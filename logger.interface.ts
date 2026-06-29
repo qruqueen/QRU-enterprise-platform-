@@ -1,0 +1,2 @@
+export interface EnterpriseLogContext { service?: string; correlationId?: string; userId?: string; manufacturingOrderId?: string; workItemId?: string; metadata?: Record<string, unknown>; }
+export interface EnterpriseLogger { info(message: string, context?: EnterpriseLogContext): void; warn(message: string, context?: EnterpriseLogContext): void; error(message: string, error?: unknown, context?: EnterpriseLogContext): void; audit(message: string, context?: EnterpriseLogContext): void; security(message: string, context?: EnterpriseLogContext): void; }
