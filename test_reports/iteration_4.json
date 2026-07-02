@@ -1,0 +1,60 @@
+{
+  "summary": "Iteration 4 validation for QRU Enterprise Organization (Executive Board + Emergent Expertise Registry + Team Assembler + Live Org Activity), QRU Creative Studio (brand standards + creative-brief + creative-queue), and Publication Gate. All 10 iteration-4 pytest cases pass (registry returns 13 board / 13 Emergent = 26 agents with the correct 9 board names + 13 Emergent titles; /api/registry/task-types lists the 6 task types; /api/registry/assemble with 'Manufacture Product' returns team spanning Manufacturing + Creative Studio + Brand + Education; approving a Knowledge Record via /api/knowledge-records/{id}/review emits Kingdom Lion™ + Manufacturing dept entries to /api/org-activity; /api/products/creative-queue lists Pending products; POST /api/products/{id}/creative-brief generates all 8 brief keys (who_for, problem_solved, will_understand, skills_gained[list], whats_included[list], reading_level, completion_time, next_path) via GPT-5.5 and flips creative_status → 'Reviewed' so the product leaves the queue; PATCH /products/{id}/status Published is blocked with HTTP 400 'Send this product through the Creative Studio before publication.' when creative_brief is absent and succeeds after the brief is generated). Frontend E2E: /organization renders 13 board-* cards, 13 registry-* rows, 6 task-* buttons, correctly assembles a 4+ member team on 'Manufacture Product', and the Live Organization Activity panel refreshes with entries from Kingdom Lion™, Manufacturing Director™, Legacy Bear™, Creative Studio Director™. /creative-studio renders Color System, Typography, Design Principles, QRU Shield master brand asset and the Creative Quality Review queue; clicking enhance-<id> generates a brief and removes the card from the queue. ProductDetail: pd-publish-btn is blocked with a 400 toast 'Send this product through the Creative Studio before publication.' when no brief; pd-creative-btn generates and displays pd-creative-brief with all sections (Who this is for / Problem it solves / What you'll understand / Skills gained / What's included / Reading level / Est. time / Next learning path) plus Related QRU products; Publish then succeeds and pd-status flips to 'Published'.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/products/{id}/creative-brief",
+        "issue": "related_products are projected with {title:1, product_type:1, product_code:1} but WITHOUT id, so the persisted related_products entries have no 'id' key. This makes the frontend render <Link to='/products/undefined'> for each related product on ProductDetail (and triggers a React 'unique key' warning). Include 'id: 1' in the projection so the related links resolve."
+      },
+      {
+        "endpoint": "manufacturing_engine._process_job (background)",
+        "issue": "If a Knowledge Record is deleted while its manufacturing job is running, the loop hits `rec = await db.knowledge_records.find_one(...)` returning None and then `rec.get('field_status', {})` throws 'NoneType has no attribute get' — the job crashes and is marked failed. Observed in backend.err.log during test cleanup: `qru.mfg - ERROR - job <id> crashed: 'NoneType' object has no attribute 'get'`. Guard with `if not rec: break` and mark job failed cleanly."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ProductDetail related_products",
+        "issue": "Related products rendered from creative_brief.related_products link to /products/undefined because backend projection strips the 'id' field. React also warns 'Each child in a list should have a unique key prop. Check the render method of ProductDetail.' Root cause is the backend projection (see backend/minor #1) — fix once on backend and both symptoms disappear.",
+        "selector": "[data-testid=\"pd-creative-brief\"] a[href^=\"/products/\"]",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration4.py",
+    "/app/test_reports/pytest/iteration4_results.xml",
+    "/app/backend/tests/test_iteration3.py",
+    "/app/backend/tests/test_iteration2.py",
+    "/app/backend/tests/backend_test.py"
+  ],
+  "action_items": [
+    "MEDIUM: In routers/products.py::creative_brief, include 'id: 1' in the related-products projection so the ProductDetail 'Related QRU products' links resolve to real product pages and the React key warning goes away.",
+    "LOW: In manufacturing_engine._process_job, guard against `rec = await db.knowledge_records.find_one(...)` returning None (KR deleted mid-job); mark the job status='failed' with a message instead of raising.",
+    "LOW (carried over from iter 3): consider aggregating dashboard_stats counts into a single $facet; add TTL / cleanup on completed manufacturing_jobs; unify CORS 'allow_origins=*' + allow_credentials=True (spec-invalid combination)."
+  ],
+  "critical_code_review_comments": [
+    "routers/products.py::creative_brief: related_products projection omits `id`, breaking downstream links. Add 'id: 1' to the projection dict.",
+    "manufacturing_engine._process_job: no None-guard on `rec` after re-fetch inside the batch loop; a KR deletion during processing crashes the job (already observed in backend logs).",
+    "routers/organization.py::assemble_team: TASK_TEAMS 'Design & Branding' and 'Technical / Deployment' target departments (UX, Design, Architecture, Security, Quality, DevOps) — these match the Emergent specialists' departments, which is fine, but 'Verify Knowledge' relies on a 'Health' department that only exists on one board director. Consider surfacing team size/coverage in the response.",
+    "routers/products.py::set_status: the publication gate correctly checks `creative_brief` but does not verify the brief actually contains the expected keys — an empty {} would pass the gate. Consider `p.get('creative_status') == 'Reviewed'` OR a non-empty who_for as the guard.",
+    "routers/organization.py::seed_registry: only seeds if collection is empty — if the board roster changes, the update won't take effect without manual clearing. Consider upserting by (name, origin)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration4.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 iteration-4 pytest cases pass in ~7s, includes real GPT-5.5 creative-brief call and end-to-end publication-gate flow)",
+    "frontend": "100% for the iteration-4 flows tested (Organization page renders 13 board + 13 registry + 6 tasks + assembler + live activity; Creative Studio renders brand standards + queue + enhance flow; ProductDetail publication gate blocks-then-permits after brief). One MEDIUM cosmetic issue on related-product links (root cause is backend projection)."
+  },
+  "test_credentials": "Admin admin@qru.com / qru-admin-2026 ✓ (executive not exercised this iteration).",
+  "seed_data_creation": "Tests create TEST_iter4-prefixed KRs (Photosynthesis, Kindness) and assembled Poster products, then delete them in fixture teardown. One published-during-UI-test product (PRD-00005 TEST_Iter3 Sunlight Vitamin D — Poster) now has creative_brief + status='Published' — safe to leave. Note: because the org-activity test intentionally deletes the KR ~25s after approve while the auto-manufacturing job is still running, one background job is expected to log a 'NoneType' crash in backend.err.log — this is a robustness gap flagged in action items.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration-4 surface area: (1) GET /api/registry (26 agents, 13 board is_board=true, 13 origin=Emergent). (2) GET /api/registry/task-types → 6 task types. (3) POST /api/registry/assemble {task_type} → returns {task_type, departments[], team[], task_types[]}. (4) GET /api/org-activity → sorted by created_at desc; entries have {id, agent, department, action, entity, level, created_at}. Populated by knowledge.review (Kingdom Lion™ Verification), manufacturing_engine.start_manufacturing_job (Manufacturing Director™), and per-batch voice mapping (BATCH_VOICE in manufacturing_engine.py). (5) POST /api/products/{id}/creative-brief → single GPT-5.5 call ~5-15s, writes {creative_brief, related_products, creative_status:'Reviewed'}. (6) GET /api/products/creative-queue → products where creative_status Pending or absent. (7) PATCH /api/products/{id}/status Published → 400 if not p.creative_brief. Frontend testids: nav-organization, nav-creative, board-<id>, registry-<id>, task-<Task-Name-With-Dashes>, assembled-team, org-activity, enhance-<id>, creative-queue-<id>, pd-creative-btn, pd-creative-brief, pd-publish-btn, pd-status. Related-product links on the brief are currently broken (see action items).",
+  "rca of the issue": "1) related_products broken links — routers/products.py::creative_brief L81-83 does `db.products.find({family, id:{$ne:pid}}, {'title':1,'product_type':1,'product_code':1})` — MongoDB projection with only explicit inclusions (except _id) means `id` is not returned. clean() then strips _id. The persisted related_products items have no id → frontend `<Link to={'/products/'+r.id}>` renders `/products/undefined`. Fix: add `'id': 1` to the projection dict. Reproduction: GET /api/products/<any-product-with-brief> and inspect related_products — id is missing. 2) manufacturing_engine crash — _process_job re-fetches the KR each batch (L164 `rec = await db.knowledge_records.find_one({'id': kr_id})`) but does not check for None before `rec.get('field_status', {})` on the next line. If the KR was deleted after start_manufacturing_job spawned the task, rec is None and the outer try/except catches it and marks the job failed. Safe today, but a check `if not rec: return` inside the loop would fail more gracefully and log the reason."
+}

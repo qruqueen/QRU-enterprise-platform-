@@ -5,7 +5,8 @@ from typing import Optional
 from database import db
 from auth import get_current_user
 from models import gen_id, now_iso, clean
-from ai_service import llm_generate
+from ai_service import llm_generate, parse_json
+from org_activity import log_org
 
 router = APIRouter(prefix="/api/products", tags=["products"])
 
@@ -46,6 +47,56 @@ async def list_products(product_type: Optional[str] = None, status: Optional[str
         query["family"] = family
     products = await db.products.find(query, {"content": 0}).sort("created_at", -1).to_list(500)
     return clean(products)
+
+
+CREATIVE_BRIEF_SYSTEM = """You are the QRU Creative Studio Director. For the given educational product, write the product-page brief that helps a learner decide with confidence.
+Return ONLY JSON with EXACTLY these keys:
+{
+ "who_for": "who this product is for (1 sentence)",
+ "problem_solved": "what problem it solves (1 sentence)",
+ "will_understand": "what the learner will understand (1-2 sentences)",
+ "skills_gained": ["skill 1", "skill 2", "skill 3"],
+ "whats_included": ["item 1", "item 2", "item 3"],
+ "reading_level": "e.g. Beginner / Intermediate / Advanced",
+ "completion_time": "e.g. 20 minutes",
+ "next_path": "suggested next learning step (1 sentence)"
+}
+Keep it warm, empowering, and honest."""
+
+
+class BriefInput(BaseModel):
+    pass
+
+
+@router.post("/{pid}/creative-brief")
+async def creative_brief(pid: str, user=Depends(get_current_user)):
+    """Creative Studio enhances the product page with a decision-ready brief."""
+    p = await db.products.find_one({"id": pid})
+    if not p:
+        raise HTTPException(404, "Product not found")
+    prompt = f"Product: {p['title']}\nType: {p['product_type']}\nTopic: {p.get('topic','')}\nAudience: {p.get('audience','')}"
+    raw = await llm_generate(CREATIVE_BRIEF_SYSTEM, prompt, f"brief-{pid}")
+    brief = parse_json(raw) or {}
+    # related products from same family
+    related = await db.products.find(
+        {"family": p.get("family"), "id": {"$ne": pid}}, {"title": 1, "product_type": 1, "product_code": 1}
+    ).to_list(4)
+    await db.products.update_one({"id": pid}, {"$set": {
+        "creative_brief": brief,
+        "related_products": clean(related),
+        "creative_status": "Reviewed",
+        "updated_at": now_iso(),
+    }})
+    await log_org("Creative Studio Director™", "Creative Studio", "enhanced the product page for", p["product_code"], "success")
+    return clean(await db.products.find_one({"id": pid}, {"content": 0}))
+
+
+@router.get("/creative-queue")
+async def creative_queue(user=Depends(get_current_user)):
+    q = await db.products.find(
+        {"$or": [{"creative_status": {"$exists": False}}, {"creative_status": "Pending"}]},
+        {"content": 0}).sort("created_at", -1).to_list(200)
+    return clean(q)
 
 
 @router.get("/types")
@@ -239,6 +290,8 @@ async def set_status(pid: str, data: StatusInput, user=Depends(get_current_user)
     p = await db.products.find_one({"id": pid})
     if not p:
         raise HTTPException(404, "Not found")
+    if data.status == "Published" and not p.get("creative_brief"):
+        raise HTTPException(400, "Send this product through the Creative Studio before publication.")
     await db.products.update_one({"id": pid}, {"$set": {"status": data.status, "updated_at": now_iso()}})
     return clean(await db.products.find_one({"id": pid}))
 

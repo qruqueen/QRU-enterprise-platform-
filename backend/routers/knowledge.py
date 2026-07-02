@@ -7,6 +7,7 @@ from auth import get_current_user
 from models import gen_id, now_iso, clean, QRU_SECTIONS
 from ai_service import llm_generate, parse_json, TRANSLATION_SYSTEM, QRU_METHODOLOGY_SYSTEM
 from manufacturing_engine import start_manufacturing_job, regenerate_field, ALL_FIELDS
+from org_activity import log_org
 
 router = APIRouter(prefix="/api/knowledge-records", tags=["knowledge"])
 
@@ -268,6 +269,8 @@ async def review_record(rid: str, data: ReviewInput, user=Depends(get_current_us
 
     await db.knowledge_records.update_one({"id": rid}, {"$set": upd})
     await log_activity(user["name"], f"{data.decision.replace('_', ' ')}d", "KnowledgeRecord", rid, rec["title"])
+    if data.decision == "approve":
+        await log_org("Kingdom Lion™", "Verification", "verified & approved", rec["kr_code"], "success")
     # Research Once. Verify Once. Manufacture Forever — auto-start pipeline on approval.
     if data.decision == "approve" and rec.get("understanding_status", "Not Manufactured") == "Not Manufactured":
         await start_manufacturing_job(rid, "Manufacturing Director™ (auto)")

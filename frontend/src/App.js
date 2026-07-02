@@ -17,6 +17,8 @@ import ProductManufacturing from "@/pages/ProductManufacturing";
 import ProductLibrary from "@/pages/ProductLibrary";
 import ProductDetail from "@/pages/ProductDetail";
 import DigitalWorkforce from "@/pages/DigitalWorkforce";
+import Organization from "@/pages/Organization";
+import CreativeStudio from "@/pages/CreativeStudio";
 import Colleges from "@/pages/Colleges";
 import CollegeWorkspace from "@/pages/CollegeWorkspace";
 import Analytics from "@/pages/Analytics";
@@ -57,6 +59,8 @@ function App() {
             >
               <Route index element={<Dashboard />} />
               <Route path="command" element={<CommandCenter />} />
+              <Route path="organization" element={<Organization />} />
+              <Route path="creative-studio" element={<CreativeStudio />} />
               <Route path="knowledge" element={<KnowledgeRecords />} />
               <Route path="knowledge/:id" element={<KnowledgeRecordDetail />} />
               <Route path="translation-engine" element={<TranslationEngine />} />

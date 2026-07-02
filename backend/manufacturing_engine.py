@@ -4,8 +4,20 @@ import logging
 from database import db
 from models import gen_id, now_iso
 from ai_service import llm_generate, parse_json, QRU_METHODOLOGY_SYSTEM
+from org_activity import log_org
 
 logger = logging.getLogger("qru.mfg")
+
+# Which board department/agent voices each manufacturing batch (live activity feed).
+BATCH_VOICE = {
+    "Core Understanding": ("Legacy Bear™", "Education"),
+    "Comprehension Aids": ("Legacy Bear™", "Education"),
+    "Vocabulary & FAQ": ("Legacy Eagle™", "Strategy"),
+    "Assessment": ("Kingdom Lion™", "Verification"),
+    "Audience Versions": ("Consumer Advocate™", "Customer Experience"),
+    "Guidance Notes": ("Legacy Bear™", "Education"),
+    "Media & Product Assets": ("Creative Studio Director™", "Creative Studio"),
+}
 
 QRU_VOICE = (
     "You are the QRU Manufacturing Engine. QRU helps people become the best version of themselves "
@@ -112,6 +124,7 @@ async def start_manufacturing_job(kr_id, actor):
     rec = await db.knowledge_records.find_one({"id": kr_id})
     if not rec:
         return None
+    await log_org("Manufacturing Director™", "Manufacturing", "started full manufacturing for", rec.get("kr_code", ""))
     steps = [{"label": b[0], "status": "pending"} for b in BATCHES]
     steps.append({"label": "Understanding Manufactured", "status": "pending"})
     job = {
@@ -145,6 +158,8 @@ async def _process_job(job_id, kr_id, actor):
             steps[i]["status"] = "running"
             await db.manufacturing_jobs.update_one(
                 {"id": job_id}, {"$set": {"steps": steps, "current_step": label, "updated_at": now_iso()}})
+            voice = BATCH_VOICE.get(label, ("Manufacturing Director™", "Manufacturing"))
+            await log_org(voice[0], voice[1], f"is manufacturing {label.lower()}", job.get("kr_code", ""))
 
             rec = await db.knowledge_records.find_one({"id": kr_id})
             field_status = rec.get("field_status", {})
@@ -186,6 +201,7 @@ async def _process_job(job_id, kr_id, actor):
         history.append({"job_id": job_id, "at": now_iso(), "by": actor, "fields": manufactured})
         await db.knowledge_records.update_one(
             {"id": kr_id}, {"$set": {"understanding_status": "Draft", "manufacturing_history": history}})
+        await log_org("Manufacturing Director™", "Manufacturing", f"completed manufacturing — {manufactured} fields ready", rec.get("kr_code", ""), "success")
         await db.notifications.insert_one({
             "id": gen_id(), "message": f"Understanding manufactured for {rec.get('kr_code')} — {manufactured} fields ready for review",
             "level": "success", "read": False, "created_at": now_iso(),

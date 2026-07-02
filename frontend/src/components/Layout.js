@@ -5,13 +5,14 @@ import MusicControl from "@/components/MusicControl";
 import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
-  Bell, Settings, Search, LogOut, Menu, Wand2,
+  Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette,
 } from "lucide-react";
 
 const NAV = [
   { section: "Command" },
   { to: "/", label: "Command Center", icon: LayoutDashboard, end: true, testid: "nav-dashboard" },
   { to: "/command", label: "Command Console", icon: MessageSquareText, testid: "nav-command" },
+  { to: "/organization", label: "Organization", icon: Building2, testid: "nav-organization" },
   { section: "Knowledge" },
   { to: "/knowledge", label: "Knowledge Records", icon: BookOpen, testid: "nav-knowledge" },
   { to: "/translation-engine", label: "Translation Engine™", icon: Wand2, testid: "nav-translation" },
@@ -21,6 +22,7 @@ const NAV = [
   { to: "/manufacturing", label: "Manufacturing Orders", icon: Factory, testid: "nav-manufacturing" },
   { to: "/manufacture", label: "Product Manufacturing", icon: Sparkles, testid: "nav-manufacture" },
   { to: "/products", label: "Product Library", icon: Library, testid: "nav-products" },
+  { to: "/creative-studio", label: "Creative Studio™", icon: Palette, testid: "nav-creative" },
   { section: "Enterprise" },
   { to: "/workforce", label: "Digital Workforce", icon: Bot, testid: "nav-workforce" },
   { to: "/colleges", label: "Understanding Colleges", icon: GraduationCap, testid: "nav-health" },
