@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from database import db
 from auth import get_current_user
 from models import gen_id, now_iso, clean
+from ai_service import llm_generate, parse_json
 
 router = APIRouter(prefix="/api", tags=["organization"])
 
@@ -53,6 +54,12 @@ EXECUTIVE_BOARD = [
     ("Creative Studio Director™", "Creative Studio Director", "Creative Studio",
      ["Brand Identity", "Product Branding", "Design Systems", "Typography", "Illustration", "Visual Consistency"],
      ["Design every visual asset", "Own QRU design standards", "Creative quality review"]),
+    ("Organizational Health Director™", "Organizational Health Director", "Organizational Health",
+     ["Enterprise Monitoring", "Bottleneck Detection", "Workload Balancing", "Continuous Improvement"],
+     ["Monitor enterprise health", "Detect bottlenecks & idle/overloaded specialists", "Recommend improvements early"]),
+    ("Experience Lab Director™", "Experience Lab Director", "Experience Lab",
+     ["Customer Journey", "Usability", "Learning Effectiveness", "Delight", "Accessibility"],
+     ["Experience QRU as customers do", "Measure clarity & delight", "Recommend experience improvements"]),
 ]
 
 EMERGENT_SPECIALISTS = [
@@ -131,3 +138,115 @@ async def task_types(user=Depends(get_current_user)):
 async def org_activity(user=Depends(get_current_user)):
     items = await db.org_activity.find().sort("created_at", -1).to_list(40)
     return clean(items)
+
+
+@router.get("/enterprise-health")
+async def enterprise_health(user=Depends(get_current_user)):
+    """Organizational Health Director™ — continuous self-monitoring."""
+    kr_total = await db.knowledge_records.count_documents({})
+    kr_verified = await db.knowledge_records.count_documents({"verification_status": "Verified"})
+    verify_queue = await db.knowledge_records.count_documents(
+        {"verification_status": {"$in": ["Draft", "In Review", "Revision Requested"]}})
+    not_manufactured = await db.knowledge_records.count_documents(
+        {"verification_status": "Verified", "understanding_status": "Not Manufactured"})
+    needs_regen = await db.products.count_documents({"status": "Needs Regeneration"})
+    creative_pending = await db.products.count_documents(
+        {"$or": [{"creative_status": {"$exists": False}}, {"creative_status": "Pending"}]})
+    failed_jobs = await db.manufacturing_jobs.count_documents({"status": "failed"})
+
+    agents = await db.registry_agents.find().to_list(200)
+    idle = [a["name"] for a in agents if a.get("workload", 0) < 15]
+    overloaded = [a["name"] for a in agents if a.get("workload", 0) > 85]
+
+    systems = {
+        "Verification": max(0, 100 - verify_queue * 8),
+        "Manufacturing": max(0, 100 - not_manufactured * 10 - failed_jobs * 15),
+        "Creative Studio": max(0, 100 - creative_pending * 6),
+        "Knowledge Database": min(100, 40 + kr_total * 5),
+        "Publishing": max(0, 100 - needs_regen * 10),
+        "Customer Experience": 90,
+        "Communication": 95,
+        "Innovation": 88,
+    }
+    overall = round(sum(systems.values()) / len(systems))
+
+    bottlenecks = []
+    if verify_queue > 3:
+        bottlenecks.append({"area": "Verification", "detail": f"{verify_queue} records awaiting verification", "severity": "warning"})
+    if not_manufactured > 0:
+        bottlenecks.append({"area": "Manufacturing", "detail": f"{not_manufactured} verified records not yet manufactured", "severity": "warning"})
+    if needs_regen > 0:
+        bottlenecks.append({"area": "Publishing", "detail": f"{needs_regen} products need regeneration after a record changed", "severity": "critical"})
+    if creative_pending > 0:
+        bottlenecks.append({"area": "Creative Studio", "detail": f"{creative_pending} products awaiting creative review", "severity": "info"})
+    if failed_jobs > 0:
+        bottlenecks.append({"area": "Manufacturing", "detail": f"{failed_jobs} failed manufacturing job(s)", "severity": "critical"})
+
+    recommendations = []
+    if not_manufactured > 0:
+        recommendations.append("Run the AI Manufacturing Pipeline on verified records that have not been manufactured.")
+    if needs_regen > 0:
+        recommendations.append("Regenerate products flagged after their source Knowledge Record changed.")
+    if creative_pending > 0:
+        recommendations.append("Route pending products through the Creative Studio before publication.")
+    if idle:
+        recommendations.append(f"{len(idle)} specialist(s) are idle — assign them to open work.")
+    if not recommendations:
+        recommendations.append("All systems healthy. Continue manufacturing understanding.")
+
+    return {
+        "overall": overall,
+        "systems": systems,
+        "bottlenecks": bottlenecks,
+        "recommendations": recommendations,
+        "idle_specialists": idle,
+        "overloaded_specialists": overloaded,
+        "metrics": {"knowledge_records": kr_total, "verified": kr_verified, "verification_queue": verify_queue,
+                    "not_manufactured": not_manufactured, "needs_regeneration": needs_regen,
+                    "creative_pending": creative_pending, "failed_jobs": failed_jobs},
+    }
+
+
+EXPERIENCE_CRITERIA = ["Clarity", "Understanding", "Engagement", "Visual Quality", "Accessibility", "Learning Effectiveness", "Customer Delight"]
+
+EXPERIENCE_SYSTEM = """You are the QRU Experience Lab Director™. Experience this educational product exactly as a customer would.
+Return ONLY JSON:
+{
+ "scores": {"Clarity": 0-100, "Understanding": 0-100, "Engagement": 0-100, "Visual Quality": 0-100, "Accessibility": 0-100, "Learning Effectiveness": 0-100, "Customer Delight": 0-100},
+ "strengths": ["..."],
+ "friction_points": ["..."],
+ "recommendations": ["actionable improvement", "..."]
+}"""
+
+
+@router.get("/experience-lab/criteria")
+async def experience_criteria(user=Depends(get_current_user)):
+    return {"criteria": EXPERIENCE_CRITERIA}
+
+
+@router.post("/experience-lab/evaluate")
+async def experience_evaluate(body: dict, user=Depends(get_current_user)):
+    pid = body.get("product_id")
+    p = await db.products.find_one({"id": pid})
+    if not p:
+        from fastapi import HTTPException
+        raise HTTPException(404, "Product not found")
+    prompt = f"Product: {p['title']}\nType: {p['product_type']}\nAudience: {p.get('audience','')}\nContent excerpt:\n{(p.get('content') or '')[:1200]}"
+    raw = await llm_generate(EXPERIENCE_SYSTEM, prompt, f"exp-{pid}")
+    result = parse_json(raw) or {}
+    await log_org_safe("Experience Lab Director™", "Experience Lab", "evaluated the customer experience for", p.get("product_code", ""))
+    return {"product": {"id": p["id"], "title": p["title"], "product_type": p["product_type"]}, "evaluation": result}
+
+
+@router.get("/consumer/products")
+async def consumer_products(user=Depends(get_current_user)):
+    prods = await db.products.find({"status": "Published"}, {"content": 0}).sort("updated_at", -1).to_list(200)
+    return clean(prods)
+
+
+async def log_org_safe(agent, dept, action, entity):
+    try:
+        from org_activity import log_org
+        await log_org(agent, dept, action, entity, "success")
+    except Exception:
+        pass
