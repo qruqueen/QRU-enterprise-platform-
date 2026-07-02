@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, ShieldCheck, ChevronDown, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
+import { Loader2, ShieldCheck, ChevronDown, AlertTriangle, GitMerge, Sparkles, ArrowRightLeft } from "lucide-react";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 
@@ -25,11 +26,25 @@ export default function EnterpriseHealth() {
   const [d, setD] = useState(null);
   const [legacy, setLegacy] = useState(null);
   const [open, setOpen] = useState(null);
+  const [refactor, setRefactor] = useState(null);
+  const [objective, setObjective] = useState("");
+  const [reviewing, setReviewing] = useState(false);
+  const [review, setReview] = useState(null);
 
   useEffect(() => {
-    Promise.all([api.get("/command-center/health-detailed"), api.get("/enterprise-health")])
-      .then(([h, l]) => { setD(h.data); setLegacy(l.data); });
+    Promise.all([api.get("/command-center/health-detailed"), api.get("/enterprise-health"), api.get("/evolution/refactoring")])
+      .then(([h, l, rf]) => { setD(h.data); setLegacy(l.data); setRefactor(rf.data); });
   }, []);
+
+  const runReview = async () => {
+    if (!objective.trim()) { toast.error("Describe the capability you're considering."); return; }
+    setReviewing(true); setReview(null);
+    try {
+      const { data } = await api.post("/evolution/review", { objective, save: true });
+      setReview(data);
+    } catch { toast.error("Review failed. Try again."); }
+    setReviewing(false);
+  };
 
   if (!d) return <div className="flex justify-center py-32"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
 
@@ -101,6 +116,62 @@ export default function EnterpriseHealth() {
           </div>
         </div>
       )}
+
+      {/* Extend Before Expand™ — Enterprise Evolution Governance */}
+      <div className="mt-10 border-t border-border pt-8" data-testid="evolution-governance">
+        <div className="flex items-center gap-2 mb-1">
+          <ArrowRightLeft className="w-4 h-4 text-primary" />
+          <h2 className="font-heading text-lg font-bold">Enterprise Evolution Review™</h2>
+          <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: "hsl(var(--gold) / 0.15)", color: "hsl(var(--navy))" }}>Extend Before Expand™</span>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">QRU becomes more powerful by becoming more intelligent, not more complicated. Before building anything new, check whether an existing capability can be extended.</p>
+
+        <div className="grid lg:grid-cols-2 gap-6">
+          <div className="bg-card border rounded-2xl p-5">
+            <label className="text-xs text-muted-foreground mb-1 block">Proposed capability or objective</label>
+            <textarea data-testid="evo-objective" value={objective} onChange={(e) => setObjective(e.target.value)} rows={3}
+              placeholder="e.g. We want a system to deliver finished products to customers after certification."
+              className="w-full px-3 py-2 text-sm bg-muted rounded-md border border-border outline-none focus:border-primary resize-none" />
+            <button data-testid="evo-review-btn" onClick={runReview} disabled={reviewing}
+              className="mt-3 px-5 py-2 rounded-md text-white text-sm font-medium flex items-center gap-2 disabled:opacity-60" style={{ background: "hsl(var(--royal))" }}>
+              {reviewing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Run Evolution Review
+            </button>
+            {review && (
+              <div className="mt-4 space-y-3" data-testid="evo-result">
+                <div className="rounded-xl p-3 text-white" style={{ background: review.recommendation === "EXTEND EXISTING SYSTEM" ? "hsl(var(--success))" : "hsl(var(--navy))" }}>
+                  <p className="text-[11px] opacity-80">Recommendation</p>
+                  <p className="font-heading font-bold">{review.recommendation}</p>
+                  <p className="text-xs opacity-90 mt-0.5">Target: {review.target_capability}</p>
+                </div>
+                <p className="text-sm">{review.rationale}</p>
+                {review.questions?.length > 0 && (
+                  <div className="space-y-1.5">
+                    {review.questions.map((q, i) => (
+                      <div key={i} className="text-xs border rounded-lg p-2"><p className="font-medium">{q.q}</p><p className="text-muted-foreground mt-0.5">{q.a}</p></div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-card border rounded-2xl p-5">
+            <p className="overline text-primary mb-3 flex items-center gap-1.5"><GitMerge className="w-3.5 h-3.5" /> Continuous Refactoring</p>
+            <div className="space-y-2" data-testid="refactoring-insights">
+              {refactor?.insights?.map((ins, i) => (
+                <div key={i} className="flex items-start gap-2 text-sm">
+                  <span className="shrink-0 w-2 h-2 rounded-full mt-1.5" style={{ background: ins.severity === "warning" ? "hsl(var(--warning))" : ins.severity === "success" ? "hsl(var(--success))" : "hsl(var(--primary))" }} />
+                  <div>
+                    <p><b>{ins.area}:</b> <span className="text-muted-foreground">{ins.finding}</span></p>
+                    <p className="text-xs text-primary mt-0.5">{ins.recommendation}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {refactor?.decisions_recorded > 0 && <p className="text-xs text-muted-foreground mt-4">{refactor.decisions_recorded} architectural decision(s) recorded in Enterprise Memory.</p>}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

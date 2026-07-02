@@ -179,6 +179,14 @@ export default function ConsumerLearn() {
             </div>
           )}
 
+          {/* QRU Memory Hook */}
+          {u.memory?.hook && (
+            <div className="mb-8 rounded-2xl p-6" style={{ background: "hsl(var(--gold) / 0.08)", border: "1px solid hsl(var(--gold))" }} data-testid="memory-hook">
+              <p className="overline mb-2" style={{ color: "hsl(var(--navy))" }}>Remember This — QRU Memory Hook™</p>
+              <p className="font-heading text-lg font-semibold" style={{ color: "hsl(var(--navy))" }}>{u.memory.hook}</p>
+            </div>
+          )}
+
           {/* Learning modes */}
           {u.learning_modes.length > 0 && (
             <div className="mb-8">

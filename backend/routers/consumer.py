@@ -98,6 +98,11 @@ def build_understanding(kr):
             modes.append({"key": key, "label": label, "content": chosen})
 
     v = kr.get("verification") or {}
+    memory = None
+    ma = kr.get("memory_assets")
+    if ma:
+        memory = {"hook": ma.get("memory_hook"), "chant": ma.get("memory_chant"),
+                  "call_and_response": ma.get("call_and_response", []), "rhythm": ma.get("memory_rhythm")}
     verification = {
         "status": kr.get("verification_status", "Draft"),
         "confidence_score": kr.get("confidence_score", 0),
@@ -111,7 +116,7 @@ def build_understanding(kr):
         "evidence_level": "High" if kr.get("confidence_score", 0) >= 90 else (
             "Moderate" if kr.get("confidence_score", 0) >= 70 else "Emerging"),
     }
-    return {"sections": sections, "layers": layers, "learning_modes": modes, "verification": verification}
+    return {"sections": sections, "layers": layers, "learning_modes": modes, "verification": verification, "memory": memory}
 
 
 async def _enrollment(user_id, product_id):

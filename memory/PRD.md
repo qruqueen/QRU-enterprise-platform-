@@ -79,11 +79,27 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 - Automatic QC loop: scores product (GPT), routes each failing criterion to its owning department (routing rules), auto-improves (real GPT content rewrite + Creative Studio deterministic branding for Visual/Accessibility/Brand), re-scores monotonically until Treasure Standard™ thresholds met → certifies → unlocks gated Release. Release is LOCKED until all gates pass. `ManufacturingStudio.js` frontend with live stages/gates/QC panel.
 - Verified: backend 11/11 (real GPT QC certified in 2 rounds), frontend 100%.
 
-## Backlog / Next (updated 2026-07-02)
-- **P0 — Memory Engineering™ / Music Studio™ / Character Voices™** (spec received): memory hooks/chants, music manufacturing recipe, character voice personalities, Legacy Learners™ children's division, adaptive memory formats. NOT yet built.
-- **P1 — QRU Design Intelligence™ / Brand Library™** (spec received): Design Library, Master Asset Library, design language learning, design checklist, Creative Studio autonomy. NOT yet built.
-- **P1 — Deep Product Assembly visual assets**: real print/mobile layouts, thumbnails, QR code images, store graphics (currently represented as assembly artifacts, not rendered binaries).
-- P2: WebSocket/SSE for live org activity (currently polling); Recipe editor UI; wire director→order assignment; future divisions content.
+## Implemented — Iteration 7 (2026-07-02) · Design Intelligence + Evolution Governance
+
+### QRU Design Intelligence™ (Phase 1 of approved order) — TESTED 100%
+- `design_intelligence.py` + `routers/design.py` (/api/design/*): Brand Library™ (5 colors, 2 typefaces, spacing, shield, treasure badge, components, 6 templates), Design Library™ (grows from Treasure Standard™ products), Master Asset Library™ (searchable, full metadata), evolving Design Language™ (baseline + learned principles), Design Checklist™ (10 questions), Creative Studio autonomy (`recommend-templates` auto-selects template/layout/illustration/palette/typography/tone by product type + audience).
+- Learning hook wired into `manufacturing2._certify()`: every Treasure Standard™ product is learned into the Design Library + Master Assets and extracts a design principle.
+- Frontend `DesignIntelligence.js` (/design-intelligence, nav-design-intel): 5 tabs + stats. Seeded from demo Treasure Standard products (6 refs, 9 assets, 6 principles).
+
+### Extend Before Expand™ — Enterprise Evolution Governance (EXTENDED Organizational Health Director, no new dept)
+- `routers/evolution.py` (/api/evolution/*): Enterprise Evolution Review™ (GPT decides EXTEND vs CREATE across existing capabilities, biased to elegant simplicity, saved to `evolution_log` = Enterprise Memory), Continuous Refactoring insights (traceability gaps, workforce-model overlap, unmanufactured knowledge, stuck pipeline), capabilities registry.
+- EXTENDED `EnterpriseHealth.js` with an Enterprise Evolution Review™ section (objective → recommendation + 10-question review) and Continuous Refactoring panel. Curl-verified: fulfillment objective → "EXTEND EXISTING SYSTEM → Consumer Learning Platform".
+
+## Approved Build Order (remaining) — updated 2026-07-02
+1. ✅ Design Intelligence™ (DONE)
+2. **P0 — Memory Engineering™ (text-first, Option 2)**: Memory Sentence/Hook/Chant, Call-and-Response, Spoken Character Scripts, Educational Lyrics, Character Dialogue, Legacy Learners™ + Child/Teen/Adult/Professional versions stored on the Knowledge Master Record. Optional OpenAI TTS spoken narration. NO AI songs yet.
+3. **P1 — Product Rendering Engine™**: transform Understanding Assets into fully branded rendered products (covers, thumbnails, posters, PDFs, store graphics, QR images) using Design Intelligence + image generation.
+
+## Additional queued specs (governance: apply Extend Before Expand™ first)
+- **Manufacturing Orchestrator™**: enterprise coordinator that turns Manufacturing Orders™ + CEO natural-language commands into routed, monitored multi-department production; retrospectives; White-Label branding modes. (Likely EXTENDS Command Center + Manufacturing Engine.)
+- **Fulfillment Center™**: order management, digital fulfillment/export formats, Customer Library, delivery methods, version management, customer success. (Likely EXTENDS Consumer Learning Platform + Manufacturing Orders.)
+
+
 
 
 
