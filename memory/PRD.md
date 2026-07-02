@@ -91,13 +91,14 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 - EXTENDED `EnterpriseHealth.js` with an Enterprise Evolution Review™ section (objective → recommendation + 10-question review) and Continuous Refactoring panel. Curl-verified: fulfillment objective → "EXTEND EXISTING SYSTEM → Consumer Learning Platform".
 
 ## Approved Build Order (remaining) — updated 2026-07-02
-1. ✅ Design Intelligence™ (DONE)
-2. **P0 — Memory Engineering™ (text-first, Option 2)**: Memory Sentence/Hook/Chant, Call-and-Response, Spoken Character Scripts, Educational Lyrics, Character Dialogue, Legacy Learners™ + Child/Teen/Adult/Professional versions stored on the Knowledge Master Record. Optional OpenAI TTS spoken narration. NO AI songs yet.
-3. **P1 — Product Rendering Engine™**: transform Understanding Assets into fully branded rendered products (covers, thumbnails, posters, PDFs, store graphics, QR images) using Design Intelligence + image generation.
+1. ✅ Design Intelligence™ (DONE, tested 100%)
+2. ✅ Memory Engineering™ (text-first) — DONE, tested 100%. `memory_engineering.py` + `routers/memory.py` (/api/memory/*): 6 Character Voices™, manufactures memory assets (Memory Sentence/Hook/Chant, Call-and-Response, One-Line Repeat, Educational Lyrics, Character Scripts + Dialogue, Legacy Learners™ child/teen/adult/professional, music+instrumental prompts) stored ON the Knowledge Record. Frontend `MemoryEngineering.js` (/memory-engineering). Memory Hook surfaced to learners in Consumer Mode. TTS spoken narration deferred (optional next).
+3. **P1 — Product Rendering Engine™**: transform Understanding Assets into fully branded rendered products (covers, thumbnails, posters, PDFs, store graphics, QR images) using Design Intelligence + image generation. NEXT.
 
 ## Additional queued specs (governance: apply Extend Before Expand™ first)
-- **Manufacturing Orchestrator™**: enterprise coordinator that turns Manufacturing Orders™ + CEO natural-language commands into routed, monitored multi-department production; retrospectives; White-Label branding modes. (Likely EXTENDS Command Center + Manufacturing Engine.)
-- **Fulfillment Center™**: order management, digital fulfillment/export formats, Customer Library, delivery methods, version management, customer success. (Likely EXTENDS Consumer Learning Platform + Manufacturing Orders.)
+- **Manufacturing Orchestrator™**: enterprise coordinator turning Manufacturing Orders™ + CEO natural-language commands into routed, monitored multi-department production; retrospectives; White-Label branding. (Likely EXTENDS Command Center + Manufacturing Engine 2.0.)
+- **Fulfillment Center™**: order management, export formats, Customer Library, delivery methods, version management, customer success. (Evolution Review recommends EXTEND Consumer Learning Platform + Manufacturing Orders.)
+- **Optional**: OpenAI TTS spoken narration for Memory Hooks & Character Voices (needs integration_expert playbook + audio storage).
 
 
 
