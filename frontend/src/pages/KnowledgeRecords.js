@@ -15,7 +15,7 @@ const CATEGORIES = ["Heart Health", "Brain Health", "Lung Health", "Metabolic He
 
 export function KnowledgeCreateDialog({ onCreated, trigger }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ title: "", category: "General", verified_truth: "" });
+  const [form, setForm] = useState({ title: "", category: "General", verified_truth: "", the_question: "", simple_answer: "" });
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
@@ -25,7 +25,7 @@ export function KnowledgeCreateDialog({ onCreated, trigger }) {
       const { data } = await api.post("/knowledge-records", form);
       toast.success(`Created ${data.kr_code}`);
       setOpen(false);
-      setForm({ title: "", category: "General", verified_truth: "" });
+      setForm({ title: "", category: "General", verified_truth: "", the_question: "", simple_answer: "" });
       onCreated?.(data);
     } catch (e) {
       toast.error("Failed to create record");
@@ -61,6 +61,7 @@ export function KnowledgeCreateDialog({ onCreated, trigger }) {
             <textarea data-testid="kr-truth-input" rows={4} value={form.verified_truth} onChange={(e) => setForm({ ...form, verified_truth: e.target.value })}
               className="mt-1 w-full px-3 py-2 rounded-sm border outline-none focus:border-primary resize-none" />
           </div>
+          <p className="text-xs text-muted-foreground -mt-1">Add the verified truth now — then use <b>Manufacture Understanding</b> to auto-generate the full QRU methodology.</p>
         </div>
         <DialogFooter>
           <button data-testid="kr-save-btn" onClick={save} disabled={saving}

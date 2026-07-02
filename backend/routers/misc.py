@@ -73,11 +73,13 @@ async def global_search(q: str, user=Depends(get_current_user)):
     mos = await db.manufacturing_orders.find({"$or": [{"topic": regex}, {"mo_code": regex}]}).to_list(20)
     prods = await db.products.find({"$or": [{"title": regex}, {"topic": regex}]}, {"content": 0}).to_list(20)
     emps = await db.digital_employees.find({"$or": [{"name": regex}, {"title": regex}]}).to_list(20)
+    colleges = await db.colleges.find({"$or": [{"name": regex}, {"description": regex}, {"division": regex}]}).to_list(20)
     return {
         "knowledge_records": clean(krs),
         "manufacturing_orders": clean(mos),
         "products": clean(prods),
         "digital_employees": clean(emps),
+        "colleges": clean(colleges),
     }
 
 

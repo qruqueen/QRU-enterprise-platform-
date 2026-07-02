@@ -10,11 +10,16 @@ router = APIRouter(prefix="/api", tags=["analytics"])
 async def dashboard_stats(user=Depends(get_current_user)):
     kr_total = await db.knowledge_records.count_documents({})
     kr_verified = await db.knowledge_records.count_documents({"verification_status": "Verified"})
+    master_files = await db.knowledge_records.count_documents({"is_master_file": True})
+    treasure = await db.knowledge_records.count_documents({"treasure_standard": True})
+    verification_queue = await db.knowledge_records.count_documents(
+        {"verification_status": {"$in": ["Draft", "In Review", "Revision Requested"]}})
     mo_total = await db.manufacturing_orders.count_documents({})
     mo_active = await db.manufacturing_orders.count_documents({"status": {"$nin": ["Published"]}})
     prod_total = await db.products.count_documents({})
     prod_published = await db.products.count_documents({"status": "Published"})
     employees = await db.digital_employees.count_documents({})
+    employees_active = await db.digital_employees.count_documents({"status": "Active"})
     customers = await db.customers.count_documents({})
 
     pipeline = [{"$group": {"_id": "$status", "count": {"$sum": 1}}}]
@@ -23,15 +28,31 @@ async def dashboard_stats(user=Depends(get_current_user)):
 
     recent = await db.activities.find().sort("created_at", -1).to_list(8)
 
+    # Enterprise health: composite score
+    verified_ratio = (kr_verified / kr_total) if kr_total else 0
+    published_ratio = (prod_published / prod_total) if prod_total else 0
+    workforce_ratio = (employees_active / employees) if employees else 0
+    enterprise_health = round((verified_ratio * 0.4 + published_ratio * 0.3 + workforce_ratio * 0.3) * 100)
+
+    # Revenue (synthetic from licensed customers & published products)
+    revenue = prod_published * 1250 + customers * 3400
+
     return {
         "knowledge_records": kr_total,
         "verified_records": kr_verified,
+        "master_files": master_files,
+        "treasure_standard": treasure,
+        "verification_queue": verification_queue,
         "manufacturing_orders": mo_total,
         "active_orders": mo_active,
         "products": prod_total,
         "published_products": prod_published,
         "digital_employees": employees,
+        "digital_employees_active": employees_active,
         "customers": customers,
+        "marketplace_opportunities": max(0, kr_verified - prod_total),
+        "revenue": revenue,
+        "enterprise_health": enterprise_health,
         "pipeline": stage_map,
         "recent_activity": clean(recent),
     }

@@ -1,7 +1,7 @@
 import os
 from database import db
 from auth import hash_password, verify_password
-from models import gen_id, now_iso
+from models import gen_id, now_iso, QRU_SECTIONS
 
 AVATARS = [
     "https://images.pexels.com/photos/31869537/pexels-photo-31869537.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
@@ -164,6 +164,56 @@ async def seed():
             await db.notifications.insert_one({
                 "id": gen_id(), "message": msg, "level": level, "read": False, "created_at": now_iso(),
             })
+
+    # Unified Understanding Colleges (modular divisions)
+    if await db.colleges.count_documents({}) == 0:
+        for name, desc, color in HEALTH_COLLEGES:
+            await db.colleges.insert_one({
+                "id": gen_id(), "name": name, "division": "Health", "description": desc,
+                "color": color, "status": "Active", "created_at": now_iso(),
+            })
+        future = [
+            ("Trading", "Understand markets, risk, and disciplined decision-making.", "#F5B21A"),
+            ("Finance", "Understand money, compounding, and financial freedom.", "#10B981"),
+            ("AI", "Understand artificial intelligence from first principles.", "#35106A"),
+            ("Programming", "Understand how software and computation truly work.", "#3B82F6"),
+            ("Parenting", "Understand child development and confident parenting.", "#EC4899"),
+            ("Business", "Understand how enterprises create and capture value.", "#0EA5E9"),
+            ("Government", "Understand civics, policy, and how systems govern.", "#6366F1"),
+        ]
+        for div, desc, color in future:
+            await db.colleges.insert_one({
+                "id": gen_id(), "name": f"College of {div}", "division": div, "description": desc,
+                "color": color, "status": "Coming Soon", "created_at": now_iso(),
+            })
+
+    # Migrate existing Knowledge Records into the QRU methodology structure (idempotent)
+    to_migrate = await db.knowledge_records.find({"section_status": {"$exists": False}}).to_list(1000)
+    for doc in to_migrate:
+        verified = doc.get("verification_status") == "Verified"
+        upd = {"division": doc.get("division", "Health")}
+        # preserve legacy content
+        if not doc.get("qru_translation") and doc.get("consumer_translation"):
+            upd["qru_translation"] = doc["consumer_translation"]
+        if not doc.get("practice_application") and doc.get("practice_activities"):
+            upd["practice_application"] = doc["practice_activities"]
+        for s in QRU_SECTIONS:
+            if s not in doc and s not in upd:
+                upd[s] = [] if s in ("practice_application", "key_vocabulary") else ""
+        merged = {**doc, **upd}
+        section_status = {}
+        for s in QRU_SECTIONS:
+            val = merged.get(s)
+            filled = (len(val) > 0) if isinstance(val, list) else bool(val and str(val).strip())
+            section_status[s] = ("Verified" if verified else "Draft") if filled else "Empty"
+        upd["section_status"] = section_status
+        all_filled = all(section_status[s] != "Empty" for s in QRU_SECTIONS)
+        upd["understanding_status"] = "Verified" if (verified and all_filled) else "Not Manufactured"
+        upd["is_master_file"] = verified
+        upd["treasure_standard"] = verified and all_filled
+        upd.setdefault("verification", None)
+        await db.knowledge_records.update_one({"id": doc["id"]}, {"$set": upd})
+
 
     # write test credentials
     try:

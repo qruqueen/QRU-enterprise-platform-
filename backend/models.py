@@ -31,3 +31,23 @@ ROLES = [
     "Customer",
     "ReadOnly",
 ]
+
+# The QRU teaching methodology — every Knowledge Record is built from these sections.
+QRU_SECTIONS = [
+    "the_question",
+    "simple_answer",
+    "why_it_matters",
+    "real_world_example",
+    "qru_translation",
+    "everyday_analogy",
+    "memory_sentence",
+    "practice_application",
+    "key_vocabulary",
+    "deep_roots",
+]
+
+# Modular Understanding Colleges — every division plugs into the same OS.
+DIVISIONS = [
+    "Health", "Trading", "Finance", "AI", "Programming",
+    "Parenting", "Business", "Government",
+]

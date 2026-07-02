@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { NavLink, useNavigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import MusicControl from "@/components/MusicControl";
 import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
-  Factory, Sparkles, Library, Bot, HeartPulse, BarChart3, Users, UserCog,
-  Bell, Settings, Search, LogOut, Menu, X, Boxes,
+  Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
+  Bell, Settings, Search, LogOut, Menu, Wand2,
 } from "lucide-react";
 
 const NAV = [
@@ -13,6 +14,7 @@ const NAV = [
   { to: "/command", label: "Command Console", icon: MessageSquareText, testid: "nav-command" },
   { section: "Knowledge" },
   { to: "/knowledge", label: "Knowledge Records", icon: BookOpen, testid: "nav-knowledge" },
+  { to: "/translation-engine", label: "Translation Engine™", icon: Wand2, testid: "nav-translation" },
   { to: "/research", label: "Research Center", icon: FlaskConical, testid: "nav-research" },
   { to: "/verification", label: "Verification Center", icon: ShieldCheck, testid: "nav-verification" },
   { section: "Manufacturing" },
@@ -21,7 +23,7 @@ const NAV = [
   { to: "/products", label: "Product Library", icon: Library, testid: "nav-products" },
   { section: "Enterprise" },
   { to: "/workforce", label: "Digital Workforce", icon: Bot, testid: "nav-workforce" },
-  { to: "/health-university", label: "Health University", icon: HeartPulse, testid: "nav-health" },
+  { to: "/colleges", label: "Understanding Colleges", icon: GraduationCap, testid: "nav-health" },
   { to: "/analytics", label: "Analytics", icon: BarChart3, testid: "nav-analytics" },
   { to: "/customers", label: "Customers", icon: Users, testid: "nav-customers" },
   { section: "Administration" },
@@ -46,23 +48,21 @@ export default function Layout() {
     <div className="min-h-screen flex bg-background">
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static z-40 w-64 h-screen bg-card border-r flex flex-col transition-transform ${
+        className={`fixed lg:static z-40 w-64 h-screen bg-navy text-white/90 border-r border-white/10 flex flex-col transition-transform ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
-        <div className="h-16 flex items-center gap-2 px-5 border-b shrink-0">
-          <div className="w-8 h-8 rounded-sm bg-primary flex items-center justify-center">
-            <Boxes className="w-5 h-5 text-primary-foreground" />
-          </div>
+        <div className="h-16 flex items-center gap-2.5 px-5 border-b border-white/10 shrink-0">
+          <img src="/qru-shield-light.png" alt="QRU" className="w-8 h-8 object-contain" />
           <div className="leading-none">
-            <p className="font-heading font-bold text-[15px] tracking-tight">QRU FACTORY™</p>
-            <p className="text-[10px] text-muted-foreground tracking-wide">KNOWLEDGE MANUFACTURING OS</p>
+            <p className="font-heading font-bold text-[15px] tracking-tight text-white">QRU FACTORY™</p>
+            <p className="text-[9px] text-gold tracking-[0.18em]">UNDERSTANDING OS</p>
           </div>
         </div>
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
           {NAV.map((item, i) =>
             item.section ? (
-              <p key={i} className="overline text-muted-foreground px-3 pt-4 pb-1">{item.section}</p>
+              <p key={i} className="overline text-white/40 px-3 pt-4 pb-1">{item.section}</p>
             ) : (
               <NavLink
                 key={item.to}
@@ -73,8 +73,8 @@ export default function Layout() {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2 rounded-sm text-sm transition-colors ${
                     isActive
-                      ? "bg-primary text-primary-foreground font-medium"
-                      : "text-foreground/70 hover:bg-muted hover:text-foreground"
+                      ? "bg-gold text-navy font-semibold"
+                      : "text-white/70 hover:bg-white/10 hover:text-white"
                   }`
                 }
               >
@@ -84,16 +84,16 @@ export default function Layout() {
             )
           )}
         </nav>
-        <div className="p-3 border-t">
+        <div className="p-3 border-t border-white/10">
           <div className="flex items-center gap-3 px-2 py-2">
-            <div className="w-9 h-9 rounded-sm bg-primary/10 text-primary flex items-center justify-center font-heading font-semibold text-sm">
+            <div className="w-9 h-9 rounded-sm bg-gold text-navy flex items-center justify-center font-heading font-semibold text-sm">
               {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.role}</p>
+              <p className="text-sm font-medium truncate text-white">{user?.name}</p>
+              <p className="text-xs text-white/50 truncate">{user?.role}</p>
             </div>
-            <button data-testid="logout-btn" onClick={logout} className="text-muted-foreground hover:text-destructive p-1">
+            <button data-testid="logout-btn" onClick={logout} className="text-white/50 hover:text-destructive p-1">
               <LogOut className="w-4 h-4" />
             </button>
           </div>
@@ -118,7 +118,11 @@ export default function Layout() {
               className="w-full pl-9 pr-3 py-2 text-sm bg-muted rounded-sm border border-transparent focus:border-primary focus:bg-card outline-none transition-colors"
             />
           </form>
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center gap-1 ml-auto">
+            <span className="hidden xl:block text-xs text-muted-foreground italic mr-2">
+              QRU simplifies the path to understanding the truth.
+            </span>
+            <MusicControl />
             <NavLink to="/notifications" data-testid="nav-notifications" className="p-2 rounded-sm hover:bg-muted text-muted-foreground hover:text-foreground">
               <Bell className="w-5 h-5" />
             </NavLink>

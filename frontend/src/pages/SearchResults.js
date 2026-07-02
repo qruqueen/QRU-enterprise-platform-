@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import api from "@/lib/api";
 import { PageHeader, EmptyState } from "@/components/shared";
-import { Search as SearchIcon, BookOpen, Factory, Library, Bot } from "lucide-react";
+import { Search as SearchIcon, BookOpen, Factory, Library, Bot, GraduationCap } from "lucide-react";
 
 const GROUPS = [
   { key: "knowledge_records", label: "Knowledge Records", icon: BookOpen, to: (i) => `/knowledge/${i.id}`, title: (i) => i.title, sub: (i) => i.kr_code },
   { key: "manufacturing_orders", label: "Manufacturing Orders", icon: Factory, to: () => `/manufacturing`, title: (i) => i.topic, sub: (i) => i.mo_code },
   { key: "products", label: "Products", icon: Library, to: (i) => `/products/${i.id}`, title: (i) => i.title, sub: (i) => i.product_code },
   { key: "digital_employees", label: "Digital Workforce", icon: Bot, to: () => `/workforce`, title: (i) => i.title, sub: (i) => i.name },
+  { key: "colleges", label: "Colleges", icon: GraduationCap, to: (i) => i.status === "Active" ? `/colleges/${i.id}` : `/colleges`, title: (i) => i.name, sub: (i) => i.division },
 ];
 
 export default function SearchResults() {

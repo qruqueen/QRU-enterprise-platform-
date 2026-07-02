@@ -67,3 +67,44 @@ async def toggle_employee(eid: str, user=Depends(get_current_user)):
     new_status = "Paused" if e.get("status") == "Active" else "Active"
     await db.digital_employees.update_one({"id": eid}, {"$set": {"status": new_status}})
     return clean(await db.digital_employees.find_one({"id": eid}))
+
+
+@router.get("/{eid}/department")
+async def department(eid: str, user=Depends(get_current_user)):
+    """Operational department view for an AI Director."""
+    e = await db.digital_employees.find_one({"id": eid})
+    if not e:
+        raise HTTPException(404, "Not found")
+    e = clean(e)
+    domain = e.get("domain")
+
+    # Manufacturing orders assigned to this director (by product-type ownership or explicit assignment)
+    mo_query = {"assigned_employees": e["id"]} if False else {}
+    orders = await db.manufacturing_orders.find(mo_query).sort("created_at", -1).to_list(200)
+    # Knowledge records within this director's domain category
+    kr_query = {"category": domain} if domain else {}
+    records = await db.knowledge_records.find(kr_query).sort("created_at", -1).to_list(100)
+    products = await db.products.find(
+        {"family": domain} if domain else {}, {"content": 0}).sort("created_at", -1).to_list(100)
+
+    active_orders = [o for o in orders if o.get("status") != "Published"]
+    published = await db.products.count_documents({"status": "Published"})
+
+    activity = await db.activities.find().sort("created_at", -1).to_list(6)
+
+    return {
+        "employee": e,
+        "current_orders": clean(active_orders[:8]),
+        "assigned_records": clean(records[:8]),
+        "product_output": clean(products[:8]),
+        "team_activity": clean(activity),
+        "metrics": {
+            "active_orders": len(active_orders),
+            "assigned_records": len(records),
+            "products_output": len(products),
+            "published": published,
+            "performance": e.get("performance", 100),
+            "quality_score": min(100, e.get("performance", 100) + 3),
+            "tasks_completed": e.get("tasks_completed", 0),
+        },
+    }

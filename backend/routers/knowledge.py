@@ -4,8 +4,8 @@ from typing import List, Optional
 
 from database import db
 from auth import get_current_user
-from models import gen_id, now_iso, clean
-from ai_service import llm_generate, parse_json, TRANSLATION_SYSTEM
+from models import gen_id, now_iso, clean, QRU_SECTIONS
+from ai_service import llm_generate, parse_json, TRANSLATION_SYSTEM, QRU_METHODOLOGY_SYSTEM
 
 router = APIRouter(prefix="/api/knowledge-records", tags=["knowledge"])
 
@@ -14,11 +14,18 @@ class KRInput(BaseModel):
     title: str
     subtitle: Optional[str] = ""
     category: str
+    division: Optional[str] = "Health"
     verified_truth: str
-    consumer_translation: Optional[str] = ""
+    the_question: Optional[str] = ""
+    simple_answer: Optional[str] = ""
+    why_it_matters: Optional[str] = ""
+    real_world_example: Optional[str] = ""
+    qru_translation: Optional[str] = ""
     everyday_analogy: Optional[str] = ""
-    story: Optional[str] = ""
     memory_sentence: Optional[str] = ""
+    practice_application: Optional[List[str]] = []
+    key_vocabulary: Optional[List[dict]] = []
+    deep_roots: Optional[str] = ""
     references: Optional[List[str]] = []
     sources: Optional[List[str]] = []
 
@@ -55,18 +62,34 @@ async def get_record(rid: str, user=Depends(get_current_user)):
     return clean(rec)
 
 
+def _section_value(data, section):
+    return data.get(section, [] if section in ("practice_application", "key_vocabulary") else "")
+
+
+def _is_filled(value):
+    if isinstance(value, list):
+        return len(value) > 0
+    return bool(value and str(value).strip())
+
+
 @router.post("")
 async def create_record(data: KRInput, user=Depends(get_current_user)):
     count = await db.knowledge_records.count_documents({})
+    payload = data.model_dump()
+    section_status = {s: ("Verified" if _is_filled(payload.get(s)) else "Empty") for s in QRU_SECTIONS}
     rec = {
         "id": gen_id(),
         "kr_code": f"KR-{count + 1:05d}",
-        **data.model_dump(),
+        **payload,
         "confidence_score": 0,
         "verification_status": "Draft",
         "approval_status": "Pending",
         "reviewer": None,
-        "practice_activities": [],
+        "verification": None,
+        "section_status": section_status,
+        "understanding_status": "Not Manufactured",
+        "is_master_file": False,
+        "treasure_standard": False,
         "products_created": 0,
         "version": 1,
         "created_by": user["name"],
@@ -95,39 +118,102 @@ async def delete_record(rid: str, user=Depends(get_current_user)):
     return {"message": "deleted"}
 
 
-@router.post("/{rid}/translate")
-async def translate_record(rid: str, user=Depends(get_current_user)):
+def _treasure_check(rec):
+    return all(_is_filled(rec.get(s)) for s in QRU_SECTIONS)
+
+
+@router.post("/{rid}/manufacture-understanding")
+async def manufacture_understanding(rid: str, user=Depends(get_current_user)):
+    """Run the QRU Translation Engine™ to fill any EMPTY methodology sections.
+    Never overwrites existing content. AI-added sections are marked Draft."""
     rec = await db.knowledge_records.find_one({"id": rid})
     if not rec:
         raise HTTPException(404, "Not found")
-    prompt = f"Title: {rec['title']}\nCategory: {rec['category']}\nVerified Truth: {rec['verified_truth']}"
-    raw = await llm_generate(TRANSLATION_SYSTEM, prompt, f"translate-{rid}")
-    data = parse_json(raw) or {}
-    upd = {
-        "consumer_translation": data.get("consumer_translation", rec.get("consumer_translation", "")),
-        "everyday_analogy": data.get("everyday_analogy", ""),
-        "story": data.get("story", ""),
-        "memory_sentence": data.get("memory_sentence", ""),
-        "practice_activities": data.get("practice_activities", []),
-        "updated_at": now_iso(),
-    }
+    prompt = (
+        f"Title: {rec['title']}\nCategory: {rec.get('category','')}\n"
+        f"Verified Truth: {rec['verified_truth']}\n"
+        f"Existing translation: {rec.get('qru_translation','')}"
+    )
+    raw = await llm_generate(QRU_METHODOLOGY_SYSTEM, prompt, f"qru-method-{rid}")
+    ai = parse_json(raw) or {}
+    section_status = rec.get("section_status", {})
+    upd = {}
+    for s in QRU_SECTIONS:
+        current = rec.get(s)
+        if not _is_filled(current) and _is_filled(_section_value(ai, s)):
+            upd[s] = _section_value(ai, s)
+            section_status[s] = "Draft"
+    upd["section_status"] = section_status
+    upd["understanding_status"] = "Draft"
+    upd["updated_at"] = now_iso()
+    merged = {**rec, **upd}
+    upd["treasure_standard"] = _treasure_check(merged) and rec.get("verification_status") == "Verified"
     await db.knowledge_records.update_one({"id": rid}, {"$set": upd})
-    await log_activity(user["name"], "translated", "KnowledgeRecord", rid, rec["title"])
+    await log_activity(user["name"], "manufactured understanding for", "KnowledgeRecord", rid, rec["title"])
+    return clean(await db.knowledge_records.find_one({"id": rid}))
+
+
+class ReviewInput(BaseModel):
+    decision: str  # approve | reject | request_revision
+    confidence_score: Optional[int] = None
+    evidence: Optional[str] = ""
+    sources: Optional[List[str]] = []
+    observed_facts: Optional[str] = ""
+    calculated_data: Optional[str] = ""
+    analytical_judgment: Optional[str] = ""
+    conflicting_evidence: Optional[str] = ""
+    open_questions: Optional[str] = ""
+    reviewer_comments: Optional[str] = ""
+
+
+@router.post("/{rid}/review")
+async def review_record(rid: str, data: ReviewInput, user=Depends(get_current_user)):
+    rec = await db.knowledge_records.find_one({"id": rid})
+    if not rec:
+        raise HTTPException(404, "Not found")
+    verification = {
+        "confidence_score": data.confidence_score,
+        "evidence": data.evidence,
+        "sources": data.sources,
+        "observed_facts": data.observed_facts,
+        "calculated_data": data.calculated_data,
+        "analytical_judgment": data.analytical_judgment,
+        "conflicting_evidence": data.conflicting_evidence,
+        "open_questions": data.open_questions,
+        "reviewer_comments": data.reviewer_comments,
+        "reviewer": user["name"],
+        "reviewed_at": now_iso(),
+        "decision": data.decision,
+    }
+    upd = {"verification": verification, "reviewer": user["name"], "updated_at": now_iso()}
+    if data.confidence_score is not None:
+        upd["confidence_score"] = data.confidence_score
+
+    section_status = rec.get("section_status", {})
+    if data.decision == "approve":
+        upd["verification_status"] = "Verified"
+        upd["approval_status"] = "Approved"
+        upd["is_master_file"] = True
+        for s in QRU_SECTIONS:
+            if section_status.get(s) == "Draft":
+                section_status[s] = "Verified"
+        upd["section_status"] = section_status
+        merged = {**rec, **upd}
+        upd["treasure_standard"] = _treasure_check(merged)
+        if data.confidence_score is None:
+            upd["confidence_score"] = max(rec.get("confidence_score", 0), 92)
+    elif data.decision == "reject":
+        upd["verification_status"] = "Rejected"
+        upd["approval_status"] = "Rejected"
+    else:
+        upd["verification_status"] = "Revision Requested"
+        upd["approval_status"] = "Pending"
+
+    await db.knowledge_records.update_one({"id": rid}, {"$set": upd})
+    await log_activity(user["name"], f"{data.decision.replace('_', ' ')}d", "KnowledgeRecord", rid, rec["title"])
     return clean(await db.knowledge_records.find_one({"id": rid}))
 
 
 @router.post("/{rid}/verify")
 async def verify_record(rid: str, user=Depends(get_current_user)):
-    rec = await db.knowledge_records.find_one({"id": rid})
-    if not rec:
-        raise HTTPException(404, "Not found")
-    upd = {
-        "verification_status": "Verified",
-        "approval_status": "Approved",
-        "confidence_score": max(rec.get("confidence_score", 0), 92),
-        "reviewer": user["name"],
-        "updated_at": now_iso(),
-    }
-    await db.knowledge_records.update_one({"id": rid}, {"$set": upd})
-    await log_activity(user["name"], "verified", "KnowledgeRecord", rid, rec["title"])
-    return clean(await db.knowledge_records.find_one({"id": rid}))
+    return await review_record(rid, ReviewInput(decision="approve"), user)

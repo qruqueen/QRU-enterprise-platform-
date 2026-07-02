@@ -118,3 +118,99 @@ export function EmptyState({ icon: Icon, title, description, action }) {
     </div>
   );
 }
+
+export function TreasureBadge({ testid }) {
+  return (
+    <span
+      data-testid={testid}
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm border border-gold bg-gold/10 text-[11px] font-semibold"
+      style={{ color: "hsl(var(--navy))" }}
+    >
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="hsl(var(--gold))"><path d="M12 2l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.8l1.2-6.6L2.5 9l6.6-.9z"/></svg>
+      Treasure Standard™
+    </span>
+  );
+}
+
+const QRU_METHOD = [
+  { key: "the_question", label: "The Question" },
+  { key: "simple_answer", label: "Simple Answer" },
+  { key: "why_it_matters", label: "Why It Matters" },
+  { key: "real_world_example", label: "Real-World Example" },
+  { key: "qru_translation", label: "QRU Translation™" },
+  { key: "everyday_analogy", label: "Everyday Analogy" },
+  { key: "memory_sentence", label: "Memory Sentence™", highlight: true },
+  { key: "practice_application", label: "Practice / Application", list: true },
+  { key: "key_vocabulary", label: "Key Vocabulary", vocab: true },
+  { key: "deep_roots", label: "Deep Roots™" },
+];
+
+function isFilled(v) {
+  if (Array.isArray(v)) return v.length > 0;
+  return !!(v && String(v).trim());
+}
+
+export function QRUMethodology({ record, sectionStatus = {} }) {
+  return (
+    <div className="space-y-3">
+      {QRU_METHOD.map(({ key, label, highlight, list, vocab }) => {
+        const val = record[key];
+        const filled = isFilled(val);
+        const status = sectionStatus[key] || (filled ? "Verified" : "Empty");
+        if (highlight && filled) {
+          return (
+            <div key={key} className="rounded-md p-5 text-white" style={{ background: "hsl(var(--royal))" }} data-testid={`qru-${key}`}>
+              <div className="flex items-center justify-between mb-2">
+                <p className="overline text-gold">{label}</p>
+                <SectionStatusPill status={status} />
+              </div>
+              <p className="font-heading text-lg font-semibold leading-snug">{val}</p>
+            </div>
+          );
+        }
+        return (
+          <div key={key} className="bg-card border rounded-md p-5" data-testid={`qru-${key}`}>
+            <div className="flex items-center justify-between mb-2">
+              <p className="overline text-primary">{label}</p>
+              <SectionStatusPill status={status} />
+            </div>
+            {!filled ? (
+              <p className="text-sm text-muted-foreground italic">Not yet manufactured.</p>
+            ) : vocab ? (
+              <dl className="grid sm:grid-cols-2 gap-2 text-sm">
+                {val.map((v, i) => (
+                  <div key={i} className="border rounded-sm p-2">
+                    <dt className="font-semibold">{v.term}</dt>
+                    <dd className="text-muted-foreground">{v.definition}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : list ? (
+              <ul className="space-y-1.5 text-sm">
+                {val.map((v, i) => (
+                  <li key={i} className="flex gap-2"><span className="text-gold font-heading font-bold">{i + 1}</span>{v}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-[15px] leading-relaxed">{val}</p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function SectionStatusPill({ status }) {
+  const map = {
+    Verified: "bg-success/10 text-success border-success/20",
+    Draft: "bg-warning/15 border-warning/30",
+    Empty: "bg-muted text-muted-foreground border-border",
+  };
+  return (
+    <span className={`text-[10px] px-1.5 py-0.5 rounded-sm border ${map[status] || map.Empty}`}
+      style={status === "Draft" ? { color: "hsl(var(--navy))" } : {}}>
+      {status}
+    </span>
+  );
+}
