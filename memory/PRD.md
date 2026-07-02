@@ -93,12 +93,14 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 ## Approved Build Order (remaining) — updated 2026-07-02
 1. ✅ Design Intelligence™ (DONE, tested 100%)
 2. ✅ Memory Engineering™ (text-first) — DONE, tested 100%. `memory_engineering.py` + `routers/memory.py` (/api/memory/*): 6 Character Voices™, manufactures memory assets (Memory Sentence/Hook/Chant, Call-and-Response, One-Line Repeat, Educational Lyrics, Character Scripts + Dialogue, Legacy Learners™ child/teen/adult/professional, music+instrumental prompts) stored ON the Knowledge Record. Frontend `MemoryEngineering.js` (/memory-engineering). Memory Hook surfaced to learners in Consumer Mode. TTS spoken narration deferred (optional next).
-3. **P1 — Product Rendering Engine™**: transform Understanding Assets into fully branded rendered products (covers, thumbnails, posters, PDFs, store graphics, QR images) using Design Intelligence + image generation. NEXT.
+3. ✅ Product Rendering Engine™ — DONE, tested 100%. `rendering_engine.py` + `routers/rendering.py` (/api/rendering/*): renders branded cover (Gemini Nano Banana via Emergent key, with deterministic placeholder fallback), thumbnail + store graphic (Pillow), QR code (qrcode → consumer URL), print-ready PDF (fpdf2). Assets served via /api/rendering/asset/{fname}. Gated to Treasure Standard™ products. `ai_service.generate_image()` added. Surfaced in Manufacturing Studio (render panel + gallery) and Consumer catalog covers.
 
-## Additional queued specs (governance: apply Extend Before Expand™ first)
-- **Manufacturing Orchestrator™**: enterprise coordinator turning Manufacturing Orders™ + CEO natural-language commands into routed, monitored multi-department production; retrospectives; White-Label branding. (Likely EXTENDS Command Center + Manufacturing Engine 2.0.)
-- **Fulfillment Center™**: order management, export formats, Customer Library, delivery methods, version management, customer success. (Evolution Review recommends EXTEND Consumer Learning Platform + Manufacturing Orders.)
-- **Optional**: OpenAI TTS spoken narration for Memory Hooks & Character Voices (needs integration_expert playbook + audio storage).
+## Queued specs — apply Extend Before Expand™ (next session)
+- **Understanding Fulfillment Center™ (PRJ-QOS-017)**: EXTEND Consumer Platform — auto-package on Treasure Standard cert, Customer Library (search/collections/bookmarks/downloads/certificates/history/streaks), delivery + notifications, Learning Success metrics, Understanding Support (recommend modes), Customer Delight, Lifetime Updates/version mgmt, Licensing/Enterprise + White-Label, Fulfillment Verification, Executive Fulfillment Dashboard.
+- **Treasure Standard™ Gold Master Reference System (PRJ-QOS-018)**: EXTEND Design Intelligence + QC — official Gold Master™ per product category, compare-against-master before certification, Gold Master Library with versioning + executive promotion, dashboards.
+- **Manufacturing Orchestrator™**: EXTEND Command Center + Manufacturing Engine — Manufacturing Orders™, CEO natural-language commands, multi-department routing, retrospectives, White-Label.
+- **Enterprise Intelligence™**: EXTEND Organizational Health/Command Center — Competitive/Technology/Customer/Manufacturing/Learning/Brand/Fulfillment/Innovation intelligence divisions + weekly executive briefing (self-improvement, no auto new departments).
+- **Optional**: OpenAI TTS spoken narration for Memory Hooks/Character Voices.
 
 
 
