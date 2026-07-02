@@ -5,6 +5,9 @@ import { PageHeader, StatusBadge, EmptyState } from "@/components/shared";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { BookOpen, Plus, Search } from "lucide-react";
 
@@ -44,10 +47,14 @@ export function KnowledgeCreateDialog({ onCreated, trigger }) {
           </div>
           <div>
             <label className="text-sm font-medium">Category</label>
-            <select data-testid="kr-category-input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}
-              className="mt-1 w-full px-3 py-2 rounded-sm border bg-card outline-none focus:border-primary">
-              {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-            </select>
+            <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+              <SelectTrigger data-testid="kr-category-input" className="mt-1 rounded-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label className="text-sm font-medium">Verified Truth</label>

@@ -1,19 +1,30 @@
 import os
 import json
+import logging
+from fastapi import HTTPException
 from emergentintegrations.llm.chat import LlmChat, UserMessage
+
+logger = logging.getLogger("qru.ai")
 
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
 MODEL = ("openai", "gpt-5.5")
 
 
 async def llm_generate(system: str, prompt: str, session_id: str) -> str:
-    chat = LlmChat(
-        api_key=EMERGENT_LLM_KEY,
-        session_id=session_id,
-        system_message=system,
-    ).with_model(*MODEL)
-    resp = await chat.send_message(UserMessage(text=prompt))
-    return resp if isinstance(resp, str) else str(resp)
+    try:
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=session_id,
+            system_message=system,
+        ).with_model(*MODEL)
+        resp = await chat.send_message(UserMessage(text=prompt))
+        return resp if isinstance(resp, str) else str(resp)
+    except Exception as e:
+        logger.error(f"LLM generation failed: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="The AI service is temporarily unavailable. Please try again in a moment.",
+        )
 
 
 def parse_json(text: str):
