@@ -2,11 +2,15 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { MusicProvider } from "@/context/MusicContext";
+import { ModeProvider, useMode } from "@/context/ModeContext";
 import { Toaster } from "@/components/ui/sonner";
 import Layout from "@/components/Layout";
+import ConsumerLayout from "@/components/ConsumerLayout";
 import Login from "@/pages/Login";
-import Dashboard from "@/pages/Dashboard";
+import MissionControl from "@/pages/MissionControl";
 import CommandCenter from "@/pages/CommandCenter";
+import EnterpriseHealth from "@/pages/EnterpriseHealth";
+import ExperienceLab from "@/pages/ExperienceLab";
 import KnowledgeRecords from "@/pages/KnowledgeRecords";
 import KnowledgeRecordDetail from "@/pages/KnowledgeRecordDetail";
 import TranslationEngine from "@/pages/TranslationEngine";
@@ -27,6 +31,12 @@ import UserManagement from "@/pages/UserManagement";
 import Notifications from "@/pages/Notifications";
 import Settings from "@/pages/Settings";
 import SearchResults from "@/pages/SearchResults";
+import ConsumerHome from "@/pages/consumer/ConsumerHome";
+import ConsumerLearn from "@/pages/consumer/ConsumerLearn";
+import ConsumerMyLearning from "@/pages/consumer/ConsumerMyLearning";
+import ConsumerFavorites from "@/pages/consumer/ConsumerFavorites";
+import ConsumerCertificates from "@/pages/consumer/ConsumerCertificates";
+import ConsumerPathways from "@/pages/consumer/ConsumerPathways";
 import { Loader2 } from "lucide-react";
 
 function ProtectedRoute({ children }) {
@@ -42,49 +52,85 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+function EnterpriseRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+        <Route index element={<MissionControl />} />
+        <Route path="command" element={<CommandCenter />} />
+        <Route path="enterprise-health" element={<EnterpriseHealth />} />
+        <Route path="experience-lab" element={<ExperienceLab />} />
+        <Route path="organization" element={<Organization />} />
+        <Route path="creative-studio" element={<CreativeStudio />} />
+        <Route path="knowledge" element={<KnowledgeRecords />} />
+        <Route path="knowledge/:id" element={<KnowledgeRecordDetail />} />
+        <Route path="translation-engine" element={<TranslationEngine />} />
+        <Route path="research" element={<ResearchCenter />} />
+        <Route path="verification" element={<VerificationCenter />} />
+        <Route path="manufacturing" element={<ManufacturingOrders />} />
+        <Route path="manufacture" element={<ProductManufacturing />} />
+        <Route path="products" element={<ProductLibrary />} />
+        <Route path="products/:id" element={<ProductDetail />} />
+        <Route path="workforce" element={<DigitalWorkforce />} />
+        <Route path="colleges" element={<Colleges />} />
+        <Route path="colleges/:id" element={<CollegeWorkspace />} />
+        <Route path="analytics" element={<Analytics />} />
+        <Route path="customers" element={<Customers />} />
+        <Route path="users" element={<UserManagement />} />
+        <Route path="notifications" element={<Notifications />} />
+        <Route path="settings" element={<Settings />} />
+        <Route path="search" element={<SearchResults />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+function ConsumerRoutes() {
+  return (
+    <Routes>
+      <Route path="/learn" element={<ProtectedRoute><ConsumerLayout /></ProtectedRoute>}>
+        <Route index element={<ConsumerHome />} />
+        <Route path="my-learning" element={<ConsumerMyLearning />} />
+        <Route path="pathways" element={<ConsumerPathways />} />
+        <Route path="favorites" element={<ConsumerFavorites />} />
+        <Route path="certificates" element={<ConsumerCertificates />} />
+        <Route path=":id" element={<ConsumerLearn />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/learn" replace />} />
+    </Routes>
+  );
+}
+
+function ModeRouter() {
+  const { user, loading } = useAuth();
+  const { isConsumer } = useMode();
+  if (loading)
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+  if (!user)
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  return isConsumer ? <ConsumerRoutes /> : <EnterpriseRoutes />;
+}
+
 function App() {
   return (
     <AuthProvider>
-      <MusicProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Layout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Dashboard />} />
-              <Route path="command" element={<CommandCenter />} />
-              <Route path="organization" element={<Organization />} />
-              <Route path="creative-studio" element={<CreativeStudio />} />
-              <Route path="knowledge" element={<KnowledgeRecords />} />
-              <Route path="knowledge/:id" element={<KnowledgeRecordDetail />} />
-              <Route path="translation-engine" element={<TranslationEngine />} />
-              <Route path="research" element={<ResearchCenter />} />
-              <Route path="verification" element={<VerificationCenter />} />
-              <Route path="manufacturing" element={<ManufacturingOrders />} />
-              <Route path="manufacture" element={<ProductManufacturing />} />
-              <Route path="products" element={<ProductLibrary />} />
-              <Route path="products/:id" element={<ProductDetail />} />
-              <Route path="workforce" element={<DigitalWorkforce />} />
-              <Route path="colleges" element={<Colleges />} />
-              <Route path="colleges/:id" element={<CollegeWorkspace />} />
-              <Route path="analytics" element={<Analytics />} />
-              <Route path="customers" element={<Customers />} />
-              <Route path="users" element={<UserManagement />} />
-              <Route path="notifications" element={<Notifications />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="search" element={<SearchResults />} />
-            </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          <Toaster position="top-right" />
-        </BrowserRouter>
-      </MusicProvider>
+      <ModeProvider>
+        <MusicProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/*" element={<ModeRouter />} />
+            </Routes>
+            <Toaster position="top-right" />
+          </BrowserRouter>
+        </MusicProvider>
+      </ModeProvider>
     </AuthProvider>
   );
 }

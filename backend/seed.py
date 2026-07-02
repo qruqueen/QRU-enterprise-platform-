@@ -96,6 +96,14 @@ async def seed():
             "name": "Jordan Ellis", "role": "Executive", "avatar": None, "created_at": now_iso(),
         })
 
+    # Demo consumer/customer user — experiences QRU as a learner (Consumer Mode).
+    cust_email = "learner@qru.com"
+    if not await db.users.find_one({"email": cust_email}):
+        await db.users.insert_one({
+            "id": gen_id(), "email": cust_email, "password_hash": hash_password("qru-learn-2026"),
+            "name": "Erica Chen", "role": "Customer", "avatar": None, "created_at": now_iso(),
+        })
+
     if await db.digital_employees.count_documents({}) == 0:
         for i, (name, title, mission, resp, perms, tools, auth) in enumerate(DIGITAL_EMPLOYEES):
             await db.digital_employees.insert_one({
@@ -224,6 +232,8 @@ async def seed():
                 f"- Email: {admin_email}\n- Password: {admin_password}\n- Role: Administrator\n\n"
                 "## Executive (test user)\n"
                 "- Email: executive@qru.com\n- Password: qru-exec-2026\n- Role: Executive\n\n"
+                "## Consumer / Learner (test user)\n"
+                "- Email: learner@qru.com\n- Password: qru-learn-2026\n- Role: Customer (locked to Consumer Mode at /learn)\n\n"
                 "## Auth endpoints\n"
                 "- POST /api/auth/register\n- POST /api/auth/login\n- GET /api/auth/me\n- POST /api/auth/logout\n\n"
                 "Auth uses Bearer tokens (Authorization: Bearer <token>) returned by login/register.\n"

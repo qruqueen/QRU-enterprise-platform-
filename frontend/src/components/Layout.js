@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { NavLink, useNavigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { useMode } from "@/context/ModeContext";
 import MusicControl from "@/components/MusicControl";
 import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
-  Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette,
+  Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye,
 } from "lucide-react";
 
 const NAV = [
-  { section: "Command" },
+  { section: "Mission Control" },
   { to: "/", label: "Command Center", icon: LayoutDashboard, end: true, testid: "nav-dashboard" },
   { to: "/command", label: "Command Console", icon: MessageSquareText, testid: "nav-command" },
+  { to: "/enterprise-health", label: "Enterprise Health", icon: Activity, testid: "nav-health-dash" },
   { to: "/organization", label: "Organization", icon: Building2, testid: "nav-organization" },
   { section: "Knowledge" },
   { to: "/knowledge", label: "Knowledge Records", icon: BookOpen, testid: "nav-knowledge" },
@@ -23,6 +25,7 @@ const NAV = [
   { to: "/manufacture", label: "Product Manufacturing", icon: Sparkles, testid: "nav-manufacture" },
   { to: "/products", label: "Product Library", icon: Library, testid: "nav-products" },
   { to: "/creative-studio", label: "Creative Studio™", icon: Palette, testid: "nav-creative" },
+  { to: "/experience-lab", label: "Experience Lab™", icon: Eye, testid: "nav-experience" },
   { section: "Enterprise" },
   { to: "/workforce", label: "Digital Workforce", icon: Bot, testid: "nav-workforce" },
   { to: "/colleges", label: "Understanding Colleges", icon: GraduationCap, testid: "nav-health" },
@@ -35,6 +38,7 @@ const NAV = [
 
 export default function Layout() {
   const { user, logout } = useAuth();
+  const { canToggle, switchMode } = useMode();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -124,6 +128,12 @@ export default function Layout() {
             <span className="hidden xl:block text-xs text-muted-foreground italic mr-2">
               QRU simplifies the path to understanding the truth.
             </span>
+            {canToggle && (
+              <button onClick={() => switchMode("consumer")} data-testid="switch-to-consumer"
+                className="hidden sm:flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary transition-colors mr-1">
+                <Eye className="w-3.5 h-3.5" /> Preview Consumer Mode
+              </button>
+            )}
             <MusicControl />
             <NavLink to="/notifications" data-testid="nav-notifications" className="p-2 rounded-sm hover:bg-muted text-muted-foreground hover:text-foreground">
               <Bell className="w-5 h-5" />

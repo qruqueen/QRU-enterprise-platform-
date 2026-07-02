@@ -106,7 +106,8 @@ export default function Login() {
           <div className="mt-6 text-xs text-muted-foreground bg-muted rounded-sm p-3 border">
             <p className="font-medium text-foreground mb-1">Demo credentials</p>
             Admin · admin@qru.com / qru-admin-2026<br />
-            Executive · executive@qru.com / qru-exec-2026
+            Executive · executive@qru.com / qru-exec-2026<br />
+            Learner · learner@qru.com / qru-learn-2026
           </div>
         </div>
       </div>

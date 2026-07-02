@@ -1,0 +1,68 @@
+{
+  "summary": "Iteration 5 validation for QRU Factory V2.0 (Enterprise Mode / Consumer Mode / Executive Command Center / Enterprise Health / Experience Lab / Consumer Learning Platform). Backend: 16/16 pytest cases pass in test_iteration5.py — /api/command-center/{briefing,mission-impact,health-detailed,departments,alerts} return the shapes expected by the Executive Command Center, /api/enterprise-health returns overall/systems/bottlenecks/recommendations/metrics, /api/experience-lab/evaluate returns a real GPT scored dict in ~10s (scores, strengths, friction_points, recommendations), and the full consumer flow works — catalog exposes the 3 demo products with Treasure/Demo badges, the assembled understanding for the Heart record has 4 layers, 15 sections and multiple learning_modes with verification metadata; enroll → progress(100) → certificate → certificates listing works and is idempotent; favorites toggle correctly and my-learning + pathways return the expected shapes. Roles: admin@qru.com returns Administrator, learner@qru.com returns Customer as required by the ModeContext lock. Frontend E2E: admin login lands on Mission Control with all required test-ids visible (enterprise-mode-badge, daily-briefing, impact-grid, health-systems, department-cards, alerts-panel, live-activity); Enterprise Health page renders health-breakdown with expandable rows; Experience Lab dropdown lists 4 published products and Run Experience Test surfaces exp-result in ~10s. Mode toggle works both ways for admin (switch-to-consumer → /learn, switch-to-enterprise → /). Learner (Customer role) is properly locked — /knowledge and / both redirect to /learn, no enterprise nav or switch-to-enterprise button is shown. Consumer learn page renders verification-card, 4 layer buttons, learning mode buttons, mode-content, mark-complete flow issues certificate and view-certificates link; favorites, my-learning and pathways pages all render with data.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/api/consumer/products/{id} (build_understanding)",
+        "issue": "LEARNING_MODES in routers/consumer.py maps mode key 'student' → knowledge-record field 'student_notes', but the demo/seed and every existing KR uses the field name 'student_version' (see consumer_seed.py METHOD_FIELDS). Result: only 5 of the 6 promised learning modes ever render (Child, Consumer, Professional, Scientific, Story) — 'Student Mode' is silently dropped and the mode-btn-student test-id is never emitted. Fix: change LEARNING_MODES tuple to (\"student\", \"Student Mode\", \"student_version\")."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Consumer Learn — Student mode",
+        "issue": "The mode-btn-student button is never rendered because build_understanding() looks up a field name that doesn't exist on any record (see backend/minor #1). All other modes work.",
+        "affected_selectors": ["[data-testid=\"mode-btn-student\"]"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "Enterprise Mission Control — enterprise-mode-badge placement",
+        "issues": ["Badge is positioned above the daily-briefing card but the PageHeader is rendered above it — small visual disconnect; consider putting the badge inside the PageHeader overline row so it's visually anchored to the page title."]
+      },
+      {
+        "screen": "Experience Lab — <select><option> render",
+        "issues": ["React console warning: 'In HTML, <span> cannot be a child of <option>' — this comes from the dev-time instrumentation wrapping option children in a <span>, but it produces a hydration warning at runtime and is fired every load. Consider using a headless select (Radix/shadcn) so styling doesn't force nested spans, or ensure the option label is a plain string node without wrappers."]
+      },
+      {
+        "screen": "Consumer Discover — catalog",
+        "issues": ["Legacy TEST_Iter3 Sunlight Vitamin D — Poster product is still Published in demo data (leftover from a previous iteration). It appears in the customer catalog alongside the 3 real demo products and dilutes the demo. Delete or unpublish before an actual customer walkthrough."]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration5.py",
+    "/app/test_reports/pytest/iteration5_results.xml"
+  ],
+  "action_items": [
+    "MEDIUM: routers/consumer.py LEARNING_MODES — change ('student', 'Student Mode', 'student_notes') to ('student', 'Student Mode', 'student_version') so Student Mode renders on every seeded and future record. Optionally accept either field with an ordered fallback list.",
+    "LOW: Unpublish or delete the leftover PRD-00005 TEST_Iter3 Sunlight Vitamin D — Poster product so the Consumer catalog only shows the 3 real demo products.",
+    "LOW: Address the <span> child of <option> hydration warning in Experience Lab (comes from dev instrumentation wrapping option label)."
+  ],
+  "critical_code_review_comments": [
+    "consumer.py LEARNING_MODES has a field-name mismatch with the seed / METHOD_FIELDS ('student_notes' vs 'student_version') — silently drops the Student mode. Consider mapping each mode to a fallback list of candidate fields so seed/production divergence never hides a mode.",
+    "consumer.py build_understanding() reads verification.reviewer/reviewed_at from the KR 'verification' sub-doc but many KRs (including the demo seed) also store 'reviewer' at the top level — the current code already falls back correctly for reviewer but not for reviewed_at. Minor.",
+    "command_center.py _counts() runs 15 separate count_documents() calls per hit — every dashboard load triggers ~15 round-trips to Mongo. Consolidate with a single $facet aggregation to cut latency once traffic scales.",
+    "command_center.py _health_systems() has magic multipliers (verify_queue*8, not_manufactured*10, failed_jobs*15, master_files*4, ...) with no explanation. Extract weights to a module constant with a short docstring so 'why 8?' is answerable — also makes the transparent breakdown genuinely transparent.",
+    "ModeContext.js persists 'consumer'/'enterprise' in localStorage but only for staff. Because the localStorage read happens in useEffect after the first render, the enterprise UI briefly flashes for staff whose last saved mode was 'consumer'. Consider initialising useState from localStorage lazily to avoid the flicker.",
+    "organization.py experience_evaluate() uses body: dict — no Pydantic validation. Any missing product_id yields a 404 that says 'Product not found' rather than 422. Wrap with a small BaseModel(pid: str) for consistency with the rest of the codebase.",
+    "consumer.py progress() endpoint returns certificate=None on any subsequent 100% call (idempotent) — that's correct, but the API contract isn't documented; frontend could reasonably poll and be confused. Consider always returning the existing certificate on completed progress calls so /learn always has the code."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration5.py (new)",
+    "restored db.products status='Published' on 'How the Human Heart Pumps Blood' demo record (a previous iteration had bumped it to 'In Review'; re-published for testing)."
+  ],
+  "success_rate": {
+    "backend": "100% (16/16 iteration-5 pytest cases pass in ~13s, includes real GPT-5.5 Experience Lab call and the full consumer enroll→progress→certificate flow)",
+    "frontend": "~95% — every requested V2.0 flow works E2E (Mission Control widgets, Enterprise Health, Experience Lab AI run, mode toggle both ways, role-locked Consumer Mode, catalog, learn page verification+layers+modes+mark-complete, favorites, my-learning, pathways). Only gap is the missing Student mode (backend bug above)."
+  },
+  "test_credentials": "admin@qru.com / qru-admin-2026 (Administrator) and learner@qru.com / qru-learn-2026 (Customer) — both from /app/memory/test_credentials.md, both verified against /api/auth/me.",
+  "seed_data_creation": "No new test data created for this iteration. Test-side actions were idempotent (existing enrollments/certificates reused). The 3 demo consumer products (Heart, Sleep, Insulin) were already seeded by consumer_seed.py.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "V2.0 surface: (a) /api/command-center/* — briefing (greeting/enterprise_health/lines/recommendation), mission-impact (impact:12+, business:3), health-detailed (overall + systems dict of {score,owner,why,recommendation,urgency,next_action} for 10 systems), departments (7 cards), alerts. (b) /api/enterprise-health (from routers/organization.py) — overall/systems/bottlenecks/recommendations/idle_specialists/overloaded_specialists/metrics. (c) /api/experience-lab/evaluate {product_id} — GPT-5.5 call, 5-15s, returns {product:{...}, evaluation:{scores, strengths, friction_points, recommendations}}. (d) /api/consumer/{catalog,pathways,my-learning,favorites,certificates,recommendations,products/{id},enroll,progress,favorite}. build_understanding() assembles {sections, layers[4], learning_modes, verification} from Knowledge Record fields. Frontend testids validated: login-email/password/submit, enterprise-mode-badge, daily-briefing, impact-grid, health-systems, department-cards, alerts-panel, health-<name>, nav-health-dash, nav-experience, exp-product-select, exp-run, exp-result, health-breakdown, eh-<name>, switch-to-consumer, switch-to-enterprise, cnav-discover/mylearning/pathways/favorites/certificates, catalog-grid, product-card-<id>, learn-title, verification-card, toggle-refs, layer-btn-0..3, layer-content, mode-btn-<key>, mode-content, section-<field>, learn-fav, mark-complete, view-certificates, certificates-list. Known open bug: mode-btn-student never renders because routers/consumer.py maps to non-existent field 'student_notes' — fix to 'student_version'.",
+  "rca of the issue": "Student mode missing — routers/consumer.py::LEARNING_MODES line 64: ('student', 'Student Mode', 'student_notes'). build_understanding() iterates LEARNING_MODES and appends {key,label,content} only when kr.get(field) is filled. The demo seed (consumer_seed.py METHOD_FIELDS line 138-144) and every real KR stores this under 'student_version', not 'student_notes' — so _filled(kr.get('student_notes')) is always False and the Student mode is silently omitted from the returned learning_modes list. Frontend then never renders the mode-btn-student button. Repro: GET /api/consumer/products/<any-demo-id> and inspect understanding.learning_modes — you will see 5 entries, none with key='student'. Fix: change field name to 'student_version' (or accept a fallback list of ['student_version','student_notes'])."
+}
