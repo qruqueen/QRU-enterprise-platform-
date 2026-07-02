@@ -36,11 +36,14 @@ const FAMILY_TINT = {
 export function ProductCard({ p, onFav }) {
   const navigate = useNavigate();
   const tint = FAMILY_TINT[p.family] || "76 29 149";
+  const BACKEND = process.env.REACT_APP_BACKEND_URL;
+  const cover = p.cover_url ? `${BACKEND}${p.cover_url}` : null;
   return (
     <div data-testid={`product-card-${p.id}`} onClick={() => navigate(`/learn/${p.id}`)}
       className="group cursor-pointer bg-card border border-border rounded-2xl overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-      <div className="h-28 relative flex items-center justify-center" style={{ background: `linear-gradient(135deg, rgb(${tint} / 0.14), rgb(${tint} / 0.04))` }}>
-        <BookOpen className="w-9 h-9" style={{ color: `rgb(${tint})` }} strokeWidth={1.5} />
+      <div className="h-28 relative flex items-center justify-center overflow-hidden" style={{ background: `linear-gradient(135deg, rgb(${tint} / 0.14), rgb(${tint} / 0.04))` }}>
+        {cover ? <img src={cover} alt={p.title} className="absolute inset-0 w-full h-full object-cover" />
+          : <BookOpen className="w-9 h-9" style={{ color: `rgb(${tint})` }} strokeWidth={1.5} />}
         {onFav && (
           <button data-testid={`fav-btn-${p.id}`} onClick={(e) => { e.stopPropagation(); onFav(p); }}
             className="absolute top-2 right-2 p-1.5 rounded-full bg-white/80 hover:bg-white transition-colors">

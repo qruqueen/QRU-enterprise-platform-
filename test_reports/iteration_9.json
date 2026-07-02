@@ -1,0 +1,61 @@
+{
+  "summary": "Iteration 9 — Full E2E validation of the QRU Product Rendering Engine™: backend (guards, async render, asset serving, traversal), Manufacturing Studio UI flow (assemble → QC → Treasure Standard → Render → gallery), and consumer catalog cover regression. All 7 backend tests pass; full frontend flow verified including a fresh Gemini-rendered cover appearing on the /learn catalog.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration9.py",
+    "/app/test_reports/pytest/iteration9.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "rendering_engine.render_product_job runs as an unbounded asyncio.create_task; if the backend restarts mid-render the product stays stuck in render_status='rendering'. Consider a status-timeout reaper or job queue (same pattern already noted for memory_engineering in iteration 8).",
+    "ManufacturingStudio.js: renderPollRef interval is only cleared on unmount and on terminal render_status; if the user re-clicks Re-render while the previous poll is still running (edge race after immediate 'rendered' resolution), a stale interval could double-poll. Minor — current code clears before each new render.",
+    "rendering.get_render exposes design_recommendation via a shared 'clean(p)' call. Ensure clean() strips MongoDB _id (already verified — no _id in responses).",
+    "rendering.py asset endpoint accepts the {fname} path param without an explicit auth dependency. This is intentional for public asset URLs but means anyone with a URL can fetch the PDF/images — acceptable since fnames are random gen_id()[:8] slugs, but worth noting for future signed-URL work."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration9.py",
+    "/app/test_reports/iteration_9.json",
+    "/app/test_reports/pytest/iteration9.xml"
+  ],
+  "success_rate": {
+    "backend": "100% (7/7 passed)",
+    "frontend": "100% (assemble → QC ~96s → Treasure Standard → render → gallery in ~9s → consumer catalog cover regression)"
+  },
+  "test_credentials": "admin@qru.com / qru-admin-2026 ; learner@qru.com / qru-learn-2026 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Assembled and QC-certified PRD-00021 (Interactive Lesson for KR-DEMO-001 'How the Human Heart Pumps Blood'). Rendered a fresh set of 5 branded assets (cover-67924721.png, thumb-97de7087.png, store-b638499d.png, plus QR + PDF). Backend test also triggered a fresh render on an existing Treasure Standard demo product.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Rendering Engine backend is stable under /api/rendering/{pid}/render, /api/rendering/{pid}, and /api/rendering/asset/{fname}. Rendered assets persisted to /app/backend/rendered_assets. Product cover_url is written back to the products doc so ProductCard in /learn shows the branded cover as background. UI testids: render-panel, ms-render, rendered-gallery, asset-qr, asset-pdf. Gemini Nano Banana (gemini-3.1-flash-image-preview) is producing real ~458KB PNGs; deterministic Pillow placeholder used as fallback. Total end-to-end (assemble→QC→render) takes ~105-120s; expect ≥90s just for QC.",
+  "test_report_details": {
+    "backend_tests_run": [
+      "TestRenderGuards::test_render_404_for_nonexistent_product — PASS",
+      "TestRenderGuards::test_render_400_for_non_certified — PASS (found non-certified product PRD-00020)",
+      "TestRenderEndToEnd::test_render_and_poll_treasure_standard_product — PASS (render_status='rendered', 5 asset keys, cover ~image/png >500B, PDF application/pdf >2KB)",
+      "TestAssetTraversal::test_traversal_dotdot_blocked — PASS (encoded ../ blocked)",
+      "TestAssetTraversal::test_traversal_dotdot_literal_blocked — PASS (400 with 'Invalid asset name')",
+      "TestAssetTraversal::test_missing_asset_returns_404 — PASS",
+      "TestCatalogCoverRegression::test_rendered_product_shows_cover_url — PASS (consumer catalog cover_url starts with /api/rendering/asset/)"
+    ],
+    "frontend_flows_verified": [
+      "Admin login → /manufacturing-studio loads with ms-kr-select and ms-type-select populated (11 verified KRs, incl. KR-DEMO-001/002/003)",
+      "Select KR-DEMO-001 + Interactive Lesson → ms-assemble creates PRD-00021 with pipeline.status='Manufacturing'",
+      "Click ms-run-qc → status transitions Manufacturing → Improving → Certified in ~96s; Treasure Standard™ Certified appears",
+      "render-panel (Product Rendering Engine™) appears once treasure_standard=true, with Render Branded Product™ button",
+      "Click ms-render → 'Rendering branded assets…' spinner shows; rendered-gallery appears in ~9s",
+      "Gallery shows Cover (768w), Thumbnail (286w), Store Graphic (1536w) images fully loaded from /api/rendering/asset/*.png; asset-qr and asset-pdf buttons visible and link to backend assets",
+      "Learner login → /learn: catalog shows Heart demo card with rendered cover image (from /api/rendering/asset/cover-*.png) as card background; Insulin demo card also shows rendered cover (from prior render). Regression PASS."
+    ],
+    "misc_observations": [
+      "React hydration warning 'In HTML, <span> cannot be a child of <option>' seen in console — cosmetic (does not affect functionality), caused by injected x-* tracker spans inside <option> elements. Not a blocker.",
+      "Rendering Engine correctly runs Gemini image gen — the freshly generated Heart cover renders as a purple/gold heart illustration (real AI output, ~768x width)."
+    ]
+  }
+}

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import {
   Loader2, Factory, CheckCircle2, Circle, XCircle, Lock, Sparkles, ShieldCheck,
-  AlertTriangle, PackageCheck, Rocket, ChevronDown,
+  AlertTriangle, PackageCheck, Rocket, ChevronDown, Image as ImageIcon, FileText, QrCode, Download,
 } from "lucide-react";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
@@ -30,7 +30,11 @@ export default function ManufacturingStudio() {
   const [pipeline, setPipeline] = useState(null);
   const [busy, setBusy] = useState(false);
   const [showScores, setShowScores] = useState(false);
+  const [render, setRender] = useState(null);
+  const [rendering, setRendering] = useState(false);
+  const renderPollRef = useRef(null);
   const pollRef = useRef(null);
+  const BACKEND = process.env.REACT_APP_BACKEND_URL;
 
   useEffect(() => {
     api.get("/knowledge-records?status=Verified").then((r) => setRecords(r.data));
@@ -55,7 +59,30 @@ export default function ManufacturingStudio() {
     }, 3000);
   }, []);
 
-  useEffect(() => () => clearInterval(pollRef.current), []);
+  useEffect(() => () => { clearInterval(pollRef.current); clearInterval(renderPollRef.current); }, []);
+
+  useEffect(() => {
+    if (pipeline?.id && pipeline.treasure_standard) {
+      api.get(`/rendering/${pipeline.id}`).then((r) => setRender(r.data)).catch(() => {});
+    }
+  }, [pipeline?.id, pipeline?.treasure_standard]);
+
+  const runRender = async () => {
+    if (!pipeline) return;
+    setRendering(true);
+    await api.post(`/rendering/${pipeline.id}/render`);
+    toast.info("Creative Studio™ is rendering branded assets…");
+    clearInterval(renderPollRef.current);
+    renderPollRef.current = setInterval(async () => {
+      const { data } = await api.get(`/rendering/${pipeline.id}`);
+      setRender(data);
+      if (data.render_status === "rendered" || data.render_status === "failed") {
+        clearInterval(renderPollRef.current);
+        setRendering(false);
+        if (data.render_status === "rendered") toast.success("Branded product rendered 🎨");
+      }
+    }, 3000);
+  };
 
   const assemble = async () => {
     setBusy(true);
@@ -225,6 +252,37 @@ export default function ManufacturingStudio() {
                 <div className="grid grid-cols-2 gap-1.5">
                   {pipeline.deliverables.map((d, i) => <span key={i} className="text-xs px-2 py-1 rounded bg-muted">{d.name}</span>)}
                 </div>
+              </div>
+            )}
+
+            {/* Product Rendering Engine */}
+            {pipeline.treasure_standard && (
+              <div className="bg-card border rounded-2xl p-5" data-testid="render-panel">
+                <p className="overline text-primary mb-3 flex items-center gap-1.5"><ImageIcon className="w-3.5 h-3.5" /> Product Rendering Engine™</p>
+                {(!render || render.render_status === "not_started") && !rendering && (
+                  <>
+                    <p className="text-xs text-muted-foreground mb-3">Render fully branded QRU assets — cover, thumbnail, store graphic, QR code, and print-ready PDF — using Design Intelligence™.</p>
+                    <button data-testid="ms-render" onClick={runRender} className="w-full px-4 py-2 rounded-md text-white text-sm font-medium" style={{ background: "hsl(var(--navy))" }}>Render Branded Product™</button>
+                  </>
+                )}
+                {rendering && <div className="flex items-center gap-2 text-sm"><Loader2 className="w-4 h-4 animate-spin text-primary" /> Rendering branded assets…</div>}
+                {render?.render_status === "rendered" && render.rendered_assets && (
+                  <div data-testid="rendered-gallery">
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      {["cover", "thumbnail", "store_graphic"].map((k) => render.rendered_assets[k] && (
+                        <a key={k} href={`${BACKEND}${render.rendered_assets[k]}`} target="_blank" rel="noreferrer" className="block">
+                          <img src={`${BACKEND}${render.rendered_assets[k]}`} alt={k} className="w-full h-20 object-cover rounded-lg border" />
+                          <p className="text-[10px] text-muted-foreground mt-0.5 capitalize">{k.replace("_", " ")}</p>
+                        </a>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      {render.rendered_assets.qr_code && <a data-testid="asset-qr" href={`${BACKEND}${render.rendered_assets.qr_code}`} target="_blank" rel="noreferrer" className="flex-1 flex items-center justify-center gap-1.5 text-xs px-3 py-2 rounded-md border hover:border-primary"><QrCode className="w-3.5 h-3.5" /> QR Code</a>}
+                      {render.rendered_assets.print_pdf && <a data-testid="asset-pdf" href={`${BACKEND}${render.rendered_assets.print_pdf}`} target="_blank" rel="noreferrer" className="flex-1 flex items-center justify-center gap-1.5 text-xs px-3 py-2 rounded-md border hover:border-primary"><FileText className="w-3.5 h-3.5" /> Print PDF</a>}
+                    </div>
+                    <button onClick={runRender} className="w-full mt-2 text-xs text-primary">Re-render</button>
+                  </div>
+                )}
               </div>
             )}
           </div>

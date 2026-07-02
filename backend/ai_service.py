@@ -8,6 +8,22 @@ logger = logging.getLogger("qru.ai")
 
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
 MODEL = ("openai", "gpt-5.5")
+IMAGE_MODEL = "gemini-3.1-flash-image-preview"
+
+
+async def generate_image(prompt: str, session_id: str):
+    """Generate a branded image via Gemini Nano Banana (Emergent key). Returns raw PNG bytes or None."""
+    import base64
+    try:
+        chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=session_id,
+                       system_message="You are QRU Creative Studio, a premium educational brand designer.")
+        chat.with_model("gemini", IMAGE_MODEL).with_params(modalities=["image", "text"])
+        _, images = await chat.send_message_multimodal_response(UserMessage(text=prompt))
+        if images:
+            return base64.b64decode(images[0]["data"])
+    except Exception as e:
+        logger.error(f"image generation failed: {e}")
+    return None
 
 
 async def llm_generate(system: str, prompt: str, session_id: str) -> str:
