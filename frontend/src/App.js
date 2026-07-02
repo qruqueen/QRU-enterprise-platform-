@@ -18,6 +18,7 @@ import ResearchCenter from "@/pages/ResearchCenter";
 import VerificationCenter from "@/pages/VerificationCenter";
 import ManufacturingOrders from "@/pages/ManufacturingOrders";
 import ProductManufacturing from "@/pages/ProductManufacturing";
+import ManufacturingStudio from "@/pages/ManufacturingStudio";
 import ProductLibrary from "@/pages/ProductLibrary";
 import ProductDetail from "@/pages/ProductDetail";
 import DigitalWorkforce from "@/pages/DigitalWorkforce";
@@ -69,6 +70,7 @@ function EnterpriseRoutes() {
         <Route path="verification" element={<VerificationCenter />} />
         <Route path="manufacturing" element={<ManufacturingOrders />} />
         <Route path="manufacture" element={<ProductManufacturing />} />
+        <Route path="manufacturing-studio" element={<ManufacturingStudio />} />
         <Route path="products" element={<ProductLibrary />} />
         <Route path="products/:id" element={<ProductDetail />} />
         <Route path="workforce" element={<DigitalWorkforce />} />

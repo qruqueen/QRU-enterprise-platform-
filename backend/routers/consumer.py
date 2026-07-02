@@ -57,13 +57,14 @@ LAYERS = [
 ]
 
 # Learning styles — presentation changes, the truth does not.
+# Each mode lists candidate fields in priority order (first filled one is used).
 LEARNING_MODES = [
-    ("child", "Child Mode", "children_version"),
-    ("consumer", "Consumer Mode", "qru_translation"),
-    ("student", "Student Mode", "student_notes"),
-    ("professional", "Professional Mode", "professional_version"),
-    ("scientific", "Scientific Mode", "deep_roots"),
-    ("story", "Story Mode", "story_version"),
+    ("child", "Child Mode", ["children_version"]),
+    ("consumer", "Consumer Mode", ["qru_translation"]),
+    ("student", "Student Mode", ["student_version", "student_notes", "adult_version"]),
+    ("professional", "Professional Mode", ["professional_version"]),
+    ("scientific", "Scientific Mode", ["deep_roots"]),
+    ("story", "Story Mode", ["story_version"]),
 ]
 
 
@@ -91,9 +92,10 @@ def build_understanding(kr):
             layers.append({"title": title, "subtitle": subtitle, "parts": parts})
 
     modes = []
-    for key, label, field in LEARNING_MODES:
-        if _filled(kr.get(field)):
-            modes.append({"key": key, "label": label, "content": kr.get(field)})
+    for key, label, fields in LEARNING_MODES:
+        chosen = next((kr.get(f) for f in fields if _filled(kr.get(f))), None)
+        if chosen:
+            modes.append({"key": key, "label": label, "content": chosen})
 
     v = kr.get("verification") or {}
     verification = {
