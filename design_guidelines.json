@@ -1,0 +1,85 @@
+{
+  "project_name": "QRU FACTORY™",
+  "domain": "Enterprise SaaS / Knowledge Manufacturing Operating System",
+  "theme": "Light",
+  "archetype": "4 (Swiss & High-Contrast)",
+  "design_philosophy": "Modern enterprise, professional, minimal, fast, responsive, highly organized, accessible. Clarity over decoration. Authority, clarity, function-first.",
+  "typography": {
+    "headings_font": "Outfit",
+    "body_font": "IBM Plex Sans",
+    "strategy": "Swiss Brutalist tech vibe: High contrast weights. Headings use 'tracking-tight'. Overlines/Labels are Uppercase + tracking-[0.2em]."
+  },
+  "colors": {
+    "background": "#F8F9FA",
+    "foreground": "#0A0A0A",
+    "card": "#FFFFFF",
+    "card_foreground": "#0A0A0A",
+    "primary": "#0047FF",
+    "primary_foreground": "#FFFFFF",
+    "secondary": "#E5E7EB",
+    "secondary_foreground": "#0A0A0A",
+    "muted": "#F3F4F6",
+    "muted_foreground": "#6B7280",
+    "accent": "#F3F4F6",
+    "accent_foreground": "#0A0A0A",
+    "destructive": "#EF4444",
+    "destructive_foreground": "#FFFFFF",
+    "border": "#E5E7EB",
+    "input": "#E5E7EB",
+    "ring": "#0047FF",
+    "success": "#10B981",
+    "warning": "#F59E0B"
+  },
+  "spacing_and_layout": {
+    "philosophy": "Control Room Grid for Dashboards: Density, Data Correlation, Scanability.",
+    "grid_strategy": "Base grid-cols-1 md:grid-cols-3 lg:grid-cols-4, tight gaps (gap-4 or gap-6).",
+    "alignment": "Left-align for data, inputs, and dense content. Center only for isolated cards or empty states."
+  },
+  "components_rules": {
+    "cards_and_surfaces": "Flat solid background, subtle 1px border, max 4px radius (rounded-sm or rounded-md). No shadows by default. On hover: slight lift (-translate-y-1) and subtle shadow (shadow-sm).",
+    "buttons": "Sharp, clean, high contrast. Only use primary color for main CTAs.",
+    "tables_and_grids": "Dense, highly organized data grids with clear column headers. Striped rows or border-b for separation.",
+    "glassmorphism": "Avoid glassmorphism. Use solid backgrounds to maintain data clarity and enterprise authority."
+  },
+  "icons": "lucide-react",
+  "media": {
+    "image_urls": [
+      {
+        "url": "https://images.unsplash.com/photo-1707730318002-6fbd8ecd6b77?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwzfHxhYnN0cmFjdCUyMGJsdWUlMjBnZW9tZXRyaWMlMjBiYWNrZ3JvdW5kfGVufDB8fHx8MTc4MzAxMjk5Nnww&ixlib=rb-4.1.0&q=85",
+        "category": "Hero / Command Center Background",
+        "description": "Abstract blue and white geometric background for the Executive Command Center header."
+      },
+      {
+        "url": "https://images.pexels.com/photos/31869537/pexels-photo-31869537.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "User Profile / AI Digital Employee",
+        "description": "Professional headshot for the 'Chief Executive Agent' or User Profile."
+      },
+      {
+        "url": "https://images.pexels.com/photos/29852895/pexels-photo-29852895.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "User Profile / AI Digital Employee",
+        "description": "Professional headshot for the 'Research Director' or other AI agent."
+      },
+      {
+        "url": "https://images.pexels.com/photos/36631701/pexels-photo-36631701.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "Auth Background / Empty State",
+        "description": "Spacious and bright modern corporate office area for login page or empty states."
+      }
+    ]
+  },
+  "accessibility_and_testing": {
+    "contrast": "Strict APCA/WCAG contrast compliance. Text on primary elements must be white (#FFFFFF). Tint greys towards blue/cool.",
+    "testing_attributes": "All interactive and key informational elements MUST include a data-testid attribute in kebab-case (e.g., data-testid='submit-button')."
+  },
+  "instructions_to_main_agent": [
+    "Use React with .jsx/.js extensions. Do not use TypeScript (.tsx).",
+    "Set up a global layout with a collapsible sidebar (navigation to all enterprise divisions) and top header.",
+    "Integrate 'Outfit' font for headings and 'IBM Plex Sans' for body text.",
+    "Build the Executive Command Center: KPI cards, charts (using Recharts or Shadcn charts), and a Workflow timeline/visualization.",
+    "Build the Knowledge Records page using a data grid/table for fast scanning.",
+    "Build the Manufacturing Orders page using a Kanban board with drag-and-drop or visual lane states.",
+    "Build the AI Digital Workforce section displaying employee cards (using the provided headshot URLs).",
+    "Implement the Conversational Command Center (chat interface) as a slide-out panel or a dedicated central view for executive commands.",
+    "Customize Shadcn components heavily: 4px border radius, 1px solid borders, and remove heavy default box-shadows.",
+    "Ensure 'data-testid' is strictly added to all buttons, inputs, links, tabs, and actionable components for robust testing."
+  ]
+}
