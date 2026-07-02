@@ -175,9 +175,10 @@ async def _process_job(job_id, kr_id, actor):
         job = await db.manufacturing_jobs.find_one({"id": job_id})
         steps = job["steps"]
         steps[-1]["status"] = "done"
+        final_status = "failed" if (manufactured == 0 and any(s["status"] == "failed" for s in steps)) else "complete"
         await db.manufacturing_jobs.update_one(
             {"id": job_id},
-            {"$set": {"steps": steps, "progress": 100, "status": "complete",
+            {"$set": {"steps": steps, "progress": 100, "status": final_status,
                       "current_step": "Understanding Manufactured", "updated_at": now_iso()}})
 
         rec = await db.knowledge_records.find_one({"id": kr_id})

@@ -40,6 +40,15 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 - **QRU Focus Audio**: Web-Audio player (Off/Focus/Calm/Nature/Orchestra/Lo-Fi/Solfeggio/Instrumental), muted by default, header + Settings controls (swappable for licensed audio later).
 - **Search** now indexes Colleges. Verified by testing agent: frontend 40/40, backend iteration-2 15/15.
 
+## Implemented — Iteration 3 (2026-07-02) · "Research Once. Verify Once. Manufacture Forever."
+- **Expanded Knowledge Record** — ~46 AI-manufacturable fields across 7 batches (Core Understanding, Comprehension Aids, Vocabulary & FAQ, Assessment, Audience Versions, Guidance Notes, Media & Product Assets): incl. Kingdom Lion Verification Questions™, Vocabulary Decoder™, Cheat Sheet™, Conversation Starter™, quiz, FAQ, story/children/teen/adult/professional versions, poster/video/podcast/presentation scripts, lesson plans. Each field has status (Empty/Draft/Verified/Approved) + version history.
+- **AI Manufacturing Pipeline** — background job (`manufacturing_engine.py`) runs 7 sequential GPT-5.5 batches with live progress; `POST /knowledge-records/{id}/manufacture-all` → poll `GET /manufacturing-jobs/{id}`; auto-triggers on verification approval. Frontend shows live progress + accordion of manufactured fields with per-field regenerate/approve.
+- **Manufacturing Recipes** — `POST /products/assemble` composes products from EXISTING KR fields (no regeneration); assembled products stamped with `kr_version`.
+- **Traceability** — editing a KR bumps version and flips dependent products to "Needs Regeneration" (+ notification); `GET /knowledge-records/{id}/dependents`.
+- **Dashboard** — Live Manufacturing Jobs panel, Recently Updated Records, needs-regeneration count.
+- Verified by testing agent: backend 10/10 (incl. real full-pipeline run), frontend 100%.
+
+
 ## Backlog / Next
 - Replace placeholder Focus Audio with licensed tracks/QRU frequency collections (URLs pending from client).
 - Product Recipe editor per product type; per-section verification rejection; real knowledge-growth time-series.

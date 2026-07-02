@@ -126,8 +126,8 @@ export default function Dashboard() {
             <div className="mt-6 pt-5 border-t">
               <p className="overline text-primary mb-3">Recently Updated Records</p>
               <div className="space-y-2">
-                {s.recently_updated.map((r) => (
-                  <Link key={r.id} to={`/knowledge/${r.id}`} className="flex items-center justify-between text-sm hover:text-primary transition-colors">
+                {s.recently_updated.map((r, i) => (
+                  <Link key={r.id || i} to={`/knowledge/${r.id}`} className="flex items-center justify-between text-sm hover:text-primary transition-colors">
                     <span><span className="font-mono text-xs text-muted-foreground mr-2">{r.kr_code}</span>{r.title}</span>
                     <StatusBadge status={r.verification_status} />
                   </Link>
@@ -141,8 +141,8 @@ export default function Dashboard() {
           <h2 className="font-heading font-semibold text-lg mb-4">Recent Activity</h2>
           <div className="space-y-3">
             {(s.recent_activity || []).length === 0 && <p className="text-sm text-muted-foreground">No recent activity yet.</p>}
-            {(s.recent_activity || []).map((a) => (
-              <div key={a.id} className="flex items-start gap-3 text-sm">
+            {(s.recent_activity || []).map((a, i) => (
+              <div key={a.id || i} className="flex items-start gap-3 text-sm">
                 <div className="w-1.5 h-1.5 rounded-full bg-gold mt-2 shrink-0" />
                 <div><span className="font-medium">{a.actor}</span> <span className="text-muted-foreground">{a.action}</span> <span>{a.detail}</span></div>
               </div>
