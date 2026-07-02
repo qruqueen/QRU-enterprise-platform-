@@ -58,11 +58,34 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 - Verified by testing agent: backend 10/10 (incl. real full-pipeline run), frontend 100%.
 
 
-## Backlog / Next
-- Replace placeholder Focus Audio with licensed tracks/QRU frequency collections (URLs pending from client).
-- Product Recipe editor per product type; per-section verification rejection; real knowledge-growth time-series.
-- Wire director→order/record assignment (department currently shows enterprise-wide ops); college linkage on Manufacturing Orders/Products by `college_id`.
-- Stand up future divisions (Trading/Finance/AI/…) content pipelines.
+## Implemented — Iteration 5 & 6 (2026-07-02) · V2.0 Evolution + Manufacturing Engine 2.0
+
+### Enterprise Mode vs Consumer Mode (role-driven)
+- `ModeContext` (frontend): Customer/ReadOnly roles are LOCKED to Consumer Mode; staff default to Enterprise with a header toggle to preview Consumer Mode ("Preview Consumer Mode" / "Enterprise" buttons). `App.js` ModeRouter renders `EnterpriseRoutes` or `ConsumerRoutes`.
+- Consumer test user: learner@qru.com / qru-learn-2026 (Customer).
+
+### Consumer Learning Platform (customer-facing, at /learn)
+- `ConsumerLayout` + pages: Discover/Catalog, Learn (product), My Learning, Favorites, Certificates, Learning Paths.
+- Backend `routers/consumer.py`: catalog, product understanding (assembled from the verified Knowledge Record — no regeneration), enroll, progress, favorite, certificates, pathways, recommendations. Collections: `consumer_enrollments`, `consumer_certificates`.
+- Learn page renders: Kingdom Lion™ Verification card (expandable refs), 4-layer Layered Understanding selector (Quick Understanding/Understand It/Scientific Explanation/Professional Resources), 6 Learning Modes (Child/Consumer/Student/Professional/Scientific/Story), the full ordered QRU branded educational structure, Mark Complete → certificate.
+- Demo data: 3 fully-populated verified records + published Treasure Standard products seeded via `consumer_seed.py` (is_demo=True, marked with "Demo Data" badges).
+
+### Executive Command Center — Mission-First (Enterprise Mode only)
+- New `MissionControl.js` (index dashboard) + `routers/command_center.py`: Daily Executive Briefing, Understanding Impact™ KPIs (people reached, lives helped, master records, understanding assets, lessons completed, certificates, treasure products, etc.) beside business metrics, transparent Enterprise Health breakdown (10 systems, expandable: why/owner/recommendation/urgency/next action), Department Status cards, intelligent Alerts & Recommendations panel, live org activity. ENTERPRISE MODE badge; mission copy "Verified knowledge enters. Understanding grows. Lives improve."
+- `EnterpriseHealth.js` full dashboard page; `ExperienceLab.js` (AI experience evaluation).
+
+### Manufacturing Engine 2.0 + Automatic Treasure Standard™ Quality Control
+- `manufacturing2.py` + `routers/pipeline.py` (/api/manufacturing2/*): 13 Manufacturing Recipes™ (required KR fields + stages + deliverables), Missing-Content Detection, assembly-first `assemble` (composes from verified fields), `manufacture-missing` (fills only missing fields), Product Assembly stage + deliverables, 8 Release Gates.
+- Automatic QC loop: scores product (GPT), routes each failing criterion to its owning department (routing rules), auto-improves (real GPT content rewrite + Creative Studio deterministic branding for Visual/Accessibility/Brand), re-scores monotonically until Treasure Standard™ thresholds met → certifies → unlocks gated Release. Release is LOCKED until all gates pass. `ManufacturingStudio.js` frontend with live stages/gates/QC panel.
+- Verified: backend 11/11 (real GPT QC certified in 2 rounds), frontend 100%.
+
+## Backlog / Next (updated 2026-07-02)
+- **P0 — Memory Engineering™ / Music Studio™ / Character Voices™** (spec received): memory hooks/chants, music manufacturing recipe, character voice personalities, Legacy Learners™ children's division, adaptive memory formats. NOT yet built.
+- **P1 — QRU Design Intelligence™ / Brand Library™** (spec received): Design Library, Master Asset Library, design language learning, design checklist, Creative Studio autonomy. NOT yet built.
+- **P1 — Deep Product Assembly visual assets**: real print/mobile layouts, thumbnails, QR code images, store graphics (currently represented as assembly artifacts, not rendered binaries).
+- P2: WebSocket/SSE for live org activity (currently polling); Recipe editor UI; wire director→order assignment; future divisions content.
+
+
 
 ## Backlog / Next (iteration 1 — superseded items kept for history)
 - P1: Stream AI responses (SSE) in Command Console & product generation for token-by-token UX.
