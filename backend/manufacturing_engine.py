@@ -162,6 +162,10 @@ async def _process_job(job_id, kr_id, actor):
             await log_org(voice[0], voice[1], f"is manufacturing {label.lower()}", job.get("kr_code", ""))
 
             rec = await db.knowledge_records.find_one({"id": kr_id})
+            if not rec:
+                await db.manufacturing_jobs.update_one(
+                    {"id": job_id}, {"$set": {"status": "failed", "current_step": "Record removed", "updated_at": now_iso()}})
+                return
             field_status = rec.get("field_status", {})
             try:
                 data = await _generate_batch(_context(rec), kind, spec, f"mfg-{kr_id}-{i}")

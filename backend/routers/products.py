@@ -79,7 +79,7 @@ async def creative_brief(pid: str, user=Depends(get_current_user)):
     brief = parse_json(raw) or {}
     # related products from same family
     related = await db.products.find(
-        {"family": p.get("family"), "id": {"$ne": pid}}, {"title": 1, "product_type": 1, "product_code": 1}
+        {"family": p.get("family"), "id": {"$ne": pid}}, {"id": 1, "title": 1, "product_type": 1, "product_code": 1}
     ).to_list(4)
     await db.products.update_one({"id": pid}, {"$set": {
         "creative_brief": brief,
@@ -290,7 +290,7 @@ async def set_status(pid: str, data: StatusInput, user=Depends(get_current_user)
     p = await db.products.find_one({"id": pid})
     if not p:
         raise HTTPException(404, "Not found")
-    if data.status == "Published" and not p.get("creative_brief"):
+    if data.status == "Published" and not (p.get("creative_brief") and p.get("creative_status") == "Reviewed"):
         raise HTTPException(400, "Send this product through the Creative Studio before publication.")
     await db.products.update_one({"id": pid}, {"$set": {"status": data.status, "updated_at": now_iso()}})
     return clean(await db.products.find_one({"id": pid}))

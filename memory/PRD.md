@@ -40,6 +40,15 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 - **QRU Focus Audio**: Web-Audio player (Off/Focus/Calm/Nature/Orchestra/Lo-Fi/Solfeggio/Instrumental), muted by default, header + Settings controls (swappable for licensed audio later).
 - **Search** now indexes Colleges. Verified by testing agent: frontend 40/40, backend iteration-2 15/15.
 
+## Implemented — Iteration 4 (2026-07-02) · QRU Enterprise Organization™
+- **Executive Board** — 13 AI directors (Kingdom Lion™, Legacy Eagle™, Legacy Bear™, Queen Unity™, Crowned Bull™, Royal Phoenix™, Consumer Advocate™, Marketing/Sales/Brand/Manufacturing/Health, Creative Studio Director™) in an **Expertise Registry** (`registry_agents`) with expertise, workload, availability, projects.
+- **Emergent collaboration** — 13 Emergent platform specialists (Software Architect, Security, Testing, Deployment, UX, etc.) registered as origin=Emergent; QRU extends, not replaces them.
+- **Collaborative review teams** — `POST /registry/assemble` assembles the most qualified specialists per task type.
+- **Live Organization Activity feed** — department-voiced entries emitted during manufacturing (per batch) and verification; polled on the Organization page.
+- **QRU Creative Studio™** — brand standards (color system, typography, principles, QRU Shield master asset), AI product-page **creative briefs** (who-for, problem, skills, what's included, reading level, time, next path, related products), a Creative Quality Review queue, and a **publication gate** (products can't publish until Creative-reviewed).
+- Verified by testing agent: backend 10/10, frontend 100%. Fixed related-product link projection, publish-gate tightening, and background-job None-guard.
+
+
 ## Implemented — Iteration 3 (2026-07-02) · "Research Once. Verify Once. Manufacture Forever."
 - **Expanded Knowledge Record** — ~46 AI-manufacturable fields across 7 batches (Core Understanding, Comprehension Aids, Vocabulary & FAQ, Assessment, Audience Versions, Guidance Notes, Media & Product Assets): incl. Kingdom Lion Verification Questions™, Vocabulary Decoder™, Cheat Sheet™, Conversation Starter™, quiz, FAQ, story/children/teen/adult/professional versions, poster/video/podcast/presentation scripts, lesson plans. Each field has status (Empty/Draft/Verified/Approved) + version history.
 - **AI Manufacturing Pipeline** — background job (`manufacturing_engine.py`) runs 7 sequential GPT-5.5 batches with live progress; `POST /knowledge-records/{id}/manufacture-all` → poll `GET /manufacturing-jobs/{id}`; auto-triggers on verification approval. Frontend shows live progress + accordion of manufactured fields with per-field regenerate/approve.
