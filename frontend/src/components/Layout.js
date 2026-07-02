@@ -26,6 +26,7 @@ const NAV = [
   { to: "/manufacturing-studio", label: "Manufacturing Studio", icon: PackageCheck, testid: "nav-mfg-studio" },
   { to: "/products", label: "Product Library", icon: Library, testid: "nav-products" },
   { to: "/creative-studio", label: "Creative Studio™", icon: Palette, testid: "nav-creative" },
+  { to: "/design-intelligence", label: "Design Intelligence™", icon: Sparkles, testid: "nav-design-intel" },
   { to: "/experience-lab", label: "Experience Lab™", icon: Eye, testid: "nav-experience" },
   { section: "Enterprise" },
   { to: "/workforce", label: "Digital Workforce", icon: Bot, testid: "nav-workforce" },

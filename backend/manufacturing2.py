@@ -387,6 +387,13 @@ async def _certify(pid, scores):
         await _set_stage(pid, label, "done")
     await log_org("Organizational Health Director™", "Organizational Health",
                   "certified Treasure Standard™ for", p.get("product_code", ""), "success")
+    # Design Intelligence learns from every Treasure Standard™ product.
+    try:
+        from design_intelligence import learn_from_product
+        certified = await db.products.find_one({"id": pid})
+        await learn_from_product(certified)
+    except Exception as e:
+        logger.error(f"design learning hook failed: {e}")
     await db.notifications.insert_one({
         "id": gen_id(), "message": f"{p.get('product_code')} passed Quality Control and earned Treasure Standard™ — ready for release.",
         "level": "success", "read": False, "created_at": now_iso()})

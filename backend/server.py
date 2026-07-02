@@ -19,7 +19,9 @@ from routers.organization import router as organization_router, seed_registry
 from routers.consumer import router as consumer_router
 from routers.command_center import router as command_center_router
 from routers.pipeline import router as pipeline_router
+from routers.design import router as design_router
 from consumer_seed import seed_consumer_demo
+from design_intelligence import seed_design_intelligence
 from routers.misc import (
     customers_router, notif_router, health_router, search_router, users_router,
 )
@@ -39,7 +41,7 @@ for r in [
     auth_router, knowledge_router, manufacturing_router, workforce_router,
     products_router, analytics_router, command_router, translation_router,
     colleges_router, jobs_router, organization_router, customers_router, notif_router, health_router,
-    search_router, users_router, consumer_router, command_center_router, pipeline_router,
+    search_router, users_router, consumer_router, command_center_router, pipeline_router, design_router,
 ]:
     app.include_router(r)
 
@@ -57,6 +59,7 @@ async def startup():
     await seed()
     await seed_registry()
     await seed_consumer_demo()
+    await seed_design_intelligence()
     logger.info("QRU Factory seeded and operational")
 
 

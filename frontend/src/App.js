@@ -24,6 +24,7 @@ import ProductDetail from "@/pages/ProductDetail";
 import DigitalWorkforce from "@/pages/DigitalWorkforce";
 import Organization from "@/pages/Organization";
 import CreativeStudio from "@/pages/CreativeStudio";
+import DesignIntelligence from "@/pages/DesignIntelligence";
 import Colleges from "@/pages/Colleges";
 import CollegeWorkspace from "@/pages/CollegeWorkspace";
 import Analytics from "@/pages/Analytics";
@@ -63,6 +64,7 @@ function EnterpriseRoutes() {
         <Route path="experience-lab" element={<ExperienceLab />} />
         <Route path="organization" element={<Organization />} />
         <Route path="creative-studio" element={<CreativeStudio />} />
+        <Route path="design-intelligence" element={<DesignIntelligence />} />
         <Route path="knowledge" element={<KnowledgeRecords />} />
         <Route path="knowledge/:id" element={<KnowledgeRecordDetail />} />
         <Route path="translation-engine" element={<TranslationEngine />} />

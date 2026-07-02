@@ -1,0 +1,46 @@
+{
+  "summary": "Iteration 7 — QRU Design Intelligence™ end-to-end validation (backend + frontend + learning hook). All 11 pytest cases in test_iteration7.py PASS in ~42s (including a real GPT-heavy QC certification loop that added a Design Library reference + Master Asset in one round). Backend: GET /api/design/stats returns {brand_standards:1, design_references:6→8, master_assets:9→11, design_principles:6} ✓; GET /api/design/brand-library returns 5 colors (Royal Purple #35106A verified), 2 typography, 6 templates, plus principles/components/spacing/shield ✓; GET /api/design/design-library returns references list ✓; GET /api/design/master-assets?q=heart correctly narrows results and every returned asset contains 'heart' in title/asset_id/keywords ✓; GET /api/design/design-language returns principles that include a 'Learned' category entry ✓; GET /api/design/recommend-templates?product_type=Poster&audience=Children returns cover_template='Poster Template™', palette='Bright QRU (Gold-forward)', illustration_style='Bold', plus layout/typography/tone/icon_set/brand_elements (with QRU Shield™) ✓; unknown product_type falls back to Master Cover Template™ ✓; unauthenticated requests to /api/design/stats return 401/403 ✓. Learning-hook E2E: POST /api/manufacturing2/assemble on KR-DEMO-003 (Insulin) → Interactive Lesson, POST /{pid}/quality-control, polled /{pid}/pipeline every 5s; certified in ~40s (treasure_standard=true) and /api/design/stats confirmed design_references + master_assets each +1 ✓. Frontend E2E (admin@qru.com): /design-intelligence loads with 4 stat cards + 5 tabs (di-tab-brand/design/assets/language/autonomy). Brand tab shows 5 color swatches, typography, principles, components, templates. Master Assets tab: di-asset-search filters from 12→2 for 'heart'. Design Language tab shows Learned chip. Studio Autonomy tab: di-rec-type=Poster + di-rec-aud=Children + click di-recommend renders di-rec-result grid with all 8 fields (Cover Template Poster Template™, Layout Single Focal, Illustration Bold, Palette Bright QRU (Gold-forward), Typography Outfit rounded, Tone Playful & encouraging, Icon Set QRU Line Icons, Brand Elements QRU Shield™, Brand Footer, Treasure Standard™ Badge). Regression: Mission Control loads, /manufacturing-studio loads with ms-kr-select, learner@qru.com redirected to /learn even when hitting /design-intelligence directly (Consumer Mode lock intact).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/manufacturing2/recipes", "issue": "Response shape changed since iteration 6 — was a bare list, now wrapped as {\"recipes\": [...]}. Fine, but callers/tests need to unwrap; test updated to handle both."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Design Intelligence · Studio Autonomy — <select><option>", "issues": ["Same dev-only React hydration warning as iterations 5 & 6 fires when the two <select> pickers render: 'In HTML, <span> cannot be a child of <option>'. Traces back to the Emergent dev-time instrumentation wrapping option labels in a display:contents <span>. No functional impact; recommend replacing native <select> with a headless Radix/shadcn Select across ManufacturingStudio.js, ExperienceLab.js, and DesignIntelligence.js to silence it."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration7.py",
+    "/app/test_reports/pytest/iteration7_results.xml"
+  ],
+  "action_items": [
+    "LOW: Consider standardising GET /api/manufacturing2/recipes response shape ({recipes:[...]} vs bare list) — iteration 6 test asserted bare list and would now fail without the compat unwrap.",
+    "LOW: Cosmetic — swap native <select> for shadcn Select in DesignIntelligence.js/ManufacturingStudio.js/ExperienceLab.js to remove the recurring dev-instrumentation hydration warning."
+  ],
+  "critical_code_review_comments": [
+    "design_intelligence.learn_from_product(): duplicate-principle guard uses {'category':'Learned','principle':{'$regex': ptype}} without escaping ptype. If a future product_type ever contains regex metachars (e.g. '+', '(', '.') the query will error or match unintendedly. Use re.escape(ptype) or a plain equality filter on a normalised field.",
+    "routers/design.py has no role guard — /api/design/* is readable by any authenticated user including learner@qru.com (Customer). That's fine for read-only brand data but /api/design/checklist/{pid} also has no role guard; if this later mutates state or exposes internal review data it should be gated to Enterprise roles (Administrator/Executive/Creative Studio Director).",
+    "design_intelligence.seed_design_intelligence(): the design_library seed loop iterates approved products but never gates on len limits and never runs after the initial empty-collection check. If a demo KR set gets reseeded later with new Treasure Standard products, they will not backfill because 'if count_documents == 0' short-circuits. Consider making learn_from_product() itself idempotent (it already is per product) and simply invoking it for all approved products on every startup, letting the per-product 'find_one({product_id: pid})' skip existing entries.",
+    "design_intelligence.library_stats() hardcodes brand_standards:1 rather than counting db.brand_library.count_documents({'kind':'standards'}). Cheap and wrong once versioning is introduced — recommend counting.",
+    "routers/design.py GET /master-assets does a case-insensitive regex on title/keywords/asset_id with no length cap. A very long user-supplied q could DoS the query planner; consider clamping q to e.g. 64 chars and escaping regex metachars.",
+    "DesignIntelligence.js: useEffect fires 5 parallel GETs on mount and does not handle rejected promises — a 401 or 500 on any single endpoint leaves the tab silently empty. Add .catch() with a toast or a per-section 'Failed to load' state.",
+    "DesignIntelligence.js searchAssets() debounces zero times — every keystroke fires a GET. Add a 250-300ms debounce."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration7.py (new — 11 tests: stats shape, brand/design/master-assets/language contents, master-assets keyword filter, recommender happy/fallback paths, manufacturing2 regression, real-GPT QC learning hook, unauth guard)"
+  ],
+  "success_rate": {
+    "backend": "100% (11/11 iteration-7 pytest cases pass in ~42s including real GPT-heavy QC certification loop)",
+    "frontend": "100% for Design Intelligence (all 5 tabs, color swatches, typography, principles, components, templates, master-assets keyword filter 12→2 for 'heart', Learned chip in Design Language, Studio Autonomy recommender end-to-end) + Mission Control + Manufacturing Studio + Consumer Mode learner lock. Only cosmetic dev-time console warning remains (same as prior iterations)."
+  },
+  "test_credentials": "admin@qru.com / qru-admin-2026 (Administrator) and learner@qru.com / qru-learn-2026 (Customer) — from /app/memory/test_credentials.md, both verified via /api/auth/login and /api/auth/me.",
+  "seed_data_creation": "Assembled and certified one additional Interactive Lesson from KR-DEMO-003 during the learning-hook test — this grew design_library from 6→8 references and master_assets from 9→11 assets (verified in /api/design/stats before/after screenshots). No test users were created.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Design Intelligence surface (all under /api/design, auth required): GET /stats → {brand_standards, design_references, master_assets, design_principles}; GET /brand-library → BRAND_STANDARDS document (5 colors, 2 typography, 6 templates, principles/components/spacing/shield); GET /design-library[?product_type=X] → {references:[]}; GET /master-assets[?q=<kw>&category=<cat>] → {assets:[]}, q is case-insensitive regex on title|keywords|asset_id; GET /design-language → {principles:[{category: Branding|Layout|Typography|Spacing|Trust|Learned, ...}]}; GET /recommend-templates?product_type=X&audience=Y → {cover_template,layout,illustration_style,palette,typography,tone,icon_set,brand_elements[]}; POST /checklist/{pid} → deterministic 10-question checklist. Learning hook lives in manufacturing2._certify() → design_intelligence.learn_from_product(product) which inserts one design_library ref + one master_assets row + one design_language 'Learned' principle (dedup by product_id + regex on ptype). Frontend route /design-intelligence, nav testid nav-design-intel. Key testids: di-tab-{brand,design,assets,language,autonomy}, di-brand, di-design, di-assets, di-asset-search, di-language, di-autonomy, di-rec-type, di-rec-aud, di-recommend, di-rec-result, di-asset-<id>, di-ref-<id>. Regression preserved: Manufacturing Studio, Mission Control, Consumer Mode locked to /learn for learner. Known cosmetic dev-only warning: '<span> cannot be a child of <option>' whenever native <select> is used.",
+  "rca of the issue": "n/a — no functional bugs found. The minor manufacturing2/recipes response-shape change (bare list → {recipes:[...]}) was corrected in-test with a compat unwrap; flag upstream in case other consumers exist."
+}
