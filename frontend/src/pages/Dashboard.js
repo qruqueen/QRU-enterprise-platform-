@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "@/lib/api";
-import { PageHeader } from "@/components/shared";
+import { PageHeader, StatusBadge } from "@/components/shared";
 import {
   BookOpen, Factory, Library, Bot, ShieldCheck, TrendingUp, Activity, ArrowUpRight,
-  Gem, DollarSign, Sparkles, Users,
+  Gem, DollarSign, Sparkles, Users, Boxes,
 } from "lucide-react";
 
 const WORKFLOW = [
@@ -93,10 +93,28 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Active Manufacturing Jobs */}
+      {(s.active_jobs || []).length > 0 && (
+        <div className="mt-8 bg-card border rounded-md p-6" data-testid="dashboard-jobs">
+          <div className="flex items-center gap-2 mb-4"><Boxes className="w-4 h-4 text-gold" /><h2 className="font-heading font-semibold text-lg">Live Manufacturing Jobs</h2></div>
+          <div className="space-y-3">
+            {s.active_jobs.map((j) => (
+              <Link key={j.id} to={`/knowledge/${j.kr_id}`} className="block border rounded-sm p-3 hover:border-primary transition-colors">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">{j.kr_code} · {j.title}</span>
+                  <span className="text-xs text-muted-foreground">{j.current_step} · {j.progress}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden"><div className="h-full bg-gold transition-all" style={{ width: `${j.progress}%` }} /></div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mt-8 grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-card border rounded-md p-6">
           <h2 className="font-heading font-semibold text-lg mb-1">The QRU Manufacturing Workflow</h2>
-          <p className="text-sm text-muted-foreground mb-5">From idea to continuous improvement — governed at every step.</p>
+          <p className="text-sm text-muted-foreground mb-5">Research Once. Verify Once. Manufacture Forever.</p>
           <div className="flex flex-wrap gap-2">
             {WORKFLOW.map((step, i) => (
               <span key={step} className="inline-flex items-center gap-2 border rounded-sm px-3 py-1.5 text-xs font-medium bg-muted/40">
@@ -104,6 +122,19 @@ export default function Dashboard() {
               </span>
             ))}
           </div>
+          {s.recently_updated?.length > 0 && (
+            <div className="mt-6 pt-5 border-t">
+              <p className="overline text-primary mb-3">Recently Updated Records</p>
+              <div className="space-y-2">
+                {s.recently_updated.map((r) => (
+                  <Link key={r.id} to={`/knowledge/${r.id}`} className="flex items-center justify-between text-sm hover:text-primary transition-colors">
+                    <span><span className="font-mono text-xs text-muted-foreground mr-2">{r.kr_code}</span>{r.title}</span>
+                    <StatusBadge status={r.verification_status} />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="bg-card border rounded-md p-6">

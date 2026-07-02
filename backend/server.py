@@ -14,6 +14,7 @@ from routers.analytics import router as analytics_router
 from routers.command import router as command_router
 from routers.translation import router as translation_router
 from routers.colleges import router as colleges_router
+from routers.jobs import router as jobs_router
 from routers.misc import (
     customers_router, notif_router, health_router, search_router, users_router,
 )
@@ -32,7 +33,7 @@ async def root():
 for r in [
     auth_router, knowledge_router, manufacturing_router, workforce_router,
     products_router, analytics_router, command_router, translation_router,
-    colleges_router, customers_router, notif_router, health_router,
+    colleges_router, jobs_router, customers_router, notif_router, health_router,
     search_router, users_router,
 ]:
     app.include_router(r)

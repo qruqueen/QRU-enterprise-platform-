@@ -18,10 +18,13 @@ export default function ProductManufacturing() {
   const [audience, setAudience] = useState("General public");
   const [level, setLevel] = useState("Introductory");
   const [loading, setLoading] = useState(false);
+  const [assembling, setAssembling] = useState(false);
   const [result, setResult] = useState(null);
+  const [recipes, setRecipes] = useState({});
 
   useEffect(() => {
     api.get("/knowledge-records").then((r) => setRecords(r.data)).catch(() => {});
+    api.get("/products/recipes").then((r) => setRecipes(r.data.recipes || {})).catch(() => {});
   }, []);
 
   const generate = async () => {
@@ -40,6 +43,19 @@ export default function ProductManufacturing() {
       toast.success(`Manufactured ${data.product_code}`);
     } catch { toast.error("Manufacturing failed"); } finally { setLoading(false); }
   };
+
+  const assemble = async () => {
+    if (!krId) return toast.error("Select a Knowledge Record to assemble from");
+    setAssembling(true);
+    setResult(null);
+    try {
+      const { data } = await api.post("/products/assemble", { knowledge_record_id: krId, product_type: productType });
+      setResult(data);
+      toast.success(`Assembled ${data.product_code} from existing fields`);
+    } catch (e) { toast.error(e.response?.data?.detail || "Assembly failed"); } finally { setAssembling(false); }
+  };
+
+  const hasRecipe = !!recipes[productType];
 
   return (
     <div>
@@ -86,10 +102,19 @@ export default function ProductManufacturing() {
               {["Introductory", "Intermediate", "Advanced", "Expert"].map((l) => <option key={l}>{l}</option>)}
             </select>
           </div>
-          <button data-testid="pm-generate-btn" onClick={generate} disabled={loading}
+          <button data-testid="pm-generate-btn" onClick={generate} disabled={loading || assembling}
             className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-2.5 rounded-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60">
-            {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Manufacturing…</> : <><Sparkles className="w-4 h-4" /> Manufacture Product</>}
+            {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Manufacturing…</> : <><Sparkles className="w-4 h-4" /> Manufacture with AI</>}
           </button>
+          {krId && hasRecipe && (
+            <button data-testid="pm-assemble-btn" onClick={assemble} disabled={loading || assembling}
+              className="w-full flex items-center justify-center gap-2 border py-2.5 rounded-sm font-medium hover:border-primary hover:text-primary transition-colors disabled:opacity-60">
+              {assembling ? <><Loader2 className="w-4 h-4 animate-spin" /> Assembling…</> : <><Factory className="w-4 h-4" /> Assemble from Record</>}
+            </button>
+          )}
+          {krId && hasRecipe && (
+            <p className="text-xs text-muted-foreground">Assembly reuses this record's already-manufactured fields — no regeneration. Recipe: {recipes[productType].map((f) => f.replace(/_/g, " ")).join(", ")}.</p>
+          )}
         </div>
 
         <div className="lg:col-span-2">

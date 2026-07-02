@@ -77,6 +77,10 @@ const STATUS_STYLES = {
   "Quality Review": "bg-warning/10 text-warning border-warning/20",
   Research: "bg-primary/10 text-primary border-primary/20",
   Manufacturing: "bg-primary/10 text-primary border-primary/20",
+  Ready: "bg-success/10 text-success border-success/20",
+  "Needs Review": "bg-warning/10 text-warning border-warning/20",
+  "Needs Regeneration": "bg-destructive/10 text-destructive border-destructive/20",
+  Generating: "bg-primary/10 text-primary border-primary/20",
   Paused: "bg-warning/10 text-warning border-warning/20",
   High: "bg-destructive/10 text-destructive border-destructive/20",
   Medium: "bg-warning/10 text-warning border-warning/20",
@@ -201,9 +205,10 @@ export function QRUMethodology({ record, sectionStatus = {} }) {
   );
 }
 
-function SectionStatusPill({ status }) {
+export function SectionStatusPill({ status }) {
   const map = {
     Verified: "bg-success/10 text-success border-success/20",
+    Approved: "bg-success/10 text-success border-success/20",
     Draft: "bg-warning/15 border-warning/30",
     Empty: "bg-muted text-muted-foreground border-border",
   };
@@ -213,4 +218,52 @@ function SectionStatusPill({ status }) {
       {status}
     </span>
   );
+}
+
+const FIELD_LABELS = {
+  the_question: "The Question", simple_answer: "Simple Answer", why_it_matters: "Why It Matters",
+  real_world_example: "Real-World Example", qru_translation: "QRU Translation™", everyday_analogy: "Everyday Analogy",
+  memory_sentence: "Memory Sentence™", practice_application: "Practice / Application", key_vocabulary: "Key Vocabulary",
+  deep_roots: "Deep Roots™", summary: "Summary", conversation_starter: "Conversation Starter™", cheat_sheet: "Cheat Sheet™",
+  common_misconceptions: "Common Misconceptions", step_by_step: "Step-by-Step", applications: "Applications",
+  benefits: "Benefits", risks: "Risks", vocabulary_decoder: "Vocabulary Decoder™", faq: "FAQ",
+  practice_questions: "Practice Questions", reflection_questions: "Reflection Questions",
+  kingdom_lion_questions: "Kingdom Lion Verification Questions™", quiz: "Quiz", certification_questions: "Certification Questions",
+  story_version: "Story Version", children_version: "Children's Version", teen_version: "Teen Version",
+  adult_version: "Adult Version", professional_version: "Professional Version", teacher_notes: "Teacher Notes",
+  parent_notes: "Parent Notes", student_notes: "Student Notes", call_to_action: "Call to Action",
+  visual_description: "Visual Description", image_prompt: "Image Prompt", infographic_text: "Infographic Text",
+  poster_text: "Poster Text", presentation_outline: "Presentation Outline", presentation_script: "Presentation Script",
+  podcast_script: "Podcast Script", video_script: "Video Script", social_media_pack: "Social Media Pack",
+  lesson_plan: "Lesson Plan", workbook_activities: "Workbook Activities",
+};
+
+export function fieldLabel(k) {
+  return FIELD_LABELS[k] || k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export function FieldValue({ value }) {
+  if (value == null || (Array.isArray(value) && value.length === 0) || value === "")
+    return <p className="text-sm text-muted-foreground italic">Not yet manufactured.</p>;
+  if (Array.isArray(value)) {
+    return (
+      <ul className="space-y-1.5 text-sm">
+        {value.map((it, i) => {
+          if (it && typeof it === "object") {
+            if ("term" in it) return <li key={i}><b>{it.term}</b> — <span className="text-muted-foreground">{it.definition}</span></li>;
+            if ("question" in it) return (
+              <li key={i}>
+                <b>{it.question}</b>
+                {it.options && <ul className="pl-4 list-disc text-muted-foreground">{it.options.map((o, j) => <li key={j}>{o}</li>)}</ul>}
+                {it.answer && <span className="text-success text-xs"> Answer: {it.answer}</span>}
+              </li>
+            );
+            return <li key={i}>{JSON.stringify(it)}</li>;
+          }
+          return <li key={i} className="flex gap-2"><span className="text-gold font-heading font-bold">{i + 1}</span>{it}</li>;
+        })}
+      </ul>
+    );
+  }
+  return <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{value}</p>;
 }

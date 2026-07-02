@@ -6,6 +6,7 @@ from database import db
 from auth import get_current_user
 from models import gen_id, now_iso, clean, QRU_SECTIONS
 from ai_service import llm_generate, parse_json, TRANSLATION_SYSTEM, QRU_METHODOLOGY_SYSTEM
+from manufacturing_engine import start_manufacturing_job, regenerate_field, ALL_FIELDS
 
 router = APIRouter(prefix="/api/knowledge-records", tags=["knowledge"])
 
@@ -106,16 +107,72 @@ async def update_record(rid: str, data: KRInput, user=Depends(get_current_user))
     rec = await db.knowledge_records.find_one({"id": rid})
     if not rec:
         raise HTTPException(404, "Not found")
-    upd = {**data.model_dump(), "updated_at": now_iso(), "version": rec.get("version", 1) + 1}
+    new_version = rec.get("version", 1) + 1
+    change_log = rec.get("change_log", [])
+    change_log.append({"version": new_version, "by": user["name"], "at": now_iso(), "action": "edited"})
+    upd = {**data.model_dump(), "updated_at": now_iso(), "version": new_version, "change_log": change_log}
     await db.knowledge_records.update_one({"id": rid}, {"$set": upd})
+    # Traceability: mark dependent products for regeneration
+    dependents = await db.products.update_many(
+        {"knowledge_record_id": rid, "status": {"$nin": ["Archived"]}},
+        {"$set": {"status": "Needs Regeneration", "updated_at": now_iso()}})
+    if dependents.modified_count:
+        await db.notifications.insert_one({
+            "id": gen_id(),
+            "message": f"{rec['kr_code']} changed — {dependents.modified_count} product(s) marked for regeneration",
+            "level": "warning", "read": False, "created_at": now_iso(),
+        })
     await log_activity(user["name"], "updated", "KnowledgeRecord", rid, data.title)
     return clean(await db.knowledge_records.find_one({"id": rid}))
+
+
+@router.get("/{rid}/dependents")
+async def dependents(rid: str, user=Depends(get_current_user)):
+    prods = await db.products.find({"knowledge_record_id": rid}, {"content": 0}).to_list(200)
+    return clean(prods)
 
 
 @router.delete("/{rid}")
 async def delete_record(rid: str, user=Depends(get_current_user)):
     await db.knowledge_records.delete_one({"id": rid})
     return {"message": "deleted"}
+
+
+@router.post("/{rid}/manufacture-all")
+async def manufacture_all(rid: str, user=Depends(get_current_user)):
+    """Start the full AI Manufacturing Pipeline as a background job."""
+    rec = await db.knowledge_records.find_one({"id": rid})
+    if not rec:
+        raise HTTPException(404, "Not found")
+    job_id = await start_manufacturing_job(rid, user["name"])
+    await log_activity(user["name"], "started full manufacturing for", "KnowledgeRecord", rid, rec["title"])
+    return {"job_id": job_id}
+
+
+@router.post("/{rid}/fields/{field}/regenerate")
+async def regenerate(rid: str, field: str, user=Depends(get_current_user)):
+    if field not in ALL_FIELDS:
+        raise HTTPException(400, "Unknown field")
+    rec = await regenerate_field(rid, field, user["name"])
+    if not rec:
+        raise HTTPException(404, "Not found")
+    return clean(rec)
+
+
+class FieldApprove(BaseModel):
+    status: str = "Approved"
+
+
+@router.patch("/{rid}/fields/{field}/approve")
+async def approve_field(rid: str, field: str, data: FieldApprove, user=Depends(get_current_user)):
+    rec = await db.knowledge_records.find_one({"id": rid})
+    if not rec:
+        raise HTTPException(404, "Not found")
+    field_status = rec.get("field_status", {})
+    field_status[field] = data.status
+    await db.knowledge_records.update_one(
+        {"id": rid}, {"$set": {"field_status": field_status, "updated_at": now_iso()}})
+    return clean(await db.knowledge_records.find_one({"id": rid}))
 
 
 def _treasure_check(rec):
@@ -211,6 +268,9 @@ async def review_record(rid: str, data: ReviewInput, user=Depends(get_current_us
 
     await db.knowledge_records.update_one({"id": rid}, {"$set": upd})
     await log_activity(user["name"], f"{data.decision.replace('_', ' ')}d", "KnowledgeRecord", rid, rec["title"])
+    # Research Once. Verify Once. Manufacture Forever — auto-start pipeline on approval.
+    if data.decision == "approve" and rec.get("understanding_status", "Not Manufactured") == "Not Manufactured":
+        await start_manufacturing_job(rid, "Manufacturing Director™ (auto)")
     return clean(await db.knowledge_records.find_one({"id": rid}))
 
 

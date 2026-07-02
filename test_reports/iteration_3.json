@@ -1,0 +1,64 @@
+{
+  "summary": "Iteration 3 backend + frontend validation for QRU Knowledge Manufacturing platform (AI Manufacturing Pipeline as background job, per-field regen/approve, product assembly recipes, KR-edit traceability, expanded dashboard). All 10 new pytest cases pass (schema, manufacture-all with 7 batches ending at 100% and 45+ draft fields, per-field regen + approve, /products/assemble + recipes + PRD-00006 produced with kr_version, PUT KR bumps version and marks dependent products 'Needs Regeneration', dashboard exposes manufacturing_jobs_active/active_jobs/recently_updated/products_needs_regeneration). Verification approve auto-triggers a manufacturing job (actor = 'Manufacturing Director™ (auto)'). Frontend E2E: on a brand-new KR the 'Manufacture Full Understanding' button starts the pipeline; kr-job-progress panel appears with step chips advancing 0→12→25→38→50→62→75→100, KR gets 45 Draft fields, 7 accordion groups render (kr-group-*), kr-regen-<field> and kr-approve-<field> icons present and functional; ProductManufacturing shows pm-assemble-btn beside pm-generate-btn when a KR + Poster recipe are selected and successfully assembles PRD-00006 from existing fields; Dashboard renders the dashboard-jobs 'Live Manufacturing Jobs' panel when a job is running and the 'Recently Updated Records' list otherwise.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Dashboard.js",
+        "issues": [
+          "React console warning: 'Each child in a list should have a unique key prop. Check the render method of Dashboard.' Non-blocking. All .map() blocks in Dashboard.js use unique keys (WORKFLOW step, PIPELINE_STAGES stage, s.active_jobs.id, s.recently_updated.id, s.recent_activity.id). Likely source: an item without an id in s.recent_activity or s.recently_updated arriving before the id is populated. Investigate & guard with `key={a.id || i}` fallbacks."
+        ]
+      },
+      {
+        "screen": "ProductManufacturing.js (dev-tools only)",
+        "issues": [
+          "Emergent dev-tooling instrumentation injects a <span x-excluded='true'> inside <option>, which triggers a hydration warning in dev only (option must have string child). This is from the previewer's live-editor wrapper, not from source code — no fix needed in production."
+        ]
+      },
+      {
+        "screen": "Radix Dialogs (carried over from iteration 2)",
+        "issues": [
+          "Verification review dialog & Department dialog still emit 'Missing Description or aria-describedby' Radix a11y warning. Add <DialogDescription> when convenient."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration3.py",
+    "/app/test_reports/pytest/iteration3_results.xml",
+    "/app/backend/tests/test_iteration2.py",
+    "/app/backend/tests/backend_test.py"
+  ],
+  "action_items": [
+    "OPTIONAL/MINOR: Investigate the Dashboard 'unique key' React warning — likely add a fallback key (e.g. `key={a.id || idx}`) on the recent_activity/recently_updated maps in /app/frontend/src/pages/Dashboard.js.",
+    "OPTIONAL/MINOR: Add <DialogDescription> or aria-describedby to VerificationCenter & DigitalWorkforce dialogs to silence Radix a11y console warning (still open from iteration 2)."
+  ],
+  "critical_code_review_comments": [
+    "manufacturing_engine.py._process_job: On per-batch exception the step is marked 'failed' and the pipeline continues — correct partial-success behavior — but the job's overall status is only 'failed' if the top-level try/except triggers. If every batch fails individually the job would still be marked 'complete'. Consider setting job status to 'failed' when any step is 'failed' AND fields_manufactured==0.",
+    "manufacturing_engine.py.regenerate_field: does not append the regenerated new value to history, only the previous value; version history therefore reflects prior versions correctly, but the endpoint response should ideally include a version count in field_versions[field] length so the UI can render 'v2'.",
+    "products.py.assemble_product computes `missing` but never returns it in the response body (it IS persisted on the doc) — expose it so the UI can render 'Needs Review' with the reason.",
+    "products.py.assemble_product does not check the KR's understanding_status; assembling from an unmanufactured record produces a nearly-empty poster. Consider warning or 400ing if all recipe fields are empty.",
+    "knowledge.py.update_record marks ALL non-archived products for regeneration on any PUT, even PUTs that don't change verified_truth or any KR field a product depends on. This is safe (over-flagging) but noisy; a diff-aware check would prevent unnecessary regeneration.",
+    "analytics.py.dashboard_stats: does 12+ separate count/find calls; fine for MVP but could be aggregated in one $facet pipeline as data scales.",
+    "jobs.py.list_jobs `active` flag ignores 'failed' jobs, which is desired, but there's no cleanup for old completed jobs — collection will grow unbounded. Consider a TTL index on manufacturing_jobs.created_at.",
+    "Server CORS still uses allow_origins='*' + allow_credentials=True (spec-invalid, carried over from iteration 1 & 2)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration3.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 iteration-3 pytest cases pass in 104s; includes real GPT-5.5 full-pipeline run)",
+    "frontend": "100% (all iteration-3 UI flows verified: kr-manufacture-all-btn, kr-job-progress step advancement 0→100, kr-group-*, kr-field-*, kr-regen-<field>, kr-approve-<field>, pm-assemble-btn, dashboard-jobs, Recently Updated Records rendered in DOM, verification approve auto-triggers job)"
+  },
+  "test_credentials": "Admin admin@qru.com / qru-admin-2026 ✓ ; Executive executive@qru.com / qru-exec-2026 ✓ (not exercised this iteration).",
+  "seed_data_creation": "Tests create TEST_ / UI_TEST_ prefixed KRs and delete them after. During UI validation KR-00010 through KR-00011 were created and all cleaned up. PRD-00006 (Love — Poster, assembled) remains in Product Library from the UI-flow assembly test — safe to leave; can be deleted if regression run needs zero-state.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Full AI Manufacturing Pipeline runs 7 sequential GPT-5.5 calls; empirically takes ~70-90s to reach status='complete'. Use ≥180s poll deadline in tests. Job payload keys: id, kr_id, kr_code, title, status ∈ {running, complete, failed}, progress 0-100, current_step, steps[{label,status}], fields_manufactured, actor, created_at, updated_at. When verification decision='approve' is issued on a Not-Manufactured KR the backend auto-spawns a job with actor='Manufacturing Director™ (auto)'. Frontend polls every 2.5s at /manufacturing-jobs/{id}. UI hides the kr-job-progress panel ~4s after status becomes 'complete'. Product Manufacturing UI shows pm-assemble-btn only when both a KR is selected AND the chosen product_type exists in RECIPES (Poster/Infographic/Workbook/Teacher Guide/Caregiver Guide/Presentation/Video Script/Podcast Script/Quiz/Flash Cards/Course/Book/Certificate/Lesson Plan/Short-form Content). Assembled products get status='Ready' if all recipe fields present else 'Needs Review'; kr_version is stamped from the source KR at assembly time; editing the KR (PUT) bumps version and flips all non-archived dependent products to status='Needs Regeneration' (verified via GET /knowledge-records/{id}/dependents). Dashboard exposes manufacturing_jobs_active/active_jobs/recently_updated/products_needs_regeneration.",
+  "rca of the issue": "N/A — no functional bugs found. The only console noise is (a) a benign React key warning on Dashboard which the main agent can silence with `key={a.id || i}` fallbacks, and (b) dev-only hydration warning from Emergent's preview instrumentation on <option> elements (not from source code)."
+}

@@ -27,6 +27,11 @@ async def dashboard_stats(user=Depends(get_current_user)):
     stage_map = {r["_id"]: r["count"] for r in mo_by_stage}
 
     recent = await db.activities.find().sort("created_at", -1).to_list(8)
+    active_jobs = await db.manufacturing_jobs.find({"status": "running"}).sort("created_at", -1).to_list(10)
+    recently_updated = await db.knowledge_records.find(
+        {}, {"kr_code": 1, "title": 1, "verification_status": 1, "updated_at": 1}
+    ).sort("updated_at", -1).to_list(6)
+    needs_regen = await db.products.count_documents({"status": "Needs Regeneration"})
 
     # Enterprise health: composite score
     verified_ratio = (kr_verified / kr_total) if kr_total else 0
@@ -53,6 +58,10 @@ async def dashboard_stats(user=Depends(get_current_user)):
         "marketplace_opportunities": max(0, kr_verified - prod_total),
         "revenue": revenue,
         "enterprise_health": enterprise_health,
+        "manufacturing_jobs_active": len(active_jobs),
+        "active_jobs": clean(active_jobs),
+        "recently_updated": clean(recently_updated),
+        "products_needs_regeneration": needs_regen,
         "pipeline": stage_map,
         "recent_activity": clean(recent),
     }
