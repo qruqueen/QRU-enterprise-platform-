@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "@/lib/api";
 import { PageHeader, StatusBadge } from "@/components/shared";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Target, ShieldCheck, Wrench, Power, Loader2, Factory, BookOpen, FileText, Activity } from "lucide-react";
 
@@ -73,6 +73,7 @@ export default function DigitalWorkforce() {
                     <p className="text-sm text-muted-foreground">{dept.employee.name} · {dept.employee.approval_authority} authority</p>
                   </div>
                 </div>
+                <DialogDescription className="sr-only">Operational department overview for this AI Director.</DialogDescription>
               </DialogHeader>
 
               {loadingDept ? (

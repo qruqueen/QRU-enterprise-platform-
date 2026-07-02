@@ -79,7 +79,7 @@ async def department(eid: str, user=Depends(get_current_user)):
     domain = e.get("domain")
 
     # Manufacturing orders assigned to this director (by product-type ownership or explicit assignment)
-    mo_query = {"assigned_employees": e["id"]} if False else {}
+    mo_query = {}
     orders = await db.manufacturing_orders.find(mo_query).sort("created_at", -1).to_list(200)
     # Knowledge records within this director's domain category
     kr_query = {"category": domain} if domain else {}

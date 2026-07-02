@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "@/lib/api";
 import { PageHeader, StatusBadge, EmptyState } from "@/components/shared";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { ShieldCheck, Loader2, CheckCircle2, XCircle, RotateCcw, Eye } from "lucide-react";
@@ -50,6 +50,7 @@ function ReviewDialog({ record, onDone, onClose }) {
           <DialogTitle className="font-heading flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-primary" /> Verification Review — {record?.kr_code}
           </DialogTitle>
+          <DialogDescription className="sr-only">Evaluate evidence and decide to approve, reject, or request revision.</DialogDescription>
         </DialogHeader>
         <p className="text-sm font-medium">{record?.title}</p>
         <p className="text-sm text-muted-foreground mb-2">{record?.verified_truth}</p>
