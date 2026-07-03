@@ -243,6 +243,12 @@ async def treasure_finalize(pid, actor="QRU Verification Team™", max_rounds=2)
                            True, "account_required", actor)
     await db.products.update_one({"id": pid}, {"$set": {"status": "Published", "published_at": now_iso(),
                                                         "ip.publication_date": now_iso(), "updated_at": now_iso()}})
+    # QRU Design Language™ — guarantee a professional branded cover/thumbnail before it reaches customers.
+    try:
+        import rendering_engine as re_engine
+        await re_engine.ensure_branded_assets(pid, actor)
+    except Exception as e:
+        logger.error(f"design language application failed for {pid}: {e}")
     try:
         import integration_hub as ihub
         await ihub.auto_distribute(pid, "AI Distribution Team™")

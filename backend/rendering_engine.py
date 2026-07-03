@@ -14,6 +14,7 @@ from models import now_iso, gen_id
 from ai_service import generate_image
 from org_activity import log_org
 import design_intelligence as di
+import design_language as dl
 
 logger = logging.getLogger("qru.render")
 
@@ -158,7 +159,27 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
     return bytes(out)
 
 
-async def render_product_job(pid, actor, base_url):
+async def ensure_branded_assets(pid, actor="Creative Studio™"):
+    """Guarantee every product carries the QRU Design Language™ — professional cover,
+    thumbnail and store graphic. Fully deterministic (no AI budget required)."""
+    p = await db.products.find_one({"id": pid})
+    if not p:
+        return None
+    kr = await db.knowledge_records.find_one({"id": p.get("knowledge_record_id")}) if p.get("knowledge_record_id") else {}
+    pal = dl.resolve_palette(p.get("family", ""), p.get("department", p.get("college", "")),
+                             p.get("topic", ""), p.get("title", ""))
+    cover = dl.premium_cover(p, kr or {})
+    cover_url = _asset_url(_save("cover", "png", cover))
+    thumb_url = _asset_url(_save("thumb", "png", dl.premium_thumbnail(cover)))
+    store_url = _asset_url(_save("store", "png", dl.premium_store_graphic(p, cover)))
+    await db.products.update_one({"id": pid}, {"$set": {
+        "cover_url": cover_url, "thumbnail_url": thumb_url, "store_graphic_url": store_url,
+        "design_palette": {"key": pal["key"], "label": pal["label"],
+                           "accent": "#%02X%02X%02X" % pal["accent"]},
+        "design_language_applied": True, "updated_at": now_iso()}})
+    await log_org("Creative Studio Director™", "Creative Studio",
+                  f"applied QRU Design Language™ ({pal['label']}) to", p.get("product_code", ""), "success")
+    return {"cover_url": cover_url, "thumbnail_url": thumb_url, "store_graphic_url": store_url, "palette": pal["label"]}
     p = await db.products.find_one({"id": pid})
     if not p:
         return
@@ -167,25 +188,16 @@ async def render_product_job(pid, actor, base_url):
     kr = await db.knowledge_records.find_one({"id": p.get("knowledge_record_id")}) if p.get("knowledge_record_id") else None
     rec = di.recommend_templates(p.get("product_type", "Interactive Lesson"), p.get("audience", "General public"))
 
-    prompt = (
-        f"Design a premium educational product cover for '{p['title']}' in the QRU brand style. "
-        f"Use Royal Purple (#35106A) and QRU Gold (#F5B21A) with deep navy depth and clean white space. "
-        f"Include a subtle shield emblem motif. Style: {rec['illustration_style']}, {rec['tone']}. "
-        f"Topic family: {p.get('family')}. Elegant, trustworthy, modern, uncluttered. "
-        f"Minimal or no text. Flat vector illustration, high quality, centered composition."
-    )
-    try:
-        cover = await generate_image(prompt, f"render-cover-{pid}")
-    except Exception as e:
-        logger.error(f"cover gen error: {e}"); cover = None
-    if not cover:
-        cover = _placeholder_cover(p["title"], p.get("family", "QRU"), rec["palette"])
+    # QRU Design Language™ cover — deterministic, consistent, premium (no AI dependency).
+    cover = dl.premium_cover(p, kr or {})
+    pal = dl.resolve_palette(p.get("family", ""), p.get("department", p.get("college", "")),
+                             p.get("topic", ""), p.get("title", ""))
 
     assets = {}
     try:
         assets["cover"] = _asset_url(_save("cover", "png", cover))
-        assets["thumbnail"] = _asset_url(_save("thumb", "png", _make_thumbnail(cover)))
-        assets["store_graphic"] = _asset_url(_save("store", "png", _make_store_graphic(cover, p["title"])))
+        assets["thumbnail"] = _asset_url(_save("thumb", "png", dl.premium_thumbnail(cover)))
+        assets["store_graphic"] = _asset_url(_save("store", "png", dl.premium_store_graphic(p, cover)))
         qr = _make_qr(f"{base_url}/learn/{pid}")
         assets["qr_code"] = _asset_url(_save("qr", "png", qr))
         assets["print_pdf"] = _asset_url(_save("product", "pdf", _make_pdf(p, kr, cover, qr)))
@@ -197,6 +209,8 @@ async def render_product_job(pid, actor, base_url):
         dlv["status"] = "rendered"
     await db.products.update_one({"id": pid}, {"$set": {
         "rendered_assets": assets, "render_status": "rendered", "cover_url": assets.get("cover"),
-        "thumbnail_url": assets.get("thumbnail"), "deliverables": deliverables,
+        "thumbnail_url": assets.get("thumbnail"), "store_graphic_url": assets.get("store_graphic"),
+        "design_palette": {"key": pal["key"], "label": pal["label"], "accent": "#%02X%02X%02X" % pal["accent"]},
+        "design_language_applied": True, "deliverables": deliverables,
         "design_recommendation": rec, "updated_at": now_iso()}})
     await log_org("Creative Studio Director\u2122", "Creative Studio", "rendered branded QRU product", p.get("product_code", ""), "success")

@@ -68,6 +68,8 @@ async def storefront():
         "id": p["id"], "product_code": p.get("product_code"), "title": p.get("title"),
         "product_type": p.get("product_type"), "family": p.get("family"),
         "topic": p.get("topic"), "cover_url": p.get("cover_url") or p.get("thumbnail_url"),
+        "thumbnail_url": p.get("thumbnail_url"), "audience": p.get("audience"),
+        "design_palette": p.get("design_palette"), "treasure_standard": bool(p.get("treasure_standard")),
         "license_type": p.get("license_type"), "price": product_price(p),
     } for p in products]
 

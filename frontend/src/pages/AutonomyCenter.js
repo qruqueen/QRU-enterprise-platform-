@@ -28,6 +28,7 @@ export default function AutonomyCenter() {
   const [cap, setCap] = useState(null);
   const [gaps, setGaps] = useState(null);
   const [mem, setMem] = useState(null);
+  const [intel, setIntel] = useState(null);
   const [repairing, setRepairing] = useState(false);
 
   const load = async () => {
@@ -42,7 +43,16 @@ export default function AutonomyCenter() {
       setScore(s.data); setCap(cp.data); setGaps(g.data); setMem(m.data);
     } catch (_) {}
   };
-  useEffect(() => { load(); }, []);
+  const loadIntel = async () => {
+    try {
+      const [imp, pred, rad] = await Promise.all([
+        api.get("/autonomy/improvement-report"), api.get("/autonomy/predictive-manufacturing"),
+        api.get("/autonomy/innovation-radar"),
+      ]);
+      setIntel({ improvement: imp.data, predictive: pred.data, radar: rad.data });
+    } catch (_) {}
+  };
+  useEffect(() => { load(); loadIntel(); }, []);
 
   const repair = async () => {
     setRepairing(true);
@@ -210,6 +220,56 @@ export default function AutonomyCenter() {
           </Section>
         )}
       </div>
+
+      {/* Enterprise Intelligence™ (LLM-narrated, degrades gracefully) */}
+      {intel && (
+        <Section icon={Lightbulb} title="Enterprise Intelligence™ — AI-narrated recommendations" testid="enterprise-intelligence">
+          {!intel.improvement?.ai_available && (
+            <p className="text-xs text-amber-600 mb-3" data-testid="intel-degraded-note">
+              AI narrative temporarily unavailable ({intel.improvement?.reason || "spend limit"}). Showing deterministic intelligence — narratives resume automatically when AI capacity returns.
+            </p>
+          )}
+          <div className="grid md:grid-cols-3 gap-4">
+            <div>
+              <p className="text-xs font-semibold text-navy mb-1">Continuous Improvement</p>
+              {intel.improvement?.ai_narrative ? (
+                <>
+                  <p className="text-xs text-navy mb-1">{intel.improvement.ai_narrative.headline}</p>
+                  <ul className="text-xs text-muted-foreground space-y-0.5">
+                    {(intel.improvement.ai_narrative.top_actions || []).map((a, i) => <li key={i}>• {a}</li>)}
+                  </ul>
+                </>
+              ) : (
+                <ul className="text-xs text-muted-foreground space-y-0.5">
+                  {(intel.improvement?.deterministic?.top_improvements || []).map((a, i) => <li key={i}>• {a}</li>)}
+                </ul>
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-navy mb-1">Predictive Manufacturing™</p>
+              {intel.predictive?.forecast?.recommended_orders ? (
+                <ul className="text-xs text-muted-foreground space-y-0.5">
+                  {intel.predictive.forecast.recommended_orders.slice(0, 5).map((o, i) => <li key={i}>• {o.topic} ({o.priority})</li>)}
+                </ul>
+              ) : (
+                <ul className="text-xs text-muted-foreground space-y-0.5">
+                  {(intel.predictive?.gaps?.pending_topics || []).slice(0, 5).map((t, i) => <li key={i}>• {t.topic}</li>)}
+                </ul>
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-navy mb-1">Innovation Radar™</p>
+              {intel.radar?.radar?.opportunities ? (
+                <ul className="text-xs text-muted-foreground space-y-0.5">
+                  {intel.radar.radar.opportunities.slice(0, 5).map((o, i) => <li key={i}>• {o.area}: {o.recommendation} ({o.impact})</li>)}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground">Radar activates with AI capacity — safe upgrade recommendations across AI, publishing, accessibility and media.</p>
+              )}
+            </div>
+          </div>
+        </Section>
+      )}
     </div>
   );
 }

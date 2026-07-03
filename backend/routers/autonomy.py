@@ -3,6 +3,9 @@ from fastapi import APIRouter, Depends
 
 from auth import get_current_user
 import autonomy
+import autonomy_ai
+from pydantic import BaseModel
+from fastapi import HTTPException
 
 router = APIRouter(prefix="/api/autonomy", tags=["autonomy"])
 
@@ -55,3 +58,50 @@ async def factory_council(user=Depends(get_current_user)):
 @router.get("/enterprise-memory")
 async def enterprise_memory(user=Depends(get_current_user)):
     return await autonomy.enterprise_memory()
+
+
+# ---------------- Enterprise Intelligence™ (LLM-narrated, degrades gracefully) ----------------
+@router.get("/improvement-report")
+async def improvement_report(user=Depends(get_current_user)):
+    return await autonomy_ai.improvement_report()
+
+
+@router.get("/predictive-manufacturing")
+async def predictive_manufacturing(user=Depends(get_current_user)):
+    return await autonomy_ai.predictive_manufacturing()
+
+
+@router.get("/innovation-radar")
+async def innovation_radar(user=Depends(get_current_user)):
+    return await autonomy_ai.innovation_radar()
+
+
+@router.get("/executive-brief/narrated")
+async def narrated_brief(user=Depends(get_current_user)):
+    return await autonomy_ai.narrated_brief(store=False)
+
+
+@router.get("/product-evolution")
+async def evolution_overview(user=Depends(get_current_user)):
+    return await autonomy_ai.evolution_overview()
+
+
+@router.get("/product-evolution/{product_id}")
+async def product_evolution(product_id: str, user=Depends(get_current_user)):
+    res, err = await autonomy_ai.product_evolution(product_id)
+    if err:
+        raise HTTPException(404, err)
+    return res
+
+
+class RatingInput(BaseModel):
+    rating: int
+    review: str = ""
+
+
+@router.post("/products/{product_id}/rate")
+async def rate_product(product_id: str, data: RatingInput, user=Depends(get_current_user)):
+    res, err = await autonomy_ai.rate_product(product_id, user, data.rating, data.review)
+    if err:
+        raise HTTPException(404, err)
+    return res

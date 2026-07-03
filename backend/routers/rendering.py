@@ -25,6 +25,38 @@ async def render(pid: str, user=Depends(get_current_user)):
     return {"message": "Rendering started", "pid": pid}
 
 
+@router.post("/{pid}/apply-design-language")
+async def apply_design_language(pid: str, user=Depends(get_current_user)):
+    res = await re_engine.ensure_branded_assets(pid, user["name"])
+    if not res:
+        raise HTTPException(404, "Product not found")
+    return res
+
+
+@router.post("/design-language/backfill")
+async def backfill_design_language(user=Depends(get_current_user)):
+    """Apply the QRU Design Language™ to every published product missing branded assets."""
+    q = {"status": "Published", "$or": [{"design_language_applied": {"$ne": True}}, {"cover_url": {"$in": [None, ""]}}]}
+    ids = [p["id"] async for p in db.products.find(q)]
+    applied = 0
+    for pid in ids:
+        try:
+            if await re_engine.ensure_branded_assets(pid, user["name"]):
+                applied += 1
+        except Exception:
+            pass
+    return {"applied": applied, "total_candidates": len(ids)}
+
+
+@router.get("/{pid}/visual-review")
+async def visual_review(pid: str, user=Depends(get_current_user)):
+    import design_language as dl
+    p = await db.products.find_one({"id": pid})
+    if not p:
+        raise HTTPException(404, "Product not found")
+    return dl.visual_review(clean(p))
+
+
 @router.get("/{pid}")
 async def get_render(pid: str, user=Depends(get_current_user)):
     p = await db.products.find_one({"id": pid})

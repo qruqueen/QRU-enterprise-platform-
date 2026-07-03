@@ -191,3 +191,21 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 ### Next (after daily limit resets / is raised)
 - P0: **Resume Phase C** — open Bulk Orchestrator™, "Retry failed" on the "Phase C — Health & Faith Controlled Batch", let it finish (research→KR→verify→QC→publish per topic). Optionally re-run the FAT for a clean 11/11 (the reliability hardening should now also produce the Short Video MP4).
 - P1: **Phase D LLM layer** — add GPT-narrated recommendations to Continuous Improvement Engine, Product Evolution (ratings/reviews→v2), Predictive Manufacturing, Innovation Radar; wire daily Executive Brief delivery.
+
+
+## Implemented — Iteration 16 (2026-07-03) · Phase D LLM layer + QRU Design Language™
+### Phase D — Enterprise Intelligence™ (LLM-narrated, degrades gracefully) — `autonomy_ai.py`, `/api/autonomy/*`
+- Continuous Improvement narrative (`/improvement-report`), Predictive Manufacturing™ (`/predictive-manufacturing`), Innovation Radar™ (`/innovation-radar`), narrated Executive Brief™ (`/executive-brief/narrated`).
+- Product Evolution™: customer ratings (`POST /autonomy/products/{id}/rate` → `product_ratings`), evolution overview (`/product-evolution`), per-product v2/v3 recommendation (`/product-evolution/{id}`).
+- Every LLM function returns deterministic data + `ai_available:false` + reason when the LLM is capped — nothing 500s. Surfaced in `AutonomyCenter.js` (Enterprise Intelligence™ section with degraded note).
+### QRU Design Language™ & Treasure Standard™ Visual System — `design_language.py`
+- Premium deterministic (Pillow) product covers with real typography (Liberation Serif/Sans), QRU Shield™, College eyebrow, product-type badge, wrapped serif title, subtitle, difficulty/audience, Treasure Standard™ seal, QRU PRESS™ publisher band + edition. **No blank placeholders.**
+- Dynamic Color System™: 15 subject palettes (heart=red, brain/sleep=purple, lung/mental=blue, nutrition=green, faith/finance/business=navy/emerald+gold, programming=electric blue, science=teal, history=bronze, math=royal blue, children=playful) resolved from family/department/topic/title keywords.
+- `premium_thumbnail`, `premium_store_graphic`, and Treasure Standard™ Visual Review™ (`visual_review()` → `/api/rendering/{pid}/visual-review`).
+- Auto-applied on publish via `rendering_engine.ensure_branded_assets()` wired into `product_protection.treasure_finalize`; `render_product_job` now uses the Design Language too. Backfill endpoint applied it to all 27 published products.
+- Store redesigned (`Store.js`): branded cover, accent top-border, product-type chip, family, audience, Treasure Standard™ badge; storefront payload enriched (thumbnail_url, audience, design_palette, treasure_standard).
+- Verified: sample covers render professionally; visual review 100/Approved; ratings + evolution work; LLM intel endpoints degrade gracefully; Store + Autonomy Center render.
+### Deferred (design)
+- AI hero-art compositing inside covers (when LLM/image budget returns); true multi-format export variants (KDP/Etsy/TpT print profiles) — layout system is ready, exporters pending.
+### Still blocked by DAILY LLM spend cap
+- Phase C bulk run + clean 11/11 FAT (need LLM). Adding balance does NOT clear the daily cap; it resets on the daily cycle.
