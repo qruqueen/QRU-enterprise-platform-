@@ -26,8 +26,15 @@ export default function CreativeStudio() {
 
   const enhance = async (id) => {
     setBusy(id);
-    try { await api.post(`/products/${id}/creative-brief`); toast.success("Product page enhanced by Creative Studio"); load(); }
-    catch { toast.error("Enhancement failed"); } finally { setBusy(""); }
+    try {
+      const { data } = await api.post(`/products/${id}/creative-brief`);
+      if (data?.enhancement_stage_note) toast.warning(data.enhancement_stage_note);
+      else toast.success("Product page enhanced by Creative Studio");
+      load();
+    } catch (e) {
+      const detail = e?.response?.data?.detail;
+      toast.error(detail ? `Creative Studio stage failed: ${detail}` : "Creative Studio enhancement could not complete — please retry.");
+    } finally { setBusy(""); }
   };
 
   return (

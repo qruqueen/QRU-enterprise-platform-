@@ -70,25 +70,72 @@ class BriefInput(BaseModel):
 
 @router.post("/{pid}/creative-brief")
 async def creative_brief(pid: str, user=Depends(get_current_user)):
-    """Creative Studio enhances the product page with a decision-ready brief."""
+    """Creative Studio enhances the product page with a decision-ready brief.
+
+    Stage-aware: if the AI Brief Writer™ stage is unavailable (provider capped), we fall back
+    to a deterministic on-brand brief so the enhancement still COMPLETES, and report the source.
+    """
+    # Stage 1 — Load Product
     p = await db.products.find_one({"id": pid})
     if not p:
         raise HTTPException(404, "Product not found")
+
+    # Stage 2 — AI Brief Writer™ (degrades gracefully)
+    brief, brief_source, stage_note = {}, "ai", None
     prompt = f"Product: {p['title']}\nType: {p['product_type']}\nTopic: {p.get('topic','')}\nAudience: {p.get('audience','')}"
-    raw = await llm_generate(CREATIVE_BRIEF_SYSTEM, prompt, f"brief-{pid}")
-    brief = parse_json(raw) or {}
-    # related products from same family
+    try:
+        raw = await llm_generate(CREATIVE_BRIEF_SYSTEM, prompt, f"brief-{pid}")
+        brief = parse_json(raw) or {}
+        if not brief:
+            raise ValueError("empty brief from provider")
+    except Exception as e:
+        msg = str(getattr(e, "detail", e))
+        if "spend limit" in msg.lower() or "quota" in msg.lower():
+            stage_note = "AI Brief Writer™: provider quota exceeded — used a deterministic on-brand brief."
+        elif "budget" in msg.lower():
+            stage_note = "AI Brief Writer™: provider budget exceeded — used a deterministic on-brand brief."
+        elif "unavailable" in msg.lower() or "503" in msg:
+            stage_note = "AI Brief Writer™: provider temporarily unavailable — used a deterministic on-brand brief."
+        else:
+            stage_note = f"AI Brief Writer™: {msg[:120]} — used a deterministic on-brand brief."
+        brief, brief_source = _fallback_brief(p), "deterministic"
+
+    # Stage 3 — Related Products
     related = await db.products.find(
         {"family": p.get("family"), "id": {"$ne": pid}}, {"id": 1, "title": 1, "product_type": 1, "product_code": 1}
     ).to_list(4)
+
+    # Stage 4 — Persist enhancement
     await db.products.update_one({"id": pid}, {"$set": {
         "creative_brief": brief,
+        "creative_brief_source": brief_source,
         "related_products": clean(related),
         "creative_status": "Reviewed",
         "updated_at": now_iso(),
     }})
-    await log_org("Creative Studio Director™", "Creative Studio", "enhanced the product page for", p["product_code"], "success")
-    return clean(await db.products.find_one({"id": pid}, {"content": 0}))
+    await log_org("Creative Studio Director™", "Creative Studio",
+                  "enhanced the product page for", p["product_code"], "success")
+    result = clean(await db.products.find_one({"id": pid}, {"content": 0}))
+    result["enhancement_stage_note"] = stage_note
+    result["enhancement_source"] = brief_source
+    return result
+
+
+def _fallback_brief(p):
+    """Deterministic, on-brand Creative Studio brief built from existing product data."""
+    ptype = p.get("product_type", "resource")
+    topic = p.get("topic") or p.get("title", "this topic")
+    audience = p.get("audience") or "curious learners"
+    return {
+        "who_for": f"For {audience} who want to genuinely understand {topic}.",
+        "problem_solved": f"Turns {topic} from confusing to clear, using the QRU teaching methodology.",
+        "will_understand": f"You'll understand what {topic} is, why it matters, and how to apply it in real life.",
+        "skills_gained": ["Clear understanding of the core idea", "Real-world application", "Confidence to explain it to others"],
+        "whats_included": [f"A complete QRU {ptype}", "Verified, plain-language explanations", "Memory aids and a next step"],
+        "reading_level": p.get("reading_level") or "Beginner-friendly",
+        "completion_time": "About 20 minutes",
+        "next_path": "Continue with the next product in this QRU learning family.",
+    }
 
 
 @router.get("/creative-queue")

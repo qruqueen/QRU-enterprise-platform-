@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Library, Loader2, Search, Network, Lightbulb, GitBranch, ShieldCheck, ArrowRight } from "lucide-react";
+import { Library, Loader2, Search, Network, Lightbulb, GitBranch, ShieldCheck, ArrowRight, CheckCircle2 } from "lucide-react";
 
 const TABS = [
   { key: "standards", label: "Standards Registry™", icon: ShieldCheck },
@@ -59,6 +59,16 @@ export default function InstitutionalKnowledge() {
     if (tab === "graph" && !graph) api.get("/qiks/graph").then(({ data }) => setGraph(data)).catch(() => {});
     if (tab === "memory" && !lessons.length) api.get("/qiks/lessons").then(({ data }) => setLessons(data.lessons || [])).catch(() => {});
   }, [tab]);
+
+  const approveLesson = async (id) => {
+    const { toast } = await import("sonner");
+    try {
+      await api.post(`/qiks/lessons/${id}/approve`);
+      toast.success("Lesson promoted to Institutional Knowledge™");
+      const { data } = await api.get("/qiks/lessons");
+      setLessons(data.lessons || []);
+    } catch { toast.error("Could not approve lesson"); }
+  };
 
   if (loading) return <div className="p-8 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Loading Institutional Knowledge System…</div>;
 
@@ -158,12 +168,20 @@ export default function InstitutionalKnowledge() {
 
       {tab === "memory" && (
         <div className="space-y-3" data-testid="qiks-memory">
-          <p className="text-sm text-muted-foreground">Every division contributes lessons learned. Every completed Manufacturing Order can feed improvements back into institutional knowledge.</p>
+          <p className="text-sm text-muted-foreground">Every division contributes lessons learned. Founder-approved lessons become permanent Institutional Knowledge™.</p>
           {lessons.map((l) => (
             <div key={l.id} className="rounded-md border border-border bg-card p-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <p className="font-semibold text-navy text-sm">{l.title}</p>
-                <span className="text-[10px] rounded-full px-2 py-0.5 bg-navy/5 text-navy">{l.division}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[10px] rounded-full px-2 py-0.5 bg-navy/5 text-navy">{l.division}</span>
+                  {l.founder_approval ? (
+                    <span className="text-[10px] rounded-full px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Institutional</span>
+                  ) : (
+                    <button data-testid={`approve-lesson-${l.id}`} onClick={() => approveLesson(l.id)}
+                      className="text-[10px] rounded-full px-2 py-0.5 bg-gold/15 text-navy border border-gold hover:bg-gold/30 transition-colors">Approve → Institutional</button>
+                  )}
+                </div>
               </div>
               <p className="text-sm text-foreground/80 mt-1">{l.lesson}</p>
               <p className="text-[10px] text-muted-foreground mt-2 font-mono">{l.id} · {l.source} · {l.date}</p>

@@ -43,6 +43,7 @@ from routers.wis import router as wis_router
 from routers.qiks import router as qiks_router
 from routers.relationships import router as relationships_router
 from routers.continuous import router as continuous_router
+from routers.first_dollar import router as first_dollar_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
 from routers.misc import (
@@ -69,7 +70,7 @@ for r in [
     ai_services_router, automation_router, enterprise_router,
     commerce_router, stripe_webhook_router, workflow_router, autonomy_router, qbos_router, qeds_router,
     governance_router, departments_router, wis_router, qiks_router,
-    relationships_router, continuous_router,
+    relationships_router, continuous_router, first_dollar_router,
 ]:
     app.include_router(r)
 

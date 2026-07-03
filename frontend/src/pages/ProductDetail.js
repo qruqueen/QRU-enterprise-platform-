@@ -23,8 +23,15 @@ export default function ProductDetail() {
 
   const enhance = async () => {
     setBriefBusy(true);
-    try { await api.post(`/products/${id}/creative-brief`); toast.success("Creative Studio enhanced this product page"); load(); }
-    catch { toast.error("Enhancement failed"); } finally { setBriefBusy(false); }
+    try {
+      const { data } = await api.post(`/products/${id}/creative-brief`);
+      if (data?.enhancement_stage_note) toast.warning(data.enhancement_stage_note);
+      else toast.success("Creative Studio enhanced this product page");
+      load();
+    } catch (e) {
+      const detail = e?.response?.data?.detail;
+      toast.error(detail ? `Creative Studio stage failed: ${detail}` : "Creative Studio enhancement could not complete — please retry.");
+    } finally { setBriefBusy(false); }
   };
 
   if (!p) return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;

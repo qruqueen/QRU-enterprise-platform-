@@ -45,6 +45,7 @@ import EnterpriseBlueprint from "@/pages/EnterpriseBlueprint";
 import CharacterLibrary from "@/pages/CharacterLibrary";
 import InstitutionalKnowledge from "@/pages/InstitutionalKnowledge";
 import EnterpriseAutonomy from "@/pages/EnterpriseAutonomy";
+import FirstDollarMode from "@/pages/FirstDollarMode";
 import Colleges from "@/pages/Colleges";
 import CollegeWorkspace from "@/pages/CollegeWorkspace";
 import Analytics from "@/pages/Analytics";
@@ -117,6 +118,7 @@ function EnterpriseRoutes() {
         <Route path="wis" element={<CharacterLibrary />} />
         <Route path="qiks" element={<InstitutionalKnowledge />} />
         <Route path="enterprise-autonomy" element={<EnterpriseAutonomy />} />
+        <Route path="first-dollar" element={<FirstDollarMode />} />
         <Route path="store" element={<Store />} />
         <Route path="checkout/success" element={<CheckoutSuccess />} />
         <Route path="command-center" element={<EnterpriseCommandCenter />} />

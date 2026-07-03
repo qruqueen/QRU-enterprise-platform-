@@ -8,11 +8,12 @@ import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard,
-  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound,
+  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins,
 } from "lucide-react";
 
 const NAV = [
   { section: "The QRU Experience" },
+  { to: "/first-dollar", label: "First Dollar Mode™", icon: Coins, testid: "nav-first-dollar", q: "Will a real customer pay for it?" },
   { to: "/teach", label: "What to Teach Today", icon: Rocket, testid: "nav-teach", q: "What do we want to teach today?" },
   { to: "/workflows", label: "Workflow Engine™", icon: Workflow, testid: "nav-workflows", q: "What should happen next?" },
   { to: "/factory-monitor", label: "Factory Monitor™", icon: Radio, testid: "nav-factory-monitor", q: "What is happening right now?" },

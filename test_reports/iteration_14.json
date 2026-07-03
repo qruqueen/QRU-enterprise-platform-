@@ -1,0 +1,41 @@
+{
+  "summary": "FM-001 Creative Studio graceful-degradation fix verified end-to-end. Backend endpoint POST /api/products/{pid}/creative-brief now returns HTTP 200 with a deterministic fallback brief while the OpenAI daily spend limit is active. All 5 backend tests pass; the frontend Product Detail page renders the full brief and no longer shows 'Enhancement failed'.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_fm001_creative_brief.py",
+    "/app/test_reports/pytest/iteration15_fm001.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "products.py: exception mapping in creative_brief uses substring checks ('spend limit', 'quota', 'budget', '503') on stringified exception. Robust enough for current LLM error surfaces but a structured error type (e.g. LLMQuotaExceeded) would be cleaner and less fragile.",
+    "The stage note is surfaced via toast.warning which auto-dismisses in a few seconds. Consider also rendering a persistent inline chip on the ProductDetail page (e.g. next to the Creative Studio badge) so operators can see WHY the brief is deterministic after the toast disappears — currently the only surface is the transient toast.",
+    "products.py is 353 lines — still under the 700-line threshold but growing; assemble/generate/creative-brief could each move to their own submodule as it expands."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_fm001_creative_brief.py (new)"
+  ],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "100% (manual E2E verified)"},
+  "test_credentials": "Founder 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! — used as Bearer token; not modified.",
+  "seed_data_creation": "None. Used existing product PRD-00071 ('Teach me how to trade by comparing it to dating — Book', id 2e5cd351-a662-4614-a10b-c88d96cb1252) for the UI check.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "FM-001 fix is verified. Backend test file /app/backend/tests/test_fm001_creative_brief.py covers 5 scenarios: list regression, detail regression, 200 with deterministic fallback + AI Brief Writer stage note + Reviewed status, persistence via GET, and 404 on unknown pid. All pass. Frontend UI on /products/{id} shows the deterministic brief block after clicking [data-testid='pd-creative-btn'] with no 'Enhancement failed' toast. The toast.warning with stage note fires briefly then auto-dismisses (sonner default); DOM body no longer contains 'Enhancement failed'.",
+  "rca_of_the_issue": {
+    "root_cause": "POST /api/products/{pid}/creative-brief unconditionally called ai_service.llm_generate() which raises HTTPException/exception when OpenAI daily spend limit is exceeded. The exception bubbled up as a 500/503 which the frontend collapsed into a generic 'Enhancement failed' toast because no error detail was surfaced.",
+    "fix_verified": "products.py wraps llm_generate in try/except. On failure it builds _fallback_brief(p) deterministically from product fields, sets brief_source='deterministic', and constructs a stage-specific note ('AI Brief Writer™: provider quota exceeded — used a deterministic on-brand brief.'). Endpoint persists creative_brief, creative_brief_source, related_products, creative_status='Reviewed', then returns the product with enhancement_stage_note + enhancement_source. Frontend (ProductDetail.js & CreativeStudio.js) reads enhancement_stage_note and shows it via toast.warning instead of 'Enhancement failed'.",
+    "verification_steps": [
+      "curl POST /api/products/{valid_pid}/creative-brief -> 200, enhancement_source='deterministic', enhancement_stage_note contains 'AI Brief Writer', creative_status='Reviewed', creative_brief has all 8 keys populated.",
+      "GET /api/products/{pid} -> creative_brief + creative_brief_source='deterministic' + creative_status='Reviewed' persisted.",
+      "POST on unknown pid -> 404 {detail: 'Product not found'}.",
+      "UI login as Founder -> Product Library -> open product -> click [data-testid='pd-creative-btn'] -> [data-testid='pd-creative-brief'] block renders with who_for/problem_solved/skills_gained/etc.; 'Enhancement failed' never appears."
+    ]
+  }
+}

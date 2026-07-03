@@ -99,3 +99,11 @@ class LessonInput(BaseModel):
 @router.post("/lessons")
 async def add_lesson(data: LessonInput, user=Depends(get_current_user)):
     return await qiks.add_lesson(data.title, data.division, data.lesson, data.source, user["name"])
+
+
+@router.post("/lessons/{lesson_id}/approve")
+async def approve_lesson(lesson_id: str, user=Depends(get_current_user)):
+    l = await qiks.approve_lesson(lesson_id)
+    if not l:
+        raise HTTPException(404, "Lesson not found")
+    return l

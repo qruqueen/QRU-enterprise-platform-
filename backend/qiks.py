@@ -285,6 +285,18 @@ async def add_lesson(title, division, lesson, source, reviewer):
     return _clean(doc)
 
 
+async def approve_lesson(lesson_id: str):
+    """Founder approval promotes a lesson into permanent Institutional Knowledge™."""
+    l = await LESSON_COL.find_one({"id": lesson_id})
+    if not l:
+        return None
+    await LESSON_COL.update_one(
+        {"id": lesson_id},
+        {"$set": {"founder_approval": True, "promotion_stage": "Institutional Knowledge™", "approved_at": _now()}},
+    )
+    return _clean(await LESSON_COL.find_one({"id": lesson_id}))
+
+
 async def knowledge_graph():
     """Nodes = standards; edges = related_standards + graph_links."""
     nodes, edges = [], []
