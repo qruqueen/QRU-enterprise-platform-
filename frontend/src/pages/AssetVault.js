@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import {
   Upload, Loader2, Search, Download, Archive, ShieldCheck, Star, Link2, History,
   FileImage, FileText, Music, Video, Package, Sparkles,
@@ -139,7 +139,8 @@ function UploadDialog({ meta, onClose, onDone }) {
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent data-testid="vault-upload-dialog">
-        <DialogHeader><DialogTitle className="font-heading">Founder Asset Import™</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle className="font-heading">Founder Asset Import™</DialogTitle>
+          <DialogDescription>Upload an existing QRU asset into the Vault™ with simple classification.</DialogDescription></DialogHeader>
         <div className="space-y-3">
           <button onClick={() => fileRef.current?.click()} data-testid="vault-file-select"
             className="w-full border-2 border-dashed rounded-lg p-6 text-center hover:border-primary text-sm text-muted-foreground">
@@ -191,6 +192,7 @@ function DetailDialog({ asset, meta, onClose, onChange }) {
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="vault-detail-dialog">
         <DialogHeader>
           <DialogTitle className="font-heading">{asset.name}</DialogTitle>
+          <DialogDescription>Asset Vault™ record — classification, versions, and reuse.</DialogDescription>
           <p className="text-xs text-muted-foreground">{asset.asset_code} · {asset.asset_type} · v{asset.version}</p>
         </DialogHeader>
         <div className="grid sm:grid-cols-[220px_1fr] gap-4">
