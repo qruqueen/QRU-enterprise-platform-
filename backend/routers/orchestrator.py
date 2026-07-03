@@ -29,30 +29,13 @@ async def set_settings(data: SettingsInput, user=Depends(require_super_admin)):
 
 
 async def _autopilot_job(actor):
-    # AI Publishing Team advances eligible products with no Founder clicks.
+    # AI Publishing Team advances eligible products through the Treasure Standard™ loop.
     prods = await db.products.find(
         {"status": {"$in": ["Draft", "Ready", "In Review", "Needs Review"]},
          "is_demo": {"$ne": True}}, {"content": 0}).to_list(500)
     for p in prods:
-        pid = p["id"]
         try:
-            conf = (p.get("verification") or {}).get("confidence_score") or 0
-            if not p.get("verified") and conf < pp.CONFIDENCE_THRESHOLD:
-                res = await pp.ai_verify_product(pid, actor)
-                if res.get("escalated"):
-                    continue
-                fresh0 = await db.products.find_one({"id": pid})
-                conf = (fresh0.get("verification") or {}).get("confidence_score") or 0
-            if conf < pp.CONFIDENCE_THRESHOLD:
-                continue
-            await db.products.update_one({"id": pid}, {"$set": {"verified": True}})
-            if not p.get("protected"):
-                await pp.apply_protection(pid, p.get("license_type") or "Personal Use", True, "account_required", actor)
-            fresh = await db.products.find_one({"id": pid})
-            if fresh.get("creative_status") == "Reviewed":
-                await db.products.update_one(
-                    {"id": pid}, {"$set": {"status": "Published", "published_at": now_iso(),
-                                           "ip.publication_date": now_iso(), "updated_at": now_iso()}})
+            await pp.treasure_finalize(p["id"], actor)
         except Exception:
             continue
 

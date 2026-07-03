@@ -62,25 +62,35 @@ DEFAULT_LICENSE_TERMS = (
 )
 
 
-PRODUCT_VERIFICATION_SYSTEM = """You are the QRU Verification Team™ reviewing a finished educational
-PRODUCT before it can be published or sold. Judge it by THE QRU MIND™ and the Treasure Standard™:
-Is it TRUE, UNDERSTANDABLE, USEFUL, COMPLETE (publication-ready), BEAUTIFUL (professional presentation),
-MEMORABLE (learning science), ON-BRAND, and does it meet the Treasure Standard™? The customer should
-finish it and say "I finally understand." Content must be grounded in verified knowledge, professional,
-and suitable for commercial sale.
+PRODUCT_VERIFICATION_SYSTEM = """You are the QRU Verification Team™ guarding the TREASURE STANDARD™ — the
+highest quality standard in the QRU Enterprise. The Treasure Standard™ is the IDENTITY of QRU, not a
+checkbox. The Founder's name (Erica Talbert) and the QRU brand appear on every product.
+
+THE QRU QUESTION™ — you MUST ask before approving:
+"If Erica Talbert's name appears on this product, would she be enthusiastically proud to sell it to her
+family, a classroom, a hospital, a church, a school district, or a Fortune 500 company?"
+If the answer is anything less than an enthusiastic YES, decision must be "request_revision" (or "reject"
+if fundamentally unsound) — never approve "good enough" or generic AI content.
+
+THE TREASURE STANDARD™ TEST — evaluate all: verified accuracy, complete understanding, professional
+writing, presentation, consistent QRU branding, educational excellence, logical organization, appropriate
+reading level, strong learning outcomes, memory reinforcement, practical application, accessibility,
+commercial quality, customer value, professional formatting.
 
 Return ONLY valid JSON (no markdown fences):
 {
   "scores": {"accuracy": 0-100, "clarity": 0-100, "completeness": 0-100, "readability": 0-100},
   "confidence_score": 0-100,
+  "treasure_standard_met": true|false,
+  "founder_would_be_proud": true|false,
   "decision": "approve" | "request_revision" | "reject",
   "sources_checked": ["source or basis 1", "..."],
-  "issues": ["..."],
+  "issues": ["specific, actionable improvement", "..."],
   "reasons": "concise explanation",
   "ip_or_legal_uncertainty": false,
   "source_conflict": false
 }
-Approve only if the product is accurate, clear, complete, professional, and meets QRU standards."""
+Approve ONLY when the Treasure Standard™ is met and the Founder would be proud."""
 
 
 async def ai_verify_product(pid: str, actor: str = "QRU Verification Team™") -> dict:
@@ -171,6 +181,76 @@ async def create_secure_link(pid: str, customer_id: str, minutes: int, actor: st
         "created_by": actor, "created_at": now_iso(),
     })
     return {"token": token, "expires_at": expires, "path": f"/api/protection/download/{token}"}, None
+
+
+IMPROVE_SYSTEM = """You are a QRU AI Production Agent improving an educational product to meet the
+TREASURE STANDARD™. Rewrite and elevate the product so the Founder would be enthusiastically proud to
+put her name on it: fix every listed issue, strengthen clarity, understanding, structure, learning
+outcomes, memory reinforcement, practical application, and professional formatting. Keep it accurate and
+grounded. Return ONLY the improved product content in clean Markdown — no commentary."""
+
+
+async def _improve_product(pid, issues, actor):
+    p = await db.products.find_one({"id": pid})
+    if not p:
+        return
+    issue_text = "\n".join(f"- {i}" for i in (issues or [])) or "- Elevate to full Treasure Standard™ quality."
+    prompt = (f"PRODUCT TYPE: {p.get('product_type')}\nTITLE: {p.get('title')}\n\n"
+              f"ISSUES TO FIX:\n{issue_text}\n\nCURRENT CONTENT:\n{(p.get('content') or '')[:4000]}")
+    improved = await llm_generate(IMPROVE_SYSTEM, prompt, f"improve-{pid}")
+    if improved and len(improved.strip()) > 40:
+        history = p.get("improvement_history", [])
+        history.append({"at": now_iso(), "by": actor, "issues": issues or []})
+        await db.products.update_one(
+            {"id": pid}, {"$set": {"content": improved, "improvement_history": history, "updated_at": now_iso()}})
+    await log_org("Manufacturing Director™", "Manufacturing", "auto-revised to meet Treasure Standard™",
+                  p.get("product_code", ""))
+
+
+async def treasure_finalize(pid, actor="QRU Verification Team™", max_rounds=2):
+    """Treasure Standard™ Improvement Loop™: verify → auto-revise → re-verify until the
+    standard is met, then protect, publish, and distribute. Escalate only on true exceptions.
+    Returns one of: published | escalated | needs_review."""
+    for rnd in range(max_rounds + 1):
+        res = await ai_verify_product(pid, actor)
+        if res.get("escalated"):
+            await db.products.update_one({"id": pid}, {"$set": {"status": "Needs Review", "updated_at": now_iso()}})
+            return "escalated"
+        v = (await db.products.find_one({"id": pid})).get("verification") or {}
+        conf = v.get("confidence_score") or 0
+        decision = v.get("decision")
+        proud = v.get("founder_would_be_proud", conf >= CONFIDENCE_THRESHOLD)
+        treasure = v.get("treasure_standard_met", conf >= CONFIDENCE_THRESHOLD)
+        if decision == "approve" and conf >= CONFIDENCE_THRESHOLD and proud and treasure:
+            break
+        if rnd < max_rounds:
+            await _improve_product(pid, v.get("issues", []), actor)
+            continue
+        # Exhausted rounds: publish only if confident, else hold for Founder judgment.
+        if not (conf >= CONFIDENCE_THRESHOLD and proud):
+            await db.products.update_one({"id": pid}, {"$set": {"status": "Needs Review", "updated_at": now_iso()}})
+            await db.founder_escalations.insert_one({
+                "id": gen_id(), "type": "quality", "product_id": pid,
+                "product_code": (await db.products.find_one({"id": pid})).get("product_code"),
+                "title": (await db.products.find_one({"id": pid})).get("title"),
+                "reason": "Did not reach Treasure Standard™ after automatic revisions — Founder judgment requested.",
+                "status": "Open", "confidence_score": conf, "created_at": now_iso()})
+            return "needs_review"
+
+    # Treasure Standard™ met → protect, publish, distribute.
+    await db.products.update_one({"id": pid}, {"$set": {"verified": True, "treasure_standard": True}})
+    await apply_protection(pid, (await db.products.find_one({"id": pid})).get("license_type") or "Personal Use",
+                           True, "account_required", actor)
+    await db.products.update_one({"id": pid}, {"$set": {"status": "Published", "published_at": now_iso(),
+                                                        "ip.publication_date": now_iso(), "updated_at": now_iso()}})
+    try:
+        import integration_hub as ihub
+        await ihub.auto_distribute(pid, "AI Distribution Team™")
+    except Exception:
+        pass
+    await log_org("AI Publishing Team™", "Manufacturing", "published at Treasure Standard™",
+                  (await db.products.find_one({"id": pid})).get("product_code", ""), "success")
+    return "published"
 
 
 def dashboard_row(p):

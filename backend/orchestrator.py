@@ -234,35 +234,12 @@ async def _auto_publish(kr_id, division, college, batch_id):
     await db.products.insert_one(dict(product))
     await db.knowledge_records.update_one({"id": kr_id}, {"$inc": {"products_created": 1}})
 
-    # AI Quality Control / product verification.
-    result = await pp.ai_verify_product(pid, "AI Quality Control Team™")
-    if result.get("escalated"):
+    # Treasure Standard™ Improvement Loop™ → QC → protect → publish → distribute.
+    outcome = await pp.treasure_finalize(pid, "AI Publishing Team™")
+    if outcome == "escalated":
         return "escalated", True
-    fresh = await db.products.find_one({"id": pid})
-    conf = (fresh.get("verification") or {}).get("confidence_score") or 0
-    # Hands-free QC: publish when confidence meets QRU standards, escalate only on
-    # IP/legal/source conflicts (handled above). Hold only if confidence is low.
-    if conf < pp.CONFIDENCE_THRESHOLD:
-        await db.products.update_one({"id": pid}, {"$set": {"status": "Needs Review", "updated_at": now_iso()}})
+    if outcome == "needs_review":
         return "needs_review", False
-
-    # Treasure Standard™ compliance + IP protection, then publish.
-    await db.products.update_one({"id": pid}, {"$set": {"verified": True}})
-    await pp.apply_protection(pid, "Personal Use", True, "account_required", "AI Publishing Team™")
-    treasure = bool(kr.get("treasure_standard"))
-    await db.products.update_one(
-        {"id": pid},
-        {"$set": {"status": "Published", "treasure_standard": treasure,
-                  "published_at": now_iso(), "updated_at": now_iso(),
-                  "ip.publication_date": now_iso()}})
-    await log_org("AI Publishing Team™", "Manufacturing", "auto-published to Product & Customer Library",
-                  product["product_code"], "success")
-    # Distribute Everywhere — route to connected external platforms (Integration Hub).
-    try:
-        import integration_hub as ihub
-        await ihub.auto_distribute(pid, "AI Distribution Team™")
-    except Exception as e:
-        logger.error(f"auto-distribute failed: {e}")
     return "published", False
 
 

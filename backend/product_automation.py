@@ -319,18 +319,9 @@ async def _produce_one(kr, ptype, order_id, owner_id, hands_free, config=None):
     await db.knowledge_records.update_one({"id": kr["id"]}, {"$inc": {"products_created": 1}})
 
     if hands_free:
-        # AI QC → protect → publish → distribute (no Founder clicks).
+        # Treasure Standard™ Improvement Loop™ → protect → publish → distribute (no Founder clicks).
         try:
-            result = await pp.ai_verify_product(pid, "AI Quality Control Team™")
-            fresh = await db.products.find_one({"id": pid})
-            conf = (fresh.get("verification") or {}).get("confidence_score") or 0
-            if not result.get("escalated") and conf >= pp.CONFIDENCE_THRESHOLD:
-                await db.products.update_one({"id": pid}, {"$set": {"verified": True}})
-                await pp.apply_protection(pid, "Personal Use", True, "account_required", agent)
-                await db.products.update_one({"id": pid}, {"$set": {"status": "Published", "published_at": now_iso(),
-                                                                    "ip.publication_date": now_iso(), "updated_at": now_iso()}})
-                import integration_hub as ihub
-                await ihub.auto_distribute(pid, "AI Distribution Team™")
+            await pp.treasure_finalize(pid, agent)
         except Exception as e:
             logger.error(f"hands-free finalize failed for {pid}: {e}")
     return pid

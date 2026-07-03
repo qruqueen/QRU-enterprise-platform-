@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { Link } from "react-router-dom";
-import { Activity, BookOpen, Factory, Cpu, Plug, Store, BarChart3, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Activity, BookOpen, Factory, Cpu, Plug, Store, BarChart3, AlertTriangle, CheckCircle2, ClipboardCheck, Loader2 } from "lucide-react";
 
 const ICONS = { knowledge: BookOpen, manufacturing: Factory, ai_services: Cpu, integration: Plug, commerce: Store, analytics: BarChart3 };
 const LINKS = { knowledge: "/knowledge", manufacturing: "/manufacturing", ai_services: "/ai-services", integration: "/integration-hub", commerce: "/product-protection", analytics: "/analytics" };
@@ -9,6 +9,14 @@ const LINKS = { knowledge: "/knowledge", manufacturing: "/manufacturing", ai_ser
 export default function EnterpriseCommandCenter() {
   const [data, setData] = useState(null);
   const [readiness, setReadiness] = useState(null);
+  const [fat, setFat] = useState(null);
+  const [running, setRunning] = useState(false);
+
+  const runFAT = async () => {
+    setRunning(true);
+    try { const { data } = await api.get("/enterprise/factory-acceptance-test"); setFat(data); }
+    finally { setRunning(false); }
+  };
 
   useEffect(() => {
     const load = () => {
@@ -67,9 +75,15 @@ export default function EnterpriseCommandCenter() {
         <div className="bg-card border rounded-sm p-5" data-testid="readiness-panel">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-heading font-semibold text-sm">Enterprise Readiness Review™</h3>
-            <span className={`text-[11px] px-2 py-0.5 rounded-full ${readiness.overall === "ready" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-              {readiness.readiness_score}% · {readiness.overall === "ready" ? "Ready to scale" : "Needs attention"}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`text-[11px] px-2 py-0.5 rounded-full ${readiness.overall === "ready" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                {readiness.readiness_score}% · {readiness.overall === "ready" ? "Ready to scale" : "Needs attention"}
+              </span>
+              <button data-testid="run-fat-btn" onClick={runFAT} disabled={running}
+                className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-sm bg-navy text-white font-medium disabled:opacity-60">
+                {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ClipboardCheck className="w-3.5 h-3.5" />} Factory Acceptance Test™
+              </button>
+            </div>
           </div>
           <div className="grid sm:grid-cols-2 gap-2">
             {readiness.checks.map((c, i) => (
@@ -83,6 +97,28 @@ export default function EnterpriseCommandCenter() {
             ))}
           </div>
           <p className="text-[11px] text-muted-foreground mt-3">{readiness.recipes} Product Recipes™ · {readiness.packages} packages validated.</p>
+        </div>
+      )}
+
+      {fat && (
+        <div className="bg-card border rounded-sm p-5" data-testid="fat-panel">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-heading font-semibold text-sm">Factory Acceptance Test™ — Enterprise Quality Score™</h3>
+            <span className={`text-sm font-heading font-bold px-3 py-1 rounded-sm ${fat.production_ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+              {fat.enterprise_quality_score}%
+            </span>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {fat.modules.map((m, i) => (
+              <div key={i} className="border rounded-sm p-3" data-testid={`fat-module-${i}`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium">{m.module}</span>
+                  <span className={`text-[11px] font-bold ${m.score >= 100 ? "text-emerald-600" : m.score >= 85 ? "text-amber-600" : "text-red-600"}`}>{m.score}</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">{m.note}</p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
