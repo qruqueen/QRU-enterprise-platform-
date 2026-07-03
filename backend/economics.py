@@ -115,6 +115,65 @@ async def economics_row(product):
     }
 
 
+async def preview_conversion(rows_by_id=None):
+    """Preview Conversion™ — sample opens → purchases, per product and overall.
+    Shows which Preview Editions™ actually drive First Dollar Mode™ sales."""
+    # Opens per product (+ format split) from the preview_opens tracker.
+    opens_map, html_opens, pdf_opens = {}, {}, {}
+    async for o in db.preview_opens.find({}, {"product_id": 1, "format": 1}):
+        pid = o.get("product_id")
+        opens_map[pid] = opens_map.get(pid, 0) + 1
+        if o.get("format") == "pdf":
+            pdf_opens[pid] = pdf_opens.get(pid, 0) + 1
+        else:
+            html_opens[pid] = html_opens.get(pid, 0) + 1
+
+    # Paid purchases per product.
+    sales_map, rev_map = {}, {}
+    async for pu in db.purchases.find({}, {"product_id": 1, "amount": 1}):
+        pid = pu.get("product_id")
+        sales_map[pid] = sales_map.get(pid, 0) + 1
+        rev_map[pid] = round(rev_map.get(pid, 0) + (pu.get("amount") or 0), 2)
+
+    # Products that have a preview available.
+    prods = await db.products.find(
+        {"$or": [{"preview_url": {"$ne": None}}, {"preview_pdf_url": {"$ne": None}}]},
+        {"id": 1, "product_code": 1, "title": 1, "product_type": 1}
+    ).to_list(500)
+
+    items = []
+    total_opens = total_sales = 0
+    total_rev = 0.0
+    for p in prods:
+        pid = p["id"]
+        opens = opens_map.get(pid, 0)
+        sales = sales_map.get(pid, 0)
+        rev = rev_map.get(pid, 0.0)
+        total_opens += opens
+        total_sales += sales
+        total_rev = round(total_rev + rev, 2)
+        conv = round(100 * sales / opens, 1) if opens else 0.0
+        items.append({
+            "id": pid, "product_code": p.get("product_code"), "title": p.get("title"),
+            "product_type": p.get("product_type"),
+            "opens": opens, "html_opens": html_opens.get(pid, 0), "pdf_opens": pdf_opens.get(pid, 0),
+            "sales": sales, "revenue": rev, "conversion_rate": conv,
+        })
+    # Rank: best converters with at least one open first, then most-opened.
+    items.sort(key=lambda x: (-(x["conversion_rate"] if x["opens"] else -1), -x["opens"]))
+    overall = round(100 * total_sales / total_opens, 1) if total_opens else 0.0
+    return {
+        "summary": {
+            "products_with_preview": len(items),
+            "total_opens": total_opens, "total_sales": total_sales,
+            "overall_conversion_rate": overall, "preview_revenue": total_rev,
+        },
+        "products": items,
+        "top_converters": [i for i in items if i["opens"] > 0][:8],
+        "note": "Conversion = paid purchases ÷ preview opens. Opens are counted when a customer clicks Read Sample or Preview PDF in the QRU Store™.",
+    }
+
+
 async def overview(limit=500):
     ai = await cost_meter.overview()
     products = await db.products.find({}).sort("created_at", -1).to_list(limit)
@@ -145,6 +204,7 @@ async def overview(limit=500):
             "products": len(rows), "avg_manufacturing_cost": avg_cost,
             "avg_gross_margin_pct": avg_margin, "total_reuse_savings": total_savings,
         },
+        "preview_conversion": await preview_conversion(),
         "products": rows,
         "credit_consumption": consumption,
         "recommendations": recommendations,

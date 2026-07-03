@@ -3,7 +3,7 @@ import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import {
   Loader2, Cpu, DollarSign, TrendingUp, PiggyBank, FileDown, FileSpreadsheet,
-  Sparkles, Zap, Star,
+  Sparkles, Zap, Star, Eye, MousePointerClick,
 } from "lucide-react";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
@@ -44,6 +44,54 @@ export default function ManufacturingEconomics() {
         <Stat icon={PiggyBank} label="Total Reuse Savings" value={money(s.total_reuse_savings)} sub="Avoided via reuse & deterministic rendering" testid="stat-savings" />
         <Stat icon={Cpu} label="Est. AI Spend Today" value={money(ai?.budget?.spent_today)} sub={`Budget ${money(ai?.budget?.daily_budget_usd)}`} testid="stat-ai-today" />
       </div>
+
+      {/* Preview Conversion™ */}
+      {data.preview_conversion && (() => {
+        const pc = data.preview_conversion;
+        const ps = pc.summary || {};
+        return (
+          <div className="bg-card border rounded-2xl p-5 mb-6" data-testid="preview-conversion">
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+              <p className="overline text-gold flex items-center gap-1.5"><MousePointerClick className="w-3.5 h-3.5" /> Preview Conversion™ — Do Samples Drive Sales?</p>
+              <span className="text-[11px] text-muted-foreground">{ps.products_with_preview} product(s) with a Preview Edition™</span>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <Stat icon={Eye} label="Preview Opens" value={ps.total_opens ?? 0} sub="Read Sample + Preview PDF" testid="pc-opens" />
+              <Stat icon={DollarSign} label="Preview Sales" value={ps.total_sales ?? 0} sub={`${money(ps.preview_revenue)} revenue`} testid="pc-sales" />
+              <Stat icon={TrendingUp} label="Overall Conversion" value={`${ps.overall_conversion_rate ?? 0}%`} sub="Purchases ÷ opens" testid="pc-rate" />
+              <Stat icon={Star} label="Top Converters" value={pc.top_converters?.length ?? 0} sub="With ≥1 sample open" testid="pc-top" />
+            </div>
+            {ps.total_opens === 0 ? (
+              <p className="text-sm text-muted-foreground italic">No preview opens yet. As customers click “Read Sample” or “Preview PDF” in the QRU Store™, conversion will appear here.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm" data-testid="preview-conversion-table">
+                  <thead>
+                    <tr className="text-left text-xs text-muted-foreground border-b">
+                      <th className="py-2 pr-3">Product</th><th className="pr-3 text-right">Opens</th>
+                      <th className="pr-3 text-right">Sample</th><th className="pr-3 text-right">PDF</th>
+                      <th className="pr-3 text-right">Sales</th><th className="pr-3 text-right">Conversion</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pc.top_converters.map((r) => (
+                      <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30" data-testid={`pc-row-${r.product_code}`}>
+                        <td className="py-2 pr-3"><span className="font-medium">{r.title}</span><span className="block text-[10px] text-muted-foreground">{r.product_code}</span></td>
+                        <td className="pr-3 text-right">{r.opens}</td>
+                        <td className="pr-3 text-right text-muted-foreground">{r.html_opens}</td>
+                        <td className="pr-3 text-right text-muted-foreground">{r.pdf_opens}</td>
+                        <td className="pr-3 text-right font-medium">{r.sales}</td>
+                        <td className="pr-3 text-right font-semibold text-emerald-600">{r.conversion_rate}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <p className="text-[11px] text-muted-foreground mt-3">{pc.note}</p>
+          </div>
+        );
+      })()}
 
       <div className="grid lg:grid-cols-3 gap-6 mb-6">
         {/* AI Cost Dashboard */}

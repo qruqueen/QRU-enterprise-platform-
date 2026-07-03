@@ -366,3 +366,8 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 ### Store Integration (MT-033 follow-up, Founder-approved)
 - `commerce.storefront()` now returns `preview_url` + `preview_pdf_url`; `Store.js` cards show **Read Sample** (HTML) + **Preview PDF** (download) next to Formats/Buy — customers sample before purchase (First Dollar Mode™ conversion).
 - `backfill_marketing.py` (one-off) built kits for all 27 remaining Published products → **28/28 store products now have previews**. New products auto-build kits during deliverable rendering.
+
+### Preview Conversion™ metric (Manufacturing Economics™, Founder-approved)
+- Public tracker `GET /api/marketing/preview/{pid}?fmt=html|pdf` records a `preview_opens` doc (+ increments `product.preview_opens`) then 302-redirects to the asset. Store "Read Sample" / "Preview PDF" links route through it.
+- `economics.preview_conversion()` aggregates opens (html/pdf split) vs paid purchases per product → conversion rate + overall totals + top converters; added to `/api/economics/overview` as `preview_conversion`.
+- Economics UI: **Preview Conversion™** panel (Preview Opens / Preview Sales / Overall Conversion / Top Converters + per-product table). Verified via curl (opens tracked, 302 redirects, conversion computed) + screenshot.

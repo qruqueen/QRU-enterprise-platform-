@@ -106,14 +106,14 @@ export default function Store() {
               {(p.preview_url || p.preview_pdf_url) && (
                 <div className="flex items-center gap-2 mt-2" data-testid={`store-preview-${p.product_code}`}>
                   {p.preview_url && (
-                    <a href={`${process.env.REACT_APP_BACKEND_URL}${p.preview_url}`} target="_blank" rel="noreferrer"
+                    <a href={`${process.env.REACT_APP_BACKEND_URL}/api/marketing/preview/${p.id}?fmt=html`} target="_blank" rel="noreferrer"
                       data-testid={`read-sample-${p.product_code}`}
                       className="flex items-center gap-1 text-primary text-xs font-medium hover:underline">
                       <Eye className="w-3.5 h-3.5" /> Read Sample
                     </a>
                   )}
                   {p.preview_pdf_url && (
-                    <a href={`${process.env.REACT_APP_BACKEND_URL}${p.preview_pdf_url}?download=1&name=${encodeURIComponent(p.title + " — Preview")}`}
+                    <a href={`${process.env.REACT_APP_BACKEND_URL}/api/marketing/preview/${p.id}?fmt=pdf`}
                       data-testid={`preview-pdf-${p.product_code}`}
                       className="flex items-center gap-1 text-navy text-xs font-medium hover:underline">
                       <FileText className="w-3.5 h-3.5" /> Preview PDF

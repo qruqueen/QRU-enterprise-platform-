@@ -1,16 +1,39 @@
 """MT-033 — QRU Preview & Marketing Manufacturing System™ API."""
 import os
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from typing import Optional
 
 from database import db
 from auth import get_current_user
-from models import clean
+from models import gen_id, now_iso, clean
 import marketing_engine as me
 
 router = APIRouter(prefix="/api/marketing", tags=["marketing"])
 BACKEND_PUBLIC = os.environ.get("REACT_APP_BACKEND_URL", "")
+
+
+@router.get("/preview/{pid}")
+async def open_preview(pid: str, fmt: str = "html"):
+    """Public preview-open tracker → records the open then redirects to the asset.
+    Powers the Preview Conversion™ metric (sample opens → purchases)."""
+    p = await db.products.find_one({"id": pid}, {"preview_url": 1, "preview_pdf_url": 1, "title": 1, "product_code": 1})
+    if not p:
+        raise HTTPException(404, "Product not found")
+    target = p.get("preview_pdf_url") if fmt == "pdf" else p.get("preview_url")
+    if not target:
+        raise HTTPException(404, "No preview available")
+    await db.preview_opens.insert_one({
+        "id": gen_id(), "product_id": pid, "product_code": p.get("product_code"),
+        "format": "pdf" if fmt == "pdf" else "html", "at": now_iso(),
+    })
+    await db.products.update_one({"id": pid}, {"$inc": {"preview_opens": 1}})
+    dest = target if target.startswith("http") else f"{BACKEND_PUBLIC}{target}"
+    if fmt == "pdf":
+        sep = "&" if "?" in dest else "?"
+        dest = f"{dest}{sep}download=1"
+    return RedirectResponse(url=dest, status_code=302)
 
 
 @router.post("/{pid}/build")
