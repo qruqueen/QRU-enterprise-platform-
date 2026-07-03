@@ -6,8 +6,8 @@ import { ArrowRight } from "lucide-react";
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("admin@qru.com");
-  const [password, setPassword] = useState("qru-admin-2026");
+  const [email, setEmail] = useState("22j2rsdzb8@privaterelay.appleid.com");
+  const [password, setPassword] = useState("QruFounder2026!");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -104,10 +104,9 @@ export default function Login() {
             </button>
           </form>
           <div className="mt-6 text-xs text-muted-foreground bg-muted rounded-sm p-3 border">
-            <p className="font-medium text-foreground mb-1">Demo credentials</p>
-            Admin · admin@qru.com / qru-admin-2026<br />
-            Executive · executive@qru.com / qru-exec-2026<br />
-            Learner · learner@qru.com / qru-learn-2026
+            <p className="font-medium text-foreground mb-1">Founder access (temporary — set your own after login)</p>
+            Founder · 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026!<br />
+            <span className="text-muted-foreground/70">Demo Admin · demo.admin@qru.com / qru-demo-admin-2026</span>
           </div>
         </div>
       </div>

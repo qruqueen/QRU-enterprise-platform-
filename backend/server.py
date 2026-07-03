@@ -24,6 +24,10 @@ from routers.evolution import router as evolution_router
 from routers.memory import router as memory_router
 from routers.rendering import router as rendering_router
 from routers.media import router as media_router
+from routers.registry import router as topic_registry_router
+from routers.verification import router as verification_router
+from routers.orchestrator import router as orchestrator_router
+from routers.protection import router as protection_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
 from routers.misc import (
@@ -46,6 +50,7 @@ for r in [
     products_router, analytics_router, command_router, translation_router,
     colleges_router, jobs_router, organization_router, customers_router, notif_router, health_router,
     search_router, users_router, consumer_router, command_center_router, pipeline_router, design_router, evolution_router, memory_router, rendering_router, media_router,
+    topic_registry_router, verification_router, orchestrator_router, protection_router,
 ]:
     app.include_router(r)
 

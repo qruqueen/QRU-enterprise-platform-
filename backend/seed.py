@@ -77,32 +77,88 @@ SEED_ORDERS = [
 async def seed():
     await db.users.create_index("email", unique=True)
 
-    admin_email = os.environ.get("ADMIN_EMAIL", "admin@qru.com")
-    admin_password = os.environ.get("ADMIN_PASSWORD", "qru-admin-2026")
-    existing = await db.users.find_one({"email": admin_email})
-    if not existing:
+    # ---------- Founder / Super Administrator ----------
+    # A temporary password is provisioned so the Founder is NEVER locked out of Preview.
+    # The Founder can set a permanent password anytime via /api/auth/change-password;
+    # once set, this seed will never overwrite it (temp_password flag guards it).
+    founder_email = os.environ["FOUNDER_EMAIL"].lower()
+    founder_name = os.environ.get("FOUNDER_NAME", "Founder")
+    temp_pw = os.environ.get("FOUNDER_TEMP_PASSWORD", "QruFounder2026!")
+    founder = await db.users.find_one({"email": founder_email})
+    if not founder:
         await db.users.insert_one({
-            "id": gen_id(), "email": admin_email, "password_hash": hash_password(admin_password),
-            "name": "QRU Administrator", "role": "Administrator", "avatar": None, "created_at": now_iso(),
+            "id": gen_id(), "email": founder_email, "password_hash": hash_password(temp_pw),
+            "name": founder_name, "role": "Founder & CEO", "is_founder": True,
+            "temp_password": True, "setup_required": True, "avatar": None, "created_at": now_iso(),
         })
-    elif not verify_password(admin_password, existing["password_hash"]):
-        await db.users.update_one({"email": admin_email}, {"$set": {"password_hash": hash_password(admin_password)}})
+    else:
+        upd = {"role": "Founder & CEO", "is_founder": True, "name": founder_name}
+        # If the account somehow has no usable password, restore the temporary one.
+        if not founder.get("password_hash"):
+            upd.update({"password_hash": hash_password(temp_pw), "temp_password": True, "setup_required": True})
+        elif founder.get("temp_password"):
+            # Keep the temporary password in sync with env until the Founder sets a permanent one.
+            if not verify_password(temp_pw, founder["password_hash"]):
+                upd["password_hash"] = hash_password(temp_pw)
+        await db.users.update_one({"email": founder_email}, {"$set": upd})
+    founder = await db.users.find_one({"email": founder_email})
+    founder_id = founder["id"]
 
-    # Demo executive user
-    exec_email = "executive@qru.com"
-    if not await db.users.find_one({"email": exec_email}):
-        await db.users.insert_one({
-            "id": gen_id(), "email": exec_email, "password_hash": hash_password("qru-exec-2026"),
-            "name": "Jordan Ellis", "role": "Executive", "avatar": None, "created_at": now_iso(),
-        })
+    # ---------- Remove all legacy / personal demo accounts ----------
+    await db.users.delete_many({"email": {"$in": [
+        "admin@qru.com", "executive@qru.com", "learner@qru.com"]}})
+    await db.users.delete_many({
+        "name": {"$in": ["Jordan Ellis", "Erica Chen", "QRU Administrator"]},
+        "is_founder": {"$ne": True}})
 
-    # Demo consumer/customer user — experiences QRU as a learner (Consumer Mode).
-    cust_email = "learner@qru.com"
-    if not await db.users.find_one({"email": cust_email}):
-        await db.users.insert_one({
-            "id": gen_id(), "email": cust_email, "password_hash": hash_password("qru-learn-2026"),
-            "name": "Erica Chen", "role": "Customer", "avatar": None, "created_at": now_iso(),
-        })
+    # ---------- Generic, non-personal demo accounts (env-gated, no real identities) ----------
+    if os.environ.get("SEED_DEMO_ACCOUNTS", "true").lower() == "true":
+        demo_accounts = [
+            ("demo.admin@qru.com", os.environ.get("DEMO_ADMIN_PASSWORD"), "Demo Administrator", "Administrator"),
+            ("demo.instructor@qru.com", os.environ.get("DEMO_INSTRUCTOR_PASSWORD"), "Demo Instructor", "Teacher"),
+            ("demo.student@qru.com", os.environ.get("DEMO_STUDENT_PASSWORD"), "Demo Student", "Customer"),
+        ]
+        for email, pw, name, role in demo_accounts:
+            if not pw:
+                continue
+            existing = await db.users.find_one({"email": email})
+            if not existing:
+                await db.users.insert_one({
+                    "id": gen_id(), "email": email, "password_hash": hash_password(pw),
+                    "name": name, "role": role, "is_demo_account": True,
+                    "avatar": None, "created_at": now_iso(),
+                })
+            elif not verify_password(pw, existing["password_hash"]):
+                await db.users.update_one({"email": email}, {"$set": {"password_hash": hash_password(pw)}})
+
+    # ---------- Transfer ownership of all existing data to the Founder ----------
+    owned_collections = [
+        "knowledge_records", "products", "manufacturing_orders", "colleges",
+        "digital_employees", "customers", "topic_registry", "manufacturing_batches",
+        "manufacturing_jobs", "media_assets",
+    ]
+    for coll in owned_collections:
+        await db[coll].update_many({"owner_id": {"$exists": False}}, {"$set": {"owner_id": founder_id}})
+
+    # Normalize legacy display attribution to the Founder.
+    for coll in ["knowledge_records", "manufacturing_orders"]:
+        await db[coll].update_many({"created_by": "QRU Administrator"}, {"$set": {"created_by": founder_name}})
+
+    # Demo published products should read as verified & protected on the Protection Dashboard.
+    from datetime import datetime, timezone
+    _year = datetime.now(timezone.utc).year
+    await db.products.update_many(
+        {"is_demo": True, "verified": {"$exists": False}},
+        {"$set": {
+            "verified": True,
+            "verification": {"reviewer": "QRU Verification Team™", "decision": "approve",
+                             "confidence_score": 95, "autonomous": True, "reviewed_at": now_iso()},
+            "license_type": "Personal Use",
+            "protected": True,
+            "protection": {"copyright_notice": f"© {_year} QRU (Quest for Real Understanding). All rights reserved.",
+                           "copyright_applied": True, "watermark": True, "watermark_applied": True,
+                           "access_control": "account_required", "secure_download": True},
+        }})
 
     if await db.digital_employees.count_documents({}) == 0:
         for i, (name, title, mission, resp, perms, tools, auth) in enumerate(DIGITAL_EMPLOYEES):
@@ -228,14 +284,24 @@ async def seed():
         with open("/app/memory/test_credentials.md", "w") as f:
             f.write(
                 "# QRU Factory Test Credentials\n\n"
-                "## Admin\n"
-                f"- Email: {admin_email}\n- Password: {admin_password}\n- Role: Administrator\n\n"
-                "## Executive (test user)\n"
-                "- Email: executive@qru.com\n- Password: qru-exec-2026\n- Role: Executive\n\n"
-                "## Consumer / Learner (test user)\n"
-                "- Email: learner@qru.com\n- Password: qru-learn-2026\n- Role: Customer (locked to Consumer Mode at /learn)\n\n"
+                "## Founder & CEO (Super Administrator — sole permanent owner)\n"
+                f"- Email: {founder_email}\n"
+                f"- Name: {founder_name}\n"
+                "- Role: Founder & CEO\n"
+                f"- TEMPORARY Password (Preview login works now): {os.environ.get('FOUNDER_TEMP_PASSWORD')}\n"
+                "- The Founder can set a PERMANENT password anytime (authenticated):\n"
+                "  - POST /api/auth/change-password {current_password, new_password} (>=10 chars, letters+numbers)\n"
+                "  - GET /api/auth/setup-status → setup_required/using_temporary_password flags\n"
+                "  - Testers MAY log in as Founder with the temporary password. Do NOT change the Founder password.\n\n"
+                "## Demo Administrator (generic — for testing enterprise flows)\n"
+                f"- Email: demo.admin@qru.com\n- Password: {os.environ.get('DEMO_ADMIN_PASSWORD')}\n- Role: Administrator\n\n"
+                "## Demo Instructor (generic)\n"
+                f"- Email: demo.instructor@qru.com\n- Password: {os.environ.get('DEMO_INSTRUCTOR_PASSWORD')}\n- Role: Teacher\n\n"
+                "## Demo Student (generic — Consumer Mode at /learn)\n"
+                f"- Email: demo.student@qru.com\n- Password: {os.environ.get('DEMO_STUDENT_PASSWORD')}\n- Role: Customer\n\n"
                 "## Auth endpoints\n"
-                "- POST /api/auth/register\n- POST /api/auth/login\n- GET /api/auth/me\n- POST /api/auth/logout\n\n"
+                "- POST /api/auth/register\n- POST /api/auth/login\n- GET /api/auth/me\n- POST /api/auth/logout\n"
+                "- GET /api/auth/setup-status\n- POST /api/auth/setup-founder\n\n"
                 "Auth uses Bearer tokens (Authorization: Bearer <token>) returned by login/register.\n"
             )
     except Exception:

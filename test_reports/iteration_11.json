@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 11 — Full E2E validation of Founder ownership + temporary-password flow, QRU Topic Registry™ (CRUD + AI generate + bulk-import), Intelligent Bulk Manufacturing Orchestrator™ (settings, hands-free batch on 1 topic → Published product with verified+protected+copyright+license, pause/resume/retry), AI Verification Team (config/log/escalations), Product Protection (licenses/dashboard/verify/apply-protection/secure-link/download + unverified 400), and Publish gate (400 for unverified). All 23 backend pytest tests pass. Frontend: Founder security banner + Set Permanent Password toggle, navigation to Topic Registry / Orchestrator / Verification Team / Product Protection all working, AI topic generation (Faith, 10) returns proposals in UI, Protection dashboard renders rows with Verify/Protect/Link buttons.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration11.py",
+    "/app/test_reports/pytest/iteration11.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "FIXED during test: orchestrator.get_settings() returned the raw Mongo doc including ObjectId _id, causing GET /api/orchestrator/settings → 500. Wrapped return in models.clean() so _id is stripped. (Same pattern recurs across the codebase — anywhere a router directly returns db.find_one(...) without clean(), a 500 will trigger. Consider a small utility/decorator or lint rule.)",
+    "orchestrator.py imports models.clean lazily inside get_settings; consider moving the import to the top of the module for consistency.",
+    "TopicRegistry.js sends `count` as Number(count), server clamps to [10,120]. Anything <10 silently becomes 10; front-end min=10 already, but showing the clamp in UI would prevent surprise.",
+    "product_protection.create_secure_link stores expires_at as ISO string and compares with datetime.now().isoformat() — lexicographic ISO comparison works only for tz-aware UTC strings with identical formatting. Currently both use `.isoformat()` so it's safe, but a naive/aware mismatch would silently fail; consider parsing with fromisoformat().",
+    "download endpoint (/api/protection/download/{token}) is unauthenticated by design (public expiring link). Anti-sharing relies solely on max_access=5 and expires_at. Consider optional IP/UA fingerprint check for tighter anti-share.",
+    "Verification /log endpoint scans all knowledge_records and flattens verification_log in-process (up to 300 docs). Fine at current scale; add a persistent verification_log collection if this grows.",
+    "auth.change_password validates new password but does NOT prevent setting the same as current; acceptable but noted.",
+    "misc.py delete_user does not clear owner_id from records owned by the deleted user; may leave orphaned owner_id references. Not exercised here (Founder is undeletable), but worth noting for demo/admin cleanup flows."
+  ],
+  "updated_files": [
+    "/app/backend/orchestrator.py",
+    "/app/backend/tests/test_iteration11.py",
+    "/app/test_reports/iteration_11.json",
+    "/app/test_reports/pytest/iteration11.xml"
+  ],
+  "success_rate": {
+    "backend": "100% (23/23 passed after 1 fix)",
+    "frontend": "100% (banner, 4 nav routes, Topic Registry AI generate, Protection dashboard rows/actions all verified)"
+  },
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (TEMPORARY — NOT changed). Demo Admin: demo.admin@qru.com / qru-demo-admin-2026 (change-password tested & reverted). Demo Instructor / Demo Student login also verified.",
+  "seed_data_creation": "Created a handful of TEST_* topics via topic-registry POST + bulk-import (2 topics + 2 orders under TEST_BulkCollege_*). One TEST_BatchTopic_* + one manufacturing batch TEST_Batch_* (batch_size=1) run through hands-free pipeline (Manufacture→Verify→QC→Publish). Products created by AI Publishing Team™ show verified=true, protected=true, license_type set, copyright_notice present. No Founder button clicks were required during the hands-free batch.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend routes verified: /api/auth/{setup-status,login,me,change-password}, /api/users (Founder undeletable → 400), /api/topic-registry (CRUD + /stats + /generate + /bulk-import), /api/orchestrator/{settings,batches,batches/{id}/{start,pause,resume,retry,approve},autopilot,stats}, /api/verification/{config,log,escalations,escalations/{id}/resolve,ai-review,ai-review-all}, /api/protection/{licenses,dashboard,{pid}/verify,{pid}/apply-protection,{pid}/secure-link,download/{token},grant,licenses/granted}, /api/products/{pid}/status publish gate (400 unless verified+creative-reviewed). Orchestrator hands-free batch on a single topic takes ~90-150s (multi-LLM per topic). ALWAYS use batch_size=1 to conserve LLM credits. Frontend testids present: founder-security-banner, set-password-toggle, cur-password, new-password, save-password-btn, nav-{topic-registry,orchestrator,verification-team,protection}, topic-registry-page, orchestrator-page, verification-team-page, protection-page, registry-{domain,count,generate-btn,proposal,import-btn,filter,row-<TOP-#####>,stat-<label>}. Fix applied: orchestrator.get_settings() now runs docs through clean(); this pattern (raw Mongo doc → 500 on ObjectId) may recur elsewhere.",
+  "rca of the issue": "GET /api/orchestrator/settings returned 500 because orchestrator.get_settings() returned the raw MongoDB document (including bson.ObjectId _id) directly. FastAPI's jsonable_encoder cannot serialize ObjectId → 'ObjectId object is not iterable' → ValueError → 500. Reproduction: hit GET /api/orchestrator/settings with a valid Founder Bearer token. Mitigation applied: wrap the return in models.clean(), which strips _id and coerces the doc into JSON-safe dict. Confirmed 200 with body {\"id\":\"factory\",\"hands_free_mode\":true} after fix."
+}

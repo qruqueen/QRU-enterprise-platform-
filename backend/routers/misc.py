@@ -95,7 +95,7 @@ class UserInput(BaseModel):
 
 
 @users_router.get("")
-async def list_users(user=Depends(require_roles("Administrator", "Executive"))):
+async def list_users(user=Depends(require_roles("Founder & CEO", "Administrator", "Executive"))):
     users = await db.users.find({}, {"password_hash": 0}).to_list(500)
     return clean(users)
 
@@ -106,10 +106,10 @@ async def roles():
 
 
 @users_router.post("")
-async def create_user(data: UserInput, user=Depends(require_roles("Administrator"))):
+async def create_user(data: UserInput, user=Depends(require_roles("Founder & CEO", "Administrator"))):
     if await db.users.find_one({"email": data.email.lower()}):
         raise HTTPException(400, "Email already registered")
-    role = data.role if data.role in ROLES else "Customer"
+    role = data.role if data.role in ROLES and data.role != "Founder & CEO" else "Customer"
     u = {"id": gen_id(), "email": data.email.lower(), "password_hash": hash_password(data.password),
          "name": data.name, "role": role, "avatar": None, "created_at": now_iso()}
     await db.users.insert_one(u)
@@ -117,9 +117,11 @@ async def create_user(data: UserInput, user=Depends(require_roles("Administrator
 
 
 @users_router.delete("/{uid}")
-async def delete_user(uid: str, user=Depends(require_roles("Administrator"))):
+async def delete_user(uid: str, user=Depends(require_roles("Founder & CEO", "Administrator"))):
     target = await db.users.find_one({"id": uid})
-    if target and target.get("role") == "Administrator":
-        raise HTTPException(400, "Cannot delete an administrator")
+    if target and (target.get("is_founder") or target.get("role") == "Founder & CEO"):
+        raise HTTPException(400, "The Founder account is permanent and cannot be deleted.")
+    if target and target.get("role") == "Administrator" and user.get("role") != "Founder & CEO":
+        raise HTTPException(400, "Only the Founder can remove an administrator.")
     await db.users.delete_one({"id": uid})
     return {"message": "deleted"}

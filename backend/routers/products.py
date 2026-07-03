@@ -290,8 +290,11 @@ async def set_status(pid: str, data: StatusInput, user=Depends(get_current_user)
     p = await db.products.find_one({"id": pid})
     if not p:
         raise HTTPException(404, "Not found")
-    if data.status == "Published" and not (p.get("creative_brief") and p.get("creative_status") == "Reviewed"):
-        raise HTTPException(400, "Send this product through the Creative Studio before publication.")
+    if data.status == "Published":
+        if not (p.get("creative_brief") and p.get("creative_status") == "Reviewed"):
+            raise HTTPException(400, "Send this product through the Creative Studio before publication.")
+        if not p.get("verified"):
+            raise HTTPException(400, "This product must pass AI Verification (Product Protection) before it can be published or sold.")
     await db.products.update_one({"id": pid}, {"$set": {"status": data.status, "updated_at": now_iso()}})
     return clean(await db.products.find_one({"id": pid}))
 

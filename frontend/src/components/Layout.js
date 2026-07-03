@@ -3,10 +3,12 @@ import { NavLink, useNavigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useMode } from "@/context/ModeContext";
 import MusicControl from "@/components/MusicControl";
+import FounderSecurityBanner from "@/components/FounderSecurityBanner";
 import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard,
+  ClipboardList, Boxes, ShieldHalf,
 } from "lucide-react";
 
 const NAV = [
@@ -17,15 +19,19 @@ const NAV = [
   { to: "/organization", label: "Organization", icon: Building2, testid: "nav-organization" },
   { section: "Knowledge" },
   { to: "/knowledge", label: "Knowledge Records", icon: BookOpen, testid: "nav-knowledge" },
+  { to: "/topic-registry", label: "Topic Registry™", icon: ClipboardList, testid: "nav-topic-registry" },
   { to: "/translation-engine", label: "Translation Engine™", icon: Wand2, testid: "nav-translation" },
   { to: "/research", label: "Research Center", icon: FlaskConical, testid: "nav-research" },
   { to: "/verification", label: "Verification Center", icon: ShieldCheck, testid: "nav-verification" },
+  { to: "/verification-team", label: "Verification Team™", icon: ShieldCheck, testid: "nav-verification-team" },
   { to: "/memory-engineering", label: "Memory Engineering™", icon: Brain, testid: "nav-memory" },
   { section: "Manufacturing" },
   { to: "/manufacturing", label: "Manufacturing Orders", icon: Factory, testid: "nav-manufacturing" },
+  { to: "/orchestrator", label: "Bulk Orchestrator™", icon: Boxes, testid: "nav-orchestrator" },
   { to: "/manufacture", label: "Product Manufacturing", icon: Sparkles, testid: "nav-manufacture" },
   { to: "/manufacturing-studio", label: "Manufacturing Studio", icon: PackageCheck, testid: "nav-mfg-studio" },
   { to: "/products", label: "Product Library", icon: Library, testid: "nav-products" },
+  { to: "/product-protection", label: "Product Protection™", icon: ShieldHalf, testid: "nav-protection" },
   { to: "/creative-studio", label: "Creative Studio™", icon: Palette, testid: "nav-creative" },
   { to: "/media-studio", label: "Media Studio™", icon: Clapperboard, testid: "nav-media" },
   { to: "/design-intelligence", label: "Design Intelligence™", icon: Sparkles, testid: "nav-design-intel" },
@@ -145,6 +151,7 @@ export default function Layout() {
           </div>
         </header>
         <main className="flex-1 p-4 sm:p-8 max-w-[1600px] w-full mx-auto">
+          <FounderSecurityBanner />
           <Outlet />
         </main>
       </div>

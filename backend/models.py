@@ -21,6 +21,7 @@ def clean(doc):
 
 
 ROLES = [
+    "Founder & CEO",
     "Administrator",
     "Executive",
     "Researcher",
@@ -48,6 +49,9 @@ QRU_SECTIONS = [
 
 # Modular Understanding Colleges — every division plugs into the same OS.
 DIVISIONS = [
-    "Health", "Trading", "Finance", "AI", "Programming",
+    "Health", "Faith", "Trading", "Finance", "AI", "Programming",
     "Parenting", "Business", "Government",
 ]
+
+# Roles with permanent super-administrator authority over the whole OS.
+SUPER_ADMIN_ROLES = ["Founder & CEO", "Administrator"]

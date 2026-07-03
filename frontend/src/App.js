@@ -27,6 +27,10 @@ import CreativeStudio from "@/pages/CreativeStudio";
 import DesignIntelligence from "@/pages/DesignIntelligence";
 import MemoryEngineering from "@/pages/MemoryEngineering";
 import MediaStudio from "@/pages/MediaStudio";
+import TopicRegistry from "@/pages/TopicRegistry";
+import Orchestrator from "@/pages/Orchestrator";
+import VerificationTeam from "@/pages/VerificationTeam";
+import ProductProtection from "@/pages/ProductProtection";
 import Colleges from "@/pages/Colleges";
 import CollegeWorkspace from "@/pages/CollegeWorkspace";
 import Analytics from "@/pages/Analytics";
@@ -71,14 +75,18 @@ function EnterpriseRoutes() {
         <Route path="media-studio" element={<MediaStudio />} />
         <Route path="knowledge" element={<KnowledgeRecords />} />
         <Route path="knowledge/:id" element={<KnowledgeRecordDetail />} />
+        <Route path="topic-registry" element={<TopicRegistry />} />
         <Route path="translation-engine" element={<TranslationEngine />} />
         <Route path="research" element={<ResearchCenter />} />
         <Route path="verification" element={<VerificationCenter />} />
+        <Route path="verification-team" element={<VerificationTeam />} />
         <Route path="manufacturing" element={<ManufacturingOrders />} />
+        <Route path="orchestrator" element={<Orchestrator />} />
         <Route path="manufacture" element={<ProductManufacturing />} />
         <Route path="manufacturing-studio" element={<ManufacturingStudio />} />
         <Route path="products" element={<ProductLibrary />} />
         <Route path="products/:id" element={<ProductDetail />} />
+        <Route path="product-protection" element={<ProductProtection />} />
         <Route path="workforce" element={<DigitalWorkforce />} />
         <Route path="colleges" element={<Colleges />} />
         <Route path="colleges/:id" element={<CollegeWorkspace />} />
