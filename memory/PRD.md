@@ -216,3 +216,34 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 - Still blocked by DAILY LLM spend cap: Phase C bulk run, clean 11/11 FAT, and live AI hero-art/LLM narratives. Adding balance does not clear the daily cap (resets on daily cycle).
 - Deferred UI: a product "Downloads/Formats" panel to surface export URLs (endpoints ready).
 
+
+## Implemented — Iteration 18 (2026-07-03) · Treasure Standard™ Enterprise Architecture (4 subsystems, non-LLM)
+> LLM daily spend cap STILL active this session (verified). Phase C bulk + clean 11/11 FAT remain blocked. All work below is deterministic and required no runtime LLM. Official character portraits were generated via the platform image tool (separate from the capped runtime key).
+
+### 1. The One Question Test™ — navigation standard
+- Every nav item now carries its department's Primary Business Question as a hover tooltip (`title` on each `NavLink` in `Layout.js`). No menu exists without a clear single question.
+
+### 2. QRU Enterprise Blueprint™ — canonical Operations Manual
+- `department_registry.py` (single source of truth): 37 Department Profiles, each with the full standardized structure (Mission, Purpose, Primary Question, Why It Exists, Problems Solved, Responsibilities, Inputs, Outputs, Daily Activities, AI Agents, People, Related Depts, Workflow, Use Cases, KPIs, Treasure Standard™ Requirements, Future Expansion). Enforces the One Question Test™.
+- `routers/departments.py` → `/api/departments`, `/api/departments/questions`, `/api/departments/{key}`.
+- Frontend `EnterpriseBlueprint.js` (`/blueprint`, nav-blueprint): grouped cards + full-profile dialog.
+- Canonical `/app/memory/QRU_ENTERPRISE_OPERATIONS_MANUAL.md` generated (2580 lines).
+
+### 3. QRU Workforce Identity System™ (WIS) — permanent Character Library™
+- `character_registry.py` + `routers/wis.py` (`/api/wis/*`, collection `character_library`): 6 flagship Treasure Standard™-approved Character Records (Kingdom Lion™, Legacy Eagle™, Legacy Bear™, Queen Unity™, Crowned Bull™, Royal Phoenix™) with full schema (bio, personality, teaching/voice style, catchphrases, official portrait, palette, uniform, expressions, poses, prompt library, brand guidelines, copyright, version + previous versions).
+- Official regal portraits generated & stored as PERMANENT URLs. Endpoints: list, get, `resolve/{role-or-dept}` (apps RETRIEVE approved characters), `POST .../variations` (create pose/expression variation that preserves the approved identity — never a new generic portrait).
+- Frontend `CharacterLibrary.js` (`/wis`, nav-wis): portrait grid + full Character Record dialog with approved palette.
+
+### 4. QRU Institutional Knowledge System™ (QIKS) — enterprise memory
+- `qiks.py` + `routers/qiks.py` (`/api/qiks/*`, collections `qiks_standards`, `qiks_lessons`): Enterprise Standards Registry™ (16 seeded standards with full schema, drawn from existing subsystems), 24 Knowledge Categories, 9-stage Knowledge Promotion™ pipeline, Knowledge Graph™ (16 nodes / 22 edges), Enterprise Memory™ (Lessons Learned per division, 3 seeded), Search & Discovery, and Version Governance™ (revise never overwrites — bumps version, archives superseded snapshot, appends change history). Executive Knowledge Dashboard™ metrics incl. Institutional Health™.
+- Endpoints: overview, standards (filter by category/status/q), search, graph, lessons, get, create (starts as Working Idea), promote, PUT revise (version governance), add lesson.
+- Frontend `InstitutionalKnowledge.js` (`/qiks`, nav-qiks): metrics header + Standards/Graph/Memory/Promotion tabs, search, category filter, standard detail dialog with change history.
+
+### Verification
+- All backend endpoints curl-verified (departments 37, questions map, wis 6 chars + resolve + variation persistence, qiks 16 standards + graph 22 edges + search + create/promote + version-governance revise to v1.1). Frontend `/blueprint`, `/wis`, `/qiks` screenshot-verified rendering correctly. Test artifacts cleaned up.
+
+### Still blocked / deferred
+- P0: Phase C bulk run + clean 11/11 FAT (need LLM daily cap to clear).
+- WIS deep-wiring: auto-inject approved portraits into Organization director cards, reports, and product artwork (source-of-truth + retrieval API are ready; consumer surfaces are future work).
+- QIKS AI-consultation wiring: agents can retrieve via `/api/qiks/standards` today; enforcing "consult before generate" inside each agent is future work.
+
