@@ -28,6 +28,7 @@ import DesignIntelligence from "@/pages/DesignIntelligence";
 import MemoryEngineering from "@/pages/MemoryEngineering";
 import MediaStudio from "@/pages/MediaStudio";
 import TopicRegistry from "@/pages/TopicRegistry";
+import PromotionPipeline from "@/pages/PromotionPipeline";
 import Orchestrator from "@/pages/Orchestrator";
 import VerificationTeam from "@/pages/VerificationTeam";
 import ProductProtection from "@/pages/ProductProtection";
@@ -37,6 +38,7 @@ import EnterpriseCommandCenter from "@/pages/EnterpriseCommandCenter";
 import AIServices from "@/pages/AIServices";
 import Workflows from "@/pages/Workflows";
 import FactoryMonitor from "@/pages/FactoryMonitor";
+import FailureIntelligence from "@/pages/FailureIntelligence";
 import Store from "@/pages/Store";
 import CheckoutSuccess from "@/pages/CheckoutSuccess";
 import AutonomyCenter from "@/pages/AutonomyCenter";
@@ -95,6 +97,7 @@ function EnterpriseRoutes() {
         <Route path="knowledge" element={<KnowledgeRecords />} />
         <Route path="knowledge/:id" element={<KnowledgeRecordDetail />} />
         <Route path="topic-registry" element={<TopicRegistry />} />
+        <Route path="promotion-pipeline" element={<PromotionPipeline />} />
         <Route path="translation-engine" element={<TranslationEngine />} />
         <Route path="research" element={<ResearchCenter />} />
         <Route path="verification" element={<VerificationCenter />} />
@@ -116,6 +119,7 @@ function EnterpriseRoutes() {
         <Route path="teach" element={<ProductionLine />} />
         <Route path="workflows" element={<Workflows />} />
         <Route path="factory-monitor" element={<FactoryMonitor />} />
+        <Route path="failure-intelligence" element={<FailureIntelligence />} />
         <Route path="autonomy" element={<AutonomyCenter />} />
         <Route path="governance" element={<GovernanceCenter />} />
         <Route path="blueprint" element={<EnterpriseBlueprint />} />

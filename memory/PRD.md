@@ -335,3 +335,30 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 - **Fix (targeted)**: `ai_verify_product()` now wraps the AI review in try/except; on failure it runs a DETERMINISTIC structural verification (approve if content ≥200 chars, else request_revision), persists it, logs a warning, and returns `ai_recommendations_available=False` + message "Core verification completed. AI recommendations temporarily unavailable." `apply_protection()` was already AI-free (assign level, protection record, product link, timestamps, ownership/version, audit history). Frontend `ProductProtection.js` shows the graceful message instead of a generic failure.
 - **Verified**: testing_agent iteration_15.json — backend 100% (5/5), frontend 100% E2E, zero issues. Applied reviewer's logging suggestion.
 
+
+## Iteration 23 (2026-06) · Forex Seeds + MT-031 Promotion Pipeline + MT-033 Preview/Marketing + MT-034 Failure Intelligence + Recipe™ Architecture
+> All work below is deterministic (no LLM budget). LLM daily cap still active; nothing here depends on it.
+
+### Priority 1 — QRU Forex Fundamentals™ Topic Seeds (Option A, Founder-approved titles)
+- `seed_forex_seeds.py` (idempotent, wired into startup) seeds 10 Topic Seeds **KR-FX-0001…0010** with the exact approved titles (What Is Forex?/Money?/Currency?/Currency Pair?/Base Currency?/Quote Currency?/Exchange Rate?/Why Do Exchange Rates Change?/Pip?/Spread?).
+- Created as: record_class=Topic Seed, verification_status=Topic Seed, approval_status=Founder Approved, source_label=QRU Legacy Seed, customer_facing=True, readiness="Topic Seed — Not Ready for Manufacturing", treasure_standard=False, treasure_standard_status=Pending, ai_content=None, promotion_ready=True. **NO AI content — all fields empty.** Await QFC-001_Master_Manuscript_v0.5.docx upload to promote to Imported Verified.
+
+### Priority 2 — MT-031 Knowledge Record Promotion Pipeline™
+- `routers/promotion.py` (`/api/promotion/*`): `/schema`, `/seeds`, `/{id}`, PUT `/{id}/fields` (manual Guided Understanding System™ entry — NO AI), POST `/{id}/promote` (requires all core GUS fields + verified_truth + **provenance source_note** → flips Topic Seed → Imported Verified, verification=Verified, readiness=Ready for Manufacturing, treasure_standard_status=Verified; bumps version, records promotion_history).
+- Frontend `PromotionPipeline.js` (`/promotion-pipeline`, nav "Promotion Pipeline™"): seed list w/ progress, structured GUS editing workspace, Save Draft + **"Promote to Verified Knowledge Record™"** (gated on completeness+provenance). KR detail shows the Promote button for Topic Seeds (replaces AI Manufacture).
+- Verified via curl: validation blocks empty promote + missing provenance; full save→promote flips a Forex seed to Imported Verified (then reset).
+
+### Priority 3 — Product Manufacturing Recipe™ Architecture
+- `product_recipes.py`: single-source RECIPE registry (23 product types → layout category + primary format + label) + **recipe-aware HTML renderer** with 10 DISTINCT layouts (book, guide, workbook, poster, card, deck, quiz, lesson, script, certificate) + `strip_placeholders()` guard.
+- `deliverable_renderer.py` refactored to use the recipe registry for primary format + `pr.render_html`; design assessment is recipe-aware (compact layouts need fewer sections). `GET /api/rendering/recipes` catalog endpoint.
+- Verified: every product type renders its own distinct layout (label + layout class present); placeholder guard strips `[INSERT..]`/`TODO`/`{{..}}`/`Lorem ipsum`.
+
+### MT-033 — QRU Preview & Marketing Manufacturing System™ (One Run → Many Deliverables)
+- `marketing_engine.py` + `routers/marketing.py` (`/api/marketing/{pid}/build|GET|preview-config`): manufactures the full family — Founder Master Edition™, Customer Edition™, **Preview Edition™** (gated HTML+PDF sample: TOC, first N% sections, PREVIEW watermark/ribbon, buy-bar CTA + purchase QR; Founder-configurable via preview_config), Store Preview Images™ (5), **Social Media Kit™** (Facebook/Instagram/Pinterest/LinkedIn/X/TikTok/YouTube at platform sizes), Marketing Graphics™, Product Flyer™, Product Thumbnail™. Reuses the tested Design Language™ Pillow pipeline. Auto-built inside `deliverable_renderer.ensure_deliverable` (best-effort, non-blocking).
+- Frontend: **Preview & Marketing Kit™** panel in `ProductDetail.js` (editions, preview download/read, store-image + social galleries, flyer/graphics, Manufacture/Re-manufacture button).
+- Verified via curl + screenshot: 3 customer files, preview 7 locked / N shown, 5 store images, 7 social platforms, flyer+thumb.
+
+### MT-034 — QRU Production Failure Intelligence™
+- `failure_intelligence.py` + `routers/failure_intelligence.py` (`/api/failure-intelligence/dashboard`, POST `/run/{id}/retry`): 18-class root-cause catalog (Topic Seed Only, Missing/Not-Ready KR, Missing Source File/Founder Asset/Vault, LLM Daily Limit, Budget, AI Provider, Missing API Key, Network, Rendering, Design Review, Publication Gate, Missing Recipe, Verification, Waiting on Founder, Unknown). Each failure → root cause, explanation, resolution, **one-click fix** (route or checkpoint retry). Scans manufacturing_batches + workflow_jobs; **Failure Dashboard** counts (Total/Successful/Failed/In Progress/Paused + Waiting on Founder/Assets/Knowledge/AI/External). Checkpoint retry via orchestrator.retry_failed (only failed items).
+- Frontend `FailureIntelligence.js` (`/failure-intelligence`, nav "Failure Intelligence™"): dashboard tiles + per-run failure cards + "Retry Failed Run" + one-click fix buttons.
+- Verified via curl + screenshot: dashboard classifies Phase C (AI Provider Error → Waiting on AI) + workflow jobs.

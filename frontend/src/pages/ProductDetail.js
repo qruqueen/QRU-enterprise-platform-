@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import api from "@/lib/api";
 import { StatusBadge, Markdown } from "@/components/shared";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, CheckCircle2, Send, Archive, Wand2, Sparkles, FileText, BookOpen, Presentation, Image as ImageIcon, FileType2, Download, Eye, PackageCheck } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle2, Send, Archive, Wand2, Sparkles, FileText, BookOpen, Presentation, Image as ImageIcon, FileType2, Download, Eye, PackageCheck, Megaphone } from "lucide-react";
 
 const FMT_ICON = { pdf: FileText, epub: BookOpen, pptx: Presentation, png: ImageIcon, html: FileType2 };
 
@@ -13,10 +13,23 @@ export default function ProductDetail() {
   const [p, setP] = useState(null);
   const [briefBusy, setBriefBusy] = useState(false);
   const [renderBusy, setRenderBusy] = useState(false);
+  const [kit, setKit] = useState(null);
+  const [kitBusy, setKitBusy] = useState(false);
   const BACKEND = process.env.REACT_APP_BACKEND_URL;
   const abs = (u) => (u ? (u.startsWith("http") ? u : `${BACKEND}${u}`) : null);
   const load = () => api.get(`/products/${id}`).then((r) => setP(r.data)).catch(() => {});
-  useEffect(() => { load(); }, [id]);
+  const loadKit = () => api.get(`/marketing/${id}`).then((r) => setKit(r.data)).catch(() => {});
+  useEffect(() => { load(); loadKit(); }, [id]);
+
+  const buildKit = async () => {
+    setKitBusy(true);
+    try {
+      await api.post(`/marketing/${id}/build`);
+      toast.success("Preview & Marketing Kit™ manufactured");
+      loadKit();
+    } catch (e) { toast.error(e?.response?.data?.detail || "Could not build the marketing kit"); }
+    finally { setKitBusy(false); }
+  };
 
   const setStatus = async (status) => {
     try {
@@ -164,7 +177,99 @@ export default function ProductDetail() {
         );
       })()}
 
-      {b && (
+      {/* MT-033 — Preview & Marketing Kit™: One Run → Many Deliverables */}
+      {(() => {
+        const mk = kit?.marketing_kit;
+        const dl2 = (u, nm) => `${abs(u)}?download=1&name=${encodeURIComponent(nm)}`;
+        return (
+          <div className="bg-card border rounded-md p-6 mb-6 max-w-4xl" data-testid="pd-marketing-kit">
+            <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Megaphone className="w-4 h-4 text-gold" />
+                <h3 className="font-heading font-semibold">Preview &amp; Marketing Kit™</h3>
+                {mk && <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Manufactured</span>}
+              </div>
+              <button data-testid="pd-build-kit" onClick={buildKit} disabled={kitBusy}
+                className="flex items-center gap-2 border px-3 py-2 rounded-sm text-sm font-medium hover:border-primary hover:text-primary transition-colors disabled:opacity-60">
+                {kitBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} {mk ? "Re-manufacture Kit" : "Manufacture Marketing Kit™"}
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">One manufacturing run produces the complete ecosystem — customer, preview, store, and social deliverables.</p>
+            {!mk ? (
+              <p className="text-sm text-muted-foreground italic">No marketing kit yet. Click “Manufacture Marketing Kit™”. It’s also produced automatically when a product’s deliverable is rendered.</p>
+            ) : (
+              <div className="space-y-4">
+                {/* Editions */}
+                <div className="grid sm:grid-cols-3 gap-2">
+                  <div className="border rounded-md p-3" data-testid="pd-edition-founder">
+                    <p className="text-xs font-semibold text-royal">Founder Master Edition™</p>
+                    <p className="text-[11px] text-muted-foreground">{mk.founder_master_edition?.content_chars} chars · editable master</p>
+                  </div>
+                  <div className="border rounded-md p-3" data-testid="pd-edition-customer">
+                    <p className="text-xs font-semibold text-royal">Customer Edition™</p>
+                    <p className="text-[11px] text-muted-foreground">{(mk.customer_edition?.files || []).length} file(s) · clean product</p>
+                  </div>
+                  <div className="border rounded-md p-3" data-testid="pd-edition-preview">
+                    <p className="text-xs font-semibold text-royal">Preview Edition™</p>
+                    <p className="text-[11px] text-muted-foreground">{mk.preview_edition?.sections_included} shown · {mk.preview_edition?.sections_locked} locked</p>
+                  </div>
+                </div>
+                {/* Preview download */}
+                <div className="flex flex-wrap gap-2">
+                  {(mk.preview_edition?.files || []).map((f, i) => (
+                    f.format === "html" ? (
+                      <a key={i} data-testid="pd-preview-read" href={abs(f.url)} target="_blank" rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border hover:border-primary"><Eye className="w-4 h-4" /> {f.label}</a>
+                    ) : (
+                      <a key={i} data-testid="pd-preview-download" href={dl2(f.url, p.title + " — Preview")}
+                        className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border hover:border-primary"><Download className="w-4 h-4" /> {f.label}</a>
+                    )
+                  ))}
+                </div>
+                {/* Store images */}
+                <div>
+                  <p className="overline text-primary mb-2">Store Preview Images™</p>
+                  <div className="flex gap-2 flex-wrap" data-testid="pd-store-images">
+                    {(mk.store_images || []).map((s, i) => (
+                      <a key={i} href={abs(s.url)} target="_blank" rel="noreferrer" title={s.label}
+                        className="w-20 h-24 rounded border overflow-hidden hover:ring-2 hover:ring-primary">
+                        <img src={abs(s.url)} alt={s.label} className="w-full h-full object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+                {/* Social kit */}
+                <div>
+                  <p className="overline text-primary mb-2">Social Media Kit™</p>
+                  <div className="flex gap-2 flex-wrap" data-testid="pd-social-kit">
+                    {(mk.social_kit || []).map((s, i) => (
+                      <a key={i} href={abs(s.url)} target="_blank" rel="noreferrer" title={s.label}
+                        className="flex flex-col items-center gap-1 w-24">
+                        <div className="w-24 h-24 rounded border overflow-hidden hover:ring-2 hover:ring-primary">
+                          <img src={abs(s.url)} alt={s.platform} className="w-full h-full object-cover" />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">{s.platform}</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+                {/* Flyer + graphics */}
+                <div className="flex gap-2 flex-wrap items-center">
+                  {mk.product_flyer?.url && (
+                    <a data-testid="pd-flyer" href={abs(mk.product_flyer.url)} target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border hover:border-primary"><ImageIcon className="w-4 h-4" /> Product Flyer™</a>
+                  )}
+                  {(mk.marketing_graphics || []).map((g, i) => (
+                    <a key={i} href={abs(g.url)} target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border hover:border-primary"><ImageIcon className="w-4 h-4" /> {g.label}</a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
         <div className="bg-card border rounded-md p-6 mb-6 max-w-4xl" data-testid="pd-creative-brief">
           <div className="flex flex-wrap items-center gap-2 mb-4"><Sparkles className="w-4 h-4 text-gold" /><h3 className="font-heading font-semibold">Product Page · by Creative Studio™</h3>
             {p.creative_brief_source === "deterministic" && (

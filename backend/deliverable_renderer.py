@@ -18,16 +18,14 @@ from database import db
 from models import now_iso
 import rendering_engine as re_engine
 import design_language as dl
+import product_recipes as pr
 
 logger = logging.getLogger("qru.deliverable")
 
-# Primary customer-facing file format per product type.
-PRIMARY_FORMAT = {
-    "Book": "epub", "Workbook": "pdf", "Teacher Guide": "pdf", "Caregiver Guide": "pdf",
-    "Course": "pdf", "Quiz": "html", "Interactive Lesson": "html", "Short-form Content": "html",
-    "Poster": "png", "Flash Cards": "pdf", "Presentation": "pptx",
-    "Podcast Script": "html", "Video Script": "html",
-}
+# Primary customer-facing file format per product type — sourced from the
+# Product Manufacturing Recipe™ registry (single source of truth).
+def _primary_format(ptype):
+    return pr.get_recipe(ptype)["primary"]
 
 FORMAT_LABEL = {
     "html": "Readable Edition (HTML)", "pdf": "Print-Ready PDF", "epub": "Digital eBook (EPUB)",
@@ -162,55 +160,8 @@ def _md_to_html(md: str) -> str:
 
 
 def _render_html(product, cover_bytes=None) -> bytes:
-    import base64
-    pal = dl.resolve_palette(product.get("family", ""), product.get("department", product.get("college", "")),
-                             product.get("topic", ""), product.get("title", ""))
-    accent = "#%02X%02X%02X" % pal["accent"]
-    title = _html.escape(product.get("title", "QRU Product"))
-    ptype = _html.escape(product.get("product_type", ""))
-    family = _html.escape(product.get("family", ""))
-    body = _md_to_html(product.get("content") or "")
-    cover_html = ""
-    if cover_bytes:
-        b64 = base64.b64encode(cover_bytes).decode("ascii")
-        cover_html = f'<img class="cover" src="data:image/png;base64,{b64}" alt="cover"/>'
-    doc = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>{title} — QRU PRESS™</title>
-<style>
-:root{{--royal:#35106A;--gold:#F5B21A;--navy:#221A42;--accent:{accent};}}
-*{{box-sizing:border-box}}
-body{{margin:0;font-family:Georgia,'Times New Roman',serif;color:#221A42;background:#f4f2f7;line-height:1.7}}
-.masthead{{background:linear-gradient(135deg,var(--royal),var(--navy));color:#fff;padding:40px 32px}}
-.eyebrow{{font-family:Arial,Helvetica,sans-serif;letter-spacing:.22em;text-transform:uppercase;font-size:11px;color:var(--gold);font-weight:700}}
-.masthead h1{{margin:.35em 0 .1em;font-size:34px;line-height:1.15}}
-.meta{{font-family:Arial,sans-serif;font-size:13px;opacity:.85}}
-.seal{{display:inline-block;margin-top:14px;font-family:Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--navy);background:var(--gold);padding:6px 12px;border-radius:999px}}
-.wrap{{max-width:760px;margin:0 auto;padding:36px 28px 80px}}
-.cover{{width:100%;max-width:420px;display:block;margin:0 auto 28px;border-radius:10px;box-shadow:0 18px 50px rgba(53,16,106,.28)}}
-.paper{{background:#fff;border-radius:14px;padding:44px 48px;box-shadow:0 10px 40px rgba(34,26,66,.08)}}
-h1,h2,h3{{font-family:Arial,Helvetica,sans-serif;color:var(--royal)}}
-h2{{border-left:5px solid var(--accent);padding-left:14px;margin-top:2em;font-size:22px}}
-h3{{font-size:17px;color:var(--navy)}}
-ul{{padding-left:22px}} li{{margin:.35em 0}}
-hr{{border:none;border-top:1px solid #e5e1ee;max-width:120px;margin:24px 0}}
-.footer{{text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#8a83a3;margin-top:40px}}
-.footer strong{{color:var(--royal)}}
-</style></head><body>
-<header class="masthead">
-  <div class="eyebrow">QRU PRESS™ · {family}</div>
-  <h1>{title}</h1>
-  <div class="meta">{ptype} · {_html.escape(product.get('product_code',''))} · Customer Edition</div>
-  <div class="seal">TREASURE STANDARD™ CERTIFIED</div>
-</header>
-<div class="wrap">
-  {cover_html}
-  <article class="paper">{body}</article>
-  <div class="footer">Manufactured by <strong>QRU Factory™</strong> — Quest for Real Understanding.<br/>
-  QRU simplifies the path to understanding the truth.</div>
-</div>
-</body></html>"""
-    return doc.encode("utf-8")
+    """Recipe-aware customer HTML edition — distinct layout per product type."""
+    return pr.render_html(product, cover_bytes)
 
 
 def _render_pdf(product, kr, cover_bytes) -> bytes:
@@ -328,6 +279,8 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
     # MT-030 — build a customer-facing copy of the product with internal production
     # notes stripped. All renderers use p_clean so no deliverable ever leaks factory notes.
     clean_content, removed_sections = filter_customer_content(p.get("content") or "")
+    # Recipe™ placeholder guard — strip draft/placeholder markers so nothing draft-y ships.
+    clean_content, placeholders_removed = pr.strip_placeholders(clean_content)
     p_clean = {**p, "content": clean_content}
     leftover_notes = detect_internal_notes(clean_content)
     content_review_required = len(leftover_notes) > 0
@@ -341,7 +294,8 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
                       "filename": fid, "bytes": len(data)})
 
     ptype = p.get("product_type", "")
-    primary = PRIMARY_FORMAT.get(ptype, "pdf")
+    recipe = pr.get_recipe(ptype)
+    primary = recipe["primary"]
 
     # 1) Always: readable HTML edition (the open/read/scroll experience)
     try:
@@ -370,8 +324,9 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
                 logger.error(f"pdf fallback failed for {pid}: {e2}")
 
     validation = validate_deliverable(p_clean, files, primary)
-    design = assess_design_quality(p_clean, files, cover_bytes)
+    design = assess_design_quality(p_clean, files, cover_bytes, recipe=recipe)
     deliverable = {
+        "recipe": recipe,
         "primary_format": primary if any(f["format"] == primary for f in files) else (files[0]["format"] if files else None),
         "files": files,
         "ready": validation["ready"],
@@ -382,6 +337,7 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
         "status_label": design["status"],
         "customer_content_review_required": content_review_required,
         "removed_internal_sections": removed_sections,
+        "placeholders_removed": placeholders_removed,
         "leftover_internal_notes": leftover_notes,
         "preview_url": next((f["url"] for f in files if f["format"] == "html"), None),
         "download_url": next((f["url"] for f in files if f["format"] == primary),
@@ -402,6 +358,13 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
                       p.get("product_code", ""), note)
     except Exception:
         pass
+    # MT-033 — One Run → Many Deliverables. Auto-manufacture the Preview & Marketing Kit™
+    # alongside the customer deliverable. Best-effort & deterministic — never blocks.
+    try:
+        import marketing_engine as me
+        await me.build_family(pid, actor, base_url)
+    except Exception as e:
+        logger.error(f"marketing kit build failed (non-blocking) for {pid}: {e}")
     return deliverable
 
 
@@ -414,10 +377,13 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
 DESIGN_THRESHOLD = 85
 
 
-def assess_design_quality(product, files, cover_bytes=None):
+def assess_design_quality(product, files, cover_bytes=None, recipe=None):
     content = product.get("content") or ""
     section_count = content.count("\n## ") + (1 if content.startswith("## ") else 0)
     chars = len(content)
+    cat = (recipe or {}).get("category", "book")
+    compact = cat in pr.COMPACT_CATEGORIES
+    min_sections = 1 if compact else 3
     branded = bool(product.get("design_language_applied"))
     has_html = any(f["format"] == "html" and f["bytes"] >= 4000 for f in files)
     has_pdf = any(f["format"] == "pdf" for f in files)
@@ -448,10 +414,10 @@ def assess_design_quality(product, files, cover_bytes=None):
          f"{cover_w}×{cover_h}px")
     crit("QRU branding applied", branded, 10, "QRU Design Language™" if branded else "not applied")
     crit("Treasure Standard™ branding", branded, 5, "seal present" if branded else "missing")
-    crit("Interior page design & sections", section_count >= 3, 15, f"{section_count} sections")
-    crit("Visual hierarchy (headings)", ("# " in content) and section_count >= 2, 10,
+    crit("Interior page design & sections", section_count >= min_sections, 15, f"{section_count} sections")
+    crit("Visual hierarchy (headings)", ("# " in content) and section_count >= 1, 10,
          "title + sections" if ("# " in content) else "no title heading")
-    crit("Typography & readability", 600 <= chars, 15, f"{chars} chars")
+    crit("Typography & readability", (250 if compact else 600) <= chars, 15, f"{chars} chars")
     crit("Print quality (PDF)", has_pdf and pdf_bytes >= 20000, 10, f"{pdf_bytes // 1024} KB PDF")
     crit("Mobile readability (responsive HTML)", has_html, 10, "viewport + fluid layout")
     crit("Margins & spacing (premium template)", branded and has_html, 10, "premium template")

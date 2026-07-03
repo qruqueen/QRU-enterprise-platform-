@@ -1,0 +1,40 @@
+{
+  "summary": "Iteration 20 — end-to-end validation of 4 features: Forex Topic Seeds, MT-031 Promotion Pipeline (backend+frontend), Product Manufacturing Recipe™ catalog, MT-033 Preview & Marketing Kit (backend+frontend), and MT-034 Failure Intelligence (backend+frontend). 13/13 backend pytest cases pass; all frontend flows validated via Playwright with correct data-testid selectors.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration20.py",
+    "/app/test_reports/pytest/iteration20.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "PromotionPipeline.js: promote() calls PUT /fields immediately before POST /promote, which flips fields to Draft status server-side. Works, but if a user typed then hit Promote without Save Draft first, the fields also get saved. Fine as-is.",
+    "marketing_engine.py: build_family always regenerates the full kit (idempotent overwrite). Consider a lightweight `ready`-early-return for repeated clicks to reduce IO in the future."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration20.py (new)"
+  ],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "100% (3 flows: Promotion, FI, Marketing Kit)"},
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (temporary — NOT changed)",
+  "seed_data_creation": "None. Backend test PROMOTED KR-FX-0010 (Topic Seed → Imported Verified) as explicitly authorized by the review request. KR-FX-0002 was used for save-draft UI test; its fields were reset back to empty after the test to preserve seed state. All other KR-FX-0001..0009 remain untouched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "IMPORTANT SEED STATE: KR-FX-0010 (What Is the Spread?) has been promoted to record_class='Imported Verified' and no longer appears in /api/promotion/seeds (which filters record_class='Topic Seed'). If a future test expects 10 Forex seeds in that endpoint, either re-run backend/seed_forex_seeds.py to reset it or update expectations to 9. KR-FX-0001..0009 are still untouched Topic Seeds. Product used for MT-033 test: a3a3326e-0046-4681-a13f-38f06ee8fa3a (PRD-00063 Sleep and Rest Presentation, Published).",
+  "detailed_results": {
+    "forex_seeds": "GET /api/promotion/seeds returned all 10 Forex Topic Seeds (KR-FX-0001..0010) with correct titles, record_class='Topic Seed', approval_status='Founder Approved', readiness='Topic Seed — Not Ready for Manufacturing', treasure_standard_status='Pending', ai_content='None', and all content fields empty (no fabricated definitions).",
+    "mt031_promotion_backend": "Schema returns required=[the_question, simple_answer, why_it_matters, verified_truth]. Promoting KR-FX-0001 with no fields → 400 (missing required). Saving fields via PUT works (no AI). Promoting with empty source_note → 400 (provenance required). Full promotion of KR-FX-0010 with all fields + source_note → 200; record_class→'Imported Verified', verification_status→'Verified', readiness→'Ready for Manufacturing'; verified via GET.",
+    "mt031_promotion_frontend": "/promotion-pipeline loads. Seed list shows Topic Seeds (KR-FX-0010 correctly hidden after promotion). Clicked KR-FX-0002 → workspace opens with promotion-field-verified_truth/the_question/simple_answer/why_it_matters, provenance source-note input. Promote button DISABLED with no fields; still DISABLED after filling fields but no source note; ENABLED after source-note added. Clicked Save Draft → 'Draft saved' toast observed. Promote button NOT clicked in UI (per instruction) — KR-FX-0002 remains a seed; fields cleared post-test.",
+    "recipes": "GET /api/rendering/recipes returned 23 recipes. Distinct categories present: book, poster, workbook, deck, quiz, script, card, guide, lesson, certificate. Every recipe has product_type + category + primary_format.",
+    "mt033_marketing_backend": "POST /api/marketing/{pid}/build returned kit with founder_master_edition, customer_edition.files, preview_edition.files, sections_locked present (>0 in prior product—value present), store_images (5), social_kit with all 7 platforms (Facebook/Instagram/Pinterest/LinkedIn/X/TikTok/YouTube), marketing_graphics, product_flyer.url, product_thumbnail.url. GET /api/marketing/{pid} returned stored kit (ready=true). PUT /preview-config include_percentage=45 → saved and reflected.",
+    "mt033_marketing_frontend": "Navigated to /products/{pid}. pd-marketing-kit panel present. pd-build-kit clicked → kit built in ~2s. pd-edition-founder, pd-edition-customer, pd-edition-preview, pd-store-images, pd-social-kit all rendered. Read Sample (HTML) and Download Preview PDF links visible.",
+    "mt034_failure_intel_backend": "GET /api/failure-intelligence/dashboard returned dashboard with all required keys (total_runs=11, failed=8, in_progress=3, waiting_on_ai=5, etc.), failure_classes map (17 codes), and runs[] with failures[] carrying root_cause/explanation/resolution/action{label,route,testid}. POST /api/failure-intelligence/run/{id}/retry on an Orchestrator batch returned ok=true (checkpoint retry).",
+    "mt034_failure_intel_frontend": "Navigated to /failure-intelligence. fi-tile-total_runs, fi-tile-failed, fi-tile-waiting_on_ai, fi-tile-waiting_on_knowledge all present. 24 one-click 'fix-' buttons rendered across failure cards. 1 'fi-retry-{run_id}' (Retry Failed Run) button present on a retryable Orchestrator batch."
+  }
+}

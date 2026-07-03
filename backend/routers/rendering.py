@@ -65,6 +65,13 @@ async def export_formats(pid: str, user=Depends(get_current_user)):
     return {"formats": urls, "count": len(urls)}
 
 
+@router.get("/recipes")
+async def recipes(user=Depends(get_current_user)):
+    """Product Manufacturing Recipe™ catalog — the layout + primary format per product type."""
+    import product_recipes as pr
+    return {"recipes": pr.catalog()}
+
+
 @router.get("/{pid}")
 async def get_render(pid: str, user=Depends(get_current_user)):
     p = await db.products.find_one({"id": pid})

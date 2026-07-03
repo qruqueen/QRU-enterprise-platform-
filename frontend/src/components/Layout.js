@@ -8,7 +8,7 @@ import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard,
-  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet,
+  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert,
 } from "lucide-react";
 
 const NAV = [
@@ -19,6 +19,7 @@ const NAV = [
   { to: "/teach", label: "What to Teach Today", icon: Rocket, testid: "nav-teach", q: "What do we want to teach today?" },
   { to: "/workflows", label: "Workflow Engine™", icon: Workflow, testid: "nav-workflows", q: "What should happen next?" },
   { to: "/factory-monitor", label: "Factory Monitor™", icon: Radio, testid: "nav-factory-monitor", q: "What is happening right now?" },
+  { to: "/failure-intelligence", label: "Failure Intelligence™", icon: ShieldAlert, testid: "nav-failure-intelligence", q: "Why did a run fail — and what do I do next?" },
   { to: "/autonomy", label: "Autonomy Center™", icon: BrainIcon, testid: "nav-autonomy", q: "How do we get better and run ourselves?" },
   { to: "/enterprise-autonomy", label: "Continuous Improvement™", icon: Cpu, testid: "nav-enterprise-autonomy", q: "How does every run make the factory better?" },
   { to: "/command-center", label: "Enterprise Command Center™", icon: LayoutDashboard, testid: "nav-command-center", q: "How is the whole enterprise doing?" },
@@ -34,6 +35,7 @@ const NAV = [
   { section: "Knowledge" },
   { to: "/knowledge", label: "Knowledge Records", icon: BookOpen, testid: "nav-knowledge", q: "What do we know?" },
   { to: "/topic-registry", label: "Topic Registry™", icon: ClipboardList, testid: "nav-topic-registry", q: "What should we teach — and in what order?" },
+  { to: "/promotion-pipeline", label: "Promotion Pipeline™", icon: Sprout, testid: "nav-promotion", q: "How do we turn a Topic Seed into Verified Knowledge?" },
   { to: "/translation-engine", label: "Translation Engine™", icon: Wand2, testid: "nav-translation", q: "How do we make this truly understandable?" },
   { to: "/research", label: "Research Center", icon: FlaskConical, testid: "nav-research", q: "What is the evidence?" },
   { to: "/verification", label: "Verification Center", icon: ShieldCheck, testid: "nav-verification", q: "Can we trust it?" },

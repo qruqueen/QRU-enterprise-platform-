@@ -5,7 +5,7 @@ import { StatusBadge, TreasureBadge, SectionStatusPill, FieldValue, fieldLabel }
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Factory, Loader2, BookText, ShieldCheck, RefreshCw, Check, Boxes, CheckCircle2, XCircle, Clock,
+  ArrowLeft, Factory, Loader2, BookText, ShieldCheck, RefreshCw, Check, Boxes, CheckCircle2, XCircle, Clock, Sprout,
 } from "lucide-react";
 
 export default function KnowledgeRecordDetail() {
@@ -80,10 +80,17 @@ export default function KnowledgeRecordDetail() {
           <p className="text-muted-foreground mt-2">{rec.category} · Confidence {rec.confidence_score}%{rec.reviewer && ` · Reviewed by ${rec.reviewer}`}</p>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
-          <button data-testid="kr-manufacture-all-btn" onClick={manufactureAll} disabled={job?.status === "running"}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-2 rounded-sm text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60">
-            {job?.status === "running" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Boxes className="w-4 h-4" />} Manufacture Full Understanding
-          </button>
+          {rec.record_class === "Topic Seed" ? (
+            <Link to="/promotion-pipeline" data-testid="kr-promote-btn"
+              className="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-2 rounded-sm text-sm font-medium hover:bg-primary/90 transition-colors">
+              <Sprout className="w-4 h-4" /> Promote to Verified Knowledge Record™
+            </Link>
+          ) : (
+            <button data-testid="kr-manufacture-all-btn" onClick={manufactureAll} disabled={job?.status === "running"}
+              className="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-2 rounded-sm text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60">
+              {job?.status === "running" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Boxes className="w-4 h-4" />} Manufacture Full Understanding
+            </button>
+          )}
           <Link to="/verification" data-testid="kr-review-link" className="flex items-center gap-2 border px-3 py-2 rounded-sm text-sm font-medium hover:border-primary hover:text-primary transition-colors">
             <ShieldCheck className="w-4 h-4" /> Review
           </Link>

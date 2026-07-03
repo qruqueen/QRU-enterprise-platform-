@@ -49,6 +49,9 @@ from routers.cost_meter import router as cost_meter_router
 from routers.readiness import router as readiness_router
 from routers.vault import router as vault_router
 from routers.economics import router as economics_router
+from routers.promotion import router as promotion_router
+from routers.failure_intelligence import router as failure_intelligence_router
+from routers.marketing import router as marketing_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
 from routers.misc import (
@@ -77,6 +80,9 @@ for r in [
     governance_router, departments_router, wis_router, qiks_router,
     relationships_router, continuous_router, first_dollar_router,
     portability_router, cost_meter_router, readiness_router, vault_router, economics_router,
+    promotion_router,
+    failure_intelligence_router,
+    marketing_router,
 ]:
     app.include_router(r)
 
@@ -107,6 +113,8 @@ async def startup():
     await character_registry.seed_characters()
     import qiks
     await qiks.seed_qiks()
+    import seed_forex_seeds
+    await seed_forex_seeds.seed()
     import asyncio
     import continuous_improvement
     asyncio.create_task(continuous_improvement.watcher_loop())
