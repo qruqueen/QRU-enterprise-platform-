@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
+import { DirectorRoster } from "@/components/DirectorRoster";
 import { Crown, Users2, Sparkles, Activity, Building2, Cpu } from "lucide-react";
 
 function WorkloadBar({ value }) {
@@ -17,16 +18,24 @@ export default function Organization() {
   const [taskTypes, setTaskTypes] = useState([]);
   const [team, setTeam] = useState(null);
   const [taskType, setTaskType] = useState("");
+  const [wisMap, setWisMap] = useState({});
 
   const loadActivity = () => api.get("/org-activity").then((r) => setActivity(r.data)).catch(() => {});
 
   useEffect(() => {
     api.get("/registry").then((r) => setAgents(r.data)).catch(() => {});
     api.get("/registry/task-types").then((r) => { setTaskTypes(r.data.task_types); setTaskType(r.data.task_types[0]); }).catch(() => {});
+    api.get("/wis/characters").then(({ data }) => {
+      const m = {};
+      (data.characters || []).forEach((c) => { m[c.name.replace(/™/g, "").trim().toLowerCase()] = c.official_portrait; });
+      setWisMap(m);
+    }).catch(() => {});
     loadActivity();
     const iv = setInterval(loadActivity, 5000);
     return () => clearInterval(iv);
   }, []);
+
+  const wisAvatar = (name) => wisMap[(name || "").replace(/™/g, "").trim().toLowerCase()];
 
   const assemble = async (t) => {
     setTaskType(t);
@@ -47,6 +56,7 @@ export default function Organization() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-8">
+          <DirectorRoster />
           {/* Executive Board */}
           <div>
             <p className="overline text-primary mb-3 flex items-center gap-2"><Crown className="w-4 h-4" /> QRU Executive Board</p>
@@ -54,7 +64,7 @@ export default function Organization() {
               {board.map((a) => (
                 <div key={a.id} data-testid={`board-${a.id}`} className="bg-card border rounded-md p-4">
                   <div className="flex items-start gap-3">
-                    {a.avatar ? <img src={a.avatar} alt="" className="w-10 h-10 rounded-sm object-cover" />
+                    {(wisAvatar(a.name) || a.avatar) ? <img src={wisAvatar(a.name) || a.avatar} alt="" className="w-10 h-10 rounded-sm object-cover ring-1 ring-gold/40" />
                       : <div className="w-10 h-10 rounded-sm bg-primary/10 text-primary flex items-center justify-center"><Building2 className="w-5 h-5" /></div>}
                     <div className="flex-1 min-w-0">
                       <p className="font-heading font-semibold text-sm leading-tight">{a.name}</p>

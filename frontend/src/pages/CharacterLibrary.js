@@ -82,6 +82,12 @@ export default function CharacterLibrary() {
                   <div className="rounded-lg overflow-hidden border border-border bg-navy">
                     <img src={open.official_portrait} alt={open.name} className="w-full object-cover" data-testid="character-portrait" />
                   </div>
+                  {open.official_full_body && (
+                    <div className="mt-3 rounded-lg overflow-hidden border border-border bg-gradient-to-b from-[#1a1147] to-[#0A1A3F]">
+                      <img src={open.official_full_body} alt={`${open.name} full body`} className="w-full object-contain" data-testid="character-full-body" />
+                      <p className="text-[10px] text-white/60 text-center pb-1.5">Official Full-Body · Transparent PNG</p>
+                    </div>
+                  )}
                   <div className="mt-3">
                     <p className="text-[11px] font-semibold tracking-wide text-gold uppercase mb-1">Approved Palette</p>
                     <div className="flex flex-wrap gap-1.5">

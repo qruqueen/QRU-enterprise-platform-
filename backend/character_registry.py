@@ -33,6 +33,16 @@ PORTRAITS = {
     "CHR-00006": "https://static.prod-images.emergentagent.com/jobs/211e16a9-15c3-4a33-9130-a6e863f129fd/images/90ea70460e326b757ae780a93e666afd9ad468c0a0c7218707b48c40b9a71616.png",  # Royal Phoenix
 }
 
+# Official full-body artwork on TRANSPARENT background (reusable across the enterprise).
+FULL_BODY = {
+    "CHR-00001": "https://static.prod-images.emergentagent.com/jobs/211e16a9-15c3-4a33-9130-a6e863f129fd/images/153203005c3d98b1337d65a7aea77758c9e1934bfcc7d439cad2da5b7b0bd756.png",  # Kingdom Lion
+    "CHR-00002": "https://static.prod-images.emergentagent.com/jobs/211e16a9-15c3-4a33-9130-a6e863f129fd/images/181b826540187efb9e0eb9ba7e22e80dc0601ef4ffacfbd9809aa21df2818df1.png",  # Legacy Eagle
+    "CHR-00003": "https://static.prod-images.emergentagent.com/jobs/211e16a9-15c3-4a33-9130-a6e863f129fd/images/aade58a4a2576e981359f02e6dd3712824c3846d2e7481cf80af5aa605d596d1.png",  # Legacy Bear
+    "CHR-00004": "https://static.prod-images.emergentagent.com/jobs/211e16a9-15c3-4a33-9130-a6e863f129fd/images/a917453f7d2d980f046e9cfd884b3a32fd371954ec979679dfc89b9b597eb6f9.png",  # Queen Unity
+    "CHR-00005": "https://static.prod-images.emergentagent.com/jobs/211e16a9-15c3-4a33-9130-a6e863f129fd/images/268d3284375d648eb60aedd64b6c1ee60d79151d557f823ede50e699c6e702e0.png",  # Crowned Bull
+    "CHR-00006": "https://static.prod-images.emergentagent.com/jobs/211e16a9-15c3-4a33-9130-a6e863f129fd/images/69a809794656e08eb2c242b039b9548a7c2b3ab67fa4c72715b27aa3a7c42a92.png",  # Royal Phoenix
+}
+
 QRU_PALETTE = ["#4B1D8F Royal Purple", "#C9A227 QRU Gold", "#0A1A3F Navy", "#FFFFFF White"]
 BRAND_GUIDELINES = [
     "Always render on the approved QRU palette (Royal Purple, Gold, Navy, White).",
@@ -46,6 +56,7 @@ BRAND_GUIDELINES = [
 def _record(cid, name, roles, dept, animal, bio, personality, teaching, voice, catchphrases, responsibilities, expressions, poses, prompt_seed):
     """Build a full Treasure Standard™ Character Record."""
     portrait = PORTRAITS[cid]
+    full_body = FULL_BODY.get(cid)
     return {
         "id": cid,
         "character_id": cid,
@@ -61,8 +72,8 @@ def _record(cid, name, roles, dept, animal, bio, personality, teaching, voice, c
         "responsibilities": responsibilities,
         # ── Official visual assets ──
         "official_portrait": portrait,
-        "official_full_body": None,        # generated on demand as a variation, preserving identity
-        "transparent_png": None,           # generated on demand
+        "official_full_body": full_body,        # transparent full-body artwork
+        "transparent_png": full_body,           # same asset — clean cutout, no background
         "approved_color_palette": QRU_PALETTE,
         "clothing_uniform": "Royal purple mantle with fine gold embroidery and QRU regalia; species-appropriate crown or circlet.",
         "facial_expressions": expressions,
@@ -179,6 +190,8 @@ async def seed_characters():
                 {"id": rec["id"]},
                 {"$set": {
                     "official_portrait": rec["official_portrait"],
+                    "official_full_body": rec["official_full_body"],
+                    "transparent_png": rec["transparent_png"],
                     "approved_color_palette": rec["approved_color_palette"],
                     "brand_guidelines": rec["brand_guidelines"],
                     "treasure_standard_status": rec["treasure_standard_status"],
