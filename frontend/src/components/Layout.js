@@ -16,7 +16,7 @@ const NAV = [
   { to: "/teach", label: "What to Teach Today", icon: Rocket, testid: "nav-teach" },
   { to: "/command-center", label: "Enterprise Command Center™", icon: LayoutDashboard, testid: "nav-command-center" },
   { section: "Mission Control" },
-  { to: "/", label: "Command Center", icon: LayoutDashboard, end: true, testid: "nav-dashboard" },
+  { to: "/", label: "Founder Console", icon: LayoutDashboard, end: true, testid: "nav-dashboard" },
   { to: "/command", label: "Command Console", icon: MessageSquareText, testid: "nav-command" },
   { to: "/enterprise-health", label: "Enterprise Health", icon: Activity, testid: "nav-health-dash" },
   { to: "/organization", label: "Organization", icon: Building2, testid: "nav-organization" },

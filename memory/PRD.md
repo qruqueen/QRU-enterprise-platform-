@@ -141,3 +141,13 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 - Activate real AI connectors (video/voice/music) and real publishing connectors (Stripe payment is available with test keys) one at a time via integration_expert.
 - Understanding Fulfillment Center™ (Customer Library lifetime updates/versioning); Treasure Standard™ Gold Master Reference; Analytics & Continuous Improvement feedback loop (real revenue/engagement).
 - Minor UI: always render default routing table on Integration Hub even with no connections.
+
+## Implemented — Iteration 13 (2026-07-03) · Treasure Standard™ Constitution + Factory Acceptance Test™
+- **Treasure Standard™ Quality Constitution**: Product verification now enforces THE QRU QUESTION™ ("Would Erica Talbert be proud to put her name on this?") + the 16-point Treasure Standard™ Test (verification returns treasure_standard_met + founder_would_be_proud).
+- **Improvement Loop™** (`product_protection.treasure_finalize` + `_improve_product`): every product is auto-verified → auto-revised (content rewritten to fix issues) → re-verified, up to 2 rounds, before publish. Publishes only when the Treasure Standard™ is met; escalates a 'quality' exception to the Founder only when it can't reach standard or true judgment is needed. Centralized and wired into hands-free (_produce_one), orchestrator (_auto_publish), and autopilot.
+- **Enterprise Readiness Review™** (`GET /api/enterprise/readiness`) + **Factory Acceptance Test™** (`GET /api/enterprise/factory-acceptance-test`): per-module Enterprise Quality Score™ (12 modules), production_ready flag, lifecycle map. Surfaced on the Enterprise Command Center (readiness-panel, run-fat-btn → fat-panel). Current EQS 99% (Analytics 90 until a payment provider is connected — honest).
+- UX polish: renamed sidebar "/" item to "Founder Console" (vs Enterprise Command Center™); FAT badge shows a "Production-ready once a payment provider is connected" hint.
+- Tested: iteration_13.json — 100% (backend 9/9, frontend all pages/buttons/nav; no dead buttons). Treasure Standard loop verified end-to-end (auto-revise + re-verify + publish, no Founder clicks).
+
+### Note on performance
+- The Improvement Loop adds multiple LLM calls per product (verify→improve→re-verify), so a single product can take ~2-4 minutes. This is the intended quality-over-speed tradeoff; runs fully in the background/hands-free.

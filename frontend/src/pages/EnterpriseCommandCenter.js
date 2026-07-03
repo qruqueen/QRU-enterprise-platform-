@@ -104,9 +104,12 @@ export default function EnterpriseCommandCenter() {
         <div className="bg-card border rounded-sm p-5" data-testid="fat-panel">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-heading font-semibold text-sm">Factory Acceptance Test™ — Enterprise Quality Score™</h3>
-            <span className={`text-sm font-heading font-bold px-3 py-1 rounded-sm ${fat.production_ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-              {fat.enterprise_quality_score}%
-            </span>
+            <div className="flex items-center gap-2">
+              {!fat.production_ready && <span className="text-[11px] text-muted-foreground">Production-ready once a payment provider is connected</span>}
+              <span className={`text-sm font-heading font-bold px-3 py-1 rounded-sm ${fat.production_ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                {fat.enterprise_quality_score}%
+              </span>
+            </div>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {fat.modules.map((m, i) => (
