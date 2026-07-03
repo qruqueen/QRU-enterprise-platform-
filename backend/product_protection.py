@@ -97,21 +97,41 @@ async def ai_verify_product(pid: str, actor: str = "QRU Verification Team™") -
     p = await db.products.find_one({"id": pid})
     if not p:
         return {"error": "not found"}
+
+    # --- AI Recommendation layer (optional; degrades gracefully) ---
+    ai_available = True
+    ai_note = None
     prompt = (f"Product: {p['title']}\nType: {p['product_type']}\nAudience: {p.get('audience','')}\n"
               f"Content:\n{(p.get('content') or '')[:2500]}")
-    raw = await llm_generate(PRODUCT_VERIFICATION_SYSTEM, prompt, f"prod-verify-{pid}")
-    review = parse_json(raw) or {"decision": "request_revision", "confidence_score": 0,
-                                 "reasons": "Verifier response could not be parsed."}
+    try:
+        raw = await llm_generate(PRODUCT_VERIFICATION_SYSTEM, prompt, f"prod-verify-{pid}")
+        review = parse_json(raw) or {"decision": "request_revision", "confidence_score": 0,
+                                     "reasons": "Verifier response could not be parsed."}
+    except Exception as e:
+        # Deterministic fallback verification — never depends on AI.
+        ai_available = False
+        msg = str(getattr(e, "detail", e))
+        ai_note = "Core verification completed. AI recommendations temporarily unavailable."
+        content = p.get("content") or ""
+        has_body = len(content.strip()) >= 200
+        review = {
+            "decision": "approve" if has_body else "request_revision",
+            "confidence_score": 80 if has_body else 40,
+            "scores": {}, "sources_checked": [], "issues": [] if has_body else ["Product content is missing or too short."],
+            "reasons": ("Deterministic structural check passed (content present)." if has_body
+                        else "Deterministic check: product content missing or too short.") + f" [AI unavailable: {msg[:80]}]",
+        }
     conf = review.get("confidence_score") or 0
     history = p.get("verification", {}).get("revision_history", []) if p.get("verification") else []
     history.append({"at": now_iso(), "decision": review.get("decision"),
                     "confidence_score": conf, "reasons": review.get("reasons", "")})
     verification = {
-        "reviewer": "QRU Verification Team™", "decision": review.get("decision"),
+        "reviewer": "QRU Verification Team™" if ai_available else "QRU Deterministic Check™",
+        "decision": review.get("decision"),
         "confidence_score": conf, "scores": review.get("scores", {}),
         "sources_checked": review.get("sources_checked", []), "issues": review.get("issues", []),
         "reasons": review.get("reasons", ""), "approved_at": now_iso() if review.get("decision") == "approve" else None,
-        "revision_history": history, "autonomous": True,
+        "revision_history": history, "autonomous": True, "ai_recommendations_available": ai_available,
     }
     verified = review.get("decision") == "approve" and conf >= CONFIDENCE_THRESHOLD
     await db.products.update_one(
@@ -133,7 +153,8 @@ async def ai_verify_product(pid: str, actor: str = "QRU Verification Team™") -
     await log_org("Kingdom Lion™", "Verification",
                   f"product {'verified' if verified else 'flagged'} ({conf}%)", p.get("product_code", ""),
                   "success" if verified else "warning")
-    return {"verified": verified, "escalated": bool(escalate), "verification": verification}
+    return {"verified": verified, "escalated": bool(escalate), "verification": verification,
+            "ai_recommendations_available": ai_available, "message": ai_note}
 
 
 async def apply_protection(pid: str, license_type: str, watermark: bool, access_control: str, actor: str):

@@ -48,9 +48,16 @@ async def synthesize_voice(text: str, voice: str = DEFAULT_VOICE, model: str = T
         clean = "Welcome to QRU. Understanding, manufactured from verified knowledge."
     tts = OpenAITextToSpeech(api_key=EMERGENT_LLM_KEY)
     audio = bytearray()
+    n = 0
     for chunk in _chunk(clean):
         part = await tts.generate_speech(text=chunk, model=model, voice=voice, response_format="mp3")
         audio.extend(part)
+        n += 1
+    try:
+        import cost_meter
+        await cost_meter.record("tts", units=n, est_cost=round(cost_meter.UNIT_COST["tts"] * max(n, 1), 4))
+    except Exception:
+        pass
     return bytes(audio)
 
 

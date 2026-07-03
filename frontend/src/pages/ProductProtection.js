@@ -20,8 +20,12 @@ export default function ProductProtection() {
     setBusy(pid + "-verify");
     try {
       const { data } = await api.post(`/protection/${pid}/verify`);
-      toast[data.verified ? "success" : "warning"](
-        data.verified ? "Product verified by the AI Verification Team" : "Product flagged — needs revision/escalation");
+      if (data.ai_recommendations_available === false) {
+        toast.warning(data.message || "Core protection completed. AI recommendations temporarily unavailable.");
+      } else {
+        toast[data.verified ? "success" : "warning"](
+          data.verified ? "Product verified by the AI Verification Team" : "Product flagged — needs revision/escalation");
+      }
       load();
     } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
     finally { setBusy(null); }

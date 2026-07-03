@@ -8,7 +8,7 @@ import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard,
-  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins,
+  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload,
 } from "lucide-react";
 
 const NAV = [
@@ -58,6 +58,7 @@ const NAV = [
   { to: "/integration-hub", label: "Integration Hub™", icon: Plug, testid: "nav-integration-hub", q: "What are we connected to?" },
   { to: "/ai-services", label: "AI Services™", icon: Cpu, testid: "nav-ai-services", q: "What AI powers can we use right now?" },
   { to: "/users", label: "User Management", icon: UserCog, testid: "nav-users", q: "Who has access, and to what?" },
+  { to: "/portability", label: "Portability Center™", icon: HardDriveDownload, testid: "nav-portability", q: "How do we back up and redeploy QRU?" },
   { to: "/settings", label: "Settings", icon: Settings, testid: "nav-settings", q: "How is the factory configured?" },
 ];
 

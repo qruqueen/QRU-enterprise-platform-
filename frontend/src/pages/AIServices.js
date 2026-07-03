@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { Link } from "react-router-dom";
 import { Cpu, CheckCircle2, PlugZap, Image, Video, Mic, Music, FileText } from "lucide-react";
+import { CostMeter } from "@/components/CostMeter";
 
 const CAP_ICONS = { image: Image, video: Video, animation: Video, voice: Mic, music: Music, audio: Music };
 
@@ -28,6 +29,8 @@ export default function AIServices() {
         <h1 className="font-heading text-3xl font-bold tracking-tight">AI Services Manager™</h1>
         <p className="text-muted-foreground text-sm mt-1">Coordinates every AI specialist automatically. The Founder never picks a tool.</p>
       </div>
+
+      <CostMeter />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[["Capabilities", status.capabilities.length], ["Jobs Run", status.jobs_total], ["Real (native)", status.jobs_real], ["Failed", status.jobs_failed]].map(([l, v]) => (

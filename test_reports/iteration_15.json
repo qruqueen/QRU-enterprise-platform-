@@ -1,0 +1,45 @@
+{
+  "summary": "MT-IP-001 Protection Center graceful-degradation fix verified end-to-end. All 5 backend tests pass. POST /api/protection/{pid}/verify returns HTTP 200 with ai_recommendations_available=false, message 'Core verification completed. AI recommendations temporarily unavailable.', reviewer 'QRU Deterministic Check™', and persists deterministically while the OpenAI daily spend cap is active. POST /api/protection/{pid}/apply-protection (super_admin) is fully AI-free and returns protected=true with license/watermark/copyright + ip.version + history. Dashboard regression passes. Unknown pid returns 404 (not 500). Frontend Product Protection page shows the graceful warning toast (no 'error' toast) and verified row updates in-place.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_mtip001_protection.py",
+    "/app/test_reports/pytest/iteration15_mtip001.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "product_protection.py ai_verify_product: exception handler catches all Exception. Consider narrowing to LLM/HTTP-provider errors so real bugs (e.g. Mongo failures) don't get silently converted into a deterministic-approval path. Structural check currently approves any product with content>=200 chars — this is intentionally lenient during LLM outages but should be logged more visibly (e.g. logger.warning) so operators see when the deterministic branch is exercised.",
+    "In apply_protection, protection.watermark_applied is always set to bool(watermark) from the request without any anti-tamper flag. Fine for now, but a future 'watermark_engine_version' field would make audit history more precise.",
+    "routers/protection.py verify_product uses user['name'] as the actor and returns pp.ai_verify_product's raw dict; consider stripping the internal 'error' key path (already covered) and adding a top-level 'ok': true so the frontend has a single boolean success signal alongside verified/ai_recommendations_available.",
+    "product_protection.py is 306 lines — still well under the 700-line threshold; verification, licensing, and secure-links could split cleanly if it grows further."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_mtip001_protection.py (new)"
+  ],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "100% (E2E graceful message verified via Playwright)"},
+  "test_credentials": "Founder 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! — used as Bearer + UI login; not modified.",
+  "seed_data_creation": "None. Used existing product PRD-00071 (id 2e5cd351-a662-4614-a10b-c88d96cb1252) for the UI verify click; other products were touched only via idempotent verify/apply-protection.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "MT-IP-001 fix is verified. Backend test file /app/backend/tests/test_mtip001_protection.py has 5 tests covering: dashboard regression, verify graceful 200 with deterministic reviewer + message + ai_recommendations_available=false, GET persistence of the deterministic verification, verify 404 on unknown pid, and apply-protection 200 with protected=true + license + copyright + ip.version + history (AI-free). Frontend: navigating to /product-protection, clicking [data-testid='verify-btn-<pid>'] surfaces the graceful sonner toast 'Core verification completed. AI recommendations temporarily unavailable.' — no generic error toast. Note: the LLM daily cap is currently ACTIVE, which is exactly the state the fix must handle; when the cap clears the endpoint should return ai_recommendations_available=true and reviewer='QRU Verification Team™' — worth a spot-check later.",
+  "rca_of_the_issue": {
+    "root_cause": "product_protection.ai_verify_product() previously called llm_generate() unconditionally. When OpenAI's daily spend cap fired, the exception propagated up through routers/protection.py verify_product and surfaced as a 500/503 that the frontend collapsed into a generic error toast. Core protection state (verification record, timestamps, audit history) never got persisted because the AI failure short-circuited the entire flow.",
+    "fix_verified": "ai_verify_product() now wraps llm_generate in try/except. On failure it (a) sets ai_available=False, (b) performs a deterministic structural check — approve if content>=200 chars else request_revision, (c) builds a verification dict with reviewer='QRU Deterministic Check™' and ai_recommendations_available=False, (d) persists to db.products, (e) returns {verified, verification, ai_recommendations_available:False, message:'Core verification completed. AI recommendations temporarily unavailable.'}. apply_protection() was already AI-free and returns protected=true with license/watermark/copyright + ip.version + history via a pure Mongo update. Frontend ProductProtection.js verify() checks data.ai_recommendations_available===false and calls toast.warning(data.message) instead of toast.error(...).",
+    "verification_steps": [
+      "pytest /app/backend/tests/test_mtip001_protection.py -> 5 passed",
+      "curl POST /api/protection/{valid_pid}/verify -> 200 with verified:true, ai_recommendations_available:false, verification.reviewer='QRU Deterministic Check™', message contains 'AI recommendations temporarily unavailable'.",
+      "GET /api/products/{pid} -> verification persisted (reviewer=QRU Deterministic Check™, ai_recommendations_available=false).",
+      "curl POST /api/protection/{pid}/apply-protection with super_admin -> 200, protected=true, license_type='Personal Use', protection.copyright_applied=true, ip.version>=1, ip.history[-1].action='protection applied'.",
+      "curl POST /api/protection/does-not-exist-xyz-123/verify -> 404 with detail 'Product not found'.",
+      "GET /api/protection/dashboard -> 200 with rows + summary keys (total/verified/protected/published/at_risk).",
+      "UI: login as Founder → nav to /product-protection → click [data-testid='verify-btn-2e5cd351...'] → sonner toast shows 'Core verification completed. AI recommendations temporarily unavailable.' (warning). No 'error'/'failed' toast. Row updates and shows 'Verified (80%)'."
+    ]
+  }
+}

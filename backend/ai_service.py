@@ -22,6 +22,11 @@ async def generate_image(prompt: str, session_id: str):
             chat.with_model("gemini", IMAGE_MODEL).with_params(modalities=["image", "text"])
             _, images = await chat.send_message_multimodal_response(UserMessage(text=prompt))
             if images:
+                try:
+                    import cost_meter
+                    await cost_meter.record("image", est_cost=cost_meter.UNIT_COST["image"])
+                except Exception:
+                    pass
                 return base64.b64decode(images[0]["data"])
         except Exception as e:
             if "Budget has been exceeded" in str(e) or "spend limit" in str(e).lower():
@@ -43,7 +48,14 @@ async def llm_generate(system: str, prompt: str, session_id: str) -> str:
                 system_message=system,
             ).with_model(*MODEL)
             resp = await chat.send_message(UserMessage(text=prompt))
-            return resp if isinstance(resp, str) else str(resp)
+            resp = resp if isinstance(resp, str) else str(resp)
+            try:
+                import cost_meter
+                est = round((len(prompt) + len(resp)) / 1000 * 0.01, 4)
+                await cost_meter.record("text", est_cost=max(est, 0.001))
+            except Exception:
+                pass
+            return resp
         except Exception as e:
             last_err = e
             # Hard spend limits are not transient — fail fast, do not retry.
