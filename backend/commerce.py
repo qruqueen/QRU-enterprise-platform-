@@ -71,6 +71,7 @@ async def storefront():
         "thumbnail_url": p.get("thumbnail_url"), "audience": p.get("audience"),
         "design_palette": p.get("design_palette"), "treasure_standard": bool(p.get("treasure_standard")),
         "license_type": p.get("license_type"), "price": product_price(p),
+        "preview_url": p.get("preview_url"), "preview_pdf_url": p.get("preview_pdf_url"),
     } for p in products]
 
 

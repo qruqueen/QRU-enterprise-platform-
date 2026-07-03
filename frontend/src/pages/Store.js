@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api, { formatApiError } from "@/lib/api";
 import { toast } from "sonner";
-import { Store as StoreIcon, ShoppingCart, Loader2, DollarSign, TrendingUp, Download, X } from "lucide-react";
+import { Store as StoreIcon, ShoppingCart, Loader2, DollarSign, TrendingUp, Download, X, Eye, FileText } from "lucide-react";
 
 export default function Store() {
   const [products, setProducts] = useState([]);
@@ -103,6 +103,24 @@ export default function Store() {
               </div>
               <p className="text-sm font-semibold text-navy mt-1.5 line-clamp-2 flex-1">{p.title}</p>
               {p.audience && <p className="text-xs text-muted-foreground mt-1">For {p.audience}</p>}
+              {(p.preview_url || p.preview_pdf_url) && (
+                <div className="flex items-center gap-2 mt-2" data-testid={`store-preview-${p.product_code}`}>
+                  {p.preview_url && (
+                    <a href={`${process.env.REACT_APP_BACKEND_URL}${p.preview_url}`} target="_blank" rel="noreferrer"
+                      data-testid={`read-sample-${p.product_code}`}
+                      className="flex items-center gap-1 text-primary text-xs font-medium hover:underline">
+                      <Eye className="w-3.5 h-3.5" /> Read Sample
+                    </a>
+                  )}
+                  {p.preview_pdf_url && (
+                    <a href={`${process.env.REACT_APP_BACKEND_URL}${p.preview_pdf_url}?download=1&name=${encodeURIComponent(p.title + " — Preview")}`}
+                      data-testid={`preview-pdf-${p.product_code}`}
+                      className="flex items-center gap-1 text-navy text-xs font-medium hover:underline">
+                      <FileText className="w-3.5 h-3.5" /> Preview PDF
+                    </a>
+                  )}
+                </div>
+              )}
               <div className="flex items-center justify-between mt-3">
                 <span className="font-heading text-lg font-bold text-navy flex items-center"><DollarSign className="w-4 h-4" />{p.price}</span>
                 <div className="flex items-center gap-2">
