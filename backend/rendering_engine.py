@@ -221,6 +221,34 @@ async def ensure_branded_assets(pid, actor="Creative Studio™"):
     kr = await db.knowledge_records.find_one({"id": p.get("knowledge_record_id")}) if p.get("knowledge_record_id") else {}
     pal = dl.resolve_palette(p.get("family", ""), p.get("department", p.get("college", "")),
                              p.get("topic", ""), p.get("title", ""))
+    # QRU Asset Vault™ (MT-027) — reuse an approved/Founder-imported cover BEFORE generating.
+    # Reuse-by-default: never regenerate over a Protected Master / Founder Imported / Approved asset.
+    try:
+        import vault
+        reusable = await vault.find_reusable(asset_type="Cover", product_family=p.get("family"),
+                                             knowledge_record_id=p.get("knowledge_record_id"))
+        if reusable and reusable.get("file", {}).get("previewable"):
+            vpath = os.path.join(vault.VAULT_DIR, reusable["file"]["filename"])
+            if os.path.exists(vpath):
+                with open(vpath, "rb") as f:
+                    cover = f.read()
+                cover_url = _asset_url(_save("cover", "png", cover))
+                thumb_url = _asset_url(_save("thumb", "png", dl.premium_thumbnail(cover)))
+                store_url = _asset_url(_save("store", "png", dl.premium_store_graphic(p, cover)))
+                await db.products.update_one({"id": pid}, {"$set": {
+                    "cover_url": cover_url, "thumbnail_url": thumb_url, "store_graphic_url": store_url,
+                    "cover_has_hero_art": False, "cover_source": "asset_vault",
+                    "cover_vault_asset": {"id": reusable["id"], "asset_code": reusable.get("asset_code"),
+                                          "name": reusable.get("name"), "source": reusable.get("source")},
+                    "design_language_applied": True, "updated_at": now_iso()}})
+                await log_org("Creative Studio Director™", "Creative Studio",
+                              f"reused Asset Vault™ cover {reusable.get('asset_code')} for",
+                              p.get("product_code", ""), "success")
+                return {"cover_url": cover_url, "thumbnail_url": thumb_url,
+                        "store_graphic_url": store_url, "reused_asset": reusable.get("asset_code")}
+    except Exception as e:
+        logger.error(f"vault cover reuse check failed (non-blocking): {e}")
+
     # Best-effort AI hero artwork — composited under the QRU frame. Skips silently when
     # AI capacity is unavailable (daily cap / budget), so covers always render.
     hero = None

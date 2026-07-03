@@ -8,13 +8,14 @@ import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard,
-  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge,
+  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet,
 } from "lucide-react";
 
 const NAV = [
   { section: "The QRU Experience" },
   { to: "/first-dollar", label: "First Dollar Mode™", icon: Coins, testid: "nav-first-dollar", q: "Will a real customer pay for it?" },
   { to: "/factory-readiness", label: "Factory Readiness™", icon: Gauge, testid: "nav-factory-readiness", q: "Which product should we manufacture first?" },
+  { to: "/manufacturing-economics", label: "Manufacturing Economics™", icon: Wallet, testid: "nav-economics", q: "What does each product cost — and what's the profit?" },
   { to: "/teach", label: "What to Teach Today", icon: Rocket, testid: "nav-teach", q: "What do we want to teach today?" },
   { to: "/workflows", label: "Workflow Engine™", icon: Workflow, testid: "nav-workflows", q: "What should happen next?" },
   { to: "/factory-monitor", label: "Factory Monitor™", icon: Radio, testid: "nav-factory-monitor", q: "What is happening right now?" },
@@ -46,6 +47,7 @@ const NAV = [
   { to: "/products", label: "Product Library", icon: Library, testid: "nav-products", q: "What have we made?" },
   { to: "/product-protection", label: "Product Protection™", icon: ShieldHalf, testid: "nav-protection", q: "Is it protected and properly licensed?" },
   { to: "/creative-studio", label: "Creative Studio™", icon: Palette, testid: "nav-creative", q: "Is it beautiful, engaging, and easy to understand?" },
+  { to: "/asset-vault", label: "Asset Vault™", icon: Archive, testid: "nav-asset-vault", q: "Which approved assets can we reuse instead of regenerating?" },
   { to: "/media-studio", label: "Media Studio™", icon: Clapperboard, testid: "nav-media", q: "How do we bring it to life in sound and motion?" },
   { to: "/design-intelligence", label: "Design Intelligence™", icon: Sparkles, testid: "nav-design-intel", q: "What does great QRU design look like — and how do we repeat it?" },
   { to: "/experience-lab", label: "Experience Lab™", icon: Eye, testid: "nav-experience", q: "How does this feel to learn?" },

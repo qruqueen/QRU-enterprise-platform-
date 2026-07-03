@@ -47,6 +47,8 @@ import InstitutionalKnowledge from "@/pages/InstitutionalKnowledge";
 import EnterpriseAutonomy from "@/pages/EnterpriseAutonomy";
 import FirstDollarMode from "@/pages/FirstDollarMode";
 import FactoryReadiness from "@/pages/FactoryReadiness";
+import AssetVault from "@/pages/AssetVault";
+import ManufacturingEconomics from "@/pages/ManufacturingEconomics";
 import PortabilityCenter from "@/pages/PortabilityCenter";
 import Colleges from "@/pages/Colleges";
 import CollegeWorkspace from "@/pages/CollegeWorkspace";
@@ -122,6 +124,8 @@ function EnterpriseRoutes() {
         <Route path="enterprise-autonomy" element={<EnterpriseAutonomy />} />
         <Route path="first-dollar" element={<FirstDollarMode />} />
         <Route path="factory-readiness" element={<FactoryReadiness />} />
+        <Route path="asset-vault" element={<AssetVault />} />
+        <Route path="manufacturing-economics" element={<ManufacturingEconomics />} />
         <Route path="portability" element={<PortabilityCenter />} />
         <Route path="store" element={<Store />} />
         <Route path="checkout/success" element={<CheckoutSuccess />} />

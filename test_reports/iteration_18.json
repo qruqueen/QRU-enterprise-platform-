@@ -1,0 +1,41 @@
+{
+  "summary": "MT-027 Asset Vault™ + MT-028 Manufacturing Economics™ fully validated. 24/24 backend pytest tests passed. Frontend Founder workflows verified end-to-end on live preview URL: upload dialog + grid, detail dialog (Mark Protected → replacement_rule updated to 'Never recreate...'), download link fires real browser download event with correct filename, new-version upload increments to v2 with both v1/v2 in version history AND original v1 file still served (not overwritten), type filter + free-text search both correctly narrow results. Manufacturing Economics page renders all summary stats (avg cost $0.06, avg margin 92.2%, reuse savings $4.30), AI cost dashboard, credit-consumption tiered list, First Dollar Mode™ recommendations with real margins (94.5% top), and 60-row economics table; PDF/CSV export endpoints both return application/pdf and text/csv with attachment Content-Disposition; $14.99 Book math verified ($0.73 processing fee, $14.16 profit, 94.5% margin). Reuse lookup finds the uploaded Founder Cover for its product_family and returns found=false for unknown families. Regression check confirmed products/{id}/pipeline still responds and MT-025 flow intact.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Vault + Economics dialogs", "issues": ["Radix Dialog warning: 'Missing Description or aria-describedby' for DialogContent — accessibility nit; add DialogDescription to Upload and Detail dialogs. Non-blocking."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_mt027_mt028_vault_and_economics.py",
+    "/app/test_reports/pytest/iteration18_mt027_mt028.xml"
+  ],
+  "action_items": [
+    "Optional a11y: add <DialogDescription> to vault-upload-dialog and vault-detail-dialog to silence Radix warnings.",
+    "Optional cleanup: TEST_ prefixed vault asset (AV-00003 'TEST_ UI Founder Cover' with v2) plus a founder-cover uploaded via API remain in Mongo. Ticket note said 'assets/products you create are fine to leave' — no action required."
+  ],
+  "critical_code_review_comments": [
+    "vault.py create_asset uses count_documents({}) to build asset_code AV-#####; this is fine for single-writer flows but can collide under concurrent uploads. Not a bug today, but consider a Mongo counter document or sequential atomic increment if concurrency grows.",
+    "vault.add_version appends {'version':n,'file':new,'previous_file':old} to version_history and mutates top-level file/version — correct 'new version never overwrites' behavior. Verified: the original PNG at .../vault-<oldid>.png still returns 200 after v2 was uploaded.",
+    "vault.find_reusable ORs source∈REUSABLE with approval_status∈REUSABLE — matches the ticket's Founder Imported/Protected/Approved reuse rule. SOURCE_RANK sort is deterministic; tie-break by version is sensible.",
+    "routers/vault.py:serve accepts arbitrary fname; path traversal is blocked via '/' and '..' rejection. Good.",
+    "economics.py rendering_cost hard-coded to 0.0 as ticket requires; per-type profile (Book 9,1,0,1) yields ~$0.09 for text + $0.04 image if cover_has_hero_art else 0 image. Stripe fees 2.9%+$0.30 verified against $14.99 Book.",
+    "economics.overview reads all products (limit=500) and computes rows sequentially — O(N) mongo find calls (cost_meter + reused-asset count-per-product). For >500 products this becomes slow; consider a single aggregation. Non-blocking for current scale.",
+    "MT-028 exports use in-memory csv/pdf generation. to_pdf sanitize() strips ™ correctly with 'latin-1 replace' — no crash on unicode.",
+    "AssetVault.js DetailDialog: 'Founder Approved' and 'Protected Master' buttons issue PATCH — verified UI reflects updated source and replacement_rule in-place via onChange(r.data).",
+    "AssetVault.js new-version input is a hidden <input type=file> — Playwright had to target with locator inside dialog; testers should use set_input_files on the hidden input (as ticket noted).",
+    "ManufacturingEconomics.js dl() uses window.open which triggers new-tab download — verified both open the export endpoint and the backend replies with attachment headers. If a stricter same-tab download is preferred, an <a href download> could be used, but window.open works reliably with attachment CD."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_mt027_mt028_vault_and_economics.py (new — 24 tests, all passing)"
+  ],
+  "success_rate": {"backend": "100% (24/24)", "frontend": "100% (Vault upload/detail/protect/download/new-version/filter/search + Economics all stats/exports)"},
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (Bearer token stored in localStorage['qru_token']).",
+  "seed_data_creation": "Uploaded TEST_-prefixed founder covers via API and via UI. Left in DB per ticket note. UI-created asset ended up as AV-00003 with v2 after new-version upload; API-created assets AV-00001/AV-00002 for TEST_Health family (used by reuse-lookup test).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Regression suite at /app/backend/tests/test_mt027_mt028_vault_and_economics.py is safe to re-run — each test either uses uniquely named uploads or reverts side-effects (archive/unarchive, source/approval flip). If future work adds more asset types or economics fields, extend TYPE_PROFILE and add new asserts on cost_breakdown keys. Consider adding a DialogDescription import in AssetVault to remove Radix a11y warnings.",
+  "rca of the issue": "N/A — ticket MT-027 + MT-028 acceptance criteria fully met. Vault upload defaults (Founder Imported / Founder Approved / v1 / AV-#####) verified; source→Protected Master flip updates replacement_rule to 'Never recreate, never replace — only reuse'; new-version keeps v1 intact (fetched original filename returns 200 after v2 upload) with version_history storing previous_file; archived=true removes from default list but include_archived=true includes it; lookup returns strongest reusable asset for matching context and None otherwise; Economics summary/stats/products/exports all render with rendering_cost==0 and correct $14.99 Book math ($0.73 fee → $14.16 profit → 94.5% margin)."
+}
