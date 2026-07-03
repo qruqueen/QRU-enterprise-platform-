@@ -1,0 +1,38 @@
+{
+  "summary": "MT-025 Design Validation + Founder Review Copy download reliability — fully validated. 14/14 backend pytest tests passed and full frontend Founder workflow verified across Book/Presentation/Poster: green Treasure Standard™ Approved badges render, every download link (html/epub/pdf/pptx/png) returns Content-Disposition: attachment with correct Content-Type, hrefs include ?download=1&name=, real Playwright browser download events fire cross-origin, Open Review Copy serves inline HTML with QRU PRESS™ masthead + Treasure Standard™ seal, and the design gate correctly blocks release (400 with 'design review' message) when design_review_required=true while approved products still publish.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_mt025_design_and_downloads.py",
+    "/app/test_reports/pytest/iteration17_mt025.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "deliverable_renderer.assess_design_quality() correctly implements 9 weighted criteria totaling 100 points and enforces DESIGN_THRESHOLD=85. The 'Cover design' criterion depends on Pillow being able to open cover_bytes; the poster caps at 90 because the deterministic premium_cover output doesn't meet the 1000x1000 minimum — this is graded (not gated) and still passes threshold. Reasonable.",
+    "routers/rendering.py:asset() sanitizes filename correctly (allows alnum, space, dot, underscore, dash) and appends the correct extension when the caller-provided name omits it. FileResponse is invoked with both filename= kwarg AND explicit Content-Disposition header — FastAPI reconciles cleanly (header override wins). Working end-to-end.",
+    "manufacturing2.release_product() runs unmet-gates check BEFORE design_review_required — correct ordering: pending gates first, then deliverable-ready, then design gate. Message contains 'design review' as required.",
+    "customer_deliverable.design_review is snapshotted into published_deliverable at release (verified via published_deliverable in release response). The snapshot preserves grade/approved/status/criteria so audits after publish are trivial.",
+    "ProductDetail.js hrefs use `${abs(f.url)}?download=1&name=<encoded title>` — because backend enforces Content-Disposition, the cross-origin `download` HTML attribute ignore-behavior is bypassed (Playwright confirmed real download events fire on the preview subdomain).",
+    "Nit: The 'Set Permanent Password' banner appears for the Founder session in every product page. Not a bug — intentional temporary-password reminder — but overlaps zero interactive controls in the Review Copy panel."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_mt025_design_and_downloads.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (14/14)",
+    "frontend": "100% (all 3 products, all download formats, real browser download events verified)"
+  },
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (Bearer token stored in localStorage['qru_token'])",
+  "seed_data_creation": "None. Used the three existing certified products from the ticket (Book c4530d52..., Presentation a3a3326e..., Poster f464e59c...). Release-gate test finds any certified product with all gates passed via /api/products then temporarily flips design_review_required in Mongo and restores immediately after.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "MT-025 test suite at /app/backend/tests/test_mt025_design_and_downloads.py is idempotent: it flips design_review_required only inside a try/finally and restores it. Front-end verification used page.request.get() to inspect response headers and page.expect_download() for a real browser-download event — both confirmed. If a future ticket adds new deliverable formats, extend FORMAT_CTYPE and the parametrized test_download_flag_sets_attachment_and_correct_ctype cases.",
+  "rca of the issue": "N/A — no bugs found. Ticket MT-025 acceptance criteria fully met: (A) design_review is computed on every render with grade/approved/status/criteria and stored under customer_deliverable + product.design_review_required flag; (B) backend Content-Disposition: attachment fix makes downloads work cross-origin — verified with both header inspection AND page.expect_download() in Playwright; (C) full Founder workflow (Render → Founder Review → Open Review Copy → Download every format → Read → Approve) executes end-to-end with the design gate blocking publication when required and allowing it when approved."
+}

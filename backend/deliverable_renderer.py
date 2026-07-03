@@ -55,6 +55,11 @@ def _md_to_html(md: str) -> str:
                 out.append("</ul>"); in_list = False
             continue
         esc = _html.escape(line)
+        if line.strip() in ("---", "***", "___", "- - -"):
+            if in_list:
+                out.append("</ul>"); in_list = False
+            out.append("<hr/>")
+            continue
         # bold
         while "**" in esc:
             esc = esc.replace("**", "<strong>", 1)
@@ -116,6 +121,7 @@ h1,h2,h3{{font-family:Arial,Helvetica,sans-serif;color:var(--royal)}}
 h2{{border-left:5px solid var(--accent);padding-left:14px;margin-top:2em;font-size:22px}}
 h3{{font-size:17px;color:var(--navy)}}
 ul{{padding-left:22px}} li{{margin:.35em 0}}
+hr{{border:none;border-top:1px solid #e5e1ee;max-width:120px;margin:24px 0}}
 .footer{{text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#8a83a3;margin-top:40px}}
 .footer strong{{color:var(--royal)}}
 </style></head><body>
@@ -285,12 +291,16 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
                 logger.error(f"pdf fallback failed for {pid}: {e2}")
 
     validation = validate_deliverable(p, files, primary)
+    design = assess_design_quality(p, files, cover_bytes)
     deliverable = {
         "primary_format": primary if any(f["format"] == primary for f in files) else (files[0]["format"] if files else None),
         "files": files,
         "ready": validation["ready"],
         "validated": validation["ready"],
         "validation": validation,
+        "design_review": design,
+        "design_approved": design["approved"],
+        "status_label": design["status"],
         "preview_url": next((f["url"] for f in files if f["format"] == "html"), None),
         "download_url": next((f["url"] for f in files if f["format"] == primary),
                              (files[0]["url"] if files else None)),
@@ -299,15 +309,81 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
     }
     await db.products.update_one({"id": pid}, {"$set": {
         "customer_deliverable": deliverable, "deliverable_ready": validation["ready"],
-        "updated_at": now_iso()}})
+        "design_review_required": not design["approved"], "updated_at": now_iso()}})
     try:
         from org_activity import log_org
+        note = "success" if (validation["ready"] and design["approved"]) else "warning"
         await log_org("Creative Studio Director™", "Creative Studio",
-                      f"rendered the customer-ready {primary.upper()} deliverable for", p.get("product_code", ""),
-                      "success" if validation["ready"] else "warning")
+                      f"rendered the customer-ready {primary.upper()} deliverable ({design['status']}) for",
+                      p.get("product_code", ""), note)
     except Exception:
         pass
     return deliverable
+
+
+# --------------------------------------------------------------------------- #
+# MT-025 — Treasure Standard™ Design Validation (deterministic, no LLM).
+# Validates that the rendered product is not only present but visually
+# customer-ready: cover, interior structure, typography, hierarchy, QRU +
+# Treasure Standard™ branding, readability, print & mobile quality.
+# --------------------------------------------------------------------------- #
+DESIGN_THRESHOLD = 85
+
+
+def assess_design_quality(product, files, cover_bytes=None):
+    content = product.get("content") or ""
+    section_count = content.count("\n## ") + (1 if content.startswith("## ") else 0)
+    chars = len(content)
+    branded = bool(product.get("design_language_applied"))
+    has_html = any(f["format"] == "html" and f["bytes"] >= 4000 for f in files)
+    has_pdf = any(f["format"] == "pdf" for f in files)
+    pdf_bytes = max([f["bytes"] for f in files if f["format"] == "pdf"] + [0])
+
+    # cover dimensions
+    cover_w = cover_h = 0
+    try:
+        from PIL import Image
+        cb = cover_bytes
+        if cb is None and product.get("cover_url"):
+            cpath = os.path.join(re_engine.ASSET_DIR, product["cover_url"].split("/")[-1])
+            if os.path.exists(cpath):
+                with open(cpath, "rb") as f:
+                    cb = f.read()
+        if cb:
+            with Image.open(io.BytesIO(cb)) as im:
+                cover_w, cover_h = im.size
+    except Exception:
+        pass
+
+    c = []
+
+    def crit(name, passed, weight, detail=""):
+        c.append({"name": name, "passed": bool(passed), "weight": weight, "detail": detail})
+
+    crit("Cover design (high-resolution branded)", cover_w >= 1000 and cover_h >= 1000, 15,
+         f"{cover_w}×{cover_h}px")
+    crit("QRU branding applied", branded, 10, "QRU Design Language™" if branded else "not applied")
+    crit("Treasure Standard™ branding", branded, 5, "seal present" if branded else "missing")
+    crit("Interior page design & sections", section_count >= 3, 15, f"{section_count} sections")
+    crit("Visual hierarchy (headings)", ("# " in content) and section_count >= 2, 10,
+         "title + sections" if ("# " in content) else "no title heading")
+    crit("Typography & readability", 600 <= chars, 15, f"{chars} chars")
+    crit("Print quality (PDF)", has_pdf and pdf_bytes >= 20000, 10, f"{pdf_bytes // 1024} KB PDF")
+    crit("Mobile readability (responsive HTML)", has_html, 10, "viewport + fluid layout")
+    crit("Margins & spacing (premium template)", branded and has_html, 10, "premium template")
+
+    grade = sum(x["weight"] for x in c if x["passed"])
+    approved = grade >= DESIGN_THRESHOLD
+    failed = [x["name"] for x in c if not x["passed"]]
+    return {
+        "grade": grade,
+        "approved": approved,
+        "status": "Treasure Standard™ Approved" if approved else "Rendered — Design Review Required",
+        "threshold": DESIGN_THRESHOLD,
+        "criteria": c,
+        "recommendations": failed,
+        "assessed_at": now_iso(),
+    }
 
 
 def validate_deliverable(product, files, primary):

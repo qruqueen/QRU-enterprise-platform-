@@ -120,41 +120,94 @@ def _strip_md(text):
 
 def _make_pdf(product, kr, cover_bytes, qr_bytes):
     from fpdf import FPDF
-    pdf = FPDF(format="A4")
-    pdf.set_margins(15, 15, 15)
-    pdf.set_auto_page_break(True, margin=18)
-    # Cover page
+
+    title_txt = _strip_md(product.get("title", "QRU Product"))
+    family_txt = _strip_md(product.get("family", ""))
+    ptype_txt = _strip_md(product.get("product_type", ""))
+
+    class QRUPDF(FPDF):
+        def footer(self):
+            # Skip footer on the cover page.
+            if self.page_no() == 1:
+                return
+            self.set_y(-14)
+            self.set_draw_color(*GOLD); self.set_line_width(0.4)
+            self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
+            self.ln(2)
+            self.set_font("Times", "I", 8); self.set_text_color(120, 120, 130)
+            self.cell(0, 6, _strip_md("QRU PRESS(TM) - Quest for Real Understanding"), align="L")
+            self.set_font("Helvetica", "", 8)
+            self.cell(0, 6, str(self.page_no() - 1), align="R")
+
+    pdf = QRUPDF(format="A4")
+    pdf.set_margins(22, 22, 22)
+    pdf.set_auto_page_break(True, margin=20)
+
+    # --- Cover page: branded full-bleed cover image ---
     pdf.add_page()
     pdf.set_fill_color(*ROYAL); pdf.rect(0, 0, 210, 297, "F")
     cover_path = os.path.join(ASSET_DIR, _save("tmp-cover", "png", cover_bytes))
-    pdf.image(cover_path, x=30, y=30, w=150)
+    pdf.image(cover_path, x=25, y=26, w=160)
     os.remove(cover_path)
-    pdf.set_text_color(*GOLD); pdf.set_font("Helvetica", "B", 22)
-    pdf.set_xy(15, 200); pdf.multi_cell(180, 10, _strip_md(product["title"]), align="C")
-    pdf.set_text_color(255, 255, 255); pdf.set_font("Helvetica", "", 12)
-    pdf.set_xy(15, 235); pdf.multi_cell(180, 8, _strip_md("Treasure Standard(TM) Certified  |  Kingdom Lion(TM) Verified"), align="C")
-    pdf.set_font("Helvetica", "", 10)
-    pdf.set_xy(15, 248); pdf.multi_cell(180, 6, _strip_md(f"QRU {product.get('product_type','')}  -  {product.get('family','')}"), align="C")
-    # Content page
+    pdf.set_text_color(*GOLD); pdf.set_font("Times", "B", 24)
+    pdf.set_xy(15, 210); pdf.multi_cell(180, 11, title_txt, align="C")
+    pdf.set_draw_color(*GOLD); pdf.set_line_width(0.6)
+    pdf.line(70, 246, 140, 246)
+    pdf.set_text_color(255, 255, 255); pdf.set_font("Helvetica", "", 11)
+    pdf.set_xy(15, 250); pdf.multi_cell(180, 7, _strip_md("TREASURE STANDARD(TM) CERTIFIED"), align="C")
+    pdf.set_font("Helvetica", "", 9)
+    pdf.set_xy(15, 260); pdf.multi_cell(180, 6, _strip_md(f"QRU {ptype_txt}  -  {family_txt}"), align="C")
+
+    # --- Title / colophon page ---
+    pdf.add_page()
+    pdf.set_text_color(*ROYAL); pdf.set_font("Helvetica", "B", 9)
+    pdf.cell(0, 6, _strip_md(f"QRU PRESS(TM)   -   {family_txt.upper()}"))
+    pdf.ln(16)
+    pdf.set_text_color(*NAVY); pdf.set_font("Times", "B", 26)
+    pdf.multi_cell(0, 12, title_txt)
+    pdf.ln(2)
+    pdf.set_font("Times", "I", 12); pdf.set_text_color(90, 84, 110)
+    pdf.multi_cell(0, 7, _strip_md("Manufactured by QRU Factory(TM). QRU simplifies the path to understanding the truth."))
+    pdf.ln(6)
+    pdf.set_draw_color(*GOLD); pdf.set_line_width(0.5)
+    pdf.line(pdf.l_margin, pdf.get_y(), pdf.l_margin + 55, pdf.get_y())
+
+    # --- Content ---
     pdf.add_page(); pdf.set_text_color(*NAVY)
     body = product.get("content") or ""
-    for block in body.split("\n"):
+    lines = body.split("\n")
+    for i, block in enumerate(lines):
         b = _strip_md(block).strip()
         pdf.set_x(pdf.l_margin)
         if not b:
-            pdf.ln(3); continue
+            pdf.ln(2.5); continue
+        if b in ("---", "***", "___", "- - -"):
+            pdf.ln(2); pdf.set_draw_color(210, 205, 220); pdf.set_line_width(0.3)
+            pdf.line(pdf.l_margin + 55, pdf.get_y(), pdf.w - pdf.r_margin - 55, pdf.get_y())
+            pdf.ln(4); continue
         if block.startswith("## "):
-            pdf.set_font("Helvetica", "B", 14); pdf.set_text_color(*ROYAL)
-            pdf.multi_cell(0, 8, b); pdf.set_text_color(*NAVY)
+            pdf.ln(4)
+            pdf.set_font("Helvetica", "B", 15); pdf.set_text_color(*ROYAL)
+            pdf.multi_cell(0, 8, b)
+            pdf.set_draw_color(*GOLD); pdf.set_line_width(0.4)
+            pdf.line(pdf.l_margin, pdf.get_y() + 0.5, pdf.l_margin + 32, pdf.get_y() + 0.5)
+            pdf.ln(3); pdf.set_text_color(*NAVY)
         elif block.startswith("# "):
-            pdf.set_font("Helvetica", "B", 18); pdf.multi_cell(0, 10, b)
+            pdf.set_font("Times", "B", 20); pdf.set_text_color(*ROYAL)
+            pdf.multi_cell(0, 10, b[0:] if not b.startswith("# ") else b); pdf.ln(2); pdf.set_text_color(*NAVY)
+        elif block.strip().startswith("- ") or block.strip().startswith("* "):
+            pdf.set_font("Times", "", 12)
+            pdf.cell(6, 6.5, chr(149))  # bullet
+            pdf.multi_cell(0, 6.5, b.lstrip("-* ").strip())
         else:
-            pdf.set_font("Helvetica", "", 11); pdf.multi_cell(0, 6, b)
-    # QR
+            pdf.set_font("Times", "", 12)
+            pdf.multi_cell(0, 6.5, b)
+
+    # --- Continue-learning QR ---
     qr_path = os.path.join(ASSET_DIR, _save("tmp-qr", "png", qr_bytes))
-    pdf.ln(6); pdf.set_x(pdf.l_margin); pdf.set_font("Helvetica", "B", 11); pdf.set_text_color(*ROYAL)
-    pdf.multi_cell(0, 6, "Continue learning at QRU:")
-    pdf.image(qr_path, x=15, w=30); os.remove(qr_path)
+    pdf.ln(8); pdf.set_x(pdf.l_margin); pdf.set_font("Helvetica", "B", 12); pdf.set_text_color(*ROYAL)
+    pdf.multi_cell(0, 7, _strip_md("Continue your understanding at QRU:"))
+    pdf.image(qr_path, x=pdf.l_margin, w=28); os.remove(qr_path)
     out = pdf.output()
     return bytes(out)
 

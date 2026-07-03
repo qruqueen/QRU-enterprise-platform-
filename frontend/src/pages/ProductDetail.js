@@ -84,50 +84,72 @@ export default function ProductDetail() {
         </div>
       </div>
 
-      {/* Founder Review Copy™ — MT-024: inspect the exact customer-ready deliverable before publishing */}
-      <div className="bg-card border rounded-md p-6 mb-6 max-w-4xl" data-testid="pd-review-copy">
-        <div className="flex items-center gap-2 mb-1">
-          <PackageCheck className="w-4 h-4 text-gold" />
-          <h3 className="font-heading font-semibold">Founder Review Copy™</h3>
-          {p.deliverable_ready && (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200" data-testid="pd-deliverable-validated">Validated · Treasure Standard™</span>
-          )}
-        </div>
-        <p className="text-sm text-muted-foreground mb-4">Review the exact file your customers will receive before you approve & publish.</p>
-        {p.customer_deliverable?.files?.length ? (
-          <>
-            <div className="grid sm:grid-cols-2 gap-2 mb-3">
-              {p.customer_deliverable.files.map((f, i) => {
-                const Icon = FMT_ICON[f.format] || FileText;
-                return (
-                  <a key={i} href={abs(f.url)} target="_blank" rel="noreferrer" download
-                    className="flex items-center gap-2 text-sm px-3 py-2 rounded-md border hover:border-primary hover:bg-primary/[0.03] transition-colors"
-                    data-testid={`pd-download-${f.format}`}>
-                    <Icon className="w-4 h-4 text-primary shrink-0" />
-                    <span className="flex-1">{f.label}</span>
-                    <span className="text-[10px] text-muted-foreground">{Math.max(1, Math.round((f.bytes || 0) / 1024))} KB</span>
-                    <Download className="w-3.5 h-3.5 text-muted-foreground" />
-                  </a>
-                );
-              })}
+      {/* Founder Review Copy™ — MT-024/025: inspect the exact customer-ready deliverable before publishing */}
+      {(() => {
+        const cd = p.customer_deliverable;
+        const dz = cd?.design_review;
+        const designApproved = cd?.design_approved ?? !p.design_review_required;
+        const dlHref = (f) => `${abs(f.url)}?download=1&name=${encodeURIComponent(p.title + " — " + p.product_type)}`;
+        return (
+          <div className="bg-card border rounded-md p-6 mb-6 max-w-4xl" data-testid="pd-review-copy">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <PackageCheck className="w-4 h-4 text-gold" />
+              <h3 className="font-heading font-semibold">Founder Review Copy™</h3>
+              {cd?.files?.length ? (
+                designApproved ? (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200" data-testid="pd-design-approved">Treasure Standard™ Approved{dz?.grade != null ? ` · ${dz.grade}/100` : ""}</span>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200" data-testid="pd-design-review-required">Rendered — Design Review Required{dz?.grade != null ? ` · ${dz.grade}/100` : ""}</span>
+                )
+              ) : null}
             </div>
-            <div className="flex flex-wrap gap-2">
-              {p.customer_deliverable.preview_url && (
-                <a data-testid="pd-open-reader" href={abs(p.customer_deliverable.preview_url)} target="_blank" rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border hover:border-primary"><Eye className="w-4 h-4" /> Open Review Copy (read &amp; scroll)</a>
-              )}
-              <button data-testid="pd-rerender" onClick={renderReviewCopy} disabled={renderBusy}
-                className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border hover:border-primary disabled:opacity-60">
-                {renderBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />} Re-render</button>
-            </div>
-          </>
-        ) : (
-          <button data-testid="pd-render-review" onClick={renderReviewCopy} disabled={renderBusy}
-            className="inline-flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-sm text-sm font-medium hover:bg-navy/90 disabled:opacity-60">
-            {renderBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackageCheck className="w-4 h-4" />} Render Founder Review Copy™
-          </button>
-        )}
-      </div>
+            <p className="text-sm text-muted-foreground mb-4">Review the exact file your customers will receive before you approve &amp; publish.</p>
+            {cd?.files?.length ? (
+              <>
+                <div className="grid sm:grid-cols-2 gap-2 mb-3">
+                  {cd.files.map((f, i) => {
+                    const Icon = FMT_ICON[f.format] || FileText;
+                    return (
+                      <a key={i} href={dlHref(f)} className="flex items-center gap-2 text-sm px-3 py-2 rounded-md border hover:border-primary hover:bg-primary/[0.03] transition-colors"
+                        data-testid={`pd-download-${f.format}`}>
+                        <Icon className="w-4 h-4 text-primary shrink-0" />
+                        <span className="flex-1">{f.label}</span>
+                        <span className="text-[10px] text-muted-foreground">{Math.max(1, Math.round((f.bytes || 0) / 1024))} KB</span>
+                        <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                      </a>
+                    );
+                  })}
+                </div>
+                {!designApproved && dz?.recommendations?.length > 0 && (
+                  <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-3 mb-3" data-testid="pd-design-recs">
+                    <p className="font-semibold mb-1">Design review needed before publication:</p>
+                    <ul className="list-disc pl-4">{dz.recommendations.map((r, i) => <li key={i}>{r}</li>)}</ul>
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {cd.preview_url && (
+                    <a data-testid="pd-open-reader" href={abs(cd.preview_url)} target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border hover:border-primary"><Eye className="w-4 h-4" /> Open Review Copy (read &amp; scroll)</a>
+                  )}
+                  {!designApproved && (
+                    <button data-testid="pd-return-creative" onClick={enhance} disabled={briefBusy}
+                      className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border border-warning text-warning hover:bg-warning/5 disabled:opacity-60">
+                      {briefBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />} Return to Creative Studio™</button>
+                  )}
+                  <button data-testid="pd-rerender" onClick={renderReviewCopy} disabled={renderBusy}
+                    className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border hover:border-primary disabled:opacity-60">
+                    {renderBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />} Re-render</button>
+                </div>
+              </>
+            ) : (
+              <button data-testid="pd-render-review" onClick={renderReviewCopy} disabled={renderBusy}
+                className="inline-flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-sm text-sm font-medium hover:bg-navy/90 disabled:opacity-60">
+                {renderBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackageCheck className="w-4 h-4" />} Render Founder Review Copy™
+              </button>
+            )}
+          </div>
+        );
+      })()}
 
       {b && (
         <div className="bg-card border rounded-md p-6 mb-6 max-w-4xl" data-testid="pd-creative-brief">

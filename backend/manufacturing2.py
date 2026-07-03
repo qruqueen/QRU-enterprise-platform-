@@ -433,6 +433,11 @@ async def release_product(pid):
             logger.error(f"deliverable render at release failed: {e}")
     if not p.get("deliverable_ready"):
         return None, "Release locked. The customer-ready deliverable has not been rendered & validated yet."
+    # MT-025 — design quality gate: only publish once the rendered product meets Treasure Standard™ design.
+    if p.get("design_review_required"):
+        recs = ((p.get("customer_deliverable") or {}).get("design_review") or {}).get("recommendations", [])
+        hint = f" Improve: {', '.join(recs)}." if recs else ""
+        return None, f"Release locked. The rendered product needs a design review before publication.{hint}"
     # Publish exactly the approved deliverable — snapshot it so what ships equals what was reviewed.
     await db.products.update_one({"id": pid}, {"$set": {
         "status": "Published", "released_at": now_iso(),

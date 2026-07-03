@@ -80,7 +80,7 @@ async def get_render(pid: str, user=Depends(get_current_user)):
 
 
 @router.get("/asset/{fname}")
-async def asset(fname: str):
+async def asset(fname: str, download: bool = False, name: str = None):
     # basic path-traversal guard
     if "/" in fname or ".." in fname:
         raise HTTPException(400, "Invalid asset name")
@@ -94,4 +94,12 @@ async def asset(fname: str):
         "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     }
     media = media_map.get(ext, "application/octet-stream")
+    # MT-025 — force a real download (cross-origin `download` attr is ignored by browsers,
+    # so we set Content-Disposition: attachment server-side). Reader/preview stays inline.
+    if download:
+        safe = "".join(ch for ch in (name or fname) if ch.isalnum() or ch in " ._-").strip() or fname
+        if not safe.lower().endswith("." + ext):
+            safe = f"{safe}.{ext}"
+        return FileResponse(path, media_type=media, filename=safe,
+                            headers={"Content-Disposition": f'attachment; filename="{safe}"'})
     return FileResponse(path, media_type=media)

@@ -27,6 +27,10 @@ export function FinalProductPreview({ open, onOpenChange, pipeline, render }) {
   const coverRel = render?.rendered_assets?.cover || render?.cover_url || pipeline.cover_url;
   const cover = abs(coverRel);
   const ready = pipeline.deliverable_ready || deliverable?.ready;
+  const dz = deliverable?.design_review;
+  const designApproved = deliverable?.design_approved ?? !pipeline.design_review_required;
+  const canPublish = ready && designApproved;
+  const dlHref = (f) => `${abs(f.url)}?download=1&name=${encodeURIComponent(pipeline.title + " — " + pipeline.product_type)}`;
 
   const publish = async () => {
     setBusy("publish");
@@ -34,7 +38,7 @@ export function FinalProductPreview({ open, onOpenChange, pipeline, render }) {
       await api.post(`/manufacturing2/${pipeline.id}/release`);
       setPublished(true);
       toast.success("Approved & published to the QRU Store™ 🚀");
-    } catch (e) { toast.error(e?.response?.data?.detail || "Publish blocked — complete Quality Control + rendering first."); }
+    } catch (e) { toast.error(e?.response?.data?.detail || "Publish blocked — complete Quality Control + design review first."); }
     finally { setBusy(""); }
   };
 
@@ -62,7 +66,7 @@ export function FinalProductPreview({ open, onOpenChange, pipeline, render }) {
                 {files.map((f, i) => {
                   const Icon = FMT_ICON[f.format] || FileText;
                   return (
-                    <a key={i} href={abs(f.url)} target="_blank" rel="noreferrer" download
+                    <a key={i} href={dlHref(f)}
                       className="flex items-center gap-2 text-sm text-foreground/80 px-2.5 py-1.5 rounded-md border border-border hover:border-navy hover:bg-navy/[0.03] transition-colors"
                       data-testid={`fpp-file-${f.format}`}>
                       <Icon className="w-4 h-4 text-navy shrink-0" />
@@ -76,9 +80,14 @@ export function FinalProductPreview({ open, onOpenChange, pipeline, render }) {
             ) : (
               <p className="text-sm text-muted-foreground mb-3">Deliverable rendering pending — it will appear here automatically once manufacturing finishes.</p>
             )}
-            <div className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full ${ready ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`} data-testid="fpp-validation">
-              <CheckCircle2 className="w-3.5 h-3.5" /> {ready ? "Deliverable validated · Treasure Standard™" : "Deliverable not yet validated"}
+            <div className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full ${designApproved ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`} data-testid="fpp-validation">
+              <CheckCircle2 className="w-3.5 h-3.5" /> {designApproved ? `Treasure Standard™ Approved${dz?.grade != null ? ` · ${dz.grade}/100` : ""}` : `Rendered — Design Review Required${dz?.grade != null ? ` · ${dz.grade}/100` : ""}`}
             </div>
+            {!designApproved && dz?.recommendations?.length > 0 && (
+              <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2.5 mt-2" data-testid="fpp-design-recs">
+                Design review needed: {dz.recommendations.join(", ")}.
+              </div>
+            )}
           </div>
         </div>
 
@@ -106,11 +115,11 @@ export function FinalProductPreview({ open, onOpenChange, pipeline, render }) {
           <button data-testid="fpp-preview" onClick={() => { onOpenChange(false); navigate(`/products/${pipeline.id}`); }}
             className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border border-border hover:border-navy"><Eye className="w-4 h-4" /> Product Page</button>
           {deliverable?.download_url && (
-            <a data-testid="fpp-download" href={abs(deliverable.download_url)} target="_blank" rel="noreferrer" download
+            <a data-testid="fpp-download" href={`${abs(deliverable.download_url)}?download=1&name=${encodeURIComponent(pipeline.title + " — " + pipeline.product_type)}`}
               className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border border-border hover:border-navy">
               <Download className="w-4 h-4" /> Download {deliverable.primary_format?.toUpperCase()}</a>
           )}
-          <button data-testid="fpp-publish" onClick={publish} disabled={busy === "publish" || published || !ready}
+          <button data-testid="fpp-publish" onClick={publish} disabled={busy === "publish" || published || !canPublish}
             className={`inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm ml-auto ${published ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-navy text-white hover:bg-navy/90"} disabled:opacity-50`}>
             {busy === "publish" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />} {published ? "Published" : "Approve & Publish"}</button>
         </div>
