@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
+import { CompletionSummary } from "@/components/CompletionSummary";
+import { AwaitingCapacity } from "@/components/AwaitingCapacity";
 import { toast } from "sonner";
 import { Wand2, Loader2, Sparkles, CheckCircle2, XCircle, Circle, ShieldCheck, AlertTriangle, ArrowRight, BookOpen, Lightbulb, Brain } from "lucide-react";
 
@@ -13,6 +15,11 @@ const SECTIONS = [
   ["memory_sentence", "6 · Memory Sentence™"],
   ["deep_roots", "8 · Deep Roots™ (Cause → Mechanism → Outcome)"],
 ];
+
+function isProviderPause(data) {
+  const reason = (data?.error?.reason || "").toLowerCase();
+  return !data?.clarifying_question && /(provider|quota|spend limit|budget|unavailable|capacity)/.test(reason);
+}
 
 function StageRow({ s }) {
   const Icon = s.status === "done" ? CheckCircle2 : s.status === "failed" ? XCircle : Circle;
@@ -34,6 +41,7 @@ export default function TranslationEngine() {
   const [audiences, setAudiences] = useState([]);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
+  const [completion, setCompletion] = useState(null);
 
   useEffect(() => {
     api.get("/translation-engine/stages").then(({ data }) => setAudiences(data.audiences || [])).catch(() => {});
@@ -43,14 +51,29 @@ export default function TranslationEngine() {
     if (!question.trim()) return toast.error("Describe what you're curious about");
     setLoading(true);
     setData(null);
+    const started = Date.now();
     try {
       const { data } = await api.post("/translation-engine/manufacture", {
         question, audience: audience || null,
         resume_from: resumeCtx?.error?.retry_from, context: resumeCtx?.context,
       });
       setData(data);
-      if (data.ok) toast.success(data.verified ? "Treasure Standard™ understanding manufactured" : "Draft understanding manufactured");
-      else toast.message(`Paused at: ${data.error?.failed_stage}`);
+      if (data.ok) {
+        setCompletion({
+          status: data.verified ? "success" : "warning",
+          workflowName: "Translation Engine™",
+          timeCompleted: Date.now(), durationMs: Date.now() - started,
+          estimatedCost: data.verified ? 0 : 0.01,
+          assets: [{ label: `Understanding: ${data.topic}`, sub: data.result?.source_label }],
+          warnings: data.verified ? [] : ["This explanation is an AI draft — verification recommended before publishing."],
+          recommendedAction: data.verified ? null : "Send to Verification Center™ before customer use.",
+          actions: [
+            { label: "View Output", testid: "completion-view-output", onClick: () => {}, primary: true },
+            { label: "Ask Next Question", testid: "completion-next", onClick: () => setQuestion(data.result?.suggested_next_question || "") },
+            { label: "Return to Dashboard", testid: "completion-dashboard", to: "/" },
+          ],
+        });
+      } else toast.message(`Paused at: ${data.error?.failed_stage}`);
     } catch { toast.error("The Translation Engine is temporarily unavailable — please retry"); }
     finally { setLoading(false); }
   };
@@ -59,6 +82,7 @@ export default function TranslationEngine() {
 
   return (
     <div>
+      <CompletionSummary open={!!completion} onOpenChange={(v) => !v && setCompletion(null)} data={completion} />
       <PageHeader
         overline="QRU Translation Engine™ · Flagship"
         title="Manufacture Understanding"
@@ -122,6 +146,15 @@ export default function TranslationEngine() {
                     className="mt-3 inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-sm bg-navy text-white hover:bg-navy/90">
                     <ArrowRight className="w-3.5 h-3.5" /> Retry from {data.error?.retry_from}
                   </button>
+                  {isProviderPause(data) && (
+                    <div className="mt-4">
+                      <AwaitingCapacity
+                        reason={data.error?.reason}
+                        onResume={() => { toast.success("AI capacity returned — resuming automatically"); run(data); }}
+                        onCancel={() => { setData(null); toast.message("Workflow cancelled"); }}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

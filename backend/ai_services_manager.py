@@ -139,34 +139,46 @@ async def execute(capability: str, spec: dict, session_id: str, actor="AI Servic
                             "content": spec.get("caption", ""), "asset_url": url, "est_cost_usd": cost}
                 raise RuntimeError("image generation returned no data")
 
-            # --- REAL voice / audio narration (OpenAI TTS) ---
+            # --- REAL voice / audio narration (OpenAI TTS) — degrades gracefully ---
             if capability in ("voice", "audio"):
                 import media_render as mr
                 script = spec.get("script") or spec.get("prompt") or spec.get("title", "")
-                audio = await mr.synthesize_voice(script)
-                fid = _save("qru_voice", "mp3", audio)
-                url = _asset_url(fid)
-                cost = estimate_cost("voice", script)
-                await _record_job(capability, "OpenAI TTS (Voice)", "real", "success", retries, cost=cost)
-                return {"status": "success", "mode": "real", "provider": "OpenAI TTS (Voice)",
-                        "content": script, "asset_url": url, "est_cost_usd": cost}
+                try:
+                    audio = await mr.synthesize_voice(script)
+                    fid = _save("qru_voice", "mp3", audio)
+                    url = _asset_url(fid)
+                    cost = estimate_cost("voice", script)
+                    await _record_job(capability, "OpenAI TTS (Voice)", "real", "success", retries, cost=cost)
+                    return {"status": "success", "mode": "real", "provider": "OpenAI TTS (Voice)",
+                            "content": script, "asset_url": url, "est_cost_usd": cost}
+                except Exception as ve:
+                    await _record_job(capability, "OpenAI TTS (Voice)", "degraded", "warning", retries, str(ve)[:120])
+                    return {"status": "success", "mode": "degraded", "provider": "OpenAI TTS (Voice)",
+                            "content": script, "asset_url": None, "est_cost_usd": 0,
+                            "message": "AI voice narration temporarily unavailable — script prepared and saved; audio can be generated when capacity returns."}
 
-            # --- REAL slideshow video / animation (branded images + TTS narration → MP4) ---
+            # --- REAL slideshow video (branded images + TTS narration → MP4) — degrades to SILENT ---
             if capability in ("video", "animation"):
                 import media_render as mr
                 script = spec.get("script") or spec.get("prompt") or spec.get("title", "")
-                audio = await mr.synthesize_voice(script)
-                images = await _scene_images(spec.get("title", "QRU"), script, session_id)
+                narrated, audio = True, b""
+                try:
+                    audio = await mr.synthesize_voice(script)
+                except Exception:
+                    narrated, audio = False, b""
+                images = await _scene_images(spec.get("title", "QRU"), script, session_id)  # already degrades to branded placeholders
                 mp4 = mr.make_slideshow_video(images, audio)
                 if not mp4:
                     raise RuntimeError("slideshow assembly returned no data")
                 fid = _save("qru_video", "mp4", mp4)
                 url = _asset_url(fid)
-                cost = estimate_cost("voice", script) + len(images) * estimate_cost("image")
-                await _record_job(capability, "QRU Slideshow Video™ (OpenAI TTS + Render)", "real", "success", retries, cost=round(cost, 6))
-                return {"status": "success", "mode": "real",
+                cost = (estimate_cost("voice", script) if narrated else 0) + len(images) * estimate_cost("image")
+                await _record_job(capability, "QRU Slideshow Video™ (OpenAI TTS + Render)", "real" if narrated else "degraded",
+                                  "success" if narrated else "warning", retries, cost=round(cost, 6))
+                return {"status": "success", "mode": "real" if narrated else "degraded",
                         "provider": "QRU Slideshow Video™", "content": script,
-                        "asset_url": url, "est_cost_usd": round(cost, 6)}
+                        "asset_url": url, "est_cost_usd": round(cost, 6),
+                        "message": None if narrated else "Video produced as a silent branded slideshow — AI narration temporarily unavailable and can be added when capacity returns."}
 
             # --- MEDIA render still needing an external connector (e.g. music) ---
             if capability in MEDIA_CAPS:

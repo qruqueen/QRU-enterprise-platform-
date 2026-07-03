@@ -17,6 +17,19 @@ async def probe(user=Depends(get_current_user)):
     return await ci.probe_capacity(force=True)
 
 
+@router.get("/capacity")
+async def capacity(user=Depends(get_current_user)):
+    """Cheap, cached capacity status for UI polling (auto-resume). Probes at most every 10 min."""
+    cap = await ci.probe_capacity(force=False)
+    return {**cap, "retry_interval_seconds": 20,
+            "next_probe_seconds": ci._PROBE_TTL_SECONDS}
+
+
+@router.get("/resilience")
+async def resilience(user=Depends(get_current_user)):
+    return await ci.resilience()
+
+
 @router.post("/auto-resume")
 async def auto_resume(user=Depends(get_current_user)):
     return await ci.auto_resume_safe_jobs(force_probe=True)

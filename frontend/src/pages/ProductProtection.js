@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api, { formatApiError } from "@/lib/api";
+import { CompletionSummary } from "@/components/CompletionSummary";
 import { toast } from "sonner";
 import { ShieldCheck, Lock, Loader2, Copyright, Droplets, KeyRound } from "lucide-react";
 
@@ -9,6 +10,7 @@ export default function ProductProtection() {
   const [data, setData] = useState(null);
   const [busy, setBusy] = useState(null);
   const [license, setLicense] = useState({});
+  const [completion, setCompletion] = useState(null);
 
   const load = async () => {
     const { data } = await api.get("/protection/dashboard");
@@ -18,14 +20,24 @@ export default function ProductProtection() {
 
   const verify = async (pid) => {
     setBusy(pid + "-verify");
+    const started = Date.now();
     try {
       const { data } = await api.post(`/protection/${pid}/verify`);
-      if (data.ai_recommendations_available === false) {
-        toast.warning(data.message || "Core protection completed. AI recommendations temporarily unavailable.");
-      } else {
-        toast[data.verified ? "success" : "warning"](
-          data.verified ? "Product verified by the AI Verification Team" : "Product flagged — needs revision/escalation");
-      }
+      const warned = data.ai_recommendations_available === false || !data.verified;
+      setCompletion({
+        status: warned ? "warning" : "success",
+        workflowName: "Verification Center™",
+        timeCompleted: Date.now(), durationMs: Date.now() - started,
+        estimatedCost: data.ai_recommendations_available === false ? 0 : 0.01,
+        assets: [{ label: "Verification record", sub: data.verification?.reviewer }],
+        warnings: warned ? [data.message || (data.verified ? "" : "Product flagged — needs revision/escalation")].filter(Boolean) : [],
+        recommendedAction: data.ai_recommendations_available === false ? "Re-run verification when AI capacity returns for full recommendations." : (!data.verified ? "Review flagged issues, then re-verify." : null),
+        actions: [
+          { label: "Protect Product", testid: "completion-protect", onClick: () => applyProtection(pid), primary: true },
+          { label: "Open Product", testid: "completion-open-product", to: `/products/${pid}` },
+          { label: "Product Library™", testid: "completion-library", to: "/products" },
+        ],
+      });
       load();
     } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
     finally { setBusy(null); }
@@ -33,11 +45,22 @@ export default function ProductProtection() {
 
   const applyProtection = async (pid) => {
     setBusy(pid + "-protect");
+    const started = Date.now();
     try {
       await api.post(`/protection/${pid}/apply-protection`, {
         license_type: license[pid] || "Personal Use", watermark: true, access_control: "account_required",
       });
-      toast.success("Protection applied (copyright, watermark, license, secure access)");
+      setCompletion({
+        status: "success",
+        workflowName: "Product Protection™",
+        timeCompleted: Date.now(), durationMs: Date.now() - started, estimatedCost: 0,
+        assets: [{ label: "Protection applied", sub: `${license[pid] || "Personal Use"} · copyright · watermark · secure access` }],
+        actions: [
+          { label: "Create Secure Link", testid: "completion-secure-link", onClick: () => secureLink(pid), primary: true },
+          { label: "Open Product", testid: "completion-open-product", to: `/products/${pid}` },
+          { label: "Product Library™", testid: "completion-library", to: "/products" },
+        ],
+      });
       load();
     } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
     finally { setBusy(null); }
@@ -55,6 +78,7 @@ export default function ProductProtection() {
 
   return (
     <div className="space-y-8" data-testid="protection-page">
+      <CompletionSummary open={!!completion} onOpenChange={(v) => !v && setCompletion(null)} data={completion} />
       <div>
         <p className="overline text-primary mb-1">IP & Access Security</p>
         <h1 className="font-heading text-3xl font-bold tracking-tight">Product Protection & Verification Agent™</h1>

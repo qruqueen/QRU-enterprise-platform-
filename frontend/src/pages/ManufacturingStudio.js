@@ -6,6 +6,8 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
+import { CompletionSummary } from "@/components/CompletionSummary";
+import { FinalProductPreview } from "@/components/FinalProductPreview";
 
 const STAGE_ICON = { done: CheckCircle2, running: Loader2, failed: XCircle, waiting: Circle, locked: Lock };
 const STAGE_COLOR = { done: "hsl(var(--success))", running: "hsl(var(--primary))", failed: "hsl(var(--destructive))", waiting: "hsl(var(--muted-foreground))" };
@@ -34,6 +36,9 @@ export default function ManufacturingStudio() {
   const [rendering, setRendering] = useState(false);
   const renderPollRef = useRef(null);
   const pollRef = useRef(null);
+  const [completion, setCompletion] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewShownFor, setPreviewShownFor] = useState(null);
   const BACKEND = process.env.REACT_APP_BACKEND_URL;
 
   useEffect(() => {
@@ -66,6 +71,16 @@ export default function ManufacturingStudio() {
       api.get(`/rendering/${pipeline.id}`).then((r) => setRender(r.data)).catch(() => {});
     }
   }, [pipeline?.id, pipeline?.treasure_standard]);
+
+  // MT-021 — auto-transition to Final Product Preview when manufacturing completes successfully
+  // (no blocking condition). Only fires once per completed pipeline.
+  useEffect(() => {
+    const done = pipeline?.treasure_standard && !["Manufacturing", "Quality Control", "Improving"].includes(pipeline?.status);
+    if (done && previewShownFor !== pipeline.id) {
+      setShowPreview(true);
+      setPreviewShownFor(pipeline.id);
+    }
+  }, [pipeline?.id, pipeline?.treasure_standard, pipeline?.status, previewShownFor]);
 
   const runRender = async () => {
     if (!pipeline) return;
@@ -112,11 +127,22 @@ export default function ManufacturingStudio() {
   };
 
   const release = async () => {
+    const started = Date.now();
     try {
       await api.post(`/manufacturing2/${pipeline.id}/release`);
       const { data } = await api.get(`/manufacturing2/${pipeline.id}/pipeline`);
       setPipeline(data);
-      toast.success("Product released to customers 🚀");
+      setCompletion({
+        status: "success",
+        workflowName: "Manufacturing Studio™ — Release",
+        timeCompleted: Date.now(), durationMs: Date.now() - started, estimatedCost: 0,
+        assets: [{ label: data?.title || "Product", sub: "Released to customers · Treasure Standard™" }],
+        actions: [
+          { label: "Open Product", testid: "completion-open-product", to: `/products/${pipeline.product_id || pipeline.id}`, primary: true },
+          { label: "Open Store™", testid: "completion-store", to: "/store" },
+          { label: "Product Library™", testid: "completion-library", to: "/products" },
+        ],
+      });
     } catch (e) { toast.error(e.response?.data?.detail || "Release locked."); }
   };
 
@@ -125,6 +151,8 @@ export default function ManufacturingStudio() {
 
   return (
     <div>
+      <CompletionSummary open={!!completion} onOpenChange={(v) => !v && setCompletion(null)} data={completion} />
+      <FinalProductPreview open={showPreview} onOpenChange={setShowPreview} pipeline={pipeline} render={render} />
       <PageHeader overline="Manufacturing Engine 2.0 · Enterprise Mode" title="Manufacturing Studio"
         description="Assemble finished QRU Products™ from verified Understanding Assets™, then let Quality Control improve them to Treasure Standard™ before release." />
 

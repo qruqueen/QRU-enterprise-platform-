@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
+import { FactoryResilience } from "@/components/FactoryResilience";
 
 const ICONS = { users: Users, heart: Heart, book: BookOpen, shield: ShieldCheck, sparkles: Sparkles,
   package: Package, check: CheckCircle2, award: Award, gem: Gem, gauge: Gauge, smile: Smile, brain: Brain };
@@ -82,6 +83,8 @@ export default function MissionControl() {
           <p className="text-sm"><span className="font-semibold" style={{ color: "hsl(var(--gold))" }}>Recommendation:</span> {d.briefing.recommendation}</p>
         </div>
       </div>
+
+      <FactoryResilience />
 
       {/* Mission + Money */}
       <div className="mb-8">

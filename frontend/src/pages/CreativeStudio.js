@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "@/lib/api";
 import { PageHeader, StatusBadge, EmptyState } from "@/components/shared";
+import { CompletionSummary } from "@/components/CompletionSummary";
 import { toast } from "sonner";
 import { Palette, Loader2, Wand2, Type, Layers, ShieldCheck, CheckCircle2 } from "lucide-react";
 
@@ -20,16 +21,31 @@ const PRINCIPLES = [
 export default function CreativeStudio() {
   const [queue, setQueue] = useState([]);
   const [busy, setBusy] = useState("");
+  const [completion, setCompletion] = useState(null);
 
   const load = () => api.get("/products/creative-queue").then((r) => setQueue(r.data)).catch(() => {});
   useEffect(() => { load(); }, []);
 
   const enhance = async (id) => {
     setBusy(id);
+    const started = Date.now();
     try {
       const { data } = await api.post(`/products/${id}/creative-brief`);
-      if (data?.enhancement_stage_note) toast.warning(data.enhancement_stage_note);
-      else toast.success("Product page enhanced by Creative Studio");
+      const warned = !!data?.enhancement_stage_note;
+      setCompletion({
+        status: warned ? "warning" : "success",
+        workflowName: "Creative Studio™ Enhancement",
+        timeCompleted: Date.now(), durationMs: Date.now() - started,
+        estimatedCost: data?.creative_brief_source === "ai" ? 0.01 : 0,
+        assets: [{ label: data?.title || "Product page", sub: "Creative brief + related products" }],
+        warnings: warned ? [data.enhancement_stage_note] : [],
+        recommendedAction: warned ? "Re-run once AI capacity returns for AI-authored copy." : null,
+        actions: [
+          { label: "Open Product", testid: "completion-open-product", to: `/products/${id}`, primary: true },
+          { label: "Open Product Library™", testid: "completion-open-library", to: "/products" },
+          { label: "Return to Dashboard", testid: "completion-dashboard", to: "/" },
+        ],
+      });
       load();
     } catch (e) {
       const detail = e?.response?.data?.detail;
@@ -39,6 +55,7 @@ export default function CreativeStudio() {
 
   return (
     <div>
+      <CompletionSummary open={!!completion} onOpenChange={(v) => !v && setCompletion(null)} data={completion} />
       <PageHeader
         overline="QRU Creative Studio™"
         title="Center of Excellence for Visual Communication"

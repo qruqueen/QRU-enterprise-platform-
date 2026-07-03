@@ -186,8 +186,32 @@ async def failed_job_diagnostics():
     return diags
 
 
-ENTERPRISE_FIRST_CHECKLIST = [
-    "What is my objective?",
+async def resilience():
+    """Factory Resilience™ — which workflows can run RIGHT NOW given current AI capacity.
+    Deterministic and hybrid workflows always run; AI-required ones depend on capacity."""
+    cap = await probe_capacity(force=False)
+    ai_ok = bool(cap["available"])
+    wf = [
+        {"name": "Translation Engine™ — verified topics", "mode": "deterministic", "available": True},
+        {"name": "Translation Engine™ — new topics (AI draft)", "mode": "ai", "available": ai_ok},
+        {"name": "Creative Studio™ enhancement", "mode": "hybrid", "available": True, "note": "AI copy when available; on-brand fallback otherwise"},
+        {"name": "Verification & Product Protection™", "mode": "hybrid", "available": True, "note": "Deterministic verification + protection always run"},
+        {"name": "Product Rendering (covers, PDF, QR)", "mode": "deterministic", "available": True},
+        {"name": "Voice narration (OpenAI TTS)", "mode": "ai", "available": ai_ok},
+        {"name": "Slideshow video", "mode": "hybrid", "available": True, "note": "Silent branded slideshow when narration unavailable"},
+        {"name": "Bulk manufacturing (Orchestrator)", "mode": "ai", "available": ai_ok},
+    ]
+    return {
+        "capacity": cap,
+        "workflows": wf,
+        "runnable_now": sum(1 for w in wf if w["available"]),
+        "total": len(wf),
+        "message": "All core workflows operational — deterministic and hybrid flows keep manufacturing even during provider outages." if not ai_ok
+                   else "Full capacity — every workflow is operational.",
+    }
+
+
+ENTERPRISE_FIRST_CHECKLIST = [    "What is my objective?",
     "What enterprise standards apply?",
     "What institutional knowledge already exists?",
     "What assets can be reused?",

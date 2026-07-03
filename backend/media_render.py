@@ -77,10 +77,14 @@ def make_slideshow_video(images: list, audio_bytes: bytes) -> bytes:
     if not images:
         return None
     with tempfile.TemporaryDirectory() as tmp:
+        has_audio = bool(audio_bytes)
         audio_path = os.path.join(tmp, "audio.mp3")
-        with open(audio_path, "wb") as f:
-            f.write(audio_bytes)
-        dur = _audio_duration(audio_path) or (len(images) * 5.0)
+        if has_audio:
+            with open(audio_path, "wb") as f:
+                f.write(audio_bytes)
+            dur = _audio_duration(audio_path) or (len(images) * 5.0)
+        else:
+            dur = len(images) * 5.0
         per = max(2.5, dur / len(images))
 
         paths = []
