@@ -93,6 +93,22 @@ def _gradient(w, h, top, bottom):
     return base
 
 
+def _cover_fit(img, W, H):
+    """Resize+crop an image to exactly fill WxH (like CSS object-fit: cover)."""
+    src_ratio = img.width / img.height
+    dst_ratio = W / H
+    if src_ratio > dst_ratio:
+        nh = H
+        nw = int(H * src_ratio)
+    else:
+        nw = W
+        nh = int(W / src_ratio)
+    img = img.resize((max(nw, 1), max(nh, 1)))
+    left = (img.width - W) // 2
+    top = (img.height - H) // 2
+    return img.crop((left, top, left + W, top + H))
+
+
 def _vignette(img):
     w, h = img.size
     mask = Image.new("L", (w, h), 0)
@@ -157,15 +173,26 @@ def _difficulty(kr):
     return "Foundational"
 
 
-def premium_cover(product, kr=None):
-    """A professionally composed portrait cover (1080x1440). No blank placeholders."""
+def premium_cover(product, kr=None, hero_bytes=None):
+    """A professionally composed portrait cover (1080x1440). No blank placeholders.
+    If hero_bytes (AI artwork) is supplied it becomes a subtle backdrop under the QRU
+    frame; otherwise a branded subject gradient is used."""
     p = product or {}
     kr = kr or {}
     W, H = 1080, 1440
     pal = resolve_palette(p.get("family", ""), p.get("department", p.get("college", "")),
                           p.get("topic", ""), p.get("title", ""))
     accent = pal["accent"]
-    img = _vignette(_gradient(W, H, pal["top"], pal["bottom"]))
+    if hero_bytes:
+        try:
+            hero = Image.open(io.BytesIO(hero_bytes)).convert("RGB")
+            hero = _cover_fit(hero, W, H)
+            grad = _gradient(W, H, pal["top"], pal["bottom"])
+            img = _vignette(Image.blend(hero, grad, 0.62))  # blend keeps art visible + text readable
+        except Exception:
+            img = _vignette(_gradient(W, H, pal["top"], pal["bottom"]))
+    else:
+        img = _vignette(_gradient(W, H, pal["top"], pal["bottom"]))
     d = ImageDraw.Draw(img)
 
     # frame
@@ -277,3 +304,56 @@ def visual_review(product):
     return {"score": score, "passed": passed, "total": len(checks),
             "approved": score >= 80, "checks": checks,
             "verdict": "Approved" if score >= 80 else "Needs design pass"}
+
+
+# ---------------- Multi-Format Output™ ----------------
+# Optimized, print/marketplace-ready renditions. Each preserves the QRU frame & branding.
+EXPORT_SPECS = {
+    "kdp_ebook":       {"size": (1600, 2560), "label": "Amazon KDP eBook Cover"},
+    "kdp_print_6x9":   {"size": (1800, 2700), "label": "KDP Print 6×9 (300dpi)"},
+    "etsy_listing":    {"size": (2000, 2000), "label": "Etsy Listing (square)"},
+    "tpt_thumbnail":   {"size": (1200, 1600), "label": "Teachers Pay Teachers"},
+    "poster_print":    {"size": (2400, 3600), "label": "High-Res Poster (300dpi)"},
+    "social_square":   {"size": (1080, 1080), "label": "Social — Square"},
+    "social_story":    {"size": (1080, 1920), "label": "Social — Story/Reel"},
+    "pinterest":       {"size": (1000, 1500), "label": "Pinterest Graphic"},
+    "web_thumb":       {"size": (600, 800),   "label": "Web Thumbnail"},
+    "desktop_banner":  {"size": (1920, 1080), "label": "Desktop / Web Banner"},
+}
+
+
+def _fit_on_brand(master, W, H, pal):
+    """Place the master cover on a branded, correctly-sized canvas (contain-fit)."""
+    accent = pal["accent"]
+    canvas = _vignette(_gradient(W, H, pal["top"], pal["bottom"]))
+    m = master.copy()
+    pad = 0.86 if (W / H) < 1.4 else 0.78
+    m.thumbnail((int(W * pad), int(H * pad)))
+    x, y = (W - m.width) // 2, (H - m.height) // 2
+    canvas.paste(m, (x, y))
+    d = ImageDraw.Draw(canvas)
+    d.rectangle([x - 6, y - 6, x + m.width + 6, y + m.height + 6], outline=accent, width=max(3, W // 400))
+    # small brand footer for wide/social formats where there is spare margin
+    if y > 70:
+        d.text((W // 2, max(34, y // 2)), "QRU PRESS™ • Treasure Standard™",
+               font=_f(SANS_BOLD, max(18, W // 60)), fill=accent, anchor="mm")
+    buf = io.BytesIO()
+    canvas.save(buf, "PNG")
+    return buf.getvalue()
+
+
+def export_formats(product, kr=None, cover_bytes=None):
+    """Return {format_name: png_bytes} across all EXPORT_SPECS, preserving QRU quality."""
+    p = product or {}
+    pal = resolve_palette(p.get("family", ""), p.get("department", p.get("college", "")),
+                          p.get("topic", ""), p.get("title", ""))
+    if cover_bytes:
+        master = Image.open(io.BytesIO(cover_bytes)).convert("RGB")
+    else:
+        master = Image.open(io.BytesIO(premium_cover(p, kr))).convert("RGB")
+    out = {}
+    for name, spec in EXPORT_SPECS.items():
+        W, H = spec["size"]
+        out[name] = _fit_on_brand(master, W, H, pal)
+    return out
+

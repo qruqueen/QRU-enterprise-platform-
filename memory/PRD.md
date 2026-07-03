@@ -209,3 +209,10 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 - AI hero-art compositing inside covers (when LLM/image budget returns); true multi-format export variants (KDP/Etsy/TpT print profiles) — layout system is ready, exporters pending.
 ### Still blocked by DAILY LLM spend cap
 - Phase C bulk run + clean 11/11 FAT (need LLM). Adding balance does NOT clear the daily cap; it resets on the daily cycle.
+
+## Implemented — Iteration 17 (2026-07-03) · Multi-Format Output™ + AI hero-art hook (P1 non-LLM)
+- **Multi-Format Output™** (`design_language.export_formats`, `rendering_engine.export_multi_format`, `POST /api/rendering/{pid}/export-formats`): generates 10 optimized, branded renditions — KDP eBook (1600×2560), KDP Print 6×9 (1800×2700), Etsy square (2000²), Teachers Pay Teachers (1200×1600), High-Res Poster (2400×3600 @300dpi), Social square/story, Pinterest, Web thumb, Desktop banner. Each preserves the QRU frame via `_fit_on_brand` (contain-fit on branded gradient + accent border + QRU PRESS™ footer). Verified: 10 formats, correct dimensions, professional output.
+- **AI hero-art compositing** wired into `ensure_branded_assets`: best-effort `generate_image` call composited as a subtle backdrop under the QRU frame (`premium_cover(..., hero_bytes=)` blends art 0.62 toward the gradient for readability). Skips silently on daily cap/budget → covers always render; auto-activates (`cover_has_hero_art`) when AI capacity returns.
+- Still blocked by DAILY LLM spend cap: Phase C bulk run, clean 11/11 FAT, and live AI hero-art/LLM narratives. Adding balance does not clear the daily cap (resets on daily cycle).
+- Deferred UI: a product "Downloads/Formats" panel to surface export URLs (endpoints ready).
+

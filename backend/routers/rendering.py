@@ -57,6 +57,14 @@ async def visual_review(pid: str, user=Depends(get_current_user)):
     return dl.visual_review(clean(p))
 
 
+@router.post("/{pid}/export-formats")
+async def export_formats(pid: str, user=Depends(get_current_user)):
+    urls = await re_engine.export_multi_format(pid, user["name"])
+    if urls is None:
+        raise HTTPException(404, "Product not found")
+    return {"formats": urls, "count": len(urls)}
+
+
 @router.get("/{pid}")
 async def get_render(pid: str, user=Depends(get_current_user)):
     p = await db.products.find_one({"id": pid})

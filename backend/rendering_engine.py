@@ -168,7 +168,18 @@ async def ensure_branded_assets(pid, actor="Creative Studio™"):
     kr = await db.knowledge_records.find_one({"id": p.get("knowledge_record_id")}) if p.get("knowledge_record_id") else {}
     pal = dl.resolve_palette(p.get("family", ""), p.get("department", p.get("college", "")),
                              p.get("topic", ""), p.get("title", ""))
-    cover = dl.premium_cover(p, kr or {})
+    # Best-effort AI hero artwork — composited under the QRU frame. Skips silently when
+    # AI capacity is unavailable (daily cap / budget), so covers always render.
+    hero = None
+    try:
+        prompt = (f"Elegant editorial illustration for an educational product about "
+                  f"'{p.get('title','')}' ({p.get('family','')}). {pal['label']} theme, "
+                  f"palette accent {'#%02X%02X%02X' % pal['accent']}, deep {pal['label']} tones, "
+                  f"premium flat-vector style, atmospheric, NO text, portrait composition.")
+        hero = await generate_image(prompt, f"hero-{pid}")
+    except Exception:
+        hero = None
+    cover = dl.premium_cover(p, kr or {}, hero_bytes=hero)
     cover_url = _asset_url(_save("cover", "png", cover))
     thumb_url = _asset_url(_save("thumb", "png", dl.premium_thumbnail(cover)))
     store_url = _asset_url(_save("store", "png", dl.premium_store_graphic(p, cover)))
@@ -176,10 +187,40 @@ async def ensure_branded_assets(pid, actor="Creative Studio™"):
         "cover_url": cover_url, "thumbnail_url": thumb_url, "store_graphic_url": store_url,
         "design_palette": {"key": pal["key"], "label": pal["label"],
                            "accent": "#%02X%02X%02X" % pal["accent"]},
+        "cover_has_hero_art": bool(hero),
         "design_language_applied": True, "updated_at": now_iso()}})
     await log_org("Creative Studio Director™", "Creative Studio",
                   f"applied QRU Design Language™ ({pal['label']}) to", p.get("product_code", ""), "success")
     return {"cover_url": cover_url, "thumbnail_url": thumb_url, "store_graphic_url": store_url, "palette": pal["label"]}
+
+
+async def export_multi_format(pid, actor="Creative Studio™"):
+    """Multi-Format Output™ — generate optimized KDP/Etsy/TpT/social/print renditions."""
+    p = await db.products.find_one({"id": pid})
+    if not p:
+        return None
+    kr = await db.knowledge_records.find_one({"id": p.get("knowledge_record_id")}) if p.get("knowledge_record_id") else {}
+    # reuse the existing branded cover if present, else compose one
+    cover_bytes = None
+    cu = p.get("cover_url")
+    if cu:
+        path = os.path.join(ASSET_DIR, cu.split("/")[-1])
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                cover_bytes = f.read()
+    formats = dl.export_formats(p, kr or {}, cover_bytes)
+    urls = {}
+    for name, data in formats.items():
+        urls[name] = {"url": _asset_url(_save(f"fmt-{name}", "png", data)),
+                      "label": dl.EXPORT_SPECS[name]["label"],
+                      "size": list(dl.EXPORT_SPECS[name]["size"])}
+    await db.products.update_one({"id": pid}, {"$set": {"export_formats": urls, "updated_at": now_iso()}})
+    await log_org("Creative Studio Director™", "Creative Studio",
+                  f"exported {len(urls)} optimized formats for", p.get("product_code", ""), "success")
+    return urls
+
+
+async def render_product_job(pid, actor, base_url):
     p = await db.products.find_one({"id": pid})
     if not p:
         return
