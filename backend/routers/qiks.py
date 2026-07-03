@@ -26,6 +26,12 @@ async def search(q: str, user=Depends(get_current_user)):
     return {"query": q, "standards": stds, "lessons": lessons, "total": len(stds) + len(lessons)}
 
 
+@router.get("/consult")
+async def consult(objective: str = "", category: str | None = None, user=Depends(get_current_user)):
+    """Retrieve applicable institutional knowledge before generating new work."""
+    return await qiks.consult(objective, category)
+
+
 @router.get("/graph")
 async def graph(user=Depends(get_current_user)):
     return await qiks.knowledge_graph()

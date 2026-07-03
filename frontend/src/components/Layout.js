@@ -17,6 +17,7 @@ const NAV = [
   { to: "/workflows", label: "Workflow Engine™", icon: Workflow, testid: "nav-workflows", q: "What should happen next?" },
   { to: "/factory-monitor", label: "Factory Monitor™", icon: Radio, testid: "nav-factory-monitor", q: "What is happening right now?" },
   { to: "/autonomy", label: "Autonomy Center™", icon: BrainIcon, testid: "nav-autonomy", q: "How do we get better and run ourselves?" },
+  { to: "/enterprise-autonomy", label: "Continuous Improvement™", icon: Cpu, testid: "nav-enterprise-autonomy", q: "How does every run make the factory better?" },
   { to: "/command-center", label: "Enterprise Command Center™", icon: LayoutDashboard, testid: "nav-command-center", q: "How is the whole enterprise doing?" },
   { to: "/governance", label: "Governance Center™", icon: BrainIcon, testid: "nav-governance", q: "What rules govern everything we make?" },
   { to: "/blueprint", label: "Enterprise Blueprint™", icon: BookOpenCheck, testid: "nav-blueprint", q: "What does every department do and why?" },

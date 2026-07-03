@@ -249,6 +249,14 @@ try:
 except Exception:
     pass
 
+# Consult-before-generate™: prepend institutional knowledge standards to every prompt.
+_QIKS_PREAMBLE = (
+    "QRU INSTITUTIONAL KNOWLEDGE™ — consult before you generate. Honor the Treasure Standard™, "
+    "QRU Brand Operating System™ (QBOS), Character Bible™, and the 8-point QRU Thinking Model™. "
+    "Reuse verified knowledge, approved recipes, brand assets, and official character identity — never reinvent what QRU already knows."
+)
+TEXT_SYSTEM = _QIKS_PREAMBLE + "\n\n" + TEXT_SYSTEM
+
 
 def _kr_context(kr):
     parts = [f"TITLE: {kr.get('title','')}", f"CATEGORY: {kr.get('category','')}",

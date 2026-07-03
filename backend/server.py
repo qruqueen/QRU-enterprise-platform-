@@ -41,6 +41,8 @@ from routers.governance import router as governance_router
 from routers.departments import router as departments_router
 from routers.wis import router as wis_router
 from routers.qiks import router as qiks_router
+from routers.relationships import router as relationships_router
+from routers.continuous import router as continuous_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
 from routers.misc import (
@@ -67,6 +69,7 @@ for r in [
     ai_services_router, automation_router, enterprise_router,
     commerce_router, stripe_webhook_router, workflow_router, autonomy_router, qbos_router, qeds_router,
     governance_router, departments_router, wis_router, qiks_router,
+    relationships_router, continuous_router,
 ]:
     app.include_router(r)
 
@@ -97,6 +100,9 @@ async def startup():
     await character_registry.seed_characters()
     import qiks
     await qiks.seed_qiks()
+    import asyncio
+    import continuous_improvement
+    asyncio.create_task(continuous_improvement.watcher_loop())
     logger.info("QRU Factory seeded and operational")
 
 

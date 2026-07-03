@@ -333,3 +333,43 @@ async def dashboard():
         "divisions": DIVISIONS,
         "implemented": len(implemented),
     }
+
+
+# ---------------- Consult-before-generate ----------------
+_CONSULT_CACHE = {"preamble": None}
+
+
+async def consult(objective: str = "", category: str = None):
+    """AI agents call this BEFORE generating to retrieve applicable institutional knowledge."""
+    stds = await list_standards(category=category)
+    obj = (objective or "").lower()
+    ranked = []
+    for s in stds:
+        hay = f"{s['name']} {s['description']} {s['purpose']} {s['category']}".lower()
+        score = sum(1 for w in set(obj.split()) if len(w) > 3 and w in hay)
+        ranked.append((score, s))
+    ranked.sort(key=lambda x: -x[0])
+    # Always include the always-on governing standards.
+    always = [s for s in stds if s["id"] in ("STD-00001", "STD-00003", "STD-00006", "STD-00010")]
+    top = [s for _, s in ranked[:5]]
+    seen, applicable = set(), []
+    for s in always + top:
+        if s["id"] not in seen:
+            seen.add(s["id"])
+            applicable.append({"id": s["id"], "name": s["name"], "category": s["category"], "purpose": s["purpose"]})
+    return {
+        "objective": objective,
+        "applicable_standards": applicable,
+        "directive": "Retrieve and reuse institutional knowledge — do not reinvent. Every output must honor these standards.",
+    }
+
+
+async def institutional_preamble():
+    """A concise institutional-knowledge preamble injected into generation prompts."""
+    active = await list_standards(status="Active")
+    lines = ["QRU INSTITUTIONAL KNOWLEDGE™ — consult before you generate. Honor these approved standards:"]
+    for s in active[:10]:
+        lines.append(f"- {s['name']} ({s['category']}): {s['purpose']}")
+    lines.append("Reuse existing verified knowledge, recipes, brand assets, and character identity. Never reinvent what QRU already knows.")
+    return "\n".join(lines)
+

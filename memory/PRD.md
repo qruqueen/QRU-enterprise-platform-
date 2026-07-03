@@ -253,3 +253,15 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 - Character Library dialog surfaces the full-body transparent artwork alongside the portrait. Verified via curl (all 6 have full_body + transparent set) and screenshots (roster, board avatars, dialog).
 - NEXT MAJOR TRACK (directive received, not yet built): QRU Enterprise Autonomy & Continuous Improvement™ — Enterprise Relationship Engine™, After-Action Review™ → QIKS lessons, enhanced per-failed-job diagnostics (root cause/recovery/retry/dependency/ETA/confidence), and a safe auto-resume watcher that completes Phase C automatically when LLM capacity returns. Investigation of job/batch structures done (orchestrator `manufacturing_batches` + `resume_batch`/`retry_failed`; `workflow_jobs`; `ai_service` fail-fast on hard limits).
 
+## Implemented — Iteration 20 (2026-07-03) · QRU Enterprise Autonomy & Continuous Improvement™
+- **Enterprise Relationship Engine™** (`relationship_engine.py`, `routers/relationships.py`, `/api/relationships/*`): canonical 15-object-type SCHEMA with 51 relationship connections + live counts; `object/{type}/{id}` (what an object connects to) and `suggest/{type}/{id}` (auto-suggested related standards + aligned Director). Verified: 15 types, 51 connections.
+- **Continuous Improvement™** (`continuous_improvement.py`, `routers/continuous.py`, `/api/continuous/*`):
+  - **Capacity Probe™** — detects when AI capacity returns; distinguishes daily-cap vs budget vs transient (cached 10 min). Currently reports "Daily spend limit reached".
+  - **Safe Auto-Resume™** — a background `watcher_loop` (started at startup, every 180s) that resumes paused batches + retries failed batch items THE MOMENT capacity returns, WITHOUT Founder intervention. Escalated/high-impact work still requires the Founder. Actions logged to `autonomy_actions`. This will finish Phase C automatically.
+  - **After-Action Review™** — deterministic AAR per completed batch → writes a lesson into QIKS (pending Founder approval). Stored in `after_action_reviews`.
+  - **Enterprise Diagnostics™** — every failed job/topic gets root cause, recovery recommendation, retry status, dependency status, estimated resolution, and confidence score. Verified: 15 failed jobs classified (incl. Phase C topics).
+  - **Enterprise-First Thinking™** 10-question checklist surfaced.
+- **QIKS consult-before-generate™**: `qiks.consult(objective)` + `/api/qiks/consult`; a concise institutional preamble is now prepended to the product-manufacturing prompt (`product_automation.TEXT_SYSTEM`) so every generation honors Treasure Standard™ / QBOS / Character Bible™ / QRU Thinking Model™.
+- Frontend `EnterpriseAutonomy.js` (`/enterprise-autonomy`, nav-enterprise-autonomy): capacity banner + Probe/Auto-resume buttons, and Continuous Improvement / Diagnostics / Relationship Engine / Enterprise-First Thinking tabs. Screenshot-verified.
+- Still gated by the daily cap: actual Phase C completion + clean FAT (the watcher will trigger automatically on reset). Auto-resume correctly holds jobs safely while capacity is unavailable.
+
