@@ -31,6 +31,10 @@ import TopicRegistry from "@/pages/TopicRegistry";
 import Orchestrator from "@/pages/Orchestrator";
 import VerificationTeam from "@/pages/VerificationTeam";
 import ProductProtection from "@/pages/ProductProtection";
+import IntegrationHub from "@/pages/IntegrationHub";
+import ProductionLine from "@/pages/ProductionLine";
+import EnterpriseCommandCenter from "@/pages/EnterpriseCommandCenter";
+import AIServices from "@/pages/AIServices";
 import Colleges from "@/pages/Colleges";
 import CollegeWorkspace from "@/pages/CollegeWorkspace";
 import Analytics from "@/pages/Analytics";
@@ -93,6 +97,10 @@ function EnterpriseRoutes() {
         <Route path="analytics" element={<Analytics />} />
         <Route path="customers" element={<Customers />} />
         <Route path="users" element={<UserManagement />} />
+        <Route path="integration-hub" element={<IntegrationHub />} />
+        <Route path="teach" element={<ProductionLine />} />
+        <Route path="command-center" element={<EnterpriseCommandCenter />} />
+        <Route path="ai-services" element={<AIServices />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
         <Route path="search" element={<SearchResults />} />

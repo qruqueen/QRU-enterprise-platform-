@@ -8,10 +8,13 @@ import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard,
-  ClipboardList, Boxes, ShieldHalf,
+  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu,
 } from "lucide-react";
 
 const NAV = [
+  { section: "The QRU Experience" },
+  { to: "/teach", label: "What to Teach Today", icon: Rocket, testid: "nav-teach" },
+  { to: "/command-center", label: "Enterprise Command Center™", icon: LayoutDashboard, testid: "nav-command-center" },
   { section: "Mission Control" },
   { to: "/", label: "Command Center", icon: LayoutDashboard, end: true, testid: "nav-dashboard" },
   { to: "/command", label: "Command Console", icon: MessageSquareText, testid: "nav-command" },
@@ -42,6 +45,8 @@ const NAV = [
   { to: "/analytics", label: "Analytics", icon: BarChart3, testid: "nav-analytics" },
   { to: "/customers", label: "Customers", icon: Users, testid: "nav-customers" },
   { section: "Administration" },
+  { to: "/integration-hub", label: "Integration Hub™", icon: Plug, testid: "nav-integration-hub" },
+  { to: "/ai-services", label: "AI Services™", icon: Cpu, testid: "nav-ai-services" },
   { to: "/users", label: "User Management", icon: UserCog, testid: "nav-users" },
   { to: "/settings", label: "Settings", icon: Settings, testid: "nav-settings" },
 ];

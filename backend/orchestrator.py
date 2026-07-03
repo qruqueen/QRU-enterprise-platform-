@@ -257,6 +257,12 @@ async def _auto_publish(kr_id, division, college, batch_id):
                   "ip.publication_date": now_iso()}})
     await log_org("AI Publishing Team™", "Manufacturing", "auto-published to Product & Customer Library",
                   product["product_code"], "success")
+    # Distribute Everywhere — route to connected external platforms (Integration Hub).
+    try:
+        import integration_hub as ihub
+        await ihub.auto_distribute(pid, "AI Distribution Team™")
+    except Exception as e:
+        logger.error(f"auto-distribute failed: {e}")
     return "published", False
 
 
