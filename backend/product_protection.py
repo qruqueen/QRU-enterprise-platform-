@@ -111,6 +111,7 @@ async def ai_verify_product(pid: str, actor: str = "QRU Verification Team™") -
         # Deterministic fallback verification — never depends on AI.
         ai_available = False
         msg = str(getattr(e, "detail", e))
+        logger.warning(f"Protection verify: AI unavailable for {pid} — using deterministic branch. Reason: {msg[:160]}")
         ai_note = "Core verification completed. AI recommendations temporarily unavailable."
         content = p.get("content") or ""
         has_body = len(content.strip()) >= 200
