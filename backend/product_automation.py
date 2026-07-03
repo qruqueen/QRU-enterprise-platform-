@@ -242,6 +242,13 @@ real-world application before theory; memory reinforcement throughout.
 
 Produce clean, complete, ready-to-use professional content in Markdown. The customer should finish and say: "I finally understand.\""""
 
+# Inject the QEDS educational constitution into every manufacturing prompt.
+try:
+    from qeds import TEACHING_PREAMBLE as _QEDS_PREAMBLE
+    TEXT_SYSTEM = TEXT_SYSTEM + "\n\n" + _QEDS_PREAMBLE
+except Exception:
+    pass
+
 
 def _kr_context(kr):
     parts = [f"TITLE: {kr.get('title','')}", f"CATEGORY: {kr.get('category','')}",

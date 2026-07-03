@@ -50,6 +50,12 @@ async def monitor(user=Depends(get_current_user)):
     return await wf.factory_monitor()
 
 
+@router.get("/healing")
+async def healing(user=Depends(get_current_user)):
+    import self_healing as sh
+    return await sh.learning_summary()
+
+
 @router.post("/factory-acceptance-test")
 async def fat(user=Depends(get_current_user)):
     job, err = await wf.run_factory_acceptance_test(user["id"], user["name"])

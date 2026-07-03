@@ -79,10 +79,22 @@ async def self_diagnostics():
                    "count": backlog, "severity": "low" if backlog else "ok", "auto_repairable": False})
 
     issues = [c for c in checks if c["count"] > 0]
+    # Severity + ownership: what needs Founder input vs what the factory handles autonomously.
+    OWNER = {"Content": "Founder", "Governance": "Founder", "Integrations": "Founder",
+             "Brand & IP": "Autonomous", "Media Assets": "Autonomous", "AI Services": "Autonomous",
+             "Workflows": "Autonomous", "Backlog": "Autonomous"}
+    SEV_RANK = {"high": "Critical", "medium": "High", "low": "Medium", "ok": "Informational"}
+    for c in checks:
+        c["severity_level"] = SEV_RANK.get(c["severity"], "Low") if c["count"] else "Informational"
+        c["owner"] = OWNER.get(c["area"], "Autonomous") if c["count"] else "Autonomous"
+        c["being_handled"] = c["count"] > 0 and c["owner"] == "Autonomous"
     repairable = sum(1 for c in issues if c["auto_repairable"])
+    founder_items = [c for c in issues if c["owner"] == "Founder"]
     status = "healthy" if not issues else ("attention" if any(c["severity"] == "high" for c in issues) else "minor")
     return {"status": status, "total_checks": len(checks), "issues_found": len(issues),
-            "auto_repairable": repairable, "checks": checks, "generated_at": now_iso()}
+            "auto_repairable": repairable, "founder_input_required": len(founder_items),
+            "being_handled_autonomously": len([c for c in issues if c["owner"] == "Autonomous"]),
+            "checks": checks, "generated_at": now_iso()}
 
 
 async def auto_repair(actor="Self-Diagnostics™"):

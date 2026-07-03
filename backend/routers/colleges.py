@@ -3,21 +3,47 @@ from fastapi import APIRouter, Depends, HTTPException
 from database import db
 from auth import get_current_user
 from models import clean
+from pydantic import BaseModel
+import college_activation as ca
+import workflow_engine as wf
 
 router = APIRouter(prefix="/api/colleges", tags=["colleges"])
 
 
 @router.get("")
 async def list_colleges(division: str = None, user=Depends(get_current_user)):
-    query = {"division": division} if division else {}
-    colleges = await db.colleges.find(query).sort("name", 1).to_list(100)
-    # attach live counts
-    result = []
-    for c in clean(colleges):
-        c["records"] = await db.knowledge_records.count_documents({"category": c["name"]})
-        c["products"] = await db.products.count_documents({"family": c["name"]})
-        result.append(c)
-    return result
+    """Every College as a live manufacturing division with status, health and metrics."""
+    overview = await ca.colleges_overview(division)
+    # keep legacy flat fields for older UI compatibility
+    for c in overview:
+        c["records"] = c["metrics"]["records"]
+        c["products"] = c["metrics"]["products"]
+    return overview
+
+
+@router.get("/{cid}/factory-defaults")
+async def factory_defaults(cid: str, user=Depends(get_current_user)):
+    college = await db.colleges.find_one({"id": cid})
+    if not college:
+        raise HTTPException(404, "College not found")
+    return ca.factory_defaults(college)
+
+
+class StartInput(BaseModel):
+    topic: str
+    template: str = "Full Treasure Package™"
+
+
+@router.post("/{cid}/start-manufacturing")
+async def start_manufacturing(cid: str, data: StartInput, user=Depends(get_current_user)):
+    college = await db.colleges.find_one({"id": cid})
+    if not college:
+        raise HTTPException(404, "College not found")
+    job, err = await wf.start_workflow(data.template, topic=data.topic,
+                                       division=college.get("division"), owner_id=user["id"], actor=user["name"])
+    if err:
+        raise HTTPException(400, err)
+    return job
 
 
 @router.get("/divisions")

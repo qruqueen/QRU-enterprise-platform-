@@ -183,11 +183,21 @@ async def ensure_branded_assets(pid, actor="Creative Studio™"):
     cover_url = _asset_url(_save("cover", "png", cover))
     thumb_url = _asset_url(_save("thumb", "png", dl.premium_thumbnail(cover)))
     store_url = _asset_url(_save("store", "png", dl.premium_store_graphic(p, cover)))
+    try:
+        import qbos
+        gov_version = await qbos.active_version()
+    except Exception:
+        gov_version = "1.0"
+    try:
+        import qeds
+        edu_version = await qeds.active_version()
+    except Exception:
+        edu_version = "1.0"
     await db.products.update_one({"id": pid}, {"$set": {
         "cover_url": cover_url, "thumbnail_url": thumb_url, "store_graphic_url": store_url,
         "design_palette": {"key": pal["key"], "label": pal["label"],
                            "accent": "#%02X%02X%02X" % pal["accent"]},
-        "cover_has_hero_art": bool(hero),
+        "cover_has_hero_art": bool(hero), "qbos_version": gov_version, "qeds_version": edu_version,
         "design_language_applied": True, "updated_at": now_iso()}})
     await log_org("Creative Studio Director™", "Creative Studio",
                   f"applied QRU Design Language™ ({pal['label']}) to", p.get("product_code", ""), "success")

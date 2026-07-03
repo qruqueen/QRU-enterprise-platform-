@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import api, { formatApiError } from "@/lib/api";
 import { toast } from "sonner";
-import { Store as StoreIcon, ShoppingCart, Loader2, DollarSign, TrendingUp } from "lucide-react";
+import { Store as StoreIcon, ShoppingCart, Loader2, DollarSign, TrendingUp, Download, X } from "lucide-react";
 
 export default function Store() {
   const [products, setProducts] = useState([]);
   const [revenue, setRevenue] = useState(null);
   const [buying, setBuying] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [formatsFor, setFormatsFor] = useState(null);
+  const [formats, setFormats] = useState(null);
+  const [loadingFormats, setLoadingFormats] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -33,6 +36,20 @@ export default function Store() {
     } catch (e) {
       toast.error(formatApiError(e.response?.data?.detail));
       setBuying(null);
+    }
+  };
+
+  const openFormats = async (product) => {
+    setFormatsFor(product);
+    setFormats(null);
+    setLoadingFormats(true);
+    try {
+      const { data } = await api.post(`/rendering/${product.id}/export-formats`);
+      setFormats(data.formats);
+    } catch (e) {
+      toast.error("Could not generate formats.");
+    } finally {
+      setLoadingFormats(false);
     }
   };
 
@@ -88,20 +105,63 @@ export default function Store() {
               {p.audience && <p className="text-xs text-muted-foreground mt-1">For {p.audience}</p>}
               <div className="flex items-center justify-between mt-3">
                 <span className="font-heading text-lg font-bold text-navy flex items-center"><DollarSign className="w-4 h-4" />{p.price}</span>
-                <button
-                  data-testid={`buy-btn-${p.product_code}`}
-                  onClick={() => buy(p)}
-                  disabled={buying === p.id}
-                  className="flex items-center gap-1.5 bg-gold text-navy px-3 py-1.5 rounded-sm text-sm font-semibold hover:bg-gold/90 disabled:opacity-60"
-                >
-                  {buying === p.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingCart className="w-4 h-4" />} Buy
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    data-testid={`formats-btn-${p.product_code}`}
+                    onClick={() => openFormats(p)}
+                    className="flex items-center gap-1 text-navy border border-navy/20 px-2.5 py-1.5 rounded-sm text-xs font-semibold hover:bg-navy/5"
+                    title="Download optimized formats (KDP, Etsy, TpT, social…)"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Formats
+                  </button>
+                  <button
+                    data-testid={`buy-btn-${p.product_code}`}
+                    onClick={() => buy(p)}
+                    disabled={buying === p.id}
+                    className="flex items-center gap-1.5 bg-gold text-navy px-3 py-1.5 rounded-sm text-sm font-semibold hover:bg-gold/90 disabled:opacity-60"
+                  >
+                    {buying === p.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingCart className="w-4 h-4" />} Buy
+                  </button>
+                </div>
               </div>
             </div>
           </div>
           );
         })}
       </div>
+
+      {formatsFor && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setFormatsFor(null)} data-testid="formats-modal">
+          <div className="bg-card rounded-sm max-w-lg w-full max-h-[80vh] overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-heading font-semibold text-navy">Download Formats — {formatsFor.title}</h3>
+              <button onClick={() => setFormatsFor(null)} data-testid="formats-close"><X className="w-5 h-5 text-muted-foreground" /></button>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">Multi-Format Output™ — marketplace & print-ready, each preserving the QRU frame.</p>
+            {loadingFormats && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Generating optimized formats…</div>}
+            {formats && (
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(formats).map(([key, f]) => (
+                  <a
+                    key={key}
+                    href={`${process.env.REACT_APP_BACKEND_URL}${f.url}`}
+                    target="_blank" rel="noreferrer"
+                    download
+                    data-testid={`format-download-${key}`}
+                    className="flex items-center gap-2 border rounded-sm p-2 hover:bg-muted transition-colors"
+                  >
+                    <Download className="w-4 h-4 text-gold shrink-0" />
+                    <span className="text-xs">
+                      <span className="block font-medium text-navy">{f.label}</span>
+                      <span className="text-muted-foreground">{f.size[0]}×{f.size[1]}</span>
+                    </span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

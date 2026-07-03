@@ -145,9 +145,17 @@ async def factory_acceptance_test(user=Depends(get_current_user)):
     analytics_note = (f"Revenue tracking live via Stripe ({paid_orders} paid order(s))"
                       if payment_connected else "Manufacturing/quality metrics live; connect payments for revenue")
 
+    def _cat(s):
+        if s >= 95: return "Enterprise Ready"
+        if s >= 85: return "Production Ready"
+        if s >= 70: return "Operational"
+        if s >= 50: return "Developing"
+        return "Needs Investment"
+
     def mod(name, score, note):
         return {"module": name, "score": score,
-                "status": "ready" if score >= 100 else ("good" if score >= 85 else "attention"), "note": note}
+                "status": "ready" if score >= 100 else ("good" if score >= 85 else "attention"),
+                "health_category": _cat(score), "note": note}
 
     modules = [
         mod("Knowledge Division™", 100 if kr_verified > 0 else 70, f"{kr_verified} verified records"),
@@ -168,6 +176,7 @@ async def factory_acceptance_test(user=Depends(get_current_user)):
     ]
     overall = round(sum(m["score"] for m in modules) / len(modules))
     return {"enterprise_quality_score": overall,
+            "enterprise_health_category": _cat(overall),
             "production_ready": all(m["score"] >= 100 for m in modules),
             "modules": modules,
             "lifecycle": ["Manufacturing Order", "Knowledge Record", "Verification", "Quality Review",

@@ -114,6 +114,7 @@ async def _record_product(job_id, ptype, status, product_id=None, retries=0, err
 
 # ---------------- Automatic Error Recovery™ manufacturing ----------------
 async def _manufacture_product(job_id, kr, ptype, owner_id):
+    import self_healing as sh
     async with _SEM:
         if ptype not in RECIPES:
             await _record_product(job_id, ptype, "skipped", error="No recipe registered")
@@ -122,19 +123,32 @@ async def _manufacture_product(job_id, kr, ptype, owner_id):
         agent = RECIPES[ptype]["agent"]
         cap = RECIPES[ptype]["capability"]
         est = ai.estimate_cost(cap, kr.get("verified_truth", "")) or 0.02
-        for attempt in range(2):
+        last_err = ""
+        for attempt in range(3):
             try:
                 pid = await _produce_one(kr, ptype, job_id, owner_id, hands_free=True)
                 await _record_product(job_id, ptype, "done", product_id=pid, retries=attempt, cost=est)
                 await _log(job_id, "Parallel Manufacturing", f"Manufactured {ptype} ({agent})", "success")
+                if attempt > 0:
+                    await sh.record_event(job_id, "Parallel Manufacturing", last_err,
+                                          sh.classify_failure(last_err), recovered=True, attempts=attempt + 1)
                 return pid
             except Exception as e:
+                last_err = str(e)
+                cls = sh.classify_failure(last_err)
                 await _log(job_id, "Parallel Manufacturing",
-                           f"{ptype} attempt {attempt+1} failed — {str(e)[:80]}; recovering", "warning")
-                await asyncio.sleep(0.5)
-        await _record_product(job_id, ptype, "failed", retries=2, error="Failed after automatic retry", cost=0.0)
-        await _error(job_id, f"{ptype}: could not be manufactured after retries")
-        await _log(job_id, "Parallel Manufacturing", f"{ptype} failed after automatic recovery", "error")
+                           f"{ptype}: {cls['human_status']} — {cls['factory_response']} (attempt {attempt+1})",
+                           "warning")
+                await asyncio.sleep(min(8, 2 ** attempt))  # exponential backoff
+        cls = sh.classify_failure(last_err)
+        await _record_product(job_id, ptype, "failed", retries=3, error=cls["human_status"], cost=0.0)
+        await _error(job_id, f"{ptype}: {cls['human_status']}")
+        await sh.record_event(job_id, "Parallel Manufacturing", last_err, cls, recovered=False, attempts=3)
+        await db.workflow_jobs.update_one({"id": job_id}, {"$set": {
+            "factory_response": cls["factory_response"], "human_status": cls["human_status"],
+            "recommended_action": cls["recommended_action"], "founder_required": cls["founder_required"],
+            "confidence": cls["confidence"], "cause": last_err[:160], "updated_at": now_iso()}})
+        await _log(job_id, "Parallel Manufacturing", f"{ptype}: {cls['human_status']} after automatic recovery", "error")
         return None
 
 
@@ -277,6 +291,8 @@ async def start_workflow(template, topic=None, kr_id=None, division=None, owner_
         "status": "queued", "stage": "Queued", "progress": 0, "current_task": "Queued",
         "completed_tasks": [], "warnings": [], "errors": [], "products": [],
         "retry_count": 0, "est_cost_usd": 0.0, "manufactured": 0, "failed_count": 0,
+        "human_status": None, "factory_response": None, "recommended_action": None,
+        "founder_required": False, "confidence": None, "cause": None,
         "planned_products": tpl["products"], "eta": eta, "is_fat": False,
         "owner_id": owner_id, "created_by": actor, "created_at": now_iso(), "updated_at": now_iso(),
         "started_at": None, "completed_at": None,
@@ -360,6 +376,9 @@ def _job_card(j):
             "est_cost_usd": round(j.get("est_cost_usd", 0), 4), "eta": j.get("eta"),
             "retry_count": j.get("retry_count", 0), "warnings": len(j.get("warnings", [])),
             "errors": len(j.get("errors", [])), "is_fat": j.get("is_fat", False),
+            "human_status": j.get("human_status"), "factory_response": j.get("factory_response"),
+            "recommended_action": j.get("recommended_action"), "founder_required": j.get("founder_required", False),
+            "confidence": j.get("confidence"), "cause": j.get("cause"),
             "created_at": j.get("created_at"), "completed_at": j.get("completed_at")}
 
 

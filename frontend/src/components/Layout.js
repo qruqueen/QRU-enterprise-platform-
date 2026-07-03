@@ -18,6 +18,7 @@ const NAV = [
   { to: "/factory-monitor", label: "Factory Monitor™", icon: Radio, testid: "nav-factory-monitor" },
   { to: "/autonomy", label: "Autonomy Center™", icon: BrainIcon, testid: "nav-autonomy" },
   { to: "/command-center", label: "Enterprise Command Center™", icon: LayoutDashboard, testid: "nav-command-center" },
+  { to: "/governance", label: "Governance Center™", icon: BrainIcon, testid: "nav-governance" },
   { section: "Mission Control" },
   { to: "/", label: "Founder Console", icon: LayoutDashboard, end: true, testid: "nav-dashboard" },
   { to: "/command", label: "Command Console", icon: MessageSquareText, testid: "nav-command" },

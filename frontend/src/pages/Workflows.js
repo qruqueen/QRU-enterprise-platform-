@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import api, { formatApiError } from "@/lib/api";
 import { toast } from "sonner";
 import {
@@ -85,6 +86,14 @@ export default function Workflows() {
   const [fatJobId, setFatJobId] = useState(null);
   const [fatResult, setFatResult] = useState(null);
   const [expanded, setExpanded] = useState(null);
+  const [params] = useSearchParams();
+
+  useEffect(() => {
+    const t = params.get("topic");
+    const tpl = params.get("template");
+    if (t) setTopic(t);
+    if (tpl) setTemplate(tpl);
+  }, [params]);
 
   const loadJobs = async () => {
     try {
