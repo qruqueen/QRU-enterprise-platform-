@@ -218,6 +218,10 @@ async def ensure_branded_assets(pid, actor="Creative Studio™"):
     p = await db.products.find_one({"id": pid})
     if not p:
         return None
+    # MT-029 — preserve a Founder-selected imported asset exactly; never regenerate over it.
+    if p.get("cover_source") == "asset_vault_selected" and p.get("cover_url"):
+        return {"cover_url": p.get("cover_url"), "thumbnail_url": p.get("thumbnail_url"),
+                "store_graphic_url": p.get("store_graphic_url"), "founder_selected": True}
     kr = await db.knowledge_records.find_one({"id": p.get("knowledge_record_id")}) if p.get("knowledge_record_id") else {}
     pal = dl.resolve_palette(p.get("family", ""), p.get("department", p.get("college", "")),
                              p.get("topic", ""), p.get("title", ""))
@@ -225,8 +229,10 @@ async def ensure_branded_assets(pid, actor="Creative Studio™"):
     # Reuse-by-default: never regenerate over a Protected Master / Founder Imported / Approved asset.
     try:
         import vault
-        reusable = await vault.find_reusable(asset_type="Cover", product_family=p.get("family"),
-                                             knowledge_record_id=p.get("knowledge_record_id"))
+        reusable = None
+        if p.get("asset_mode") != "generate":  # Founder "Generate New Asset" → skip reuse
+            reusable = await vault.find_reusable(asset_type="Cover", product_family=p.get("family"),
+                                                 knowledge_record_id=p.get("knowledge_record_id"))
         if reusable and reusable.get("file", {}).get("previewable"):
             vpath = os.path.join(vault.VAULT_DIR, reusable["file"]["filename"])
             if os.path.exists(vpath):

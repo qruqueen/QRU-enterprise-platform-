@@ -1,0 +1,42 @@
+{
+  "summary": "MT-030 Customer-Facing Content Filter + MT-029 Founder Asset Selection™ FULLY VERIFIED. 20/20 backend pytest tests passing on live preview URL. Frontend UI flows verified via Playwright on /products/a3a3326e-... and /manufacture. HTML/PPTX/PDF for PRD-00063 were actually downloaded from /api/rendering/asset/{fname} and byte-level scanned — ZERO occurrences of 'Deck-Wide', 'Design Guidance', 'Brand feel', 'Suggested colors', 'Footer on every slide', 'Visual style' in any of the three deliverable formats. Educational markers (Slide 1, Sleep, Takeaways) still present. render-deliverable response contract complete: removed_internal_sections=['Deck-Wide QRU Design Guidance'], customer_content_review_required=false, ready=true, files={html,pdf,pptx}. Pipeline endpoint echoes the same. Raw db product.content confirmed to STILL contain the internal section (filter is render-only, internal metadata preserved). Publication gate confirmed: DRAFT test product with '## Creative Brief' heading + inline 'Brand feel:' bullet → customer_content_review_required=true (leftover: brand feel), Creative Brief heading stripped, and POST /release returned HTTP 400 with 'Customer Content Review Required — internal production notes remain in the deliverable. Detected: brand feel.' Clean-product path unchanged. MT-029: uploaded selectable Cover (Protected Master + Treasure Standard™ Approved + Health family) via /api/vault/upload — appears in /api/vault/assets?selectable=true and /api/vault/recommend?product_family=Health. /api/products/assemble with asset_mode=use_imported + asset_vault_id produces product with cover_source='asset_vault_selected', cover_has_hero_art=false (no regeneration), manufacturing_asset carrying asset_vault_id/asset_code/asset_version/asset_source/asset_name/asset_type/approval_status, and asset.related_products updated with the new product. asset_mode='generate' + default ('director') + omitted (backward compat) all verified. Frontend /manufacture shows pm-asset-selection with radios use_imported/generate/director; selecting Use Imported reveals pm-asset-picker with 2 assets (thumbnails, Protected Master + Treasure Standard™ badges, pm-asset-<AV-code>); clicking Assemble without a selection shows validation toast 'Select an imported asset, or change the asset option'; after selecting an asset + KR + Poster type + clicking Assemble, PRD-00075 was assembled from existing fields and rendered on the right side. Frontend /products/a3a3326e-... shows pd-removed-sections text 'Customer-facing filter applied — 1 internal section excluded from the customer edition (Deck-Wide QRU Design Guidance).' pd-content-review and pd-return-creative correctly absent for clean product.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/manufacture Source Knowledge Record select", "issues": ["React hydration warning: '<span> cannot be a child of <option>'. Non-blocking, but the pm-kr-select rendering wraps kr_code inside <span>/decorative elements inside <option>. Suggest plain text-only option labels."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_mt030_customer_content_filter.py",
+    "/app/backend/tests/test_mt029_founder_asset_selection.py",
+    "/app/test_reports/pytest/iteration19_full.xml",
+    "/app/test_reports/pytest/iteration19_mt030.xml",
+    "/app/test_reports/pytest/iteration19_mt029.xml"
+  ],
+  "action_items": [
+    "Optional: sanitize <option> children in ProductManufacturing pm-kr-select to avoid React DOM hydration warning about <span> inside <option>.",
+    "Optional cleanup: TEST_MT030_dirty_* and TEST_MT029_Cover_* fixtures self-clean via DELETE/PATCH archive; a few TEST_-prefixed vault assets and one PRD from main-agent testing may remain in Mongo (safe to ignore per ticket)."
+  ],
+  "critical_code_review_comments": [
+    "deliverable_renderer.filter_customer_content correctly strips internal headings and all body up to next equal/higher-level heading; detect_internal_notes flags remaining inline phrases (brand feel, suggested colors, footer on every slide, creative brief, ...). Well-covered by unit + integration tests.",
+    "manufacturing2.release_product order: RELEASE_GATES → deliverable_ready → customer_content_review_required → design_review_required. The 'Customer Content Review Required' message is reached only after all gates pass; tests must pre-pass gates to exercise this path (documented in test fixture).",
+    "vault.apply_to_product: for image assets it re-saves the imported bytes as cover/thumbnail/store_graphic via rendering_engine._save, then flips cover_has_hero_art=false and cover_source='asset_vault_selected' — preserves original quality (no regeneration).",
+    "routers/products.AssembleInput defaults asset_mode='director' — backward-compatible with existing clients that don't send asset_mode. Verified in test_director_mode_default_when_omitted.",
+    "routers/rendering.asset(): inline by default, attachment only when ?download=1 — this is by design (MT-025). Tests updated to use ?download=1 for attachment assertions.",
+    "No POST /api/products (bare) endpoint exists — only /assemble and /generate. The pre-written test fixture was calling POST /api/products which 405'd; fixed by switching to /assemble + direct Mongo content patch (there is no PATCH /api/products/{id} for content field — consider adding one for admin/test purposes, otherwise product content is only mutable via re-generate/re-assemble).",
+    "asset_code AV-##### uses count_documents({}) which is not concurrency-safe — same note as iter18. Non-blocking at current scale."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_mt030_customer_content_filter.py (fixed dirty_test_product fixture: /assemble + direct Mongo content patch + force RELEASE_GATES; added ?download=1 to attachment CD checks)",
+    "/app/backend/tests/test_mt029_founder_asset_selection.py (new — 7 tests, all passing)"
+  ],
+  "success_rate": {"backend": "100% (20/20)", "frontend": "100% (MT-030 pd-removed-sections + MT-029 pm-asset-selection radios + picker + validation toast + successful assemble)"},
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! — Bearer token in localStorage['qru_token'].",
+  "seed_data_creation": "MT-029 tests upload TEST_MT029_Cover_<hex>.png (32x32 hand-built PNG). Cleanup via PATCH archived=true. MT-030 tests create TEST_MT030_dirty_<hex> assembled products; cleanup via DELETE /api/products/{id}. Frontend Playwright test assembled PRD-00075 (Poster) using Master Health Cover — left in DB (safe to ignore per ticket).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Both MT-029 and MT-030 suites are safe to re-run repeatedly. If you want to test the MT-030 release gate without touching production data, use the pattern in dirty_test_product fixture: assemble → mongo update content → mongo update gates (all passed) + deliverable_ready=true + design_review_required=false → render-deliverable → release. If the /manufacture React hydration warning is fixed, no regressions expected. The RECIPES dict in routers/products.py determines which product_type + KR combinations are assembly-eligible; Poster is safest.",
+  "rca of the issue": "N/A — both MT-030 (Customer-Facing Content Filter, publication gate) and MT-029 (Founder Asset Selection™) acceptance criteria fully met at API, DB, and UI layers. The three pre-existing test failures in the shipped MT-030 suite were TEST BUGS (endpoint choice + missing ?download=1), not product bugs; fixed test code with no product changes needed."
+}

@@ -23,6 +23,8 @@ class GenerateInput(BaseModel):
     product_type: str
     audience: Optional[str] = "General public"
     learning_level: Optional[str] = "Introductory"
+    asset_mode: Optional[str] = "director"       # MT-029: use_imported | generate | director
+    asset_vault_id: Optional[str] = None
 
 
 def product_system(ptype: str) -> str:
@@ -216,6 +218,8 @@ def _render_field(field, value):
 class AssembleInput(BaseModel):
     knowledge_record_id: str
     product_type: str
+    asset_mode: str = "director"          # MT-029: use_imported | generate | director
+    asset_vault_id: str = None
 
 
 @router.post("/assemble")
@@ -252,13 +256,20 @@ async def assemble_product(data: AssembleInput, user=Depends(get_current_user)):
         "recipe": recipe,
         "missing_fields": missing,
         "assembled": True,
+        "asset_mode": data.asset_mode,
         "created_by": user["name"],
         "created_at": now_iso(),
         "updated_at": now_iso(),
     }
     await db.products.insert_one(dict(product))
     await db.knowledge_records.update_one({"id": kr["id"]}, {"$inc": {"products_created": 1}})
-    return clean(product)
+    # MT-029 — Founder Asset Selection™: manufacture using a chosen imported asset.
+    if data.asset_mode == "use_imported" and data.asset_vault_id:
+        import vault
+        rel = await vault.apply_to_product(product["id"], data.asset_vault_id, user["name"])
+        if rel:
+            product["manufacturing_asset"] = rel
+    return clean(await db.products.find_one({"id": product["id"]}))
 
 
 @router.get("/recipes")
@@ -315,6 +326,7 @@ async def generate_product(data: GenerateInput, user=Depends(get_current_user)):
         "knowledge_record_id": data.knowledge_record_id,
         "kr_version": kr.get("version", 1) if kr else None,
         "assembled": False,
+        "asset_mode": data.asset_mode,
         "created_by": user["name"],
         "created_at": now_iso(),
         "updated_at": now_iso(),
@@ -323,7 +335,13 @@ async def generate_product(data: GenerateInput, user=Depends(get_current_user)):
     if kr:
         await db.knowledge_records.update_one(
             {"id": kr["id"]}, {"$inc": {"products_created": 1}})
-    return clean(product)
+    # MT-029 — Founder Asset Selection™: manufacture using a chosen imported asset.
+    if data.asset_mode == "use_imported" and data.asset_vault_id:
+        import vault
+        rel = await vault.apply_to_product(product["id"], data.asset_vault_id, user["name"])
+        if rel:
+            product["manufacturing_asset"] = rel
+    return clean(await db.products.find_one({"id": product["id"]}))
 
 
 class StatusInput(BaseModel):

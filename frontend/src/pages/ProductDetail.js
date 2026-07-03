@@ -89,6 +89,8 @@ export default function ProductDetail() {
         const cd = p.customer_deliverable;
         const dz = cd?.design_review;
         const designApproved = cd?.design_approved ?? !p.design_review_required;
+        const contentReviewRequired = cd?.customer_content_review_required ?? p.customer_content_review_required;
+        const removedSections = cd?.removed_internal_sections || p.removed_internal_sections || [];
         const dlHref = (f) => `${abs(f.url)}?download=1&name=${encodeURIComponent(p.title + " — " + p.product_type)}`;
         return (
           <div className="bg-card border rounded-md p-6 mb-6 max-w-4xl" data-testid="pd-review-copy">
@@ -126,12 +128,23 @@ export default function ProductDetail() {
                     <ul className="list-disc pl-4">{dz.recommendations.map((r, i) => <li key={i}>{r}</li>)}</ul>
                   </div>
                 )}
+                {contentReviewRequired && (
+                  <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-md p-3 mb-3" data-testid="pd-content-review">
+                    <p className="font-semibold mb-1">Customer Content Review Required</p>
+                    <p>Internal production notes remain in the deliverable{cd?.leftover_internal_notes?.length ? `: ${cd.leftover_internal_notes.join(", ")}` : ""}. Return to Creative Studio™, remove them, then re-render before publishing.</p>
+                  </div>
+                )}
+                {removedSections.length > 0 && (
+                  <p className="text-[11px] text-muted-foreground mb-3" data-testid="pd-removed-sections">
+                    Customer-facing filter applied — {removedSections.length} internal section{removedSections.length > 1 ? "s" : ""} excluded from the customer edition ({removedSections.join(", ")}).
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {cd.preview_url && (
                     <a data-testid="pd-open-reader" href={abs(cd.preview_url)} target="_blank" rel="noreferrer"
                       className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border hover:border-primary"><Eye className="w-4 h-4" /> Open Review Copy (read &amp; scroll)</a>
                   )}
-                  {!designApproved && (
+                  {(!designApproved || contentReviewRequired) && (
                     <button data-testid="pd-return-creative" onClick={enhance} disabled={briefBusy}
                       className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border border-warning text-warning hover:bg-warning/5 disabled:opacity-60">
                       {briefBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />} Return to Creative Studio™</button>

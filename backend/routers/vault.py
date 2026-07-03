@@ -48,11 +48,19 @@ async def upload(
 async def assets(q: str = None, asset_type: str = None, source: str = None,
                  approval_status: str = None, product_family: str = None,
                  character: str = None, knowledge_record_id: str = None,
-                 include_archived: bool = False, user=Depends(get_current_user)):
+                 include_archived: bool = False, selectable: bool = False,
+                 user=Depends(get_current_user)):
     rows = await vault.list_assets(q=q, asset_type=asset_type, source=source,
                                    approval_status=approval_status, product_family=product_family,
                                    character=character, knowledge_record_id=knowledge_record_id,
-                                   include_archived=include_archived)
+                                   include_archived=include_archived, selectable=selectable)
+    return {"assets": rows, "count": len(rows)}
+
+
+@router.get("/recommend")
+async def recommend(product_family: str = None, topic: str = None, asset_type: str = None,
+                    user=Depends(get_current_user)):
+    rows = await vault.recommend_assets(product_family=product_family, topic=topic, asset_type=asset_type)
     return {"assets": rows, "count": len(rows)}
 
 

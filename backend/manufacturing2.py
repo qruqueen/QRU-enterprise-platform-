@@ -433,6 +433,11 @@ async def release_product(pid):
             logger.error(f"deliverable render at release failed: {e}")
     if not p.get("deliverable_ready"):
         return None, "Release locked. The customer-ready deliverable has not been rendered & validated yet."
+    # MT-030 — customer-facing content gate: never publish factory notes to customers.
+    if p.get("customer_content_review_required"):
+        notes = ((p.get("customer_deliverable") or {}).get("leftover_internal_notes") or [])
+        hint = f" Detected: {', '.join(notes[:5])}." if notes else ""
+        return None, f"Release locked. Customer Content Review Required — internal production notes remain in the deliverable.{hint}"
     # MT-025 — design quality gate: only publish once the rendered product meets Treasure Standard™ design.
     if p.get("design_review_required"):
         recs = ((p.get("customer_deliverable") or {}).get("design_review") or {}).get("recommendations", [])

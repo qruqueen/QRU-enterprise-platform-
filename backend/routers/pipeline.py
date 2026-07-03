@@ -81,6 +81,8 @@ async def pipeline(pid: str, user=Depends(get_current_user)):
         "cover_url": p.get("cover_url"), "thumbnail_url": p.get("thumbnail_url"),
         "customer_deliverable": p.get("customer_deliverable"),
         "deliverable_ready": p.get("deliverable_ready", False),
+        "customer_content_review_required": p.get("customer_content_review_required", False),
+        "removed_internal_sections": p.get("removed_internal_sections", []),
     }
 
 

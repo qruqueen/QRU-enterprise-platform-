@@ -99,10 +99,15 @@ async def create_asset(name, asset_type, file_info, source="Founder Imported",
 
 async def list_assets(q=None, asset_type=None, source=None, approval_status=None,
                       product_family=None, character=None, knowledge_record_id=None,
-                      include_archived=False):
+                      include_archived=False, selectable=False):
     query = {}
     if not include_archived:
         query["archived"] = {"$ne": True}
+    if selectable:
+        # Manufacturing-selectable = reusable (Founder/Protected/Approved OR approved status), not superseded.
+        query["superseded"] = {"$ne": True}
+        query["$or"] = [{"source": {"$in": REUSABLE_SOURCES}},
+                        {"approval_status": {"$in": REUSABLE_STATUSES}}]
     if asset_type:
         query["asset_type"] = asset_type
     if source:
@@ -116,9 +121,9 @@ async def list_assets(q=None, asset_type=None, source=None, approval_status=None
     if knowledge_record_id:
         query["knowledge_record_id"] = knowledge_record_id
     if q:
-        query["$or"] = [{"name": {"$regex": q, "$options": "i"}},
-                        {"asset_code": {"$regex": q, "$options": "i"}},
-                        {"usage_notes": {"$regex": q, "$options": "i"}}]
+        query["$and"] = [{"$or": [{"name": {"$regex": q, "$options": "i"}},
+                                  {"asset_code": {"$regex": q, "$options": "i"}},
+                                  {"usage_notes": {"$regex": q, "$options": "i"}}]}]
     docs = await db.asset_vault.find(query).sort("created_at", -1).to_list(2000)
     return [clean(d) for d in docs]
 
@@ -199,3 +204,61 @@ def meta():
     return {"sources": SOURCES, "approval_statuses": APPROVAL_STATUSES, "asset_types": ASSET_TYPES,
             "replacement_rules": REPLACEMENT_RULES, "reusable_sources": REUSABLE_SOURCES,
             "reusable_statuses": REUSABLE_STATUSES}
+
+
+async def recommend_assets(product_family=None, topic=None, asset_type=None, limit=6):
+    """MT-029 — intelligent recommendations: reusable assets that match the product's
+    family or topic, strongest first. Founder can always override."""
+    base = {"archived": {"$ne": True}, "superseded": {"$ne": True},
+            "$and": [{"$or": [{"source": {"$in": REUSABLE_SOURCES}},
+                              {"approval_status": {"$in": REUSABLE_STATUSES}}]}]}
+    if asset_type:
+        base["asset_type"] = asset_type
+    ors = []
+    if product_family:
+        ors.append({"product_family": product_family})
+    if topic:
+        ors.append({"name": {"$regex": topic[:40], "$options": "i"}})
+    if ors:
+        base["$and"].append({"$or": ors})
+    docs = await db.asset_vault.find(base).to_list(200)
+    docs.sort(key=lambda d: (SOURCE_RANK.get(d.get("source"), 0), d.get("version", 1)), reverse=True)
+    return [clean(d) for d in docs[:limit]]
+
+
+async def apply_to_product(pid, asset_id, actor="Founder"):
+    """MT-029 — manufacture a product USING a selected imported asset. Records the permanent
+    Product→Asset relationship and, for image assets, sets the product cover directly from the
+    imported asset (preserving original quality — never regenerated/overwritten)."""
+    a = await db.asset_vault.find_one({"id": asset_id})
+    p = await db.products.find_one({"id": pid})
+    if not a or not p:
+        return None
+    rel = {"asset_vault_id": a["id"], "asset_code": a.get("asset_code"), "asset_version": a.get("version"),
+           "asset_source": a.get("source"), "asset_name": a.get("name"), "asset_type": a.get("asset_type"),
+           "approval_status": a.get("approval_status")}
+    updates = {"manufacturing_asset": rel, "asset_mode": "use_imported", "updated_at": now_iso()}
+    # If the imported asset is an image, use it exactly as the product cover (no regeneration).
+    if a.get("file", {}).get("previewable") and a["file"].get("ext") in ("png", "jpg", "jpeg", "webp"):
+        import rendering_engine as re_engine
+        import design_language as dl
+        vpath = os.path.join(VAULT_DIR, a["file"]["filename"])
+        if os.path.exists(vpath):
+            with open(vpath, "rb") as f:
+                cover = f.read()
+            updates["cover_url"] = re_engine._asset_url(re_engine._save("cover", "png", cover))
+            updates["thumbnail_url"] = re_engine._asset_url(re_engine._save("thumb", "png", dl.premium_thumbnail(cover)))
+            updates["store_graphic_url"] = re_engine._asset_url(re_engine._save("store", "png", dl.premium_store_graphic(p, cover)))
+            updates["cover_has_hero_art"] = False
+            updates["cover_source"] = "asset_vault_selected"
+            updates["design_language_applied"] = True
+    await db.products.update_one({"id": pid}, {"$set": updates})
+    await link_product(asset_id, pid)
+    try:
+        from org_activity import log_org
+        await log_org("Manufacturing Director™", "Manufacturing",
+                      f"manufactured using imported Asset Vault™ {a.get('asset_code')} ({a.get('source')}) for",
+                      p.get("product_code", ""), "success")
+    except Exception:
+        pass
+    return rel

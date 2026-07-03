@@ -42,6 +42,78 @@ MEDIA_TYPE = {
 MIN_BYTES = 800          # a real deliverable is never tiny
 MIN_CONTENT_CHARS = 180  # source content must be substantive
 
+# --------------------------------------------------------------------------- #
+# MT-030 — Customer-Facing Content Filter. Strips INTERNAL production notes
+# (design guidance, creative brief, manufacturing/rendering instructions, QA
+# notes, brand-for-production notes) from the content used to render customer
+# deliverables. Internal notes stay in the product record (content/metadata) —
+# they are only excluded from the rendered customer editions.
+# --------------------------------------------------------------------------- #
+import re as _re
+
+INTERNAL_HEADING_PATTERNS = [
+    "design guidance", "deck-wide", "deck wide", "creative brief", "creative direction",
+    "manufacturing note", "manufacturing instruction", "production note", "rendering instruction",
+    "rendering note", "style note", "style guide", "brand guidance", "brand note", "design note",
+    "visual guidance", "layout guidance", "qa note", "quality assurance", "internal note",
+    "for creative studio", "for manufacturing", "prompt instruction", "prompt note",
+    "slide design", "design brief", "art direction",
+]
+# Inline phrases that indicate leftover internal notes even outside a section heading.
+INTERNAL_INLINE_PATTERNS = [
+    "deck-wide", "design guidance", "brand feel", "suggested colors", "suggested colours",
+    "footer on every slide", "creative brief", "rendering instruction", "manufacturing note",
+    "for creative studio", "for manufacturing studio", "art direction", "prompt:",
+]
+
+
+def _is_internal_heading(heading: str) -> bool:
+    h = heading.lower()
+    return any(pat in h for pat in INTERNAL_HEADING_PATTERNS)
+
+
+def filter_customer_content(content: str):
+    """Return (clean_content, removed_section_titles). Drops any internal heading and all
+    of its body up to the next heading of the same or higher level."""
+    lines = (content or "").split("\n")
+    out, removed = [], []
+    skip_level = None
+    for line in lines:
+        m = _re.match(r"^(#{1,6})\s+(.*)$", line)
+        if m:
+            level = len(m.group(1))
+            heading = m.group(2).strip()
+            if skip_level is not None and level > skip_level:
+                continue  # still inside a skipped internal section
+            skip_level = None  # exited any skipped section
+            if _is_internal_heading(heading):
+                skip_level = level
+                removed.append(heading)
+                continue
+            out.append(line)
+        else:
+            if skip_level is not None:
+                continue
+            out.append(line)
+    # collapse leftover leading/trailing blank + orphan dividers
+    text = "\n".join(out)
+    text = _re.sub(r"\n{3,}", "\n\n", text).strip()
+    return text, removed
+
+
+def detect_internal_notes(content: str):
+    """Safety detector — returns leftover internal-note markers in customer content."""
+    found = []
+    low = (content or "").lower()
+    for line in (content or "").split("\n"):
+        m = _re.match(r"^(#{1,6})\s+(.*)$", line)
+        if m and _is_internal_heading(m.group(2)):
+            found.append(m.group(2).strip())
+    for pat in INTERNAL_INLINE_PATTERNS:
+        if pat in low:
+            found.append(pat)
+    return sorted(set(found))
+
 
 # --------------------------------------------------------------------------- #
 # Minimal, safe Markdown → HTML (headings, bold, lists, paragraphs). No LLM.
@@ -253,6 +325,13 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
     if cover_bytes is None:
         cover_bytes = dl.premium_cover(p, kr or {})
 
+    # MT-030 — build a customer-facing copy of the product with internal production
+    # notes stripped. All renderers use p_clean so no deliverable ever leaks factory notes.
+    clean_content, removed_sections = filter_customer_content(p.get("content") or "")
+    p_clean = {**p, "content": clean_content}
+    leftover_notes = detect_internal_notes(clean_content)
+    content_review_required = len(leftover_notes) > 0
+
     files = []
 
     def add(fmt, data):
@@ -266,32 +345,32 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
 
     # 1) Always: readable HTML edition (the open/read/scroll experience)
     try:
-        add("html", _render_html(p, cover_bytes))
+        add("html", _render_html(p_clean, cover_bytes))
     except Exception as e:
         logger.error(f"HTML render failed for {pid}: {e}")
 
     # 2) Type-specific primary + universal PDF fallback
     try:
         if primary == "pptx":
-            add("pptx", _render_pptx(p))
+            add("pptx", _render_pptx(p_clean))
         elif primary == "png":
-            add("png", _render_poster_png(p, cover_bytes))
+            add("png", _render_poster_png(p_clean, cover_bytes))
         elif primary == "epub":
-            add("epub", _render_epub(p))
+            add("epub", _render_epub(p_clean))
         # PDF is always available as a print/download format for text products.
         if primary in ("pdf", "epub", "html", "pptx"):
-            add("pdf", _render_pdf(p, kr, cover_bytes))
+            add("pdf", _render_pdf(p_clean, kr, cover_bytes))
     except Exception as e:
         logger.error(f"primary({primary}) render failed for {pid}: {e}")
         # guarantee at least a PDF exists
         if not any(f["format"] == "pdf" for f in files):
             try:
-                add("pdf", _render_pdf(p, kr, cover_bytes))
+                add("pdf", _render_pdf(p_clean, kr, cover_bytes))
             except Exception as e2:
                 logger.error(f"pdf fallback failed for {pid}: {e2}")
 
-    validation = validate_deliverable(p, files, primary)
-    design = assess_design_quality(p, files, cover_bytes)
+    validation = validate_deliverable(p_clean, files, primary)
+    design = assess_design_quality(p_clean, files, cover_bytes)
     deliverable = {
         "primary_format": primary if any(f["format"] == primary for f in files) else (files[0]["format"] if files else None),
         "files": files,
@@ -301,6 +380,9 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
         "design_review": design,
         "design_approved": design["approved"],
         "status_label": design["status"],
+        "customer_content_review_required": content_review_required,
+        "removed_internal_sections": removed_sections,
+        "leftover_internal_notes": leftover_notes,
         "preview_url": next((f["url"] for f in files if f["format"] == "html"), None),
         "download_url": next((f["url"] for f in files if f["format"] == primary),
                              (files[0]["url"] if files else None)),
@@ -309,7 +391,9 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
     }
     await db.products.update_one({"id": pid}, {"$set": {
         "customer_deliverable": deliverable, "deliverable_ready": validation["ready"],
-        "design_review_required": not design["approved"], "updated_at": now_iso()}})
+        "design_review_required": not design["approved"],
+        "customer_content_review_required": content_review_required,
+        "removed_internal_sections": removed_sections, "updated_at": now_iso()}})
     try:
         from org_activity import log_org
         note = "success" if (validation["ready"] and design["approved"]) else "warning"

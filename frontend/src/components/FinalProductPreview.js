@@ -29,7 +29,9 @@ export function FinalProductPreview({ open, onOpenChange, pipeline, render }) {
   const ready = pipeline.deliverable_ready || deliverable?.ready;
   const dz = deliverable?.design_review;
   const designApproved = deliverable?.design_approved ?? !pipeline.design_review_required;
-  const canPublish = ready && designApproved;
+  const contentReviewRequired = deliverable?.customer_content_review_required ?? pipeline.customer_content_review_required;
+  const removedSections = deliverable?.removed_internal_sections || pipeline.removed_internal_sections || [];
+  const canPublish = ready && designApproved && !contentReviewRequired;
   const dlHref = (f) => `${abs(f.url)}?download=1&name=${encodeURIComponent(pipeline.title + " — " + pipeline.product_type)}`;
 
   const publish = async () => {
@@ -87,6 +89,16 @@ export function FinalProductPreview({ open, onOpenChange, pipeline, render }) {
               <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2.5 mt-2" data-testid="fpp-design-recs">
                 Design review needed: {dz.recommendations.join(", ")}.
               </div>
+            )}
+            {contentReviewRequired && (
+              <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-md p-2.5 mt-2" data-testid="fpp-content-review">
+                <b>Customer Content Review Required.</b> Internal production notes were detected in the deliverable{deliverable?.leftover_internal_notes?.length ? `: ${deliverable.leftover_internal_notes.join(", ")}` : ""}. Return to Creative Studio™, remove them, then re-render before publishing.
+              </div>
+            )}
+            {removedSections.length > 0 && (
+              <p className="text-[11px] text-muted-foreground mt-2" data-testid="fpp-removed-sections">
+                Customer-facing filter applied — {removedSections.length} internal section{removedSections.length > 1 ? "s" : ""} excluded from the customer edition ({removedSections.join(", ")}).
+              </p>
             )}
           </div>
         </div>
