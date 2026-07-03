@@ -1,0 +1,64 @@
+{
+  "summary": "Iteration 10 — Full E2E validation of the QRU Media Manufacturing Engine™: backend (video + meditation manufacture, verified guard, QC gate, publish gate + unknown-destination guard) + frontend Media Studio flow (KR select, video/meditation toggle, Manufacture Media trigger → library growth → detail render → Treasure Standard™ QC certification badge → publish destinations unlock and publish). All 7 backend tests pass. Consumer/learner lock and regression on admin pages (Command Center, Manufacturing Studio, Design Intelligence, Memory Engineering) confirmed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "MediaStudio / any page with <select><option>", "issues": ["Pre-existing hydration warning: 'In HTML, <span> cannot be a child of <option>' caused by ve-dynamic tracker spans injected inside <option>. Cosmetic; does not affect functionality (already noted in iteration 9)."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration10.py",
+    "/app/test_reports/pytest/iteration10.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "media_engine.manufacture_media_job and media_qc_job both run as unbounded asyncio.create_task; if backend restarts mid-job the media_asset stays in 'manufacturing' or qc.status='running' forever. Same pattern noted in earlier iterations — consider a status-timeout reaper.",
+    "MediaStudio.js manufacture() setInterval poll cleared only when no media has status='manufacturing'. If a second background manufacture (e.g. from another admin session) is running when the current user's job finishes, the poll keeps refetching library every 4s until all globally 'manufacturing' items settle. Minor UX; consider polling only on the mid you just started.",
+    "media.py library endpoint strips assets (projection {'assets': 0}) — good for payload size — but that means the initial /media/library response omits legacy_learners etc.; the detail GET /api/media/{mid} correctly returns them. Behavior is intentional, just note for future consumers.",
+    "publish endpoint returns 400 for both 'not-certified' and 'unknown destination'. Two distinct error paths share the same status code; consider 409 (or 422) for policy-block vs 400 for validation to help clients differentiate."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration10.py",
+    "/app/test_reports/iteration_10.json",
+    "/app/test_reports/pytest/iteration10.xml"
+  ],
+  "success_rate": {
+    "backend": "100% (7/7 passed — 1 previously-skipped guard test also verified once /api/knowledge-records was queried correctly)",
+    "frontend": "100% (media studio manufacture, detail, QC-certified badge, gated publish unlock + publish click all verified; regression on 4 admin pages + learner lock all pass)"
+  },
+  "test_credentials": "admin@qru.com / qru-admin-2026 ; learner@qru.com / qru-learn-2026 (from /app/memory/test_credentials.md).",
+  "seed_data_creation": "Manufactured 1 fresh video and 2 fresh meditation media assets for KR-DEMO-003 during testing; ran Treasure Standard™ QC on the fresh video (certified, publishing_ready=true) and published to YouTube (backend test) + Website (UI test). Existing library therefore contains multiple video + meditation packages for KR-DEMO-003 (How Insulin Controls Blood Sugar).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Media Manufacturing Engine backend routes live under /api/media/{manufacture,library,{mid},{mid}/quality-control,{mid}/publish}. /api/media/library omits assets by projection (fetch /api/media/{mid} for full assets incl. legacy_learners & video/meditation sub-package). QC threshold is 75; deterministic scores for Production Completeness (based on presence of core assets) and Character Consistency (presence of character_dialogue) are computed server-side alongside AI scores. Publish accepts any destination in PUBLISHING_DESTINATIONS list (8) — connectors are STUBS that only record a publications[] entry (no real external upload). MediaStudio.js testids: nav-media, media-kr-select, media-type-video, media-type-meditation, media-manufacture, media-library, media-item-<id>, media-detail, media-qc, media-certified, publish-destinations, publish-<Destination>. Verified-KR list is fetched via /api/memory/records (module already exposes only Verified). Non-verified KRs are found by GET /api/knowledge-records?status=Draft (router prefix is /api/knowledge-records, not /api/knowledge).",
+  "test_report_details": {
+    "backend_tests_run": [
+      "TestMediaEnd2End::test_01_video_manufacture_and_assets — PASS (asserts long_form_script, short_form_script, narration_script, voice_over_script, memory_hook, video.title/description/chapters[]/thumbnail_brief/hashtags[], legacy_learners.{child,teen,adult,teacher,parent,caregiver})",
+      "TestMediaEnd2End::test_02_meditation_manufacture_and_assets — PASS (asserts meditation.session_name/script/reflection_prompts[]/journal_page/poster_brief/workbook_page/ambient_music_prompt/character_intro/closing_reflection)",
+      "TestMediaEnd2End::test_03_non_verified_record_returns_400 — PASS (Draft KR from /api/knowledge-records → 400 'Only verified records can manufacture media.')",
+      "TestMediaEnd2End::test_04_publish_before_qc_returns_400 — PASS ('Media must pass Treasure Standard™ QC before publishing.')",
+      "TestMediaEnd2End::test_05_run_qc — PASS (qc.status='certified', publishing_ready=true within ~30-45s; scores dict populated)",
+      "TestMediaEnd2End::test_06_publish_after_cert_or_still_blocked — PASS (published to YouTube; publications[] contains {destination:'YouTube', status:'published'})",
+      "TestMediaEnd2End::test_07_publish_unknown_destination_returns_400 — PASS ('Unknown destination')"
+    ],
+    "frontend_flows_verified": [
+      "Admin login → /media-studio loads with 12 verified KRs in media-kr-select and 5 existing library items across video + meditation types (2 already Ready-to-Publish from backend test).",
+      "Media type toggle switches between 'Video' and 'Meditation' (both testids clickable).",
+      "Selecting KR-DEMO-003 + Meditation + Manufacture Media → toast 'Manufacturing meditation media…' + Manufacture button spinner + library grew from 5 → 6 items with new MED-* at top showing 'Manufacturing…' status. Poll cleared when settled.",
+      "Clicking a manufactured Meditation item shows detail with Session name, Guided Script, Reflection Prompts, Journal Page, Character Intro, Closing Reflection, Ambient Music Prompt.",
+      "Clicking a ready-to-publish Video item (MED-C76699) shows media-certified badge, Video Package (Title, SEO Title, Description, Chapters list, Thumbnail Text, Thumbnail Brief, Opening Hook, Closing CTA, hashtags), Scripts, Memory & Music. Publish destinations: YouTube already '✓ YouTube' (published via backend test), other 7 destinations enabled. Clicked publish-Website → toast success + button becomes '✓ Website'.",
+      "Learner login redirects to Consumer Mode at / (QRU Learning UI shown, sidebar hidden). Attempting to visit /media-studio while logged out → redirected to /login. Attempting to visit /media-studio while logged in as learner → same redirect. Learner cannot see media-kr-select.",
+      "Regression: /, /manufacturing-studio, /design-intelligence, /memory-engineering all load with correct H1 and no .error selectors on page."
+    ],
+    "misc_observations": [
+      "React hydration warning 'In HTML, <span> cannot be a child of <option>' still present on any page rendering <option> children with dynamic string values (caused by ve-dynamic tracker spans injected into <option>). Not a functional issue and was already flagged in iteration 9.",
+      "Media Studio detail scrolls cleanly; Video Package and Meditation Session content is complete and well-formatted (character voice = Legacy Bear™ appears in descriptions).",
+      "Publishing connectors are STUBS as documented — no external upload happens; a publications[] entry is written to the media doc for each Publish click."
+    ]
+  }
+}

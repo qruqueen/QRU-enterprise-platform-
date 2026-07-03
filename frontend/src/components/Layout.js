@@ -6,7 +6,7 @@ import MusicControl from "@/components/MusicControl";
 import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
-  Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain,
+  Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard,
 } from "lucide-react";
 
 const NAV = [
@@ -27,6 +27,7 @@ const NAV = [
   { to: "/manufacturing-studio", label: "Manufacturing Studio", icon: PackageCheck, testid: "nav-mfg-studio" },
   { to: "/products", label: "Product Library", icon: Library, testid: "nav-products" },
   { to: "/creative-studio", label: "Creative Studio™", icon: Palette, testid: "nav-creative" },
+  { to: "/media-studio", label: "Media Studio™", icon: Clapperboard, testid: "nav-media" },
   { to: "/design-intelligence", label: "Design Intelligence™", icon: Sparkles, testid: "nav-design-intel" },
   { to: "/experience-lab", label: "Experience Lab™", icon: Eye, testid: "nav-experience" },
   { section: "Enterprise" },

@@ -26,6 +26,7 @@ import Organization from "@/pages/Organization";
 import CreativeStudio from "@/pages/CreativeStudio";
 import DesignIntelligence from "@/pages/DesignIntelligence";
 import MemoryEngineering from "@/pages/MemoryEngineering";
+import MediaStudio from "@/pages/MediaStudio";
 import Colleges from "@/pages/Colleges";
 import CollegeWorkspace from "@/pages/CollegeWorkspace";
 import Analytics from "@/pages/Analytics";
@@ -67,6 +68,7 @@ function EnterpriseRoutes() {
         <Route path="creative-studio" element={<CreativeStudio />} />
         <Route path="design-intelligence" element={<DesignIntelligence />} />
         <Route path="memory-engineering" element={<MemoryEngineering />} />
+        <Route path="media-studio" element={<MediaStudio />} />
         <Route path="knowledge" element={<KnowledgeRecords />} />
         <Route path="knowledge/:id" element={<KnowledgeRecordDetail />} />
         <Route path="translation-engine" element={<TranslationEngine />} />
