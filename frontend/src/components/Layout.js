@@ -8,12 +8,14 @@ import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard,
-  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu,
+  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store,
 } from "lucide-react";
 
 const NAV = [
   { section: "The QRU Experience" },
   { to: "/teach", label: "What to Teach Today", icon: Rocket, testid: "nav-teach" },
+  { to: "/workflows", label: "Workflow Engine™", icon: Workflow, testid: "nav-workflows" },
+  { to: "/factory-monitor", label: "Factory Monitor™", icon: Radio, testid: "nav-factory-monitor" },
   { to: "/command-center", label: "Enterprise Command Center™", icon: LayoutDashboard, testid: "nav-command-center" },
   { section: "Mission Control" },
   { to: "/", label: "Founder Console", icon: LayoutDashboard, end: true, testid: "nav-dashboard" },
@@ -44,6 +46,7 @@ const NAV = [
   { to: "/colleges", label: "Understanding Colleges", icon: GraduationCap, testid: "nav-health" },
   { to: "/analytics", label: "Analytics", icon: BarChart3, testid: "nav-analytics" },
   { to: "/customers", label: "Customers", icon: Users, testid: "nav-customers" },
+  { to: "/store", label: "QRU Store™", icon: Store, testid: "nav-store" },
   { section: "Administration" },
   { to: "/integration-hub", label: "Integration Hub™", icon: Plug, testid: "nav-integration-hub" },
   { to: "/ai-services", label: "AI Services™", icon: Cpu, testid: "nav-ai-services" },

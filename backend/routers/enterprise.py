@@ -33,6 +33,8 @@ async def command_center(user=Depends(get_current_user)):
     protected = await db.products.count_documents({"protected": True})
     # Exceptions
     open_esc = await db.founder_escalations.count_documents({"status": "Open"})
+    import commerce
+    rev = await commerce.revenue_summary()
 
     divisions = [
         {"key": "knowledge", "name": "Knowledge Division™",
@@ -63,8 +65,10 @@ async def command_center(user=Depends(get_current_user)):
         "factory_health": "attention" if open_esc or monitor["unhealthy"] or ai_status["jobs_failed"] else "healthy",
         "exceptions": open_esc,
         "portfolio": {"products": products, "published": published, "protected": protected},
-        "revenue": {"note": "Connect a payment provider in the Integration Hub to activate revenue tracking.",
-                    "licenses_granted": licenses},
+        "revenue": {"connected": rev["connected"], "provider": rev.get("provider"),
+                    "revenue_usd": rev["revenue_usd"], "paid_orders": rev["paid_orders"],
+                    "aov_usd": rev["aov_usd"], "licenses_granted": licenses,
+                    "note": None if rev["connected"] else "Connect a payment provider in the Integration Hub to activate revenue tracking."},
     }
 
 
@@ -135,6 +139,12 @@ async def factory_acceptance_test(user=Depends(get_current_user)):
     catalog = await db.products.count_documents({"status": "Published"})
     incomplete = [k for k, v in pa.RECIPES.items() if not (v.get("capability") and v.get("agent") and v.get("instruction"))]
 
+    payment_connected = await db.integrations.count_documents({"category": "Payment", "status": "Connected"}) > 0
+    paid_orders = await db.payment_transactions.count_documents({"payment_status": "paid"})
+    analytics_score = 100 if payment_connected else 90
+    analytics_note = (f"Revenue tracking live via Stripe ({paid_orders} paid order(s))"
+                      if payment_connected else "Manufacturing/quality metrics live; connect payments for revenue")
+
     def mod(name, score, note):
         return {"module": name, "score": score,
                 "status": "ready" if score >= 100 else ("good" if score >= 85 else "attention"), "note": note}
@@ -150,7 +160,7 @@ async def factory_acceptance_test(user=Depends(get_current_user)):
         mod("Publishing Division™", 100 if published > 0 else 85, f"{published} products published"),
         mod("Distribution Division™", 100, "Smart routing + auto-distribution wired"),
         mod("Integration Hub™", 100, "Encrypted connections + monitoring"),
-        mod("Analytics Division™", 90, "Manufacturing/quality metrics live; connect payments for revenue"),
+        mod("Analytics Division™", analytics_score, analytics_note),
         mod("Founder Dashboard™", 100, "Enterprise Command Center™ operational"),
         mod("Customer Experience™", 100 if catalog > 0 else 85, f"{catalog} products in Customer Library"),
         mod("Brand Experience™", 100 if unprotected_pub == 0 else 80,

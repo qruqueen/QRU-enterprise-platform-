@@ -44,6 +44,28 @@ MEDIA_CAPS = {"video", "animation", "voice", "music", "audio"}
 
 ALL_CAPABILITIES = sorted(NATIVE_TEXT | NATIVE_IMAGE | MEDIA_CAPS)
 
+# Capabilities now produced REAL natively (no external connector required):
+#   voice/audio → OpenAI TTS (Emergent key) ; video/animation → ffmpeg slideshow (images + narration).
+NATIVE_MEDIA = {"voice", "audio", "video", "animation"}
+
+# Estimated Production Cost™ (USD) per capability — labelled "estimated" in the UI.
+# Replaced automatically with actual provider billing when those APIs are wired.
+CAP_UNIT_COST = {
+    "text": 0.0, "quiz": 0.0, "social": 0.0, "seo": 0.0, "website": 0.0, "document": 0.0,
+    "presentation": 0.0, "translation": 0.0, "caption": 0.0, "subtitle": 0.0,
+    "image": 0.04, "voice": 0.015, "audio": 0.015, "video": 0.13, "animation": 0.13, "music": 0.0,
+}
+
+
+def estimate_cost(capability: str, content: str = "") -> float:
+    base = CAP_UNIT_COST.get(capability, 0.0)
+    if capability in NATIVE_TEXT:
+        # ~ $0.60 / 1M output tokens, tokens ≈ chars/4
+        return round(len(content or "") / 4 / 1_000_000 * 0.60, 6)
+    if capability in ("voice", "audio"):
+        return round(len(content or "") / 1000 * 0.015, 6)  # $0.015 / 1K chars (tts-1)
+    return round(base, 6)
+
 
 async def select_service(capability: str):
     """Return the connected provider for a capability, else None."""
@@ -56,17 +78,34 @@ async def select_service(capability: str):
 
 
 def capability_mode(capability: str, provider) -> str:
-    if capability in NATIVE_TEXT or capability in NATIVE_IMAGE:
+    if capability in NATIVE_TEXT or capability in NATIVE_IMAGE or capability in NATIVE_MEDIA:
         return "real"
     return "real" if provider else "simulated"
 
 
-async def _record_job(capability, provider, mode, status, retries, detail=""):
+async def _record_job(capability, provider, mode, status, retries, detail="", cost=0.0):
     await db.ai_service_jobs.insert_one({
         "id": gen_id(), "capability": capability, "provider": provider or "native",
         "mode": mode, "status": status, "retries": retries, "detail": detail[:300],
-        "at": now_iso(),
+        "est_cost_usd": round(float(cost or 0.0), 6), "at": now_iso(),
     })
+
+
+async def _scene_images(title: str, script: str, session_id: str, count: int = 3):
+    """Generate a few branded scene stills for a slideshow video; always returns >=1 image."""
+    from rendering_engine import _placeholder_cover
+    images = []
+    beats = [b.strip() for b in (script or "").replace("\n", " ").split(".") if b.strip()][:count] or [title]
+    for i, beat in enumerate(beats):
+        prompt = (f"Premium educational slide illustration for a QRU video about '{title}'. "
+                  f"Scene: {beat[:180]}. QRU brand: royal purple #35106A, gold #F5B21A, deep navy, "
+                  f"clean white space, subtle shield motif. 16:9, flat vector, minimal text, high quality.")
+        try:
+            img = await generate_image(prompt, f"{session_id}-scene{i}")
+        except Exception:
+            img = None
+        images.append(img or _placeholder_cover(title, "QRU", {}))
+    return images
 
 
 async def execute(capability: str, spec: dict, session_id: str, actor="AI Services Manager™") -> dict:
@@ -82,9 +121,10 @@ async def execute(capability: str, spec: dict, session_id: str, actor="AI Servic
             # --- REAL text-producing capabilities ---
             if capability in NATIVE_TEXT:
                 content = await llm_generate(spec.get("system", ""), spec.get("prompt", ""), session_id)
-                await _record_job(capability, provider or "Emergent LLM", "real", "success", retries)
+                cost = estimate_cost(capability, content)
+                await _record_job(capability, provider or "Emergent LLM", "real", "success", retries, cost=cost)
                 return {"status": "success", "mode": "real", "provider": provider or "Emergent LLM",
-                        "content": content, "asset_url": None}
+                        "content": content, "asset_url": None, "est_cost_usd": cost}
 
             # --- REAL image ---
             if capability in NATIVE_IMAGE:
@@ -92,25 +132,49 @@ async def execute(capability: str, spec: dict, session_id: str, actor="AI Servic
                 if img:
                     fid = _save("qru_asset", "png", img)
                     url = _asset_url(fid)
-                    await _record_job(capability, provider or "Gemini Nano Banana (Image)", "real", "success", retries)
+                    cost = estimate_cost("image")
+                    await _record_job(capability, provider or "Gemini Nano Banana (Image)", "real", "success", retries, cost=cost)
                     return {"status": "success", "mode": "real",
                             "provider": provider or "Gemini Nano Banana (Image)",
-                            "content": spec.get("caption", ""), "asset_url": url}
+                            "content": spec.get("caption", ""), "asset_url": url, "est_cost_usd": cost}
                 raise RuntimeError("image generation returned no data")
 
-            # --- MEDIA render capabilities (require external connector) ---
+            # --- REAL voice / audio narration (OpenAI TTS) ---
+            if capability in ("voice", "audio"):
+                import media_render as mr
+                script = spec.get("script") or spec.get("prompt") or spec.get("title", "")
+                audio = await mr.synthesize_voice(script)
+                fid = _save("qru_voice", "mp3", audio)
+                url = _asset_url(fid)
+                cost = estimate_cost("voice", script)
+                await _record_job(capability, "OpenAI TTS (Voice)", "real", "success", retries, cost=cost)
+                return {"status": "success", "mode": "real", "provider": "OpenAI TTS (Voice)",
+                        "content": script, "asset_url": url, "est_cost_usd": cost}
+
+            # --- REAL slideshow video / animation (branded images + TTS narration → MP4) ---
+            if capability in ("video", "animation"):
+                import media_render as mr
+                script = spec.get("script") or spec.get("prompt") or spec.get("title", "")
+                audio = await mr.synthesize_voice(script)
+                images = await _scene_images(spec.get("title", "QRU"), script, session_id)
+                mp4 = mr.make_slideshow_video(images, audio)
+                if not mp4:
+                    raise RuntimeError("slideshow assembly returned no data")
+                fid = _save("qru_video", "mp4", mp4)
+                url = _asset_url(fid)
+                cost = estimate_cost("voice", script) + len(images) * estimate_cost("image")
+                await _record_job(capability, "QRU Slideshow Video™ (OpenAI TTS + Render)", "real", "success", retries, cost=round(cost, 6))
+                return {"status": "success", "mode": "real",
+                        "provider": "QRU Slideshow Video™", "content": script,
+                        "asset_url": url, "est_cost_usd": round(cost, 6)}
+
+            # --- MEDIA render still needing an external connector (e.g. music) ---
             if capability in MEDIA_CAPS:
-                if provider:
-                    # A real connector would call the provider API here and receive an asset.
-                    await _record_job(capability, provider, "simulated", "success", retries,
-                                      "connector configured — live call stubbed")
-                    return {"status": "success", "mode": "simulated", "provider": provider,
-                            "content": spec.get("script", ""),
-                            "asset_url": f"https://qru.example/asset/{capability}/{gen_id()[:8]}"}
-                await _record_job(capability, None, "simulated", "success", retries, "no connector — spec only")
-                return {"status": "success", "mode": "simulated", "provider": None,
-                        "content": spec.get("script", ""), "asset_url": None,
-                        "note": f"{capability} render pending an AI Services connector"}
+                await _record_job(capability, provider, "simulated", "success", retries,
+                                  "spec produced; dedicated generative provider not yet connected")
+                return {"status": "success", "mode": "simulated", "provider": provider,
+                        "content": spec.get("script", ""), "asset_url": None, "est_cost_usd": 0.0,
+                        "note": f"{capability} render pending a dedicated AI Services connector"}
 
             raise ValueError(f"unknown capability: {capability}")
         except Exception as e:
@@ -127,11 +191,15 @@ async def status_summary():
     caps = []
     for c in ALL_CAPABILITIES:
         provider = await select_service(c)
+        native_real = c in NATIVE_TEXT or c in NATIVE_IMAGE or c in NATIVE_MEDIA
         caps.append({"capability": c, "mode": capability_mode(c, provider),
-                     "connected_provider": provider,
-                     "requires_connector": c in MEDIA_CAPS and not provider})
+                     "connected_provider": provider or ("Native (QRU)" if native_real else None),
+                     "requires_connector": (c in MEDIA_CAPS) and (c not in NATIVE_MEDIA) and not provider})
     total = await db.ai_service_jobs.count_documents({})
     failed = await db.ai_service_jobs.count_documents({"status": "failed"})
     real = await db.ai_service_jobs.count_documents({"mode": "real"})
+    cost_agg = await db.ai_service_jobs.aggregate(
+        [{"$group": {"_id": None, "c": {"$sum": "$est_cost_usd"}}}]).to_list(1)
+    est_cost = round(cost_agg[0]["c"], 4) if cost_agg else 0.0
     return {"capabilities": caps, "jobs_total": total, "jobs_failed": failed, "jobs_real": real,
-            "capability_providers": CAPABILITY_PROVIDERS}
+            "estimated_cost_usd": est_cost, "capability_providers": CAPABILITY_PROVIDERS}

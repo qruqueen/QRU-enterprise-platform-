@@ -51,6 +51,8 @@ RECIPES = {
         "instruction": "Create a printable workbook with warm-up, guided practice, independent exercises, and an answer key."},
     "Teacher Guide": {"agent": "Lesson Builder™", "capability": "text",
         "instruction": "Write a teacher guide: objectives, standards alignment, lesson flow, discussion questions, and assessment tips."},
+    "Student Guide": {"agent": "Lesson Builder™", "capability": "text",
+        "instruction": "Write a student study guide: what you'll learn, key ideas explained simply, worked examples, self-check questions, and a summary."},
     "Lesson Plan": {"agent": "Lesson Builder™", "capability": "text",
         "instruction": "Write a 45-minute lesson plan with objectives, materials, step-by-step timing, and differentiation."},
     "Quiz": {"agent": "Quiz Builder™", "capability": "quiz",

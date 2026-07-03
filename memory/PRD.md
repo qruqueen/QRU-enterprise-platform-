@@ -151,3 +151,29 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 
 ### Note on performance
 - The Improvement Loop adds multiple LLM calls per product (verify→improve→re-verify), so a single product can take ~2-4 minutes. This is the intended quality-over-speed tradeoff; runs fully in the background/hands-free.
+
+
+## Implemented — Iteration 14 (2026-07-03) · Real Connectors + QRU Enterprise Workflow Engine™
+### PHASE A — Real Production Connectors (no more SIMULATED where feasible)
+- **Stripe Commerce™** (`commerce.py`, `routers/commerce.py`): real Stripe Checkout via emergentintegrations. Server-side PRICE_TIERS catalog (frontend never sends amount), `payment_transactions` collection, status polling, single-fulfillment (`purchases` + product sales/revenue increment), `/api/webhook/stripe`. Stripe registered as a Connected Payment integration on startup (env key STRIPE_API_KEY=sk_test_emergent). Endpoints: `/api/commerce/{storefront,revenue,checkout,checkout/status/{id},purchases,transactions}`.
+- **Real Voice (OpenAI TTS)** + **Real Slideshow Video** (`media_render.py`): `synthesize_voice()` (OpenAI TTS `tts-1`, voice `fable`, chunked) → MP3; `make_slideshow_video()` assembles branded scene images + narration into a 720p MP4 via ffmpeg. Wired into `ai_services_manager.execute()` — voice/audio/video/animation now REAL; only music remains spec-only. Manually verified: 129KB mp3 + 426KB mp4 produced.
+- **Estimated Production Cost™**: `ai_services_manager.estimate_cost()` + `est_cost_usd` on ai_service_jobs; surfaced everywhere, labeled "Estimated".
+- **Analytics → 100%**: FAT Analytics Division™ score is 100 when a Payment provider is Connected; Command Center revenue now shows live Stripe revenue/AOV/paid orders.
+### PHASE B — QRU Enterprise Workflow Engine™ (`workflow_engine.py`, `routers/workflow.py`)
+- **Workflow Engine™** governed 10-stage pipeline: KR Retrieval → Verification → Treasure Standard™ → Product Recipes™ → Parallel Manufacturing → QC → Packaging → Distribution → Analytics → Continuous Improvement.
+- **Parallel Manufacturing™**: `asyncio.gather` over recipes with a concurrency semaphore(4); each product runs the hands-free Treasure Standard finalize (QC→protect→publish→distribute).
+- **Job Queue™**: `workflow_jobs` with job_number (WF-#####), status, stage, progress, current_task, completed_tasks[], warnings[], errors[], retry_count, products[], est_cost_usd, eta, full logs[].
+- **Automatic Error Recovery™**: per-product retry; escalate only true exceptions.
+- **Production Logs™** + **Workflow Templates™** (8: Book/Video/Health/Faith/Course/Marketing/Translation/Full Treasure Package™).
+- **Executive Factory Monitor™** (`/api/workflow/monitor`): jobs running/waiting/completed/escalated, division activity, AI usage, Estimated Production Cost™, quality/Treasure compliance, distribution, revenue, factory health (automation success, founder intervention, knowledge health).
+- **Factory Acceptance Test™** (Phase B.5): `POST /api/workflow/factory-acceptance-test` runs one full Full Treasure Package™ end-to-end; `GET .../{id}` evaluates every division (checks[], score, PASS/REVIEW, defects[]).
+- Frontend: `Workflows.js` (/workflows), `FactoryMonitor.js` (/factory-monitor), `Store.js` (/store), `CheckoutSuccess.js` (/checkout/success); nav + routes added. Learning Factory seed: `factory_learnings`.
+- Added "Student Guide" recipe to product_automation.
+- Tested (iteration_14.json): backend 13/14 (1 skip), Workflows/Store/Factory Monitor UI verified. Testing agent fixed an async-generator bug in `evaluate_fat`.
+
+### ⚠️ BLOCKER (not a code issue)
+- Emergent LLM key **budget exceeded** (current cost ~$18.42 > max ~$18.19). Text/image LLM calls fail with "Budget has been exceeded" → this caused FAT to reach 10/11 and a re-run to fail at KR Retrieval. **Action:** Founder must add balance (Profile → Universal Key → Add Balance) to run a fully clean FAT and Phase C bulk manufacturing. Stripe/TTS/ffmpeg are unaffected.
+
+### Next (after budget top-up)
+- P0: Re-run FAT to green (target PASS ≥80%); then PHASE C — controlled batch manufacturing of seeded Health/Faith libraries via the Workflow Engine.
+- P1 (PHASE D — Level-5 Autonomy directive received): Continuous Improvement Engine, Learning Factory, Product Evolution, Knowledge Gap Detector, Predictive Manufacturing, Cost Optimization, Capacity Planning, Self-Diagnostics, Executive Advisor daily brief, Factory Council, Innovation Radar, Enterprise Memory.
