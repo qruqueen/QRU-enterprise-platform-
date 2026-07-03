@@ -8,9 +8,13 @@ const LINKS = { knowledge: "/knowledge", manufacturing: "/manufacturing", ai_ser
 
 export default function EnterpriseCommandCenter() {
   const [data, setData] = useState(null);
+  const [readiness, setReadiness] = useState(null);
 
   useEffect(() => {
-    const load = () => api.get("/enterprise/command-center").then((r) => setData(r.data));
+    const load = () => {
+      api.get("/enterprise/command-center").then((r) => setData(r.data));
+      api.get("/enterprise/readiness").then((r) => setReadiness(r.data));
+    };
     load();
     const iv = setInterval(load, 15000);
     return () => clearInterval(iv);
@@ -58,6 +62,29 @@ export default function EnterpriseCommandCenter() {
           );
         })}
       </div>
+
+      {readiness && (
+        <div className="bg-card border rounded-sm p-5" data-testid="readiness-panel">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-heading font-semibold text-sm">Enterprise Readiness Review™</h3>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full ${readiness.overall === "ready" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+              {readiness.readiness_score}% · {readiness.overall === "ready" ? "Ready to scale" : "Needs attention"}
+            </span>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {readiness.checks.map((c, i) => (
+              <div key={i} className="flex items-start gap-2 text-sm" data-testid={`readiness-check-${i}`}>
+                <span className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${c.status === "pass" ? "bg-emerald-500" : c.status === "warn" ? "bg-amber-500" : "bg-red-500"}`} />
+                <div>
+                  <p className="font-medium">{c.label}</p>
+                  <p className="text-[11px] text-muted-foreground">{c.area} · {c.detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-3">{readiness.recipes} Product Recipes™ · {readiness.packages} packages validated.</p>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-2 gap-4">
         <div className="bg-card border rounded-sm p-5">

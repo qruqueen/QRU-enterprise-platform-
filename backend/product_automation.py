@@ -203,9 +203,42 @@ PACKAGE_PRESETS.update({
 
 MEDITATION_CONTENT_TYPES = list(MEDITATION_RECIPES.keys())
 
-TEXT_SYSTEM = """You are a QRU AI Production Agent manufacturing a finished educational product
-from a VERIFIED Knowledge Record. Follow the QRU educational methodology (clear, layered, accurate).
-Never invent facts beyond the verified truth. Produce clean, ready-to-use, professional content in Markdown."""
+# Complete, publication-ready "Package™" bundles — every asset a professional launch needs.
+PACKAGE_PRESETS.update({
+    "Video Package™": ["YouTube Video Script", "YouTube Shorts Script", "Audio Narration",
+                       "YouTube Thumbnail", "Transcript", "Short Video", "Long Video",
+                       "Blog Article", "Email Newsletter", "Landing Page", "Product Listing",
+                       "Social Media Pack", "Infographic"],
+    "Book Package™": ["Book", "Workbook", "Teacher Guide", "Certificate", "Poster",
+                      "Blog Article", "Email Newsletter", "Product Listing", "Landing Page"],
+    "Course Package™": ["Course", "Interactive Lesson", "Quiz", "Flash Cards", "Workbook",
+                        "Teacher Guide", "Certificate", "Presentation"],
+    "Teacher Package™": ["Teacher Guide", "Lesson Plan", "Workbook", "Quiz", "Flash Cards",
+                         "Presentation", "Certificate"],
+    "Marketing Package™": ["Blog Article", "Email Newsletter", "Social Media Pack", "Landing Page",
+                           "Product Listing", "Pinterest Graphic", "Infographic"],
+    "Podcast Package™": ["Podcast Script", "Audio Narration", "Transcript", "Blog Article", "Social Media Pack"],
+    "Poster Package™": ["Poster", "Infographic", "Pinterest Graphic", "Social Media Pack"],
+    "Presentation Package™": ["Presentation", "Interactive Lesson", "Quiz", "Poster"],
+})
+
+TEXT_SYSTEM = """You are a QRU AI Production Agent manufacturing a PUBLICATION-READY educational product
+from a VERIFIED Knowledge Record. You must think according to THE QRU MIND™ before producing output.
+
+THE QRU THINKING MODEL™ — every output must be:
+1. TRUE (never invent facts beyond the verified truth)  2. UNDERSTANDABLE (clarity over complexity)
+3. USEFUL (real-world application)  4. COMPLETE (professional, publication-ready)
+5. BEAUTIFUL (clean professional presentation)  6. MEMORABLE (learning science, reinforcement)
+7. ON-BRAND (QRU voice: warm, clear, trustworthy)  8. TREASURE STANDARD™ (accurate, polished, actionable).
+
+QRU manufactures UNDERSTANDING, not information. Help the learner Observe → Understand → Remember → Apply → Teach others.
+Answer, where relevant: Why does this matter? How does it work? What should I notice? How can I remember it?
+How can I use it? What mistakes to avoid? What to do next?
+
+Principles: understanding over memorization; examples before definitions; stories before jargon; simple language;
+real-world application before theory; memory reinforcement throughout.
+
+Produce clean, complete, ready-to-use professional content in Markdown. The customer should finish and say: "I finally understand.\""""
 
 
 def _kr_context(kr):

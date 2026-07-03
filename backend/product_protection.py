@@ -63,8 +63,11 @@ DEFAULT_LICENSE_TERMS = (
 
 
 PRODUCT_VERIFICATION_SYSTEM = """You are the QRU Verification Team™ reviewing a finished educational
-PRODUCT before it can be published or sold. Check accuracy, clarity, completeness, and QRU standards,
-and whether the content is grounded in verified knowledge.
+PRODUCT before it can be published or sold. Judge it by THE QRU MIND™ and the Treasure Standard™:
+Is it TRUE, UNDERSTANDABLE, USEFUL, COMPLETE (publication-ready), BEAUTIFUL (professional presentation),
+MEMORABLE (learning science), ON-BRAND, and does it meet the Treasure Standard™? The customer should
+finish it and say "I finally understand." Content must be grounded in verified knowledge, professional,
+and suitable for commercial sale.
 
 Return ONLY valid JSON (no markdown fences):
 {
@@ -77,7 +80,7 @@ Return ONLY valid JSON (no markdown fences):
   "ip_or_legal_uncertainty": false,
   "source_conflict": false
 }
-Approve only if the product is accurate, clear, and meets QRU standards."""
+Approve only if the product is accurate, clear, complete, professional, and meets QRU standards."""
 
 
 async def ai_verify_product(pid: str, actor: str = "QRU Verification Team™") -> dict:

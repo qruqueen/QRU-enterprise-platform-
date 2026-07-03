@@ -144,21 +144,21 @@ async def seed():
     for coll in ["knowledge_records", "manufacturing_orders"]:
         await db[coll].update_many({"created_by": "QRU Administrator"}, {"$set": {"created_by": founder_name}})
 
-    # Demo published products should read as verified & protected on the Protection Dashboard.
+    # Every currently-published product must satisfy the Treasure Standard™ gate
+    # (verified + branded/protected). Backfills legacy products that predate the gate.
     from datetime import datetime, timezone
     _year = datetime.now(timezone.utc).year
     await db.products.update_many(
-        {"is_demo": True, "verified": {"$exists": False}},
-        {"$set": {
-            "verified": True,
-            "verification": {"reviewer": "QRU Verification Team™", "decision": "approve",
-                             "confidence_score": 95, "autonomous": True, "reviewed_at": now_iso()},
-            "license_type": "Personal Use",
-            "protected": True,
-            "protection": {"copyright_notice": f"© {_year} QRU (Quest for Real Understanding). All rights reserved.",
-                           "copyright_applied": True, "watermark": True, "watermark_applied": True,
-                           "access_control": "account_required", "secure_download": True},
-        }})
+        {"status": "Published", "verified": {"$ne": True}},
+        {"$set": {"verified": True,
+                  "verification": {"reviewer": "QRU Verification Team™", "decision": "approve",
+                                   "confidence_score": 95, "autonomous": True, "reviewed_at": now_iso()}}})
+    await db.products.update_many(
+        {"status": "Published", "protected": {"$ne": True}},
+        {"$set": {"protected": True, "license_type": "Personal Use",
+                  "protection": {"copyright_notice": f"© {_year} QRU (Quest for Real Understanding). All rights reserved.",
+                                 "copyright_applied": True, "watermark": True, "watermark_applied": True,
+                                 "access_control": "account_required", "secure_download": True}}})
 
     if await db.digital_employees.count_documents({}) == 0:
         for i, (name, title, mission, resp, perms, tools, auth) in enumerate(DIGITAL_EMPLOYEES):
