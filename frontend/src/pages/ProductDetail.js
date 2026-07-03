@@ -3,13 +3,18 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import api from "@/lib/api";
 import { StatusBadge, Markdown } from "@/components/shared";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, CheckCircle2, Send, Archive, Wand2, Sparkles } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle2, Send, Archive, Wand2, Sparkles, FileText, BookOpen, Presentation, Image as ImageIcon, FileType2, Download, Eye, PackageCheck } from "lucide-react";
+
+const FMT_ICON = { pdf: FileText, epub: BookOpen, pptx: Presentation, png: ImageIcon, html: FileType2 };
 
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [p, setP] = useState(null);
   const [briefBusy, setBriefBusy] = useState(false);
+  const [renderBusy, setRenderBusy] = useState(false);
+  const BACKEND = process.env.REACT_APP_BACKEND_URL;
+  const abs = (u) => (u ? (u.startsWith("http") ? u : `${BACKEND}${u}`) : null);
   const load = () => api.get(`/products/${id}`).then((r) => setP(r.data)).catch(() => {});
   useEffect(() => { load(); }, [id]);
 
@@ -19,6 +24,16 @@ export default function ProductDetail() {
       toast.success(`Product ${status}`);
       load();
     } catch (e) { toast.error(e.response?.data?.detail || "Failed"); }
+  };
+
+  const renderReviewCopy = async () => {
+    setRenderBusy(true);
+    try {
+      await api.post(`/manufacturing2/${id}/render-deliverable`);
+      toast.success("Founder Review Copy™ rendered");
+      load();
+    } catch (e) { toast.error(e?.response?.data?.detail || "Could not render the review copy"); }
+    finally { setRenderBusy(false); }
   };
 
   const enhance = async () => {
@@ -67,6 +82,51 @@ export default function ProductDetail() {
             <Archive className="w-4 h-4" />
           </button>
         </div>
+      </div>
+
+      {/* Founder Review Copy™ — MT-024: inspect the exact customer-ready deliverable before publishing */}
+      <div className="bg-card border rounded-md p-6 mb-6 max-w-4xl" data-testid="pd-review-copy">
+        <div className="flex items-center gap-2 mb-1">
+          <PackageCheck className="w-4 h-4 text-gold" />
+          <h3 className="font-heading font-semibold">Founder Review Copy™</h3>
+          {p.deliverable_ready && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200" data-testid="pd-deliverable-validated">Validated · Treasure Standard™</span>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">Review the exact file your customers will receive before you approve & publish.</p>
+        {p.customer_deliverable?.files?.length ? (
+          <>
+            <div className="grid sm:grid-cols-2 gap-2 mb-3">
+              {p.customer_deliverable.files.map((f, i) => {
+                const Icon = FMT_ICON[f.format] || FileText;
+                return (
+                  <a key={i} href={abs(f.url)} target="_blank" rel="noreferrer" download
+                    className="flex items-center gap-2 text-sm px-3 py-2 rounded-md border hover:border-primary hover:bg-primary/[0.03] transition-colors"
+                    data-testid={`pd-download-${f.format}`}>
+                    <Icon className="w-4 h-4 text-primary shrink-0" />
+                    <span className="flex-1">{f.label}</span>
+                    <span className="text-[10px] text-muted-foreground">{Math.max(1, Math.round((f.bytes || 0) / 1024))} KB</span>
+                    <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                  </a>
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {p.customer_deliverable.preview_url && (
+                <a data-testid="pd-open-reader" href={abs(p.customer_deliverable.preview_url)} target="_blank" rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border hover:border-primary"><Eye className="w-4 h-4" /> Open Review Copy (read &amp; scroll)</a>
+              )}
+              <button data-testid="pd-rerender" onClick={renderReviewCopy} disabled={renderBusy}
+                className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border hover:border-primary disabled:opacity-60">
+                {renderBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />} Re-render</button>
+            </div>
+          </>
+        ) : (
+          <button data-testid="pd-render-review" onClick={renderReviewCopy} disabled={renderBusy}
+            className="inline-flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-sm text-sm font-medium hover:bg-navy/90 disabled:opacity-60">
+            {renderBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackageCheck className="w-4 h-4" />} Render Founder Review Copy™
+          </button>
+        )}
       </div>
 
       {b && (
