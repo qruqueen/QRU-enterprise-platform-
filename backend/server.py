@@ -34,6 +34,7 @@ from routers.automation import router as automation_router
 from routers.enterprise import router as enterprise_router
 from routers.commerce import router as commerce_router, webhook_router as stripe_webhook_router
 from routers.workflow import router as workflow_router
+from routers.autonomy import router as autonomy_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
 from routers.misc import (
@@ -58,7 +59,7 @@ for r in [
     search_router, users_router, consumer_router, command_center_router, pipeline_router, design_router, evolution_router, memory_router, rendering_router, media_router,
     topic_registry_router, verification_router, orchestrator_router, protection_router, integrations_router,
     ai_services_router, automation_router, enterprise_router,
-    commerce_router, stripe_webhook_router, workflow_router,
+    commerce_router, stripe_webhook_router, workflow_router, autonomy_router,
 ]:
     app.include_router(r)
 

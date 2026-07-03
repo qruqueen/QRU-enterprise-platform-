@@ -39,6 +39,7 @@ import Workflows from "@/pages/Workflows";
 import FactoryMonitor from "@/pages/FactoryMonitor";
 import Store from "@/pages/Store";
 import CheckoutSuccess from "@/pages/CheckoutSuccess";
+import AutonomyCenter from "@/pages/AutonomyCenter";
 import Colleges from "@/pages/Colleges";
 import CollegeWorkspace from "@/pages/CollegeWorkspace";
 import Analytics from "@/pages/Analytics";
@@ -105,6 +106,7 @@ function EnterpriseRoutes() {
         <Route path="teach" element={<ProductionLine />} />
         <Route path="workflows" element={<Workflows />} />
         <Route path="factory-monitor" element={<FactoryMonitor />} />
+        <Route path="autonomy" element={<AutonomyCenter />} />
         <Route path="store" element={<Store />} />
         <Route path="checkout/success" element={<CheckoutSuccess />} />
         <Route path="command-center" element={<EnterpriseCommandCenter />} />

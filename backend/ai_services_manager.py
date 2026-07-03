@@ -181,6 +181,8 @@ async def execute(capability: str, spec: dict, session_id: str, actor="AI Servic
             last_err = str(e)
             retries += 1
             logger.error(f"AI service {capability} attempt {attempt+1} failed: {e}")
+            import asyncio
+            await asyncio.sleep(1.5)
 
     await _record_job(capability, provider, mode, "failed", retries, last_err)
     await log_org("AI Services Manager™", "Manufacturing", f"{capability} task failed after retry", "", "error")

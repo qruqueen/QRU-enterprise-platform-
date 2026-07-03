@@ -8,7 +8,7 @@ import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard,
-  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store,
+  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon,
 } from "lucide-react";
 
 const NAV = [
@@ -16,6 +16,7 @@ const NAV = [
   { to: "/teach", label: "What to Teach Today", icon: Rocket, testid: "nav-teach" },
   { to: "/workflows", label: "Workflow Engine™", icon: Workflow, testid: "nav-workflows" },
   { to: "/factory-monitor", label: "Factory Monitor™", icon: Radio, testid: "nav-factory-monitor" },
+  { to: "/autonomy", label: "Autonomy Center™", icon: BrainIcon, testid: "nav-autonomy" },
   { to: "/command-center", label: "Enterprise Command Center™", icon: LayoutDashboard, testid: "nav-command-center" },
   { section: "Mission Control" },
   { to: "/", label: "Founder Console", icon: LayoutDashboard, end: true, testid: "nav-dashboard" },

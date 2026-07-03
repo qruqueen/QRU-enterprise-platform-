@@ -29,8 +29,8 @@ from org_activity import log_org
 
 logger = logging.getLogger("qru.workflow")
 
-# Bound concurrent LLM/render pipelines for reliability under load.
-_SEM = asyncio.Semaphore(4)
+# Bound concurrent LLM/render pipelines for reliability under load (avoid 503 bursts).
+_SEM = asyncio.Semaphore(2)
 
 STAGES = [
     "KR Retrieval", "Verification", "Treasure Standard™", "Product Recipes™",

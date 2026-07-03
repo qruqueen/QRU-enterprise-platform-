@@ -14,33 +14,48 @@ IMAGE_MODEL = "gemini-3.1-flash-image-preview"
 async def generate_image(prompt: str, session_id: str):
     """Generate a branded image via Gemini Nano Banana (Emergent key). Returns raw PNG bytes or None."""
     import base64
-    try:
-        chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=session_id,
-                       system_message="You are QRU Creative Studio, a premium educational brand designer.")
-        chat.with_model("gemini", IMAGE_MODEL).with_params(modalities=["image", "text"])
-        _, images = await chat.send_message_multimodal_response(UserMessage(text=prompt))
-        if images:
-            return base64.b64decode(images[0]["data"])
-    except Exception as e:
-        logger.error(f"image generation failed: {e}")
+    import asyncio
+    for attempt in range(3):
+        try:
+            chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=session_id,
+                           system_message="You are QRU Creative Studio, a premium educational brand designer.")
+            chat.with_model("gemini", IMAGE_MODEL).with_params(modalities=["image", "text"])
+            _, images = await chat.send_message_multimodal_response(UserMessage(text=prompt))
+            if images:
+                return base64.b64decode(images[0]["data"])
+        except Exception as e:
+            if "Budget has been exceeded" in str(e) or "spend limit" in str(e).lower():
+                logger.error(f"image generation failed (limit): {e}")
+                return None
+            logger.warning(f"image attempt {attempt+1} failed: {str(e)[:100]}")
+            await asyncio.sleep(2 * (attempt + 1))
     return None
 
 
 async def llm_generate(system: str, prompt: str, session_id: str) -> str:
-    try:
-        chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=session_id,
-            system_message=system,
-        ).with_model(*MODEL)
-        resp = await chat.send_message(UserMessage(text=prompt))
-        return resp if isinstance(resp, str) else str(resp)
-    except Exception as e:
-        logger.error(f"LLM generation failed: {e}")
-        raise HTTPException(
-            status_code=503,
-            detail="The AI service is temporarily unavailable. Please try again in a moment.",
-        )
+    import asyncio
+    last_err = None
+    for attempt in range(3):
+        try:
+            chat = LlmChat(
+                api_key=EMERGENT_LLM_KEY,
+                session_id=session_id,
+                system_message=system,
+            ).with_model(*MODEL)
+            resp = await chat.send_message(UserMessage(text=prompt))
+            return resp if isinstance(resp, str) else str(resp)
+        except Exception as e:
+            last_err = e
+            # Hard spend limits are not transient — fail fast, do not retry.
+            if "Budget has been exceeded" in str(e) or "spend limit" in str(e).lower():
+                break
+            logger.warning(f"LLM attempt {attempt+1} failed (transient?): {str(e)[:100]}")
+            await asyncio.sleep(2 * (attempt + 1))
+    logger.error(f"LLM generation failed: {last_err}")
+    raise HTTPException(
+        status_code=503,
+        detail="The AI service is temporarily unavailable. Please try again in a moment.",
+    )
 
 
 def parse_json(text: str):

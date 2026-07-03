@@ -177,3 +177,17 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 ### Next (after budget top-up)
 - P0: Re-run FAT to green (target PASS ≥80%); then PHASE C — controlled batch manufacturing of seeded Health/Faith libraries via the Workflow Engine.
 - P1 (PHASE D — Level-5 Autonomy directive received): Continuous Improvement Engine, Learning Factory, Product Evolution, Knowledge Gap Detector, Predictive Manufacturing, Cost Optimization, Capacity Planning, Self-Diagnostics, Executive Advisor daily brief, Factory Council, Innovation Radar, Enterprise Memory.
+
+
+## Implemented — Iteration 15 (2026-07-03) · FAT run + Phase D (Level-5 Autonomy) foundation
+- **Factory Acceptance Test™ RESULT: PASS at 89%** (threshold 80%). WF-00009, Full Treasure Package™, 10/11 products manufactured, real OpenAI TTS narration produced, all divisions green. Two transient defects under heavy parallel load: the Short Video MP4 and one Podcast Script (both HTTP 503 rate-limit bursts, not budget).
+- **Reliability hardening:** `ai_service.llm_generate` + `generate_image` now retry transient errors 3× with backoff and **fail fast** on hard limits ("Budget has been exceeded" / "spend limit"). Workflow parallel-manufacturing concurrency reduced 4→2 to avoid 503 bursts. `ai_services_manager.execute` retry now backs off.
+- **PHASE D (Level-5 Autonomy) — deterministic foundation** (`autonomy.py`, `routers/autonomy.py`, `/api/autonomy/*`): Self-Diagnostics™ (+ safe auto-repair of unprotected published products), Factory Health™ (8 named metrics), Executive Advisor™ daily brief, Cost Optimization™ + AI Provider Scorecard™, Capacity Planning™, Knowledge Gap Detector™, Factory Council™ (continuous improvement report), Enterprise Memory™ (best templates & recipes). All computed from factory data — runs WITHOUT LLM budget. Frontend `AutonomyCenter.js` (/autonomy, nav-autonomy). LLM-narrated recommendations deferred.
+- **Phase C — controlled batch (10 topics: 5 Health + 5 Faith) created & launched via Orchestrator**, then **PAUSED** — blocked by the Emergent key's **DAILY spend limit** ("Daily spend limit reached", hit after the FAT + a day of testing). Batch id saved; 3 topics pending, 7 to retry.
+
+### ⚠️ BLOCKER (external, not code)
+- Emergent LLM key **DAILY spend limit reached** today. This is separate from total balance. It resets on the daily cycle (or can be raised). Until then, no text/image LLM manufacturing runs. Stripe checkout, TTS/ffmpeg media, and all autonomy dashboards are unaffected.
+
+### Next (after daily limit resets / is raised)
+- P0: **Resume Phase C** — open Bulk Orchestrator™, "Retry failed" on the "Phase C — Health & Faith Controlled Batch", let it finish (research→KR→verify→QC→publish per topic). Optionally re-run the FAT for a clean 11/11 (the reliability hardening should now also produce the Short Video MP4).
+- P1: **Phase D LLM layer** — add GPT-narrated recommendations to Continuous Improvement Engine, Product Evolution (ratings/reviews→v2), Predictive Manufacturing, Innovation Radar; wire daily Executive Brief delivery.
