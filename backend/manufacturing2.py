@@ -394,6 +394,21 @@ async def _certify(pid, scores):
         await learn_from_product(certified)
     except Exception as e:
         logger.error(f"design learning hook failed: {e}")
+    # MT-024 — render branded assets + the customer-ready deliverable BEFORE Founder Approval.
+    # Deterministic; runs even while the LLM budget is capped. Treasure Standard™ validates
+    # the rendered deliverable itself (validate_deliverable).
+    try:
+        import rendering_engine as re_engine
+        await re_engine.ensure_branded_assets(pid, "Creative Studio™")
+    except Exception as e:
+        logger.error(f"branded assets at certify failed: {e}")
+    try:
+        import deliverable_renderer as dr
+        dv = await dr.ensure_deliverable(pid, "Manufacturing Director™")
+        if dv and not dv.get("ready"):
+            logger.warning(f"deliverable for {pid} did not fully validate: {dv.get('validation')}")
+    except Exception as e:
+        logger.error(f"deliverable render at certify failed: {e}")
     await db.notifications.insert_one({
         "id": gen_id(), "message": f"{p.get('product_code')} passed Quality Control and earned Treasure Standard™ — ready for release.",
         "level": "success", "read": False, "created_at": now_iso()})
@@ -407,7 +422,21 @@ async def release_product(pid):
     unmet = [g for g in RELEASE_GATES if gates.get(g, {}).get("status") != "passed"]
     if unmet:
         return None, f"Release locked. Pending gates: {', '.join(unmet)}."
-    await db.products.update_one({"id": pid}, {"$set": {"status": "Published", "released_at": now_iso(), "updated_at": now_iso()}})
+    # MT-024 — never publish an incomplete product: the customer-ready deliverable must be
+    # rendered & validated. Render on-demand (deterministic) if it isn't present yet.
+    if not p.get("deliverable_ready"):
+        try:
+            import deliverable_renderer as dr
+            await dr.ensure_deliverable(pid, "Manufacturing Director™")
+            p = await db.products.find_one({"id": pid})
+        except Exception as e:
+            logger.error(f"deliverable render at release failed: {e}")
+    if not p.get("deliverable_ready"):
+        return None, "Release locked. The customer-ready deliverable has not been rendered & validated yet."
+    # Publish exactly the approved deliverable — snapshot it so what ships equals what was reviewed.
+    await db.products.update_one({"id": pid}, {"$set": {
+        "status": "Published", "released_at": now_iso(),
+        "published_deliverable": p.get("customer_deliverable"), "updated_at": now_iso()}})
     await _set_stage(pid, "Release", "done", "Released to customers")
     await log_org("Manufacturing Director™", "Manufacturing", "released", p.get("product_code", ""), "success")
     from models import clean

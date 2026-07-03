@@ -1,0 +1,37 @@
+{
+  "summary": "MT-024 Customer-Ready Deliverable backend fully validated. 14/14 pytest tests passed across render-deliverable (Book/Presentation/Poster), asset serving (content-type + magic bytes), pipeline exposure, idempotency, 404 handling, and release gating (published_deliverable snapshot + gate-lock).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_mt024_deliverable.py",
+    "/app/test_reports/pytest/mt024_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "deliverable_renderer.PRIMARY_FORMAT map + validate_deliverable() correctly enforces content>=180 chars, html rendered, primary rendered, and on-disk >=800 bytes — matches ticket spec.",
+    "routers/pipeline.py:render_deliverable checks product existence before invoking ensure_deliverable (returns 404 correctly).",
+    "manufacturing2.release_product auto-renders deliverable when deliverable_ready is false and snapshots published_deliverable on publish — verified end-to-end.",
+    "routers/rendering.py:asset endpoint has path-traversal guard and correct media_map for html/pdf/epub/pptx/png/mp4/mp3 — content-type headers verified for all formats served.",
+    "Nit: /api/rendering/asset/{fname} has no auth (by design for public asset URLs). Consider signed/expiring URLs if these should not be publicly enumerable."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_mt024_deliverable.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (14/14)",
+    "frontend": "n/a (skipped per request)"
+  },
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (login → Bearer token)",
+  "seed_data_creation": "None. Used existing products: Book c4530d52..., Presentation a3a3326e..., Poster f464e59c...; queried /api/products for a 'Ready for Release' or 'Published' certified candidate for release-idempotency test, and for a gates-unmet candidate for lock test.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "MT-024 backend is green. Test suite at /app/backend/tests/test_mt024_deliverable.py is idempotent and safe to re-run — release test prefers an already-Published certified product for idempotent re-release when no Ready-for-Release candidate exists. Pytest addopts include xdist by default; run with `-o addopts=\"\"` to force serial execution.",
+  "rca of the issue": "N/A — no issues found. All acceptance criteria in the ticket verified: (1) render-deliverable returns ready=true with correct primary_format/preview_url/download_url/files[] and validation.checks all passed for Book(html+epub+pdf), Presentation(html+pptx+pdf), Poster(html+png). (2) Assets served with correct Content-Type headers and valid magic bytes (%PDF, PK for zip, PNG signature). (3) Pipeline exposes customer_deliverable, deliverable_ready, cover_url, thumbnail_url. (4) Release publishes with published_deliverable snapshot; unmet-gate products return HTTP 400 with 'Release locked. Pending gates' and are not published. (5) Re-render is idempotent. (6) Unknown pid returns 404 (not 500)."
+}

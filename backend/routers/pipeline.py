@@ -78,7 +78,23 @@ async def pipeline(pid: str, user=Depends(get_current_user)):
         "gates": p.get("gates", {}), "deliverables": p.get("deliverables", []),
         "missing_fields": p.get("missing_fields", []), "qc": p.get("qc", {}),
         "treasure_standard": p.get("treasure_standard", False),
+        "cover_url": p.get("cover_url"), "thumbnail_url": p.get("thumbnail_url"),
+        "customer_deliverable": p.get("customer_deliverable"),
+        "deliverable_ready": p.get("deliverable_ready", False),
     }
+
+
+@router.post("/{pid}/render-deliverable")
+async def render_deliverable(pid: str, user=Depends(get_current_user)):
+    """MT-024 — (re)render the exact customer-ready deliverable set. Deterministic."""
+    import deliverable_renderer as dr
+    p = await db.products.find_one({"id": pid})
+    if not p:
+        raise HTTPException(404, "Product not found")
+    dv = await dr.ensure_deliverable(pid, user["name"])
+    if dv is None:
+        raise HTTPException(404, "Product not found")
+    return dv
 
 
 @router.post("/{pid}/manufacture-missing")

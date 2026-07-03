@@ -87,5 +87,11 @@ async def asset(fname: str):
     path = os.path.join(re_engine.ASSET_DIR, fname)
     if not os.path.exists(path):
         raise HTTPException(404, "Asset not found")
-    media = "application/pdf" if fname.endswith(".pdf") else "image/png"
+    ext = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
+    media_map = {
+        "pdf": "application/pdf", "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
+        "html": "text/html", "epub": "application/epub+zip", "mp4": "video/mp4", "mp3": "audio/mpeg",
+        "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    }
+    media = media_map.get(ext, "application/octet-stream")
     return FileResponse(path, media_type=media)

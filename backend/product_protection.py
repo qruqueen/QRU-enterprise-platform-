@@ -259,18 +259,26 @@ async def treasure_finalize(pid, actor="QRU Verification Team™", max_rounds=2)
                 "status": "Open", "confidence_score": conf, "created_at": now_iso()})
             return "needs_review"
 
-    # Treasure Standard™ met → protect, publish, distribute.
+    # Treasure Standard™ met → protect, render deliverable, publish, distribute.
     await db.products.update_one({"id": pid}, {"$set": {"verified": True, "treasure_standard": True}})
     await apply_protection(pid, (await db.products.find_one({"id": pid})).get("license_type") or "Personal Use",
                            True, "account_required", actor)
-    await db.products.update_one({"id": pid}, {"$set": {"status": "Published", "published_at": now_iso(),
-                                                        "ip.publication_date": now_iso(), "updated_at": now_iso()}})
     # QRU Design Language™ — guarantee a professional branded cover/thumbnail before it reaches customers.
     try:
         import rendering_engine as re_engine
         await re_engine.ensure_branded_assets(pid, actor)
     except Exception as e:
         logger.error(f"design language application failed for {pid}: {e}")
+    # MT-024 — render the exact customer-ready deliverable (deterministic) before publication.
+    try:
+        import deliverable_renderer as dr
+        await dr.ensure_deliverable(pid, actor)
+    except Exception as e:
+        logger.error(f"deliverable render failed for {pid}: {e}")
+    _p = await db.products.find_one({"id": pid})
+    await db.products.update_one({"id": pid}, {"$set": {"status": "Published", "published_at": now_iso(),
+                                                        "published_deliverable": _p.get("customer_deliverable"),
+                                                        "ip.publication_date": now_iso(), "updated_at": now_iso()}})
     try:
         import integration_hub as ihub
         await ihub.auto_distribute(pid, "AI Distribution Team™")
