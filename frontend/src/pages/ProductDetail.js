@@ -71,7 +71,14 @@ export default function ProductDetail() {
 
       {b && (
         <div className="bg-card border rounded-md p-6 mb-6 max-w-4xl" data-testid="pd-creative-brief">
-          <div className="flex items-center gap-2 mb-4"><Sparkles className="w-4 h-4 text-gold" /><h3 className="font-heading font-semibold">Product Page · by Creative Studio™</h3></div>
+          <div className="flex flex-wrap items-center gap-2 mb-4"><Sparkles className="w-4 h-4 text-gold" /><h3 className="font-heading font-semibold">Product Page · by Creative Studio™</h3>
+            {p.creative_brief_source === "deterministic" && (
+              <span data-testid="pd-brief-source" className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">On-brand fallback · AI Brief Writer™ unavailable</span>
+            )}
+            {p.creative_brief_source === "ai" && (
+              <span data-testid="pd-brief-source" className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">AI-enhanced</span>
+            )}
+          </div>
           <div className="grid sm:grid-cols-2 gap-4 text-sm">
             <div><p className="overline text-primary mb-1">Who this is for</p><p>{b.who_for}</p></div>
             <div><p className="overline text-primary mb-1">Problem it solves</p><p>{b.problem_solved}</p></div>

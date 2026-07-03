@@ -265,3 +265,8 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 - Frontend `EnterpriseAutonomy.js` (`/enterprise-autonomy`, nav-enterprise-autonomy): capacity banner + Probe/Auto-resume buttons, and Continuous Improvement / Diagnostics / Relationship Engine / Enterprise-First Thinking tabs. Screenshot-verified.
 - Still gated by the daily cap: actual Phase C completion + clean FAT (the watcher will trigger automatically on reset). Auto-resume correctly holds jobs safely while capacity is unavailable.
 
+## Bug Fix — FM-001 Creative Studio Enhancement Failure (2026-07-03) · VERIFIED by testing_agent
+- **Root cause**: `POST /api/products/{pid}/creative-brief` called `llm_generate()`, which fails while the OpenAI daily spend limit is active; the frontend caught it as a generic "Enhancement failed".
+- **Fix (targeted, no redesign)**: the endpoint now wraps the AI Brief Writer™ stage in try/except and, on failure, builds a deterministic on-brand brief (`_fallback_brief`) so the enhancement COMPLETES and sets `creative_status='Reviewed'`. Response returns `enhancement_stage_note` + `creative_brief_source` (`ai` | `deterministic`). Frontend (CreativeStudio.js, ProductDetail.js) now surfaces the specific stage note instead of "Enhancement failed", plus a persistent amber chip on the product page when the brief is a fallback.
+- **Verified**: testing_agent iteration_14.json — backend 100% (5/5), frontend E2E confirmed, zero issues. Screenshot confirms brief renders + stage note + persistent chip. Test file: `/app/backend/tests/test_fm001_creative_brief.py`.
+
