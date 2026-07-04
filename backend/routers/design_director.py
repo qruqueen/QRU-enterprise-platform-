@@ -38,6 +38,25 @@ async def references(user=Depends(get_current_user)):
     return {"references": await dd.references()}
 
 
+@router.post("/auto-gate/{pid}")
+async def auto_gate(pid: str, user=Depends(get_current_user)):
+    """Run the deterministic Auto-Gate (score → improve → telemetry) before Founder Review."""
+    p = await db.products.find_one({"id": pid})
+    if not p:
+        raise HTTPException(404, "Product not found")
+    return await dd.auto_gate(pid, user["name"])
+
+
+@router.get("/telemetry")
+async def telemetry(user=Depends(get_current_user)):
+    return {"telemetry": await dd.telemetry()}
+
+
+@router.get("/factory-intelligence")
+async def factory_intelligence(user=Depends(get_current_user)):
+    return await dd.factory_intelligence()
+
+
 @router.get("/score/{pid}")
 async def score(pid: str, user=Depends(get_current_user)):
     p = await db.products.find_one({"id": pid})

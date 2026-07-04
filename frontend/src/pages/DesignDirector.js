@@ -4,11 +4,20 @@ import { PageHeader, EmptyState } from "@/components/shared";
 import { toast } from "sonner";
 import {
   Loader2, Gauge, Wand2, ShieldCheck, Settings2, Award, CheckCircle2, AlertTriangle,
-  Sparkles, RefreshCw, X,
+  Sparkles, RefreshCw, X, Brain, Clock, TrendingUp,
 } from "lucide-react";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
 const abs = (u) => (u ? (u.startsWith("http") ? u : `${BACKEND}${u}`) : null);
+
+const ISSUE_LABELS = {
+  unclear_content: "Unclear content", weak_teaching_flow: "Weak teaching flow",
+  weak_visual_hierarchy: "Weak visual hierarchy", inconsistent_typography: "Inconsistent typography",
+  poor_spacing: "Poor spacing", readability_problems: "Readability problems",
+  branding_imbalance: "Branding imbalance", treasure_standard_gap: "Treasure Standard™ gap",
+  print_readiness_issues: "Print readiness issues", marketplace_export_issues: "Marketplace export issues",
+  recipe_violations: "Recipe violations", cover_only_posters: "Cover-only posters",
+};
 
 const scoreColor = (n) => (n == null ? "text-muted-foreground" : n >= 90 ? "text-emerald-600" : n >= 70 ? "text-amber-600" : "text-red-600");
 
@@ -16,6 +25,7 @@ export default function DesignDirector() {
   const [queue, setQueue] = useState(null);
   const [settings, setSettings] = useState(null);
   const [refs, setRefs] = useState([]);
+  const [fi, setFi] = useState(null);
   const [sel, setSel] = useState(null);
   const [scoring, setScoring] = useState(false);
   const [reviewing, setReviewing] = useState("");
@@ -23,8 +33,9 @@ export default function DesignDirector() {
 
   const loadQueue = () => api.get("/design-director/queue").then((r) => setQueue(r.data)).catch(() => {});
   const loadRefs = () => api.get("/design-director/references").then((r) => setRefs(r.data.references || [])).catch(() => {});
+  const loadFi = () => api.get("/design-director/factory-intelligence").then((r) => setFi(r.data)).catch(() => {});
   useEffect(() => {
-    loadQueue(); loadRefs();
+    loadQueue(); loadRefs(); loadFi();
     api.get("/design-director/settings").then((r) => setSettings(r.data)).catch(() => {});
   }, []);
 
@@ -46,12 +57,11 @@ export default function DesignDirector() {
       toast[data.passed ? "success" : "info"](
         `${data.passed ? "Passed" : "Best effort"} — ${data.final.overall}/100 after ${data.iterations} pass(es)` +
         (cost ? ` · ~$${cost} AI` : " · $0 AI"));
-      loadQueue(); loadRefs();
+      loadQueue(); loadRefs(); loadFi();
       if (sel?.product?.id === p.id) openScore(p);
     } catch (e) { toast.error(e.response?.data?.detail || "Review failed"); }
     finally { setReviewing(""); }
   };
-
   const saveSettings = async (patch) => {
     const next = { ...settings, ...patch };
     setSettings(next);
@@ -86,6 +96,47 @@ export default function DesignDirector() {
         <Tile icon={Wand2} label="Auto-Improve" value={settings.auto_improve ? "On" : "Off"} testid="dd-tile-auto" />
         <Tile icon={Sparkles} label="AI Hero Art" value={settings.allow_ai_hero_art ? "Enabled ($)" : "Off ($0)"} testid="dd-tile-ai" />
       </div>
+
+      {/* Factory Intelligence™ */}
+      {fi && fi.summary.products_gated > 0 && (
+        <div className="bg-card border rounded-md p-5 mb-6" data-testid="dd-factory-intelligence">
+          <p className="overline text-gold mb-3 flex items-center gap-1.5"><Brain className="w-3.5 h-3.5" /> Factory Intelligence™ — Continuous Improvement</p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <Tile icon={Gauge} label="Products Gated" value={fi.summary.products_gated} testid="fi-gated" />
+            <Tile icon={CheckCircle2} label="Pass Rate" value={`${fi.summary.pass_rate}%`} testid="fi-passrate" />
+            <Tile icon={TrendingUp} label="Avg Design Score" value={fi.summary.avg_design_score} testid="fi-avgscore" />
+            <Tile icon={Clock} label="Founder Time Saved" value={`${fi.summary.time_saved_hours}h`} testid="fi-timesaved" />
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Recurring Design Issues</p>
+              {fi.recurring_issues.length === 0 ? (
+                <p className="text-sm text-emerald-600">No recurring issues — clean manufacturing.</p>
+              ) : (
+                <div className="space-y-1.5" data-testid="fi-recurring">
+                  {fi.recurring_issues.slice(0, 6).map((r) => (
+                    <div key={r.issue} className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> {ISSUE_LABELS[r.issue] || r.issue}</span>
+                      <span className="font-semibold text-amber-700">{r.count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-2">By Product Type</p>
+              <div className="space-y-1.5" data-testid="fi-bytype">
+                {fi.by_product_type.slice(0, 6).map((t) => (
+                  <div key={t.product_type} className="flex items-center justify-between text-sm">
+                    <span>{t.product_type}</span>
+                    <span className="text-muted-foreground">{t.count} · {t.pass_rate}% pass · avg {t.avg_score}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Review queue */}

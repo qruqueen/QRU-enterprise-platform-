@@ -409,6 +409,14 @@ async def _certify(pid, scores):
             logger.warning(f"deliverable for {pid} did not fully validate: {dv.get('validation')}")
     except Exception as e:
         logger.error(f"deliverable render at certify failed: {e}")
+    # MT-032 — Auto-Gated Design Director™: run deterministic design QC ($0 by default)
+    # right after manufacturing and BEFORE Founder Review. Non-blocking; Founder keeps
+    # final approval authority.
+    try:
+        import design_director as dd
+        await dd.auto_gate(pid, "QRU Design Director™")
+    except Exception as e:
+        logger.error(f"design auto-gate at certify failed (non-blocking): {e}")
     await db.notifications.insert_one({
         "id": gen_id(), "message": f"{p.get('product_code')} passed Quality Control and earned Treasure Standard™ — ready for release.",
         "level": "success", "read": False, "created_at": now_iso()})

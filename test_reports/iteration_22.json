@@ -1,0 +1,25 @@
+{
+  "summary": "MT-032 Auto-Gate Extension (QRU Design Director™) fully tested and passing (backend + frontend). 15/15 pytest cases green. Verified: 11 QRU Design Standard categories in exact required order, product_type_compliance shape + recipe label ('QRU Poster Recipe™'), POST /auto-gate/{pid} returns estimated_ai_cost_usd==0.0 with default settings (allow_ai_hero_art=false), auto-gate does NOT change Founder approval/publish status, /telemetry returns records with all required fields, /factory-intelligence aggregates summary+recurring_issues+by_product_type, and manufacturing2._certify contains the design_director.auto_gate hook. Frontend /design-director UI verified end-to-end: Passing 91/100 tile, AI Hero Art 'Off ($0)' tile, Factory Intelligence panel with all 6 metrics (fi-gated=7, fi-passrate=100%, fi-avgscore=92.9, fi-timesaved=2.1h, fi-recurring, fi-bytype), review queue (10 rows), 11-category scorecard modal, Auto-Improve toast confirmed as 'Passed — 95/100 after 1 pass(es) · $0 AI', References gallery, Settings modal with dd-set-ai toggle. allow_ai_hero_art left OFF at end. LLM daily cap respected — no AI manufacturing triggered.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_mt032_auto_gate.py",
+    "/app/test_reports/pytest/iteration22_mt032_autogate.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "design_director.score_product writes design_scorecard on GET /score/{pid} — read-side mutation is intentional ('always freshest' UX) but worth documenting; also fine because auto-gate uses the same computed value.",
+    "auto_gate: when auto_improve is False OR product already passing, it writes design_scorecard but skips the design_gate write later — actually re-check: auto_gate always writes design_gate at line 325 with $set unconditional, so this is fine.",
+    "issue_tags mapping uses category name string matching against _ISSUE_TAGS dict; since category names include ™ chars, keep tests in sync if categories are ever renamed. Present code is correct.",
+    "product_recipes.get_recipe falls back to a default 'QRU Document Recipe™' which will fail the recipe-label test only for unknown types. Current corpus is all known types — safe.",
+    "manufacturing2._certify swallows auto-gate exceptions (non-blocking) — correct behavior since Founder review still runs; consider surfacing gate failures in notifications so silent failures are observable.",
+    "design_director.telemetry / references correctly strip mongo _id before returning. Good."
+  ],
+  "updated_files": ["/app/backend/tests/test_mt032_auto_gate.py"],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "100%"},
+  "test_credentials": "Founder 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (temporary — NOT changed)",
+  "seed_data_creation": "None. Auto-gate was run on existing products (PRD-00051, PRD-00021, PRD-00061 and up to 3 others in queue). Telemetry collection populated with 7+ records as observed via Factory Intelligence panel.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "MT-032 Auto-Gate is fully green. Known passing products: PRD-00061 (Poster, 92), PRD-00051 (Book, 95), PRD-00021 (Interactive Lesson, 95). Deterministic-first invariant holds: estimated_ai_cost_usd==0.0 with allow_ai_hero_art=false. Manufacturing hook is wired in manufacturing2._certify (line 416-417) and swallows exceptions to remain non-blocking. Factory Intelligence recurring_issues currently reports 'recipe_violations' x5 (posters without hero content). Settings state at end: passing_score=91, allow_ai_hero_art=false, auto_improve=true, max_iterations=3."
+}
