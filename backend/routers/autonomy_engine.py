@@ -55,3 +55,13 @@ async def advance(pid: str, user=Depends(get_current_user)):
     if not res.get("ok"):
         raise HTTPException(404, res.get("message", "Not found"))
     return res
+
+
+@router.get("/ladder/{pid}")
+async def ladder(pid: str, user=Depends(get_current_user)):
+    from database import db
+    p = await db.products.find_one({"id": pid})
+    if not p:
+        raise HTTPException(404, "Product not found")
+    s = await ae.get_settings()
+    return ae.gate_ladder(p, s["publish_threshold"])

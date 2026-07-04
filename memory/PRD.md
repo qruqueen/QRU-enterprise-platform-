@@ -476,3 +476,10 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 
 ### 3. Revision note (Evidence Center)
 - `ActionInput` accepts optional `note`; `_apply(..., note)` stores `founder_revision_note` on `revise`. Evidence Center "Request Revision" now opens an inline textarea (`revise-note-panel` / `revise-note-input` / `revise-confirm`) so the Founder attaches specific correction notes. Verified: note persisted on product, status → Needs Revision.
+
+## MO-041 — Self-Guiding Manufacturing Gates™ & Founder Navigation™ (2026-07-04) · VERIFIED (curl + screenshot)
+- `autonomous_engine.gate_ladder(p, threshold)`: deterministic GPS per product across the 7 QRU gates (Manufacturing → Design Review → Treasure Standard™ → Product Protection™ → Marketplace Certification → Founder Review → Publication) with per-gate 🟢/🟡/🔴/⚪ status, progress %, current blocker, root cause, AI recommendation, estimated seconds, Automatic/Manual mode, next action, after-completion gate, and founder_action_required. $0 AI, reuses next_action + factory_confidence.
+- Endpoint `GET /api/autonomy-engine/ladder/{pid}`. Founder Inbox `_meta` now carries a compact `guidance` (progress %, next action, mode, after-completion) on EVERY row → no dead ends. Evidence dossier carries the full `gate_ladder`.
+- Frontend: Evidence Center shows the gate-chip ladder + progress bar + a "What Happens Next?" panel (`evidence-ladder` / `whats-next`); each inbox row shows a guidance strip (`inbox-guidance-<code>`) with a mini progress bar, next action, Automatic/"You decide" badge, and "→ then <next gate>".
+- Automatic continuation was already handled by the Autonomous Manufacturing Engine™ (watcher + run-cycle when Autonomy ON); this order makes that pipeline transparent to the Founder.
+- Verified: ladder endpoint (29%/43% progress, correct gate states, blocker/root/rec/est/after), inbox guidance on all 33 rows, and screenshot of the Evidence Center ladder + What Happens Next panel.

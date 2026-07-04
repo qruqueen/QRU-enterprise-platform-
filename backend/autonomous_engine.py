@@ -138,6 +138,95 @@ def next_action(p, threshold=91):
 
 
 # --------------------------------------------------------------------------- #
+# MO-041 — Self-Guiding Gate Ladder™ + Founder Guidance Panel™ ("What Happens Next?")
+# --------------------------------------------------------------------------- #
+# The ordered QRU manufacturing gates and the deterministic check that marks each complete.
+_GATES = [
+    ("manufacturing",   "Manufacturing",           lambda p: (len(p.get("content") or "") >= fc.MIN_CONTENT_CHARS) and bool(p.get("deliverable_ready"))),
+    ("design_review",   "Design Review",           lambda p: bool((p.get("design_gate") or {}).get("gated_at"))),
+    ("treasure",        "Treasure Standard™",      lambda p: fc._design_passed(p, 91) and bool(p.get("verified"))),
+    ("protection",      "Product Protection™",     lambda p: bool(p.get("verified"))),
+    ("marketplace",     "Marketplace Certification", lambda p: bool(p.get("marketing_kit_ready"))),
+    ("founder_review",  "Founder Review",          lambda p: p.get("status") in ("Approved", "Published")),
+    ("publication",     "Publication",             lambda p: p.get("status") == "Published"),
+]
+# Which automatic step (from next_action) advances each not-yet-complete gate.
+_AUTO_STEPS = {"brand", "deliverable", "design_gate", "verify", "creative", "protect"}
+_STEP_SECONDS = {"brand": 15, "deliverable": 25, "design_gate": 20, "verify": 5, "creative": 5, "protect": 5}
+
+
+def gate_ladder(p, threshold=91):
+    """A GPS for one product: every gate's status + the exact next action, why it remains,
+    who does it, how long it takes, and the progress %. Deterministic, $0 AI."""
+    gates, completed = [], 0
+    current_idx = None
+    for key, label, check in _GATES:
+        done = bool(check(p))
+        if done:
+            completed += 1
+            gates.append({"key": key, "label": label, "status": "complete", "emoji": "🟢"})
+        else:
+            if current_idx is None:
+                current_idx = len(gates)
+                gates.append({"key": key, "label": label, "status": "active", "emoji": "🟡"})
+            else:
+                gates.append({"key": key, "label": label, "status": "pending", "emoji": "⚪"})
+
+    na = next_action(p, threshold)
+    esc = p.get("design_escalation")
+    # Root cause + recommendation, in plain language.
+    if na["step"] == "done":
+        blocker, root, rec = None, "All gates complete — the product is live.", "No action needed."
+    elif na["step"] == "founder_review":
+        blocker = "Awaiting your publication decision."
+        root = "Every automated gate has passed — this needs a human approval."
+        rec = "Review the evidence and Approve for Publication (or return/revise)."
+    elif na["step"] == "blocked":
+        blocker = na["reason"]; root = na["reason"]
+        rec = "Provide the missing source material / Knowledge Record, then the factory continues automatically."
+    elif na["step"] == "needs_fix":
+        blocker = (esc or {}).get("stopped_reason") or na["reason"]
+        root = blocker
+        rec = (esc or {}).get("decision_needed") or "Provide creative direction or approve as-is."
+    else:
+        blocker = f"{na['label']} in progress."
+        root = "Deterministic manufacturing step not yet run."
+        rec = f"Autonomy will {na['label'].lower()} automatically." 
+
+    # Estimated time for the remaining automatic steps up to Founder Review.
+    remaining_auto = [k for (k, _l, chk) in _GATES if not chk(p) and k not in ("founder_review", "publication")]
+    est_seconds = sum(_STEP_SECONDS.get(na["step"], 12) for _ in remaining_auto) if na["step"] in _AUTO_STEPS else (
+        0 if na["step"] in ("done", "founder_review") else 0)
+    is_auto = na["step"] in _AUTO_STEPS
+    founder_required = na["needs_founder"]
+    total = len(_GATES)
+    progress = round(100 * completed / total)
+
+    current_gate = gates[current_idx]["label"] if current_idx is not None else "Publication"
+    if current_idx is not None:
+        gates[current_idx]["status"] = "blocked" if (founder_required and na["step"] in ("blocked", "needs_fix")) else "active"
+        gates[current_idx]["emoji"] = "🔴" if gates[current_idx]["status"] == "blocked" else "🟡"
+
+    return {
+        "gates": gates,
+        "progress_pct": progress,
+        "current_gate": current_gate,
+        "current_status": na["label"],
+        "completed_steps": [g["label"] for g in gates if g["status"] == "complete"],
+        "remaining_steps": [g["label"] for g in gates if g["status"] in ("pending", "active", "blocked")],
+        "current_blocker": blocker,
+        "root_cause": root,
+        "ai_recommendation": rec,
+        "estimated_seconds": est_seconds,
+        "mode": "Automatic" if is_auto else "Manual",
+        "next_action": na["label"],
+        "founder_action_required": founder_required,
+        "auto_continue": is_auto,
+        "after_completion": (gates[current_idx + 1]["label"] if (current_idx is not None and current_idx + 1 < len(gates)) else "Publication"),
+    }
+
+
+# --------------------------------------------------------------------------- #
 # Advance™ — perform the deterministic chain for a single product.
 # --------------------------------------------------------------------------- #
 async def advance_product(pid, actor="Autonomous Manufacturing Engine™", threshold=91):

@@ -66,6 +66,12 @@ def _meta(p):
     confidence = fc.factory_confidence(p)
     dh = confidence["data_health"]
     publishable, publish_blockers = fc.publish_gate(p)
+    # MO-041 — self-guiding guidance so no row is ever a dead end.
+    lad = ae.gate_ladder(p, 91)
+    guidance = {"next_action": lad["next_action"], "mode": lad["mode"],
+                "founder_action_required": lad["founder_action_required"],
+                "progress_pct": lad["progress_pct"], "current_gate": lad["current_gate"],
+                "after_completion": lad["after_completion"]}
 
     return {
         "design_score": score, "design_passed": passed,
@@ -78,6 +84,7 @@ def _meta(p):
         "confidence_components": confidence["components"],
         "publishable": publishable,
         "publish_blockers": publish_blockers,
+        "guidance": guidance,
         "design_escalation": p.get("design_escalation"),
         "design_result": (p.get("design_gate") or {}).get("result_summary"),
         "blockers": blockers, "filter_tags": sorted(set(tags)),
@@ -226,6 +233,7 @@ async def _evidence(p):
         } if ver else None),
         "publishable": m["publishable"], "publish_blockers": m["publish_blockers"],
         "before_after": (p.get("design_gate") or {}).get("before_after"),
+        "gate_ladder": ae.gate_ladder(p, 91),
         "previews": previews, "cover_url": p.get("cover_url"),
     }
 

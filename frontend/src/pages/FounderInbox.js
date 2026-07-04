@@ -146,6 +146,16 @@ export default function FounderInbox() {
                         <Wrench className="w-3 h-3 mt-0.5 shrink-0" /> <span><b>Founder input needed:</b> {p.design_escalation.stopped_reason} — {p.design_escalation.decision_needed}</span>
                       </p>
                     )}
+                    {p.guidance && (
+                      <div className="mt-1.5 flex items-center gap-2 text-[11px]" data-testid={`inbox-guidance-${p.product_code}`}>
+                        <div className="h-1.5 w-20 bg-muted rounded-full overflow-hidden shrink-0"><div className="h-full bg-royal" style={{ width: `${p.guidance.progress_pct}%` }} /></div>
+                        <span className="text-royal font-medium">{p.guidance.progress_pct}%</span>
+                        <span className="text-muted-foreground">·</span>
+                        <span className="text-navy"><b>Next:</b> {p.guidance.next_action}</span>
+                        <span className={`px-1.5 py-0.5 rounded-full ${p.guidance.founder_action_required ? "bg-gold/20 text-royal" : "bg-emerald-50 text-emerald-700"}`}>{p.guidance.founder_action_required ? "You decide" : "Automatic"}</span>
+                        {!p.guidance.founder_action_required && <span className="text-muted-foreground">→ then {p.guidance.after_completion}</span>}
+                      </div>
+                    )}
                     {/* Buttons */}
                     <div className="flex flex-wrap gap-2 mt-2">
                       {p.preview_url && <a data-testid={`inbox-preview-${p.product_code}`} href={`${BACKEND}/api/marketing/preview/${p.id}?fmt=html`} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1 border px-2 py-1 rounded-sm hover:border-primary"><Eye className="w-3.5 h-3.5" /> Open Preview</a>}
@@ -306,6 +316,32 @@ function EvidenceCenter({ ev, busy, onClose, onDecide }) {
               {(d.verification_notes.issues || []).length > 0 && (
                 <ul className="text-[12px] text-amber-700 list-disc pl-5 mt-1">{d.verification_notes.issues.map((i, k) => <li key={k}>{i}</li>)}</ul>
               )}
+            </div>
+          )}
+
+          {/* MO-041 — Self-Guiding Gate Ladder™ + What Happens Next? */}
+          {d.gate_ladder && (
+            <div className="border rounded-sm p-3" data-testid="evidence-ladder">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-navy">Manufacturing Gates — {d.gate_ladder.progress_pct}% complete</p>
+                <span className="text-[11px] text-muted-foreground">{d.gate_ladder.current_gate}</span>
+              </div>
+              <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden mb-3"><div className="h-full bg-royal" style={{ width: `${d.gate_ladder.progress_pct}%` }} /></div>
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {d.gate_ladder.gates.map((g) => (
+                  <span key={g.key} className={`text-[11px] px-2 py-0.5 rounded-full border ${g.status === "complete" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : g.status === "active" ? "bg-amber-50 text-amber-700 border-amber-200" : g.status === "blocked" ? "bg-red-50 text-red-700 border-red-200" : "bg-muted text-muted-foreground"}`}>{g.emoji} {g.label}</span>
+                ))}
+              </div>
+              <div className="bg-royal/5 rounded-sm p-3 grid sm:grid-cols-2 gap-x-4 gap-y-1 text-[13px]" data-testid="whats-next">
+                <p className="sm:col-span-2 text-[11px] uppercase tracking-wide text-royal font-semibold">What Happens Next?</p>
+                <p><b>Current activity:</b> {d.gate_ladder.current_status}</p>
+                <p><b>Mode:</b> {d.gate_ladder.mode}</p>
+                <p><b>Blocker:</b> {d.gate_ladder.current_blocker || "None"}</p>
+                <p><b>Est. time:</b> {d.gate_ladder.estimated_seconds > 0 ? `~${d.gate_ladder.estimated_seconds}s` : "—"}</p>
+                <p className="sm:col-span-2"><b>Recommendation:</b> {d.gate_ladder.ai_recommendation}</p>
+                <p className="sm:col-span-2"><b>After completion:</b> {d.gate_ladder.after_completion} {d.gate_ladder.auto_continue ? "(continues automatically)" : ""}</p>
+                <p className="sm:col-span-2"><b>Founder action required?</b> {d.gate_ladder.founder_action_required ? "Yes — your decision below." : "No — the factory handles it."}</p>
+              </div>
             </div>
           )}
 
