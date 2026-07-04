@@ -8,6 +8,7 @@ import {
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import { FactoryResilience } from "@/components/FactoryResilience";
+import FounderBetaDashboard from "@/components/FounderBetaDashboard";
 
 function AutonomyMissionWidget({ navigate }) {
   const [ov, setOv] = useState(null);
@@ -113,6 +114,9 @@ export default function MissionControl() {
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold mb-6" style={{ background: "hsl(var(--navy))", color: "white" }} data-testid="enterprise-mode-badge">
         <ShieldCheck className="w-3.5 h-3.5" style={{ color: "hsl(var(--gold))" }} /> ENTERPRISE MODE · INTERNAL
       </span>
+
+      {/* MO-042 — Founder Beta Dashboard™ (five questions, nothing more) */}
+      <FounderBetaDashboard />
 
       {/* Daily briefing */}
       <div className="rounded-2xl p-6 mb-8 text-white relative overflow-hidden" style={{ background: "linear-gradient(135deg, hsl(var(--royal)), hsl(var(--navy)))" }} data-testid="daily-briefing">

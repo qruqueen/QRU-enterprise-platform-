@@ -69,6 +69,7 @@ const NAV = [
   { to: "/ai-services", label: "AI Services™", icon: Cpu, testid: "nav-ai-services", q: "What AI powers can we use right now?" },
   { to: "/users", label: "User Management", icon: UserCog, testid: "nav-users", q: "Who has access, and to what?" },
   { to: "/portability", label: "Portability Center™", icon: HardDriveDownload, testid: "nav-portability", q: "How do we back up and redeploy QRU?" },
+  { to: "/engineering-console", label: "Engineering Console", icon: Cpu, testid: "nav-engineering-console", q: "Where do developers see the technical diagnostics?" },
   { to: "/settings", label: "Settings", icon: Settings, testid: "nav-settings", q: "How is the factory configured?" },
 ];
 

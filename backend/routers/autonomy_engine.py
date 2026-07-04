@@ -14,6 +14,11 @@ async def overview(user=Depends(get_current_user)):
     return await ae.overview()
 
 
+@router.get("/founder-beta")
+async def founder_beta(user=Depends(get_current_user)):
+    return await ae.founder_beta_summary()
+
+
 @router.get("/settings")
 async def get_settings(user=Depends(get_current_user)):
     return await ae.get_settings()

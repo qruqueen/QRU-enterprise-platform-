@@ -33,6 +33,7 @@ import MediaStudio from "@/pages/MediaStudio";
 import TopicRegistry from "@/pages/TopicRegistry";
 import PromotionPipeline from "@/pages/PromotionPipeline";
 import LibraryImport from "@/pages/LibraryImport";
+import EngineeringConsole from "@/pages/EngineeringConsole";
 import Orchestrator from "@/pages/Orchestrator";
 import VerificationTeam from "@/pages/VerificationTeam";
 import ProductProtection from "@/pages/ProductProtection";
@@ -106,6 +107,7 @@ function EnterpriseRoutes() {
         <Route path="topic-registry" element={<TopicRegistry />} />
         <Route path="promotion-pipeline" element={<PromotionPipeline />} />
         <Route path="library-import" element={<LibraryImport />} />
+        <Route path="engineering-console" element={<EngineeringConsole />} />
         <Route path="translation-engine" element={<TranslationEngine />} />
         <Route path="research" element={<ResearchCenter />} />
         <Route path="verification" element={<VerificationCenter />} />

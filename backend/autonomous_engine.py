@@ -504,3 +504,55 @@ async def overview():
         "recent_actions": recent,
         "generated_at": now_iso(),
     }
+
+
+# --------------------------------------------------------------------------- #
+# MO-042 — Founder Beta Dashboard™: answers exactly five questions, nothing more.
+# --------------------------------------------------------------------------- #
+async def founder_beta_summary():
+    s = await get_settings()
+    threshold = s["publish_threshold"]
+    queue = await priority_queue(limit=500, threshold=threshold)
+
+    doing = [r for r in queue if r["priority"] == 2]
+    waiting = [r for r in queue if r["next_action"]["step"] == "founder_review"]
+    blocked = [r for r in queue if r["next_action"]["step"] == "blocked"]
+
+    products = await db.products.find({}, {"content": 0}).to_list(5000)
+    finished_today = [{"product_code": p.get("product_code"), "title": p.get("title")}
+                      for p in products if p.get("status") == "Published" and _today(p.get("published_at"))]
+    made_today = sum(1 for p in products if _today(p.get("created_at")))
+
+    # "How close are we to publishing?" — progress across everything not yet live.
+    ladders = []
+    for p in products:
+        if p.get("status") == "Published":
+            continue
+        lad = gate_ladder(p, threshold)
+        ladders.append({"product_code": p.get("product_code"), "title": p.get("title"),
+                        "progress_pct": lad["progress_pct"], "current_gate": lad["current_gate"],
+                        "founder_action_required": lad["founder_action_required"]})
+    ladders.sort(key=lambda x: -x["progress_pct"])
+    ready_to_publish = [r for r in queue if r["next_action"]["step"] == "founder_review"]
+    avg_progress = round(sum(l["progress_pct"] for l in ladders) / len(ladders)) if ladders else 100
+
+    def _slim(rows):
+        return [{"id": r["id"], "product_code": r["product_code"], "title": r["title"],
+                 "next_action": r["next_action"]["label"], "reason": r["next_action"].get("reason", ""),
+                 "factory_confidence": r["factory_confidence"]} for r in rows[:12]]
+
+    return {
+        "autonomy_on": s["enabled"],
+        "q1_doing": {"count": len(doing), "items": _slim(doing),
+                     "headline": (f"Manufacturing {len(doing)} product(s) automatically" if doing else "Line is idle — no products in active manufacturing")},
+        "q2_waiting": {"count": len(waiting), "items": _slim(waiting),
+                       "headline": (f"{len(waiting)} product(s) ready for your review & publish decision" if waiting else "Nothing is waiting on you right now")},
+        "q3_blocked": {"count": len(blocked), "items": _slim(blocked),
+                       "headline": (f"{len(blocked)} product(s) blocked — need source material or a decision" if blocked else "Nothing is blocked")},
+        "q4_finished_today": {"count": len(finished_today), "published": finished_today, "manufactured_today": made_today,
+                              "headline": (f"{len(finished_today)} published today · {made_today} manufactured today" if (finished_today or made_today) else "Nothing finished yet today")},
+        "q5_publish_readiness": {"ready_to_publish": len(ready_to_publish), "avg_progress_pct": avg_progress,
+                                 "closest": ladders[:8],
+                                 "headline": (f"{len(ready_to_publish)} product(s) ready to publish now · library {avg_progress}% to publication" if ready_to_publish else f"Library is {avg_progress}% of the way to publication")},
+        "generated_at": now_iso(),
+    }
