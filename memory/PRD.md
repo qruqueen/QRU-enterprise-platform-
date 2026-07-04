@@ -500,3 +500,9 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 ### Founder Beta Counter™ (stabilization)
 - `autonomous_engine.founder_beta_counter()` + included in `/api/autonomy-engine/founder-beta`: Products Started / Manufactured / Published / Purchased, Consecutive Successful Runs (trailing streak, broken by Rejected/Failed), Manufacturing Success Rate, Founder Hours Saved, progress toward 25 consecutive runs, and auto-recommendation "Founder Beta Complete — Ready for Production Review." at milestone.
 - Frontend: counter panel under the 5-question Founder Beta Dashboard (7 stats + milestone badge + progress bar + recommendation). Verified via screenshot (117 started / 53 manufactured / 31 published / 1 consecutive / 45% success / 12h saved · "24 more…").
+
+## MO-043 — Founder Beta Usability Fix™ (Evidence Center previews) (2026-07-04) · VERIFIED (screenshot)
+> Root cause: preview actions opened in a new browser tab (target=_blank) — pop-up blocking made them feel dead; unavailable items rendered as look-alike non-buttons ("clickable but nothing happens"). Files themselves returned 200 (asset endpoint is public, not auth-gated).
+- Fix (frontend `FounderInbox.js`): previews now open in an **in-app PreviewViewer modal** (`preview-viewer`) — iframe for HTML/PDF, `<img>` for PNG/JPG — with a loading spinner (`preview-loading`), a "New tab" fallback (`preview-open-tab`), and close. Instant visible feedback (<1s), no pop-up-blocker silent failure.
+- Unavailable previews render as a clearly **disabled** button (`DisabledPreview`, opacity + cursor-not-allowed) explaining the reason + "Generated automatically during manufacturing" (next step). Knowledge Record preview now links to the Promotion Pipeline. No dead buttons, no silent failures.
+- Verified via screenshot: HTML preview renders the branded deliverable in-iframe; PNG preview renders the cover inline; both open instantly with New-tab fallback + close.

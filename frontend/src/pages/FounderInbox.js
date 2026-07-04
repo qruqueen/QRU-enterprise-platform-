@@ -235,10 +235,59 @@ function Ev({ label, value }) {
   );
 }
 
+function DisabledPreview({ pv, Icon }) {
+  return (
+    <div data-testid={`preview-${pv.key}`}
+      className="flex items-start gap-2 border border-dashed rounded-sm px-2 py-2 text-xs bg-muted/40 opacity-70 cursor-not-allowed" title={pv.reason}>
+      <Icon className="w-4 h-4 text-muted-foreground shrink-0" />
+      <div className="min-w-0">
+        <p className="truncate text-muted-foreground">{pv.label} · not ready</p>
+        <p className="text-[10px] text-muted-foreground">{pv.reason}</p>
+        <p className="text-[10px] text-royal/70 mt-0.5">Generated automatically during manufacturing.</p>
+      </div>
+    </div>
+  );
+}
+
+function PreviewViewer({ viewer, onClose }) {
+  const [loading, setLoading] = useState(true);
+  const url = viewer.url;
+  const ext = (url.split("?")[0].split(".").pop() || "").toLowerCase();
+  const isImage = ["png", "jpg", "jpeg", "webp", "gif", "svg"].includes(ext);
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-4" onClick={onClose} data-testid="preview-viewer">
+      <div className="bg-card rounded-md w-full max-w-4xl h-[88vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-2.5 border-b shrink-0">
+          <p className="font-heading font-semibold text-navy text-sm truncate">{viewer.title}</p>
+          <div className="flex items-center gap-3 shrink-0">
+            <a href={url} target="_blank" rel="noreferrer" className="text-xs text-royal inline-flex items-center gap-1 hover:underline" data-testid="preview-open-tab"><ExternalLink className="w-3.5 h-3.5" /> New tab</a>
+            <button onClick={onClose} data-testid="preview-viewer-close"><X className="w-5 h-5 text-muted-foreground" /></button>
+          </div>
+        </div>
+        <div className="relative flex-1 bg-muted/30">
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center gap-2 text-sm text-muted-foreground" data-testid="preview-loading">
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading preview…
+            </div>
+          )}
+          {isImage ? (
+            <div className="w-full h-full overflow-auto flex items-center justify-center p-4">
+              <img src={url} alt={viewer.title} onLoad={() => setLoading(false)} className="max-w-full max-h-full object-contain" />
+            </div>
+          ) : (
+            <iframe title={viewer.title} src={url} onLoad={() => setLoading(false)} className="w-full h-full border-0" />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EvidenceCenter({ ev, busy, onClose, onDecide }) {
   const abs = (u) => (u ? (u.startsWith("http") ? u : `${BACKEND}${u}`) : null);
   const [reviseOpen, setReviseOpen] = useState(false);
   const [note, setNote] = useState("");
+  const [viewer, setViewer] = useState(null);
   if (ev.loading) {
     return (
       <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" data-testid="evidence-center">
@@ -379,42 +428,55 @@ function EvidenceCenter({ ev, busy, onClose, onDecide }) {
             </div>
           )}
 
-          {/* Preview section — see exactly what the customer receives */}
+          {/* Preview section — see exactly what the customer receives (in-app viewer, instant feedback) */}
           <div>
             <p className="text-xs font-semibold text-navy mb-2">What the Customer Will Receive</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2" data-testid="evidence-previews">
               {d.previews.map((pv) => {
                 const Icon = PREVIEW_ICON[pv.key] || FileText;
-                const hasFiles = (pv.files || []).length > 0;
+                const files = pv.files || [];
+                const hasFiles = files.length > 0;
+                // Knowledge Record links to the Promotion Pipeline; others open in the viewer.
+                if (pv.key === "knowledge_record") {
+                  const kr = d.knowledge_record;
+                  return kr ? (
+                    <button key={pv.key} data-testid={`preview-${pv.key}`} onClick={() => window.location.assign("/promotion-pipeline")}
+                      className="flex items-center gap-2 border rounded-sm px-2 py-2 text-xs hover:border-primary text-left">
+                      <Icon className="w-4 h-4 text-royal shrink-0" /><span className="flex-1 truncate">Knowledge Record · {kr.code}</span><ExternalLink className="w-3 h-3 text-muted-foreground" />
+                    </button>
+                  ) : (
+                    <DisabledPreview key={pv.key} pv={pv} Icon={Icon} />
+                  );
+                }
                 if (pv.available && pv.url) {
                   return (
-                    <a key={pv.key} data-testid={`preview-${pv.key}`} href={abs(pv.url)} target="_blank" rel="noreferrer"
-                      className="flex items-center gap-2 border rounded-sm px-2 py-2 text-xs hover:border-primary">
-                      <Icon className="w-4 h-4 text-royal shrink-0" /><span className="flex-1 truncate">{pv.label}</span><ExternalLink className="w-3 h-3 text-muted-foreground" />
-                    </a>
+                    <button key={pv.key} data-testid={`preview-${pv.key}`} onClick={() => setViewer({ url: abs(pv.url), title: pv.label })}
+                      className="flex items-center gap-2 border rounded-sm px-2 py-2 text-xs hover:border-primary text-left transition-colors" title={`Open ${pv.label}`}>
+                      <Icon className="w-4 h-4 text-royal shrink-0" /><span className="flex-1 truncate">{pv.label}</span><Eye className="w-3.5 h-3.5 text-royal shrink-0" />
+                    </button>
                   );
                 }
                 if (pv.available && hasFiles) {
                   return (
                     <div key={pv.key} data-testid={`preview-${pv.key}`} className="border rounded-sm px-2 py-2 text-xs">
-                      <p className="flex items-center gap-2 mb-1"><Icon className="w-4 h-4 text-royal shrink-0" /><span className="truncate">{pv.label} ({pv.files.length})</span></p>
+                      <p className="flex items-center gap-2 mb-1"><Icon className="w-4 h-4 text-royal shrink-0" /><span className="truncate">{pv.label} ({files.length})</span></p>
                       <div className="flex flex-wrap gap-1">
-                        {pv.files.slice(0, 6).map((f, k) => (
-                          <a key={k} href={abs(f.url)} target="_blank" rel="noreferrer" className="text-[10px] px-1.5 py-0.5 rounded bg-royal/10 text-royal hover:bg-royal/20 truncate max-w-[100px]">{f.label || f.format || `file ${k + 1}`}</a>
+                        {files.slice(0, 6).map((f, k) => (
+                          <button key={k} data-testid={`preview-${pv.key}-file-${k}`} onClick={() => setViewer({ url: abs(f.url), title: f.label || f.format || `${pv.label} ${k + 1}` })}
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-royal/10 text-royal hover:bg-royal/20 truncate max-w-[110px] inline-flex items-center gap-1">
+                            <Eye className="w-3 h-3" />{f.label || f.format || `file ${k + 1}`}
+                          </button>
                         ))}
                       </div>
                     </div>
                   );
                 }
-                return (
-                  <div key={pv.key} data-testid={`preview-${pv.key}`} className="flex items-start gap-2 border border-dashed rounded-sm px-2 py-2 text-xs bg-muted/40" title={pv.reason}>
-                    <Icon className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <div className="min-w-0"><p className="truncate">{pv.label}</p><p className="text-[10px] text-muted-foreground">{pv.reason}</p></div>
-                  </div>
-                );
+                return <DisabledPreview key={pv.key} pv={pv} Icon={Icon} />;
               })}
             </div>
+            <p className="text-[10px] text-muted-foreground mt-1.5">Greyed items aren't ready yet — the factory generates them automatically during manufacturing.</p>
           </div>
+          {viewer && <PreviewViewer viewer={viewer} onClose={() => setViewer(null)} />}
 
           {/* Decisions */}
           <div className="border-t pt-4">
