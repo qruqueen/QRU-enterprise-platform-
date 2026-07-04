@@ -62,6 +62,42 @@ export default function FounderBetaDashboard() {
           );
         })}
       </div>
+
+      {/* Founder Beta Counter™ — progress toward 25 consecutive successful runs */}
+      {d.counter && (
+        <div className="mt-4 bg-card border rounded-xl p-4" data-testid="beta-counter">
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <p className="font-heading font-semibold text-navy">Founder Beta Counter™</p>
+            <span className={`text-[12px] px-2.5 py-1 rounded-full font-medium ${d.counter.beta_complete ? "bg-emerald-600 text-white" : "bg-gold/20 text-royal"}`} data-testid="beta-milestone">
+              {d.counter.consecutive_successful_runs} / {d.counter.milestone_target} consecutive runs
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-3">
+            <BetaStat label="Started" value={d.counter.products_started} />
+            <BetaStat label="Manufactured" value={d.counter.products_manufactured} />
+            <BetaStat label="Published" value={d.counter.products_published} />
+            <BetaStat label="Purchased" value={d.counter.products_purchased} />
+            <BetaStat label="Consecutive Runs" value={d.counter.consecutive_successful_runs} tone="text-royal" />
+            <BetaStat label="Success Rate" value={`${d.counter.manufacturing_success_rate}%`} tone="text-emerald-600" />
+            <BetaStat label="Hours Saved" value={`${d.counter.founder_hours_saved}h`} tone="text-emerald-600" />
+          </div>
+          <div className="h-2 w-full bg-muted rounded-full overflow-hidden mb-2">
+            <div className={`h-full ${d.counter.beta_complete ? "bg-emerald-500" : "bg-gold"}`} style={{ width: `${d.counter.milestone_progress_pct}%` }} />
+          </div>
+          <p className={`text-[13px] font-medium ${d.counter.beta_complete ? "text-emerald-700" : "text-navy"}`} data-testid="beta-recommendation">
+            {d.counter.beta_complete ? "🎉 " : ""}{d.counter.recommendation}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BetaStat({ label, value, tone }) {
+  return (
+    <div className="border rounded-sm p-2">
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground leading-tight">{label}</p>
+      <p className={`font-heading text-xl font-bold ${tone || "text-navy"}`}>{value}</p>
     </div>
   );
 }

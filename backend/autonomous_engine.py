@@ -554,5 +554,60 @@ async def founder_beta_summary():
         "q5_publish_readiness": {"ready_to_publish": len(ready_to_publish), "avg_progress_pct": avg_progress,
                                  "closest": ladders[:8],
                                  "headline": (f"{len(ready_to_publish)} product(s) ready to publish now · library {avg_progress}% to publication" if ready_to_publish else f"Library is {avg_progress}% of the way to publication")},
+        "counter": await founder_beta_counter(products),
         "generated_at": now_iso(),
+    }
+
+
+def _mfg_success(p):
+    """A product counts as 'successfully manufactured' once it reaches review-ready or beyond."""
+    if p.get("status") in ("Rejected", "Failed"):
+        return False
+    return bool(p.get("deliverable_ready")) and bool((p.get("design_gate") or {}).get("gated_at"))
+
+
+async def founder_beta_counter(products=None):
+    """Founder Beta Counter™ (MO-043 stabilization) — progress toward 25 consecutive
+    successful manufacturing runs. Deterministic, $0 AI."""
+    if products is None:
+        products = await db.products.find({}, {"content": 0}).to_list(5000)
+    started = len(products)
+    manufactured = sum(1 for p in products if _mfg_success(p))
+    published = sum(1 for p in products if p.get("status") == "Published")
+    try:
+        purchased = await db.purchases.count_documents({})
+    except Exception:
+        purchased = 0
+
+    # Consecutive successful runs = trailing streak in creation order (a Rejected/Failed breaks it).
+    ordered = sorted(products, key=lambda p: p.get("created_at") or "")
+    streak = 0
+    for p in reversed(ordered):
+        if p.get("status") in ("Rejected", "Failed"):
+            break
+        if _mfg_success(p) or p.get("status") in ("Published", "Approved"):
+            streak += 1
+        else:
+            # In-progress items don't break the streak but don't count either; stop counting.
+            break
+    success_rate = round(100 * manufactured / started) if started else 0
+
+    engine_actions = await ACTION_COL.count_documents({"engine": True, "kind": "advance"})
+    hours_saved = round(engine_actions * 12 / 60, 1)
+
+    target = 25
+    complete = streak >= target
+    return {
+        "products_started": started,
+        "products_manufactured": manufactured,
+        "products_published": published,
+        "products_purchased": purchased,
+        "consecutive_successful_runs": streak,
+        "manufacturing_success_rate": success_rate,
+        "founder_hours_saved": hours_saved,
+        "milestone_target": target,
+        "milestone_progress_pct": min(100, round(100 * streak / target)),
+        "beta_complete": complete,
+        "recommendation": ("Founder Beta Complete — Ready for Production Review." if complete
+                           else f"{target - streak} more consecutive successful run(s) to complete Founder Beta."),
     }
