@@ -5,6 +5,7 @@ import {
   Brain, Activity, Stethoscope, Wrench, Lightbulb, DollarSign, Gauge, Search,
   Users, Database, Loader2, CheckCircle2, AlertTriangle,
 } from "lucide-react";
+import AutonomyEngineDashboard from "@/components/AutonomyEngineDashboard";
 
 const SEV = { high: "text-red-600", medium: "text-amber-600", low: "text-slate-500", ok: "text-emerald-600" };
 
@@ -75,6 +76,10 @@ export default function AutonomyCenter() {
           The factory that continuously improves, diagnoses, and repairs itself — Level 5 Autonomy.
         </p>
       </div>
+
+      {/* AO-001 — Autonomous Manufacturing Engine™ (executive dashboard + master switch) */}
+      <AutonomyEngineDashboard />
+
 
       {/* Executive Brief */}
       <Section icon={Lightbulb} title="Executive Advisor™ — What to focus on today" testid="exec-brief">

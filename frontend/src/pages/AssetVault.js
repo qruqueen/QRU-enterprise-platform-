@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import {
   Upload, Loader2, Search, Download, Archive, ShieldCheck, Star, Link2, History,
-  FileImage, FileText, Music, Video, Package, Sparkles,
+  FileImage, FileText, Music, Video, Package, Sparkles, Factory, ArrowRight, Store,
 } from "lucide-react";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
@@ -243,8 +243,86 @@ function DetailDialog({ asset, meta, onClose, onChange }) {
             </div>
           </div>
         )}
+
+        <ManufacturePanel asset={asset} />
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ManufacturePanel({ asset }) {
+  const [plan, setPlan] = useState(null);
+  const [sel, setSel] = useState({});
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+
+  useEffect(() => {
+    api.get(`/asset-manufacturing/plan/${asset.id}`).then((r) => {
+      setPlan(r.data);
+      const pre = {};
+      (r.data.recommended_products || []).forEach((p) => { pre[p] = true; });
+      setSel(pre);
+    }).catch(() => {});
+  }, [asset.id]);
+
+  const manufacture = async (labels) => {
+    if (!labels || labels.length === 0) { toast.error("Select at least one product"); return; }
+    setBusy(true);
+    try {
+      const { data } = await api.post(`/asset-manufacturing/manufacture/${asset.id}`, { product_labels: labels });
+      toast.success(`Manufacturing ${data.count} product(s) — finishing in the background. Review in the Founder Inbox™.`);
+      setResult(data);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Manufacturing failed"); }
+    finally { setBusy(false); }
+  };
+
+  if (!plan) return null;
+  const selected = Object.keys(sel).filter((k) => sel[k]);
+
+  return (
+    <div className="mt-4 pt-4 border-t" data-testid="vault-manufacture-panel">
+      <p className="overline text-primary mb-1 flex items-center gap-1.5"><Factory className="w-3.5 h-3.5" /> Founder Manufacturing Panel™</p>
+      <div className="flex flex-wrap items-center gap-2 mb-3 text-xs">
+        <span className="px-2 py-0.5 rounded-full border bg-navy/5">Classified: <b>{plan.classification}</b></span>
+        <span className="px-2 py-0.5 rounded-full border bg-navy/5">~{plan.estimated_minutes} min</span>
+        <span className="px-2 py-0.5 rounded-full border bg-navy/5">{plan.product_count} compatible products</span>
+      </div>
+      <p className="text-[11px] text-muted-foreground mb-3">{plan.hero_handling}</p>
+
+      <p className="text-xs font-semibold text-navy mb-1.5">Compatible Products</p>
+      <div className="grid grid-cols-2 gap-1.5 mb-3 max-h-40 overflow-y-auto">
+        {plan.compatible_products.map((p) => (
+          <label key={p} className="flex items-center gap-2 text-xs border rounded-sm px-2 py-1.5 cursor-pointer hover:border-primary" data-testid={`mfg-product-${p.replace(/\s+/g, "-")}`}>
+            <input type="checkbox" checked={!!sel[p]} onChange={(e) => setSel({ ...sel, [p]: e.target.checked })} />
+            <span className="truncate">{p}</span>
+          </label>
+        ))}
+      </div>
+
+      <p className="text-xs font-semibold text-navy mb-1.5">Compatible Marketplaces</p>
+      <div className="flex flex-wrap gap-1 mb-4">
+        {plan.compatible_marketplaces.map((m) => (
+          <span key={m.id} className="text-[10px] px-1.5 py-0.5 rounded bg-gold/15 text-navy" title={`${m.dimensions} · ${m.dpi}dpi · ${m.format}`}>{m.name}</span>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button data-testid="mfg-recommended" onClick={() => manufacture(plan.recommended_products)} disabled={busy}
+          className="inline-flex items-center gap-1.5 bg-navy text-white text-sm px-3 py-2 rounded-sm disabled:opacity-60">
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Manufacture Recommended ({plan.recommended_products.length})
+        </button>
+        <button data-testid="mfg-selected" onClick={() => manufacture(selected)} disabled={busy || selected.length === 0}
+          className="inline-flex items-center gap-1.5 border text-sm px-3 py-2 rounded-sm hover:border-primary disabled:opacity-60">
+          <ArrowRight className="w-4 h-4" /> Manufacture Selected ({selected.length})
+        </button>
+      </div>
+
+      {result && (
+        <div className="mt-3 p-2 bg-emerald-50 border border-emerald-200 rounded-sm text-xs text-emerald-800" data-testid="mfg-result">
+          <p className="flex items-center gap-1.5"><Store className="w-3.5 h-3.5" /> Started {result.count} product(s) ({result.classification}). Deliverables render in the background — review & publish them in the Founder Review Inbox™.</p>
+        </div>
+      )}
+    </div>
   );
 }
 

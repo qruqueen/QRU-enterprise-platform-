@@ -55,6 +55,8 @@ from routers.marketing import router as marketing_router
 from routers.design_director import router as design_director_router
 from routers.factory_audit import router as factory_audit_router
 from routers.founder_inbox import router as founder_inbox_router
+from routers.autonomy_engine import router as autonomy_engine_router
+from routers.asset_manufacturing import router as asset_manufacturing_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
 from routers.misc import (
@@ -89,6 +91,8 @@ for r in [
     design_director_router,
     factory_audit_router,
     founder_inbox_router,
+    autonomy_engine_router,
+    asset_manufacturing_router,
 ]:
     app.include_router(r)
 

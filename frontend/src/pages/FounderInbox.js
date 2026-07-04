@@ -20,6 +20,14 @@ const FILTERS = [
   { key: "blocked", label: "Blocked" },
 ];
 
+const HEALTH_STYLE = {
+  ready: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  needs_metadata: "bg-amber-50 text-amber-700 border-amber-200",
+  needs_assets: "bg-orange-50 text-orange-700 border-orange-200",
+  needs_knowledge: "bg-blue-50 text-blue-700 border-blue-200",
+  blocked: "bg-red-50 text-red-700 border-red-200",
+};
+
 export default function FounderInbox() {
   const [data, setData] = useState(null);
   const [filter, setFilter] = useState("ready_for_review");
@@ -109,6 +117,8 @@ export default function FounderInbox() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-heading font-semibold">{p.title}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full border ${HEALTH_STYLE[p.data_health] || "bg-muted"}`} title={(p.data_health_reasons || []).join(" · ")} data-testid={`inbox-health-${p.product_code}`}>{p.data_health_emoji} {p.data_health_label}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full border ${p.confidence_band === "High" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : p.confidence_band === "Medium" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-red-50 text-red-700 border-red-200"}`} data-testid={`inbox-confidence-${p.product_code}`}>Confidence {p.factory_confidence}%</span>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.design_passed ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>Design {p.design_score ?? "—"}</span>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full border ${p.treasure_standard ? "bg-gold/10 text-royal border-gold" : "bg-muted"}`}>TS™ {p.treasure_status}</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full border">Market {p.marketplace_readiness}</span>

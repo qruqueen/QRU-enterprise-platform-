@@ -412,3 +412,36 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 - **Bug:** `undefined is not an object (evaluating 'b.who_for')` — Product Detail rendered the creative-brief block unconditionally; 24 products have no `creative_brief`.
 - **Fix:** `frontend/src/lib/safeRender.js` (`normalizeProduct` fills required fields — title/subtitle/type/who_for/description/price/status/thumbnail/preview/KR id — with safe placeholders and logs missing fields for maintenance; `safeBrief` guarantees a safe creative_brief). `components/ErrorBoundary.js` is a page-level Safe Render™ net wrapping `<Outlet/>` (keyed by route) so no customer-facing page white-screens on missing data. `ProductDetail.js` applies `normalizeProduct` on load.
 - **Tested:** testing_agent iteration_23 — the 3 previously-crashing pages (PRD-00001/00002/00011) now render with placeholders ("General Audience", "Coming Soon"); zero TypeErrors, zero React errors; product WITH a brief still renders correctly. Frontend 100%, zero issues.
+
+## Iteration 24 (2026-07-04) · QRU Autonomy Initiative — AO-001 + AO-002 + MO-038 + MO-039 · VERIFIED (backend 10/10)
+> Founder approved ONE integrated autonomy initiative (feature expansion paused). All deterministic / **$0 AI** (no LLM in the autonomy loop). Nothing auto-publishes; Founder keeps final authority. Reuses/extends existing architecture (Autonomy Center, Design Director™, Treasure Standard™, Product Protection™, Asset Vault™, Founder Inbox™).
+
+### MO-038 — Factory Confidence™ + Data Health™ (`factory_confidence.py`)
+- `data_health(p)` → deterministic traffic light: 🟢 Ready / 🟡 Needs Metadata / 🟠 Needs Assets / 🔵 Needs Knowledge / 🔴 Blocked, with checklist + reasons.
+- `factory_confidence(p)` → composite 0-100 (Design 30 + Treasure 20 + Data Health 20 + Marketplace 15 + Recipe 15) with High/Medium/Low band.
+- `publish_gate(p)` → un-bypassable: blocks unless Data Health = ready, Design ≥ 91, verified, creative reviewed, deliverable rendered.
+- Founder Inbox payload now carries data_health/label/emoji/reasons + factory_confidence/band + publishable/publish_blockers; approve refuses to publish non-ready products (records approval + lists what's required). Inbox rows show Data Health + Confidence chips.
+
+### AO-001 — Autonomous Manufacturing Engine™ (`autonomous_engine.py`, `routers/autonomy_engine.py` → `/api/autonomy-engine/*`)
+- `next_action(p)` deterministic state machine; `advance_product(pid)` runs the full $0-AI chain (brand → deliverable → design gate → **deterministic verify** → creative brief → protect → Founder Inbox). Verify is `_deterministic_verify` — NEVER calls the LLM.
+- `priority_queue()` ranks by the approved priority order (protect customer → finish blocked → improve → founder review → blocked-on-source).
+- `run_cycle()` respects a global Founder ON/OFF switch (default OFF); manual "Run Cycle Now" is fire-and-forget (background) so it never times out. Wired into the existing 180s watcher loop.
+- `overview()` = executive dashboard (Currently Manufacturing, Waiting for Founder, Blocked, Made/Published Today, Founder Hours Saved, Automation Rate, TS Pass Rate, Avg Factory Confidence, System Health, Next Recommended Action).
+- Frontend: `components/AutonomyEngineDashboard.jsx` embedded at top of `AutonomyCenter.js` (`/autonomy`) — master switch, metrics, priority queue with per-product Advance, Waiting/Blocked lists, recent autonomous work, Factory Learning strip.
+
+### AO-002 — Autonomous Asset Manufacturing Engine™ (`asset_manufacturing.py`, `routers/asset_manufacturing.py` → `/api/asset-manufacturing/*`)
+- `classify_asset` (19 classes), `manufacturing_plan` (compatible products + 12-marketplace specs w/ dimensions/DPI/bleed/format + recommended order + est time), `manufacture_from_asset` (Founder-triggered; preserves a completed-product asset as the raw hero visual, creates products fast + renders deliverables/design gate in the **background**).
+- Frontend: Founder Manufacturing Panel™ inside the Asset Vault detail dialog (classification, product checkboxes, marketplace chips, Manufacture Recommended / Selected).
+
+### MO-039 — Recovery + Memory + Learning (in `autonomous_engine.py`)
+- Autonomous Recovery Engine™: each step retries (2 attempts) then escalates that product only (never stops the whole factory).
+- Manufacturing Memory™ (`manufacturing_memory` collection) + `factory_learning()` (auto-recovery rate, interruptions prevented, common failures) surfaced on the dashboard.
+- Founder Translation Layer™: plain-language action labels (no WF IDs) throughout.
+
+### Verified
+- testing_agent iteration_24.json: backend 10/10 (advance <1s $0-AI confirmed; run-cycle fire-and-forget; publish gate un-bypassable; asset plan/manufacture no auto-publish). Frontend: dashboard, toggle, advance, inbox chips (32/32), manufacturing panel all render. Post-test fix: `manufacture_from_asset` now renders in the background (0.5s response) to avoid the 60s ingress timeout.
+
+### Next / Backlog
+- P1: Founder home (MissionControl) executive-summary widget mirroring the engine dashboard; Engineering Console consolidation of technical logs.
+- P1: Bulk Library Import (folder → Knowledge Records w/ dedupe) — still pending.
+- Blocked (external): Forex Master Manuscript upload (`QFC-001_Master_Manuscript_v0.5.docx`) to promote the 10 Forex seeds; LLM daily cap (deterministic fallbacks cover it).

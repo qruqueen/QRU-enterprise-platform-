@@ -15,6 +15,7 @@ from typing import List, Optional
 from database import db
 from auth import get_current_user
 from models import now_iso, clean
+import factory_confidence as fc
 
 router = APIRouter(prefix="/api/founder-inbox", tags=["founder-inbox"])
 
@@ -58,18 +59,22 @@ def _meta(p):
             tags.append("ready_for_store")
         if p.get("status") not in ("Approved", "Published"):
             tags.append("needs_founder_decision")
-    publish_blockers = []
-    if not creative_ok:
-        publish_blockers.append("Creative Studio review")
-    if not verified:
-        publish_blockers.append("Product Protection™ verification")
+
+    # MO-038 — Data Health™ + Factory Confidence™ + un-bypassable publish gate.
+    confidence = fc.factory_confidence(p)
+    dh = confidence["data_health"]
+    publishable, publish_blockers = fc.publish_gate(p)
 
     return {
         "design_score": score, "design_passed": passed,
         "treasure_standard": bool(p.get("treasure_standard")),
         "treasure_status": p.get("treasure_standard_status") or ("Certified" if p.get("treasure_standard") else "Pending"),
         "marketplace_readiness": marketplace, "preview_available": preview,
-        "publishable": ready and verified and creative_ok,
+        "data_health": dh["status"], "data_health_label": dh["label"],
+        "data_health_emoji": dh["emoji"], "data_health_reasons": dh["reasons"],
+        "factory_confidence": confidence["score"], "confidence_band": confidence["band"],
+        "confidence_components": confidence["components"],
+        "publishable": publishable,
         "publish_blockers": publish_blockers,
         "blockers": blockers, "filter_tags": sorted(set(tags)),
     }

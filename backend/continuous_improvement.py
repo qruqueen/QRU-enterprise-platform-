@@ -255,6 +255,12 @@ async def watcher_loop():
         try:
             await auto_resume_safe_jobs()
             await review_completed_batches()
+            # AO-001 — Autonomous Manufacturing Engine™ advances safe products when enabled.
+            try:
+                import autonomous_engine as ae
+                await ae.run_cycle(actor="Autonomy Watcher™")
+            except Exception as e:
+                logger.warning(f"autonomous engine cycle error: {e}")
         except Exception as e:
             logger.warning(f"watcher loop error: {e}")
         await asyncio.sleep(180)
