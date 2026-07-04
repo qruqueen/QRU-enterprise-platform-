@@ -76,6 +76,8 @@ def _meta(p):
         "confidence_components": confidence["components"],
         "publishable": publishable,
         "publish_blockers": publish_blockers,
+        "design_escalation": p.get("design_escalation"),
+        "design_result": (p.get("design_gate") or {}).get("result_summary"),
         "blockers": blockers, "filter_tags": sorted(set(tags)),
     }
 

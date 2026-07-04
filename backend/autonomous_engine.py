@@ -129,6 +129,10 @@ def next_action(p, threshold=91):
     if ok:
         return {"step": "founder_review", "label": "Awaiting Founder publish decision",
                 "needs_founder": True, "reason": "Publishing approval is required."}
+    esc = p.get("design_escalation")
+    if esc:
+        return {"step": "needs_fix", "label": "Needs Founder input",
+                "needs_founder": True, "reason": esc.get("stopped_reason", "; ".join(blockers[:2]))}
     return {"step": "needs_fix", "label": "Needs improvement",
             "needs_founder": True, "reason": "; ".join(blockers[:2])}
 

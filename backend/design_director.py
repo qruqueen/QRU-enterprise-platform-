@@ -252,8 +252,43 @@ async def record_reference(product):
         "recorded_at": now_iso()}}, upsert=True)
 
 
+# --------------------------------------------------------------------------- #
+# MO-039 — Autonomous Improvement Mode™: escalation intelligence.
+# Categories the Factory can safely repair deterministically vs those needing a human.
+# --------------------------------------------------------------------------- #
+_DETERMINISTIC_FIXABLE = {
+    "Visual Hierarchy", "Typography", "Layout & Spacing", "Accessibility",
+    "QRU Branding", "Print Readiness", "Marketplace Readiness", "Product-Type Compliance",
+    "Treasure Standard™ Compliance",
+}
+_NEEDS_FOUNDER = {"Understanding & Clarity", "Educational Effectiveness"}
+
+
+def improvement_escalation(scorecard, product):
+    """After Autonomous Improvement Mode™ runs, decide whether the Founder is genuinely
+    needed and, if so, explain exactly what remains and what decision is required."""
+    if scorecard.get("passed"):
+        return None
+    remaining = [l["category"] for l in scorecard.get("deductions", [])]
+    content_gaps = [c for c in remaining if c in _NEEDS_FOUNDER]
+    if content_gaps:
+        return {
+            "needs_founder": True,
+            "stopped_reason": "Knowledge content is too thin for the Factory to reach the Gold Standard on its own.",
+            "whats_remaining": remaining,
+            "decision_needed": "Add or promote a fuller Knowledge Record (content), then the Factory finishes automatically.",
+            "category": "knowledge_content",
+        }
+    return {
+        "needs_founder": True,
+        "stopped_reason": "The Factory applied every safe deterministic repair, but the design is still below the Gold Standard.",
+        "whats_remaining": remaining,
+        "decision_needed": "Provide creative direction, or approve the current design as an acceptable choice.",
+        "category": "creative_direction",
+    }
+
+
 def _issue_tags(scorecard):
-    """Recurring-issue tags for Factory Continuous Improvement™."""
     tags = []
     for l in scorecard.get("deductions", []):
         tag = _ISSUE_TAGS.get(l["category"])
@@ -313,6 +348,18 @@ async def auto_gate(pid, actor="QRU Design Director™"):
 
     # ~18 min of manual design QC saved per product + 4 min per improvement pass.
     time_saved = 18 + 4 * improvements.get("iterations", 0)
+    p_after = await db.products.find_one({"id": pid})
+    escalation = improvement_escalation(final, p_after)
+    result_summary = {
+        "manufactured": True,
+        "autonomous_improvements": improvements.get("iterations", 0),
+        "improved_categories": improvements.get("improved_categories", []),
+        "final_design_score": final["overall"],
+        "gold_standard": s["passing_score"],
+        "passed": final["passed"],
+        "treasure_status": p_after.get("treasure_standard_status") or ("Certified" if p_after.get("treasure_standard") else "Pending"),
+        "needs_founder": bool(escalation),
+    }
     gate = {
         "score": final["overall"], "passed": final["passed"],
         "passing_score": s["passing_score"],
@@ -321,20 +368,28 @@ async def auto_gate(pid, actor="QRU Design Director™"):
         "issue_tags": _issue_tags(final),
         "gated_at": now_iso(), "gated_by": actor,
         "estimated_ai_cost_usd": improvements.get("estimated_ai_cost_usd", 0.0),
+        "escalation": escalation,
+        "result_summary": result_summary,
     }
-    await db.products.update_one({"id": pid}, {"$set": {"design_gate": gate, "updated_at": now_iso()}})
+    await db.products.update_one({"id": pid}, {"$set": {
+        "design_gate": gate, "design_escalation": escalation, "updated_at": now_iso()}})
     p = await db.products.find_one({"id": pid})
     await record_telemetry(p, final, improvements, time_saved)
     if final["passed"]:
         await record_reference(p)
     try:
         from org_activity import log_org
-        await log_org("QRU Design Director™", "Creative Studio",
-                      f"auto-gated ({final['overall']}/100, {'passed' if final['passed'] else 'flagged'}) before Founder Review for",
+        if final["passed"]:
+            note = f"reached the Gold Standard ({final['overall']}/100) after {improvements.get('iterations',0)} autonomous improvement pass(es) for"
+        else:
+            note = f"auto-improved to {final['overall']}/100 and escalated to the Founder ({(escalation or {}).get('category','')}) for"
+        await log_org("QRU Design Director™", "Creative Studio", note,
                       p.get("product_code", ""), "success" if final["passed"] else "warning")
     except Exception:
         pass
-    return {"gate": gate, "scorecard": final, "improvements": improvements, "time_saved_minutes": time_saved}
+    return {"gate": gate, "scorecard": final, "improvements": improvements,
+            "escalation": escalation, "result_summary": result_summary,
+            "time_saved_minutes": time_saved}
 
 
 async def telemetry(limit=300):

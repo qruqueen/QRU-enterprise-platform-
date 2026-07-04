@@ -4,7 +4,7 @@ import { PageHeader, EmptyState } from "@/components/shared";
 import { toast } from "sonner";
 import {
   Loader2, Inbox, CheckCircle2, Eye, Download, FileText, Gauge, RotateCcw, Archive, EyeOff,
-  ShieldCheck, X, AlertTriangle, Store,
+  ShieldCheck, X, AlertTriangle, Store, Sparkles, Wrench,
 } from "lucide-react";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
@@ -127,6 +127,16 @@ export default function FounderInbox() {
                     <p className="text-[11px] text-muted-foreground mt-0.5">{p.product_code} · {p.product_type} · {p.category} · {p.status}</p>
                     {p.blockers.length > 0 && (
                       <p className="text-[11px] text-amber-700 mt-1 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> {p.blockers.join(" · ")}</p>
+                    )}
+                    {p.design_result && (
+                      <p className="text-[11px] text-emerald-700 mt-1 flex items-center gap-1" data-testid={`inbox-autoimprove-${p.product_code}`}>
+                        <Sparkles className="w-3 h-3" /> Autonomous improvements: {p.design_result.autonomous_improvements} pass(es) → Design {p.design_result.final_design_score}/{p.design_result.gold_standard}{p.design_result.passed ? " · Gold Standard ✓" : ""}
+                      </p>
+                    )}
+                    {p.design_escalation && (
+                      <p className="text-[11px] text-orange-700 mt-1 flex items-start gap-1" data-testid={`inbox-escalation-${p.product_code}`}>
+                        <Wrench className="w-3 h-3 mt-0.5 shrink-0" /> <span><b>Founder input needed:</b> {p.design_escalation.stopped_reason} — {p.design_escalation.decision_needed}</span>
+                      </p>
                     )}
                     {/* Buttons */}
                     <div className="flex flex-wrap gap-2 mt-2">
