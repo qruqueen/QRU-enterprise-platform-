@@ -27,6 +27,7 @@ import CreativeStudio from "@/pages/CreativeStudio";
 import DesignIntelligence from "@/pages/DesignIntelligence";
 import DesignDirector from "@/pages/DesignDirector";
 import FactoryHealth from "@/pages/FactoryHealth";
+import FounderInbox from "@/pages/FounderInbox";
 import MemoryEngineering from "@/pages/MemoryEngineering";
 import MediaStudio from "@/pages/MediaStudio";
 import TopicRegistry from "@/pages/TopicRegistry";
@@ -96,6 +97,7 @@ function EnterpriseRoutes() {
         <Route path="design-intelligence" element={<DesignIntelligence />} />
         <Route path="design-director" element={<DesignDirector />} />
         <Route path="factory-health" element={<FactoryHealth />} />
+        <Route path="founder-inbox" element={<FounderInbox />} />
         <Route path="memory-engineering" element={<MemoryEngineering />} />
         <Route path="media-studio" element={<MediaStudio />} />
         <Route path="knowledge" element={<KnowledgeRecords />} />
