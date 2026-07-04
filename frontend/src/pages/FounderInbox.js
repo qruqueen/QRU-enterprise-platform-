@@ -307,6 +307,40 @@ function EvidenceCenter({ ev, busy, onClose, onDecide }) {
             </div>
           )}
 
+          {/* Autonomous Improvement — Before vs After */}
+          {d.before_after && (
+            <div className="border rounded-sm p-3" data-testid="evidence-before-after">
+              <p className="text-xs font-semibold text-navy mb-2 flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-gold" /> Autonomous Improvement — Before vs After</p>
+              {d.before_after.iterations > 0 ? (
+                <>
+                  <div className="flex items-center gap-3 mb-2 text-sm">
+                    <span className="text-muted-foreground">Overall design</span>
+                    <span className="font-heading font-bold text-amber-600">{d.before_after.before_score}</span>
+                    <span className="text-muted-foreground">→</span>
+                    <span className="font-heading font-bold text-emerald-600">{d.before_after.after_score}</span>
+                    <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${d.before_after.score_delta > 0 ? "bg-emerald-50 text-emerald-700" : "bg-muted"}`}>{d.before_after.score_delta >= 0 ? "+" : ""}{d.before_after.score_delta}</span>
+                    <span className="text-[11px] text-muted-foreground ml-auto">{d.before_after.iterations} improvement pass(es)</span>
+                  </div>
+                  <div className="space-y-1">
+                    {d.before_after.categories.filter((c) => c.delta !== 0).length === 0 ? (
+                      <p className="text-[12px] text-muted-foreground">Overall score improved across passes; category grades held steady.</p>
+                    ) : d.before_after.categories.filter((c) => c.delta !== 0).map((c, k) => (
+                      <div key={k} className="flex items-center gap-2 text-[12px] border-b pb-1">
+                        <span className="flex-1 text-navy">{c.category}</span>
+                        <span className="text-amber-600">{c.before}/10</span>
+                        <span className="text-muted-foreground">→</span>
+                        <span className="text-emerald-600 font-medium">{c.after}/10</span>
+                        <span className="text-[10px] px-1 rounded bg-emerald-50 text-emerald-700">+{c.delta}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-[12px] text-emerald-700">Passed on first inspection ({d.before_after.after_score}/100) — no automated repairs were needed.</p>
+              )}
+            </div>
+          )}
+
           {/* Preview section — see exactly what the customer receives */}
           <div>
             <p className="text-xs font-semibold text-navy mb-2">What the Customer Will Receive</p>

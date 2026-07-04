@@ -225,6 +225,7 @@ async def _evidence(p):
             "autonomous": ver.get("autonomous"),
         } if ver else None),
         "publishable": m["publishable"], "publish_blockers": m["publish_blockers"],
+        "before_after": (p.get("design_gate") or {}).get("before_after"),
         "previews": previews, "cover_url": p.get("cover_url"),
     }
 

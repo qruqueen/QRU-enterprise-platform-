@@ -350,6 +350,24 @@ async def auto_gate(pid, actor="QRU Design Director™"):
     time_saved = 18 + 4 * improvements.get("iterations", 0)
     p_after = await db.products.find_one({"id": pid})
     escalation = improvement_escalation(final, p_after)
+
+    def _compact(sc):
+        return {"overall": sc.get("overall"),
+                "categories": {l["category"]: l["score"] for l in sc.get("categories", [])}}
+    _b, _a = _compact(before), _compact(final)
+    changed = sorted([c for c in _a["categories"]
+                      if _a["categories"].get(c, 0) != _b["categories"].get(c, 0)])
+    before_after = {
+        "before_score": _b["overall"], "after_score": _a["overall"],
+        "score_delta": (_a["overall"] or 0) - (_b["overall"] or 0),
+        "iterations": improvements.get("iterations", 0),
+        "categories": [
+            {"category": c, "before": _b["categories"].get(c), "after": _a["categories"].get(c),
+             "delta": (_a["categories"].get(c) or 0) - (_b["categories"].get(c) or 0)}
+            for c in sorted(set(list(_b["categories"]) + list(_a["categories"])))
+        ],
+        "changed_categories": changed,
+    }
     result_summary = {
         "manufactured": True,
         "autonomous_improvements": improvements.get("iterations", 0),
@@ -370,6 +388,7 @@ async def auto_gate(pid, actor="QRU Design Director™"):
         "estimated_ai_cost_usd": improvements.get("estimated_ai_cost_usd", 0.0),
         "escalation": escalation,
         "result_summary": result_summary,
+        "before_after": before_after,
     }
     await db.products.update_one({"id": pid}, {"$set": {
         "design_gate": gate, "design_escalation": escalation, "updated_at": now_iso()}})
