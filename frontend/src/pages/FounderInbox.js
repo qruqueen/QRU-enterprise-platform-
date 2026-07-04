@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   Loader2, Inbox, CheckCircle2, Eye, Download, FileText, Gauge, RotateCcw, Archive, EyeOff,
   ShieldCheck, X, AlertTriangle, Store, Sparkles, Wrench,
+  FileSearch, Pencil, ShieldQuestion, Ban, ExternalLink, BookOpen, Image as ImageIcon, Package,
 } from "lucide-react";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
@@ -34,9 +35,16 @@ export default function FounderInbox() {
   const [sel, setSel] = useState({});
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState(null);
+  const [ev, setEv] = useState(null); // Evidence-Based Decision Center™ dialog
 
   const load = () => api.get("/founder-inbox").then((r) => { setData(r.data); setSel({}); }).catch(() => {});
   useEffect(() => { load(); }, []);
+
+  const openEvidence = async (pid) => {
+    setEv({ loading: true });
+    try { const { data: d } = await api.get(`/founder-inbox/${pid}/evidence`); setEv({ loading: false, d }); }
+    catch (e) { setEv(null); toast.error("Could not load evidence"); }
+  };
 
   const doAction = async (pid, action) => {
     setBusy(true);
@@ -144,6 +152,7 @@ export default function FounderInbox() {
                       {primary && <a data-testid={`inbox-customer-${p.product_code}`} href={`${abs(primary.url)}?download=1&name=${encodeURIComponent(p.title)}`} className="text-xs flex items-center gap-1 border px-2 py-1 rounded-sm hover:border-primary"><Download className="w-3.5 h-3.5" /> Customer Edition</a>}
                       {p.preview_pdf_url && <a data-testid={`inbox-previewpdf-${p.product_code}`} href={`${BACKEND}/api/marketing/preview/${p.id}?fmt=pdf`} className="text-xs flex items-center gap-1 border px-2 py-1 rounded-sm hover:border-primary"><FileText className="w-3.5 h-3.5" /> Preview Edition</a>}
                       <button data-testid={`inbox-report-${p.product_code}`} onClick={() => viewReport(p.id)} className="text-xs flex items-center gap-1 border px-2 py-1 rounded-sm hover:border-primary"><Gauge className="w-3.5 h-3.5" /> Design Report</button>
+                      <button data-testid={`inbox-evidence-${p.product_code}`} onClick={() => openEvidence(p.id)} className="text-xs flex items-center gap-1 bg-royal text-white px-2 py-1 rounded-sm hover:opacity-90"><FileSearch className="w-3.5 h-3.5" /> Review Evidence & Decide</button>
                     </div>
                   </div>
                   {/* Decision buttons */}
@@ -185,6 +194,172 @@ export default function FounderInbox() {
           </div>
         </div>
       )}
+      {/* MO-040 — Evidence-Based Decision Center™ */}
+      {ev && (
+        <EvidenceCenter ev={ev} busy={busy} onClose={() => setEv(null)}
+          onDecide={async (pid, action) => { await doAction(pid, action); setEv(null); }} />
+      )}
+    </div>
+  );
+}
+
+const DECISIONS = [
+  { action: "approve", label: "Approve for Publication", icon: Store, cls: "bg-emerald-600 text-white hover:bg-emerald-700", desc: "Publishes to the QRU Store™ (only if all gates pass; otherwise records your approval and lists what remains)." },
+  { action: "return", label: "Return to Factory", icon: RotateCcw, cls: "border hover:border-primary", desc: "Sends it back so Creative Studio™ and Design Director™ re-run automatically." },
+  { action: "revise", label: "Request Revision", icon: Pencil, cls: "border hover:border-primary", desc: "Routes back for a specific correction and marks it Needs Revision." },
+  { action: "verify", label: "Send to Verification", icon: ShieldQuestion, cls: "border hover:border-primary", desc: "Re-runs Product Protection™ verification before it returns to you." },
+  { action: "reject", label: "Reject Product", icon: Ban, cls: "border border-red-300 text-red-700 hover:bg-red-50", desc: "Removes it from the manufacturing line entirely." },
+];
+
+const PREVIEW_ICON = {
+  html: Eye, pdf: FileText, png: ImageIcon, mobile: Eye, print: FileText, marketplace: Store,
+  thumbnail: ImageIcon, marketing: Sparkles, product_files: Package, source_assets: ImageIcon, knowledge_record: BookOpen,
+};
+
+function Ev({ label, value }) {
+  return (
+    <div className="border rounded-sm p-2">
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-sm text-navy font-medium">{value ?? "—"}</p>
+    </div>
+  );
+}
+
+function EvidenceCenter({ ev, busy, onClose, onDecide }) {
+  const abs = (u) => (u ? (u.startsWith("http") ? u : `${BACKEND}${u}`) : null);
+  if (ev.loading) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" data-testid="evidence-center">
+        <div className="bg-card rounded-md p-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+      </div>
+    );
+  }
+  const d = ev.d;
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose} data-testid="evidence-center">
+      <div className="bg-card rounded-md max-w-4xl w-full max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="sticky top-0 bg-card border-b px-5 py-3 flex items-center justify-between z-10">
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-royal font-semibold">Evidence-Based Decision Center™</p>
+            <p className="font-heading font-bold text-navy">{d.title}</p>
+          </div>
+          <button onClick={onClose} data-testid="evidence-close"><X className="w-5 h-5 text-muted-foreground" /></button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Recommendation banner */}
+          <div className={`rounded-sm p-3 border ${d.publishable ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`} data-testid="evidence-recommendation">
+            <p className="text-xs font-semibold text-navy flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-gold" /> AI Recommendation: {d.ai_recommendation}{d.ai_confidence != null ? ` · ${d.ai_confidence}% confidence` : ""}</p>
+            <p className="text-[13px] text-navy mt-1"><b>Reason for escalation:</b> {d.escalation_reason}</p>
+            <p className="text-[13px] text-navy"><b>Root cause:</b> {d.root_cause}</p>
+            <p className="text-[13px] text-navy"><b>Recommended resolution:</b> {d.recommended_resolution}</p>
+            {d.publish_blockers?.length > 0 && (
+              <p className="text-[12px] text-amber-800 mt-1 flex items-start gap-1"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> Still required before publication: {d.publish_blockers.join(" · ")}</p>
+            )}
+          </div>
+
+          {/* The 17 evidence items */}
+          <div>
+            <p className="text-xs font-semibold text-navy mb-2">Product Evidence</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <Ev label="Product Type" value={d.product_type} />
+              <Ev label="Status" value={d.product_status} />
+              <Ev label="Recipe Used" value={d.recipe_used} />
+              <Ev label="Design Score" value={`${d.design_score ?? "—"} / 91${d.design_passed ? " ✓" : ""}`} />
+              <Ev label="Treasure Standard™" value={d.treasure_standard_status} />
+              <Ev label="Factory Confidence™" value={`${d.factory_confidence}% (${d.confidence_band})`} />
+              <Ev label="Data Health™" value={`${d.data_health_emoji} ${d.data_health_label}`} />
+              <Ev label="Marketplace Readiness™" value={d.marketplace_readiness} />
+              <Ev label="AI Confidence" value={d.ai_confidence != null ? `${d.ai_confidence}%` : "—"} />
+            </div>
+          </div>
+
+          {/* Knowledge Record + Manufacturing Report */}
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="border rounded-sm p-3" data-testid="evidence-kr">
+              <p className="text-xs font-semibold text-navy mb-1 flex items-center gap-1.5"><BookOpen className="w-3.5 h-3.5 text-royal" /> Knowledge Record</p>
+              {d.knowledge_record ? (
+                <div className="text-[13px] text-navy space-y-0.5">
+                  <p>{d.knowledge_record.code} · {d.knowledge_record.title}</p>
+                  <p className="text-muted-foreground text-xs">Verification: {d.knowledge_record.verification_status || "—"} · Class: {d.knowledge_record.record_class || "—"}</p>
+                </div>
+              ) : <p className="text-[13px] text-amber-700">No Knowledge Record linked to this product.</p>}
+            </div>
+            <div className="border rounded-sm p-3" data-testid="evidence-mfg-report">
+              <p className="text-xs font-semibold text-navy mb-1 flex items-center gap-1.5"><Gauge className="w-3.5 h-3.5 text-royal" /> Manufacturing Report</p>
+              <div className="text-[12px] text-navy space-y-0.5">
+                <p>Content: {d.manufacturing_report.content_chars} chars · Formats: {(d.manufacturing_report.formats_rendered || []).join(", ") || "none"}</p>
+                <p>Deliverable: {d.manufacturing_report.deliverable_ready ? "rendered" : "not rendered"}{d.manufacturing_report.deliverable_validated ? " · validated" : ""} · Marketing kit: {d.manufacturing_report.marketing_kit_ready ? "ready" : "pending"}</p>
+                <p>Autonomous improvements: {d.manufacturing_report.autonomous_improvements} pass(es){(d.manufacturing_report.improved_categories || []).length ? ` (${d.manufacturing_report.improved_categories.join(", ")})` : ""}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Verification notes */}
+          {d.verification_notes && (d.verification_notes.decision || (d.verification_notes.issues || []).length > 0) && (
+            <div className="border rounded-sm p-3" data-testid="evidence-verification">
+              <p className="text-xs font-semibold text-navy mb-1 flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-royal" /> Verification Notes</p>
+              <p className="text-[13px] text-navy">{d.verification_notes.reviewer} · {d.verification_notes.decision} — {d.verification_notes.reasons || "No issues noted."}</p>
+              {(d.verification_notes.issues || []).length > 0 && (
+                <ul className="text-[12px] text-amber-700 list-disc pl-5 mt-1">{d.verification_notes.issues.map((i, k) => <li key={k}>{i}</li>)}</ul>
+              )}
+            </div>
+          )}
+
+          {/* Preview section — see exactly what the customer receives */}
+          <div>
+            <p className="text-xs font-semibold text-navy mb-2">What the Customer Will Receive</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2" data-testid="evidence-previews">
+              {d.previews.map((pv) => {
+                const Icon = PREVIEW_ICON[pv.key] || FileText;
+                const hasFiles = (pv.files || []).length > 0;
+                if (pv.available && pv.url) {
+                  return (
+                    <a key={pv.key} data-testid={`preview-${pv.key}`} href={abs(pv.url)} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-2 border rounded-sm px-2 py-2 text-xs hover:border-primary">
+                      <Icon className="w-4 h-4 text-royal shrink-0" /><span className="flex-1 truncate">{pv.label}</span><ExternalLink className="w-3 h-3 text-muted-foreground" />
+                    </a>
+                  );
+                }
+                if (pv.available && hasFiles) {
+                  return (
+                    <div key={pv.key} data-testid={`preview-${pv.key}`} className="border rounded-sm px-2 py-2 text-xs">
+                      <p className="flex items-center gap-2 mb-1"><Icon className="w-4 h-4 text-royal shrink-0" /><span className="truncate">{pv.label} ({pv.files.length})</span></p>
+                      <div className="flex flex-wrap gap-1">
+                        {pv.files.slice(0, 6).map((f, k) => (
+                          <a key={k} href={abs(f.url)} target="_blank" rel="noreferrer" className="text-[10px] px-1.5 py-0.5 rounded bg-royal/10 text-royal hover:bg-royal/20 truncate max-w-[100px]">{f.label || f.format || `file ${k + 1}`}</a>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                return (
+                  <div key={pv.key} data-testid={`preview-${pv.key}`} className="flex items-start gap-2 border border-dashed rounded-sm px-2 py-2 text-xs bg-muted/40" title={pv.reason}>
+                    <Icon className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <div className="min-w-0"><p className="truncate">{pv.label}</p><p className="text-[10px] text-muted-foreground">{pv.reason}</p></div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Decisions */}
+          <div className="border-t pt-4">
+            <p className="text-xs font-semibold text-navy mb-2">Your Decision</p>
+            <div className="grid sm:grid-cols-2 gap-2" data-testid="evidence-decisions">
+              {DECISIONS.map((b) => (
+                <button key={b.action} data-testid={`decide-${b.action}`} disabled={busy}
+                  onClick={() => onDecide(d.id, b.action)}
+                  className={`text-left rounded-sm px-3 py-2.5 text-sm flex items-start gap-2 disabled:opacity-60 ${b.cls}`}>
+                  <b.icon className="w-4 h-4 mt-0.5 shrink-0" />
+                  <span><span className="font-semibold block">{b.label}</span><span className="text-[11px] opacity-80">{b.desc}</span></span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
