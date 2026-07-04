@@ -18,7 +18,7 @@ logger = logging.getLogger("qru.design_director")
 
 SETTINGS_KEY = "design_director"
 DEFAULT_SETTINGS = {"passing_score": 90, "auto_improve": True, "max_iterations": 3,
-                    "allow_founder_override": True}
+                    "allow_founder_override": True, "allow_ai_hero_art": False}
 
 CATEGORIES = ["QRU Branding", "Treasure Standard™ Compliance", "Educational Clarity",
               "Visual Hierarchy", "Typography", "Graphics & Illustration", "Layout & Spacing",
@@ -61,6 +61,12 @@ async def score_product(product, files=None):
     hero = bool(product.get("cover_has_hero_art"))
     has_html = any(f.get("format") == "html" and f.get("bytes", 0) >= 4000 for f in files)
     has_pdf = any(f.get("format") == "pdf" and f.get("bytes", 0) >= 20000 for f in files)
+    # Recipe-aware output quality: a real, substantial downloadable file in the product's
+    # native format (PDF / EPUB / PPTX / PNG) — a Presentation ≠ a Book.
+    has_print_quality = any(
+        f.get("format") in ("pdf", "epub", "pptx", "png") and f.get("bytes", 0) >= 15000
+        for f in files
+    )
     deliver_ready = bool(product.get("deliverable_ready"))
     content_clean = not product.get("customer_content_review_required")
 
@@ -93,9 +99,12 @@ async def score_product(product, files=None):
     lines.append(_line("Typography", 9 if branded else 6,
                        "Premium serif/sans typographic system applied." if branded else "Default typography.",
                        "Use the QRU premium typography (Times body, Helvetica headings)."))
-    lines.append(_line("Graphics & Illustration", 9 if hero else 3,
-                       "Educational hero artwork present." if hero else "Relies primarily on text and lacks educational visuals.",
-                       "Generate QRU-style educational graphics, diagrams, icons, and callouts appropriate for the audience."))
+    lines.append(_line("Graphics & Illustration", 10 if hero else (7 if branded else 3),
+                       "Educational hero artwork present." if hero else (
+                           "Branded educational design (QRU cover + structured layout)." if branded else
+                           "Relies primarily on text and lacks educational visuals."),
+                       "Optional: add an AI educational hero illustration for extra polish." if branded else
+                       "Apply QRU branding and structure the content into visual, teaching layout blocks."))
     lines.append(_line("Layout & Spacing", 9 if branded else 6,
                        "Premium template spacing/margins." if branded else "Generic layout spacing.",
                        "Apply the QRU template margins, spacing, and grid."))
@@ -105,9 +114,9 @@ async def score_product(product, files=None):
     lines.append(_line("Readability", 9 if (has_html and chars >= 400) else 5,
                        "Responsive, readable customer edition." if has_html else "Readable edition not rendered.",
                        "Render the responsive HTML reading edition."))
-    lines.append(_line("Print Quality", 9 if has_pdf else 5,
-                       "Print-ready PDF rendered." if has_pdf else "No print-ready PDF.",
-                       "Render a paginated, print-ready PDF with cover + footers."))
+    lines.append(_line("Print Quality", 9 if has_print_quality else 5,
+                       "Print-ready deliverable rendered in the product's native format." if has_print_quality else "No substantial print/output-ready file.",
+                       "Render a paginated, print-ready file (PDF/EPUB/PPTX/PNG) with cover + footers."))
     lines.append(_line("Customer Readiness", 9 if (deliver_ready and content_clean) else 4,
                        "Customer-ready — no internal notes, deliverable validated." if (deliver_ready and content_clean) else "Not customer-ready (missing deliverable or internal notes present).",
                        "Render & validate the deliverable and remove any internal production notes."))
@@ -126,10 +135,12 @@ async def fix_design_issues(pid, actor="QRU Design Director™"):
     s = await get_settings()
     import rendering_engine as re_engine
     import deliverable_renderer as dr
+    allow_ai = bool(s.get("allow_ai_hero_art"))
     history, last = [], None
     for i in range(max(1, s["max_iterations"])):
         try:
-            await re_engine.ensure_branded_assets(pid, "Creative Studio™")   # attempts hero art, deterministic fallback
+            # Deterministic-first: re-renders spend ZERO AI unless allow_ai_hero_art is on.
+            await re_engine.ensure_branded_assets(pid, "QRU Design Director™", allow_ai_hero_art=allow_ai)
             await dr.ensure_deliverable(pid, actor)
         except Exception as e:
             logger.error(f"fix iteration {i+1} render failed: {e}")
@@ -151,8 +162,39 @@ async def fix_design_issues(pid, actor="QRU Design Director™"):
                       p.get("product_code", ""), "success" if history[-1]["passed"] else "warning")
     except Exception:
         pass
+    est_cost = round((len(history) * _rate_image()) if allow_ai else 0.0, 4)
     return {"history": history, "final": sc, "passed": sc["passed"],
-            "iterations": len(history), "max_iterations": s["max_iterations"]}
+            "iterations": len(history), "max_iterations": s["max_iterations"],
+            "allow_ai_hero_art": allow_ai, "estimated_ai_cost_usd": est_cost}
+
+
+def _rate_image():
+    try:
+        import cost_meter
+        return cost_meter.UNIT_COST.get("image", 0.04)
+    except Exception:
+        return 0.04
+
+
+async def queue(limit=200):
+    """Products the Design Director can review, with their latest score (if any)."""
+    prods = await db.products.find(
+        {"$or": [{"customer_deliverable": {"$ne": None}}, {"design_scorecard": {"$ne": None}}]}
+    ).sort("updated_at", -1).to_list(limit)
+    s = await get_settings()
+    out = []
+    for p in prods:
+        sc = p.get("design_scorecard") or {}
+        overall = sc.get("overall")
+        out.append({
+            "id": p["id"], "product_code": p.get("product_code"), "title": p.get("title"),
+            "product_type": p.get("product_type"), "family": p.get("family"),
+            "status": p.get("status"), "cover_url": p.get("cover_url"),
+            "overall": overall,
+            "passed": (overall is not None and overall >= s["passing_score"]),
+            "scored": overall is not None,
+        })
+    return {"passing_score": s["passing_score"], "products": out}
 
 
 async def record_reference(product):

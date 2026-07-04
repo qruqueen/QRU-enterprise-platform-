@@ -212,9 +212,10 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
     return bytes(out)
 
 
-async def ensure_branded_assets(pid, actor="Creative Studio™"):
+async def ensure_branded_assets(pid, actor="Creative Studio™", allow_ai_hero_art=True):
     """Guarantee every product carries the QRU Design Language™ — professional cover,
-    thumbnail and store graphic. Fully deterministic (no AI budget required)."""
+    thumbnail and store graphic. Fully deterministic (no AI budget required).
+    Set allow_ai_hero_art=False to guarantee ZERO AI spend (deterministic cover only)."""
     p = await db.products.find_one({"id": pid})
     if not p:
         return None
@@ -257,15 +258,17 @@ async def ensure_branded_assets(pid, actor="Creative Studio™"):
 
     # Best-effort AI hero artwork — composited under the QRU frame. Skips silently when
     # AI capacity is unavailable (daily cap / budget), so covers always render.
+    # Deterministic-first: only attempted when allow_ai_hero_art is True.
     hero = None
-    try:
-        prompt = (f"Elegant editorial illustration for an educational product about "
-                  f"'{p.get('title','')}' ({p.get('family','')}). {pal['label']} theme, "
-                  f"palette accent {'#%02X%02X%02X' % pal['accent']}, deep {pal['label']} tones, "
-                  f"premium flat-vector style, atmospheric, NO text, portrait composition.")
-        hero = await generate_image(prompt, f"hero-{pid}")
-    except Exception:
-        hero = None
+    if allow_ai_hero_art:
+        try:
+            prompt = (f"Elegant editorial illustration for an educational product about "
+                      f"'{p.get('title','')}' ({p.get('family','')}). {pal['label']} theme, "
+                      f"palette accent {'#%02X%02X%02X' % pal['accent']}, deep {pal['label']} tones, "
+                      f"premium flat-vector style, atmospheric, NO text, portrait composition.")
+            hero = await generate_image(prompt, f"hero-{pid}")
+        except Exception:
+            hero = None
     cover = dl.premium_cover(p, kr or {}, hero_bytes=hero)
     cover_url = _asset_url(_save("cover", "png", cover))
     thumb_url = _asset_url(_save("thumb", "png", dl.premium_thumbnail(cover)))

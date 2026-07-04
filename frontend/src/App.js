@@ -25,6 +25,7 @@ import DigitalWorkforce from "@/pages/DigitalWorkforce";
 import Organization from "@/pages/Organization";
 import CreativeStudio from "@/pages/CreativeStudio";
 import DesignIntelligence from "@/pages/DesignIntelligence";
+import DesignDirector from "@/pages/DesignDirector";
 import MemoryEngineering from "@/pages/MemoryEngineering";
 import MediaStudio from "@/pages/MediaStudio";
 import TopicRegistry from "@/pages/TopicRegistry";
@@ -92,6 +93,7 @@ function EnterpriseRoutes() {
         <Route path="organization" element={<Organization />} />
         <Route path="creative-studio" element={<CreativeStudio />} />
         <Route path="design-intelligence" element={<DesignIntelligence />} />
+        <Route path="design-director" element={<DesignDirector />} />
         <Route path="memory-engineering" element={<MemoryEngineering />} />
         <Route path="media-studio" element={<MediaStudio />} />
         <Route path="knowledge" element={<KnowledgeRecords />} />

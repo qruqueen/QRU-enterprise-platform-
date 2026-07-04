@@ -52,6 +52,7 @@ const NAV = [
   { to: "/asset-vault", label: "Asset Vault™", icon: Archive, testid: "nav-asset-vault", q: "Which approved assets can we reuse instead of regenerating?" },
   { to: "/media-studio", label: "Media Studio™", icon: Clapperboard, testid: "nav-media", q: "How do we bring it to life in sound and motion?" },
   { to: "/design-intelligence", label: "Design Intelligence™", icon: Sparkles, testid: "nav-design-intel", q: "What does great QRU design look like — and how do we repeat it?" },
+  { to: "/design-director", label: "Design Director™", icon: Gauge, testid: "nav-design-director", q: "Is every product polished before the Founder sees it?" },
   { to: "/experience-lab", label: "Experience Lab™", icon: Eye, testid: "nav-experience", q: "How does this feel to learn?" },
   { section: "Enterprise" },
   { to: "/workforce", label: "Digital Workforce", icon: Bot, testid: "nav-workforce", q: "Who (which AI) does each job?" },

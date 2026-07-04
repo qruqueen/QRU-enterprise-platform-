@@ -52,6 +52,7 @@ from routers.economics import router as economics_router
 from routers.promotion import router as promotion_router
 from routers.failure_intelligence import router as failure_intelligence_router
 from routers.marketing import router as marketing_router
+from routers.design_director import router as design_director_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
 from routers.misc import (
@@ -83,6 +84,7 @@ for r in [
     promotion_router,
     failure_intelligence_router,
     marketing_router,
+    design_director_router,
 ]:
     app.include_router(r)
 
