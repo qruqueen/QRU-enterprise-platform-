@@ -4,7 +4,7 @@ import { PageHeader, EmptyState } from "@/components/shared";
 import { toast } from "sonner";
 import {
   Loader2, Activity, Play, CheckCircle2, AlertTriangle, TrendingUp, Clock, PiggyBank,
-  Award, ArrowUpRight, Recycle, Stethoscope, Trophy, ThumbsDown,
+  Award, ArrowUpRight, Recycle, Stethoscope, Trophy, ThumbsDown, Wand2, ClipboardCheck,
 } from "lucide-react";
 
 const ISSUE_LABELS = {
@@ -46,6 +46,8 @@ export default function FactoryHealth() {
   const [data, setData] = useState(null);
   const [report, setReport] = useState(null);
   const [running, setRunning] = useState(false);
+  const [gate, setGate] = useState(null);      // {status, processed, total, report}
+  const [gating, setGating] = useState(false);
 
   const loadReport = () => api.get("/factory-audit/learning-report").then((r) => setReport(r.data)).catch(() => {});
   useEffect(() => { loadReport(); }, []);
@@ -61,6 +63,26 @@ export default function FactoryHealth() {
     finally { setRunning(false); }
   };
 
+  const gateLibrary = async () => {
+    setGating(true);
+    try {
+      const { data: res } = await api.post("/factory-audit/gate-library");
+      setGate({ status: "running", processed: 0, total: res.total });
+      const poll = setInterval(async () => {
+        try {
+          const { data: st } = await api.get(`/factory-audit/gate-library/${res.run_id}`);
+          setGate(st);
+          if (st.status === "done") {
+            clearInterval(poll);
+            setGating(false);
+            toast.success(`Library gated — ${st.report.ready_for_founder_review} products ready for review`);
+            loadReport();
+          }
+        } catch (e) { clearInterval(poll); setGating(false); }
+      }, 3000);
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not start"); setGating(false); }
+  };
+
   const d = data?.dashboard;
   const m = report?.available && !report.baseline ? report.metrics : null;
 
@@ -71,12 +93,43 @@ export default function FactoryHealth() {
         title="QRU Factory Health Audit™"
         description="A one-click, fully deterministic inspection of the entire Product Library ($0 AI, no regeneration). Measures the health, maturity, efficiency, and learning progress of the factory over time."
         actions={
-          <button data-testid="fh-run-btn" onClick={run} disabled={running}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-sm text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60">
-            {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} Run Factory Health Audit™
-          </button>
+          <div className="flex gap-2">
+            <button data-testid="fh-gate-btn" onClick={gateLibrary} disabled={gating || running}
+              className="flex items-center gap-2 border px-4 py-2.5 rounded-sm text-sm font-medium hover:border-primary hover:text-primary transition-colors disabled:opacity-60">
+              {gating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />} Gate Entire Library
+            </button>
+            <button data-testid="fh-run-btn" onClick={run} disabled={running || gating}
+              className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-sm text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60">
+              {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} Run Factory Health Audit™
+            </button>
+          </div>
         }
       />
+
+      {/* QRU Library Auto-Gate™ progress + report */}
+      {gate && (
+        <div className="bg-card border rounded-md p-5 mb-6" data-testid="fh-gate-panel">
+          <p className="overline text-primary mb-2 flex items-center gap-1.5"><Wand2 className="w-3.5 h-3.5" /> QRU Library Auto-Gate™ {gate.status === "running" ? "— running…" : "— complete"}</p>
+          {gate.status === "running" ? (
+            <div>
+              <div className="flex items-center justify-between text-sm mb-1"><span className="text-muted-foreground">Deterministic gating ($0 AI)…</span><span>{gate.processed}/{gate.total}</span></div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-gold transition-all" style={{ width: `${gate.total ? (gate.processed / gate.total) * 100 : 0}%` }} /></div>
+            </div>
+          ) : gate.report ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" data-testid="fh-gate-report">
+              <Tile icon={ClipboardCheck} label="Processed" value={gate.report.processed} testid="fh-g-processed" />
+              <Tile icon={CheckCircle2} label="Ready for Founder Review" value={gate.report.ready_for_founder_review} testid="fh-g-ready" />
+              <Tile icon={ArrowUpRight} label="Improved" value={gate.report.improved} sub={`${gate.report.rendered} newly rendered`} testid="fh-g-improved" />
+              <Tile icon={Clock} label="Founder Hours Saved" value={`${gate.report.estimated_founder_hours_saved}h`} testid="fh-g-saved" />
+              <Tile icon={AlertTriangle} label="Still Need Rendering" value={gate.report.requires_rendering} testid="fh-g-render" />
+              <Tile icon={Activity} label="Need Knowledge Records" value={gate.report.requires_knowledge_record} testid="fh-g-kr" />
+              <Tile icon={Activity} label="Need AI (after cap)" value={gate.report.requires_ai_after_cap} testid="fh-g-ai" />
+              <Tile icon={AlertTriangle} label="Still Blocked" value={gate.report.still_blocked} testid="fh-g-blocked" />
+            </div>
+          ) : null}
+          <p className="text-[11px] text-muted-foreground mt-3">Preparation & QC only. Live products are scored (not changed); nothing is published without your review and approval.</p>
+        </div>
+      )}
 
       {/* Learning Report */}
       {report?.available && (

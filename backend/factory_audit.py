@@ -160,6 +160,117 @@ async def run_audit(actor="QRU Factory Health Audit™", persist=True):
     return {"dashboard": dashboard, "products": rows, "snapshot_at": snapshot["created_at"]}
 
 
+async def _gate_one(p, actor):
+    """Deterministic, $0 gate of a single product. Live/Published products are SCORED
+    ONLY (never re-rendered/changed). Drafts get a single safe deterministic render pass
+    if their deliverable is missing. No AI, no marketing rebuild, no publishing."""
+    import design_director as dd
+    pid = p["id"]
+    files = (p.get("customer_deliverable") or {}).get("files", [])
+    before = (await dd.score_product(p, files))["overall"]
+    is_live = p.get("status") == "Published"
+    content = p.get("content") or ""
+    has_content = len(content) >= 300
+
+    rendered = False
+    if not is_live and has_content and not p.get("deliverable_ready"):
+        try:
+            import rendering_engine as re_engine
+            import deliverable_renderer as dr
+            await re_engine.ensure_branded_assets(pid, "QRU Library Auto-Gate™", allow_ai_hero_art=False)
+            await dr.ensure_deliverable(pid, "QRU Library Auto-Gate™", build_marketing=False)
+            rendered = True
+        except Exception as e:
+            logger.error(f"library gate render failed for {pid}: {e}")
+
+    fp = await db.products.find_one({"id": pid})
+    files = (fp.get("customer_deliverable") or {}).get("files", [])
+    sc = await dd.score_product(fp, files)
+    await db.products.update_one({"id": pid}, {"$set": {"design_scorecard": sc, "updated_at": now_iso()}})
+
+    content = fp.get("content") or ""
+    has_content = len(content) >= 300
+    has_kr = bool(fp.get("knowledge_record_id")) or bool(fp.get("assembled"))
+    deliver_ready = bool(fp.get("deliverable_ready"))
+    passed = sc["passed"]
+    ready_for_review = passed and deliver_ready
+
+    flags = {
+        "requires_rendering": (not deliver_ready) and has_content,
+        "requires_knowledge_record": (not has_content) and (not has_kr),
+        "requires_ai_after_cap": (not has_content) and has_kr,
+        "requires_founder_assets": fp.get("asset_mode") in ("founder_selected", "founder") and not fp.get("cover_vault_asset"),
+        "ready_for_review": ready_for_review,
+    }
+    return {"before": before, "after": sc["overall"], "improved": sc["overall"] > before,
+            "rendered": rendered, "live_scored_only": is_live, "flags": flags}
+
+
+async def _run_library_gate(run_id, actor):
+    products = await db.products.find({}).to_list(2000)
+    total = len(products)
+    counts = {"processed": 0, "improved": 0, "rendered": 0,
+              "requires_rendering": 0, "requires_knowledge_record": 0, "requires_founder_assets": 0,
+              "requires_ai_after_cap": 0, "ready_for_founder_review": 0, "still_blocked": 0}
+    for p in products:
+        try:
+            r = await _gate_one(p, actor)
+        except Exception as e:
+            logger.error(f"gate_one failed for {p.get('id')}: {e}")
+            r = None
+        counts["processed"] += 1
+        if r:
+            if r["improved"]:
+                counts["improved"] += 1
+            if r["rendered"]:
+                counts["rendered"] += 1
+            f = r["flags"]
+            for k in ("requires_rendering", "requires_knowledge_record", "requires_founder_assets", "requires_ai_after_cap"):
+                if f[k]:
+                    counts[k] += 1
+            if f["ready_for_review"]:
+                counts["ready_for_founder_review"] += 1
+            else:
+                counts["still_blocked"] += 1
+        if counts["processed"] % 5 == 0 or counts["processed"] == total:
+            await db.library_gate_runs.update_one({"id": run_id}, {"$set": {"processed": counts["processed"]}})
+
+    report = dict(counts)
+    report["total_products"] = total
+    report["estimated_founder_hours_saved"] = round(counts["ready_for_founder_review"] * MINUTES_SAVED_PER_PRODUCT / 60, 1)
+    await db.library_gate_runs.update_one({"id": run_id}, {"$set": {
+        "status": "done", "finished_at": now_iso(), "report": report}})
+    # Refresh the Factory Health snapshot so the next audit reflects the improvements.
+    try:
+        await run_audit("QRU Library Auto-Gate™ (post-gate audit)")
+    except Exception as e:
+        logger.error(f"post-gate audit failed: {e}")
+
+
+async def start_library_gate(actor="QRU Library Auto-Gate™"):
+    """Kick off the library-wide deterministic gate as a background job."""
+    import asyncio
+    from models import gen_id
+    existing = await db.library_gate_runs.find_one({"status": "running"})
+    if existing:
+        return {"run_id": existing["id"], "status": "running", "already_running": True}
+    total = await db.products.count_documents({})
+    run_id = gen_id()
+    await db.library_gate_runs.insert_one({
+        "id": run_id, "status": "running", "total": total, "processed": 0,
+        "started_at": now_iso(), "by": actor, "report": None})
+    asyncio.create_task(_run_library_gate(run_id, actor))
+    return {"run_id": run_id, "status": "running", "total": total}
+
+
+async def library_gate_status(run_id):
+    doc = await db.library_gate_runs.find_one({"id": run_id})
+    if not doc:
+        return {"found": False}
+    doc.pop("_id", None)
+    return {"found": True, **doc}
+
+
 async def latest_audit():
     snap = await db.factory_audits.find_one(sort=[("created_at", -1)])
     if not snap:

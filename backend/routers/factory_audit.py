@@ -20,3 +20,14 @@ async def latest(user=Depends(get_current_user)):
 @router.get("/learning-report")
 async def learning_report(user=Depends(get_current_user)):
     return await fa.learning_report()
+
+
+@router.post("/gate-library")
+async def gate_library(user=Depends(get_current_user)):
+    """QRU Library Auto-Gate™ — start the $0 deterministic gate across the whole library."""
+    return await fa.start_library_gate(user["name"])
+
+
+@router.get("/gate-library/{run_id}")
+async def gate_library_status(run_id: str, user=Depends(get_current_user)):
+    return await fa.library_gate_status(run_id)

@@ -256,7 +256,7 @@ def _render_epub(product) -> bytes:
     return buf.getvalue()
 
 
-async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""):
+async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url="", build_marketing=True):
     """Render (idempotently) the customer-ready deliverable set for a product.
     Always produces a readable HTML edition + a downloadable primary format.
     Deterministic — safe to call while the LLM budget is capped."""
@@ -360,11 +360,13 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
         pass
     # MT-033 — One Run → Many Deliverables. Auto-manufacture the Preview & Marketing Kit™
     # alongside the customer deliverable. Best-effort & deterministic — never blocks.
-    try:
-        import marketing_engine as me
-        await me.build_family(pid, actor, base_url)
-    except Exception as e:
-        logger.error(f"marketing kit build failed (non-blocking) for {pid}: {e}")
+    # Skipped during bulk operations (build_marketing=False) to keep them light.
+    if build_marketing:
+        try:
+            import marketing_engine as me
+            await me.build_family(pid, actor, base_url)
+        except Exception as e:
+            logger.error(f"marketing kit build failed (non-blocking) for {pid}: {e}")
     return deliverable
 
 
