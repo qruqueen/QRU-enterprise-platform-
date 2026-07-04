@@ -8,7 +8,7 @@ import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard,
-  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert,
+  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope,
 } from "lucide-react";
 
 const NAV = [
@@ -53,6 +53,7 @@ const NAV = [
   { to: "/media-studio", label: "Media Studio™", icon: Clapperboard, testid: "nav-media", q: "How do we bring it to life in sound and motion?" },
   { to: "/design-intelligence", label: "Design Intelligence™", icon: Sparkles, testid: "nav-design-intel", q: "What does great QRU design look like — and how do we repeat it?" },
   { to: "/design-director", label: "Design Director™", icon: Gauge, testid: "nav-design-director", q: "Is every product polished before the Founder sees it?" },
+  { to: "/factory-health", label: "Factory Health™", icon: Stethoscope, testid: "nav-factory-health", q: "How healthy is the factory — and what is it learning?" },
   { to: "/experience-lab", label: "Experience Lab™", icon: Eye, testid: "nav-experience", q: "How does this feel to learn?" },
   { section: "Enterprise" },
   { to: "/workforce", label: "Digital Workforce", icon: Bot, testid: "nav-workforce", q: "Who (which AI) does each job?" },

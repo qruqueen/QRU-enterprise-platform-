@@ -387,3 +387,10 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 - **Factory Continuous Improvement™** (`factory_intelligence`): aggregates recurring issue tags (recipe_violations, weak_visual_hierarchy, branding_imbalance, etc.), pass rate, avg score, Founder time saved, by-product-type.
 - API: `/api/design-director/auto-gate/{pid}`, `/telemetry`, `/factory-intelligence`. UI: Factory Intelligence™ panel added to `/design-director`.
 - **Tested:** testing_agent iteration_22 — backend 100% (15/15), frontend 100%, zero issues; auto-gate confirmed $0 AI.
+
+### MO-036 — Factory Intelligence™ Library Audit & Continuous Learning System (Founder-authorized)
+- `factory_audit.py` + `routers/factory_audit.py`: **QRU Factory Health Audit™** — one-click, fully DETERMINISTIC ($0 AI, read-only, no regeneration/modification) inspection of the ENTIRE product library. Reuses `design_director.score_product` read-only.
+- **Factory Health Dashboard** (`POST /api/factory-audit/run`): total products, passing/needs-review, avg design/treasure/readiness/marketplace scores, avg asset reuse %, preview coverage, Founder time saved, estimated AI cost avoided, most-common design/manufacturing issues + recipe violations, best/lowest-performing product types. Per-product rows include all 13 required metrics.
+- **Factory Learning Report™** (`GET /api/factory-audit/learning-report`): compares the two most recent audit snapshots (`db.factory_audits`) → design-score change %, asset-reuse change, Founder corrections reduced, AI savings, hours saved, and "improved areas" (per-category deltas). First run = baseline. `GET /latest` returns the newest snapshot.
+- Frontend `FactoryHealth.js` (`/factory-health`, nav "Factory Health™"): Run button, Learning Report™ panel, health dashboard tiles, issue lists, best/lowest type rankings.
+- **Verified** via curl (78 products audited: 4 passing / 74 need review, avg 68.9; period-over-period report; fixed an ObjectId serialization bug) + screenshot. First real health signal: 74 products have unrendered deliverables.
