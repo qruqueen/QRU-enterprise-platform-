@@ -464,3 +464,15 @@ Administrator, Executive, Researcher, Reviewer, Designer, Publisher, Teacher, Cu
 - `design_director.auto_gate` now captures a compact `design_gate.before_after` (before_score, after_score, score_delta, iterations, per-category before/after/delta, changed_categories) from the initial vs final scorecard — deterministic, no extra renders.
 - Exposed as `before_after` in the Founder Inbox evidence dossier; the Evidence-Based Decision Center™ renders an "Autonomous Improvement — Before vs After" section (overall before→after + delta + per-category rows that changed), or "Passed on first inspection — no automated repairs were needed" when it passed on the first pass.
 - Verified: a re-gated product showed 80→83 (Marketplace Readiness 7→10, 2 passes); a first-pass product showed 93/100 no-repairs branch. Screenshot confirms rendering.
+
+## Three P1s (2026-07-04) · Mission widget + Bulk Library Import + Revision note · VERIFIED (curl + screenshot)
+### 1. Founder-home Autonomy widget
+- `MissionControl.js` now shows an `AutonomyMissionWidget` (data-testid `mission-autonomy-widget`) after Factory Resilience — fetches `/autonomy-engine/overview`, shows ON/OFF, 6 key metrics (Manufacturing, Waiting for You, Blocked, Made Today, Hours Saved, Confidence), Next Recommended Action™, "Open Autonomy Center" + a "Review N" jump to the Founder Inbox when decisions are waiting.
+
+### 2. Bulk Library Import™ (folder → Knowledge Records, dedupe, $0 AI)
+- `library_import.py` + `routers/library_import.py` (`/api/library-import/analyze` + `/commit`, multipart). Deterministic text extraction for .txt/.md/.docx (python-docx)/.pdf (pypdf). Dedupe by normalized content hash + title (within batch and against the existing library). Imports create KR-IMP-#### records as record_class "Imported — Needs Completion" / verification "Needs Completion" with the extracted text stored verbatim in `imported_text` (Knowledge-First — no AI), flowing into the Promotion Pipeline™. New deps: python-docx, pypdf (requirements frozen).
+- Frontend `LibraryImport.js` (`/library-import`, nav `nav-library-import`): multi-file picker → Analyze (report with new/duplicate/empty/unsupported + preview) → select → Import Selected → result linking to Promotion Pipeline.
+- Verified: analyze (2 new) → commit (1 created KR-IMP-0001, 1 skipped) → re-analyze detects duplicate. Test KR cleaned up.
+
+### 3. Revision note (Evidence Center)
+- `ActionInput` accepts optional `note`; `_apply(..., note)` stores `founder_revision_note` on `revise`. Evidence Center "Request Revision" now opens an inline textarea (`revise-note-panel` / `revise-note-input` / `revise-confirm`) so the Founder attaches specific correction notes. Verified: note persisted on product, status → Needs Revision.

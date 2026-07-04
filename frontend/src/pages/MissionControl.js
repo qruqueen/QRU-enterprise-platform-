@@ -3,10 +3,63 @@ import { useNavigate } from "react-router-dom";
 import {
   Loader2, Users, Heart, BookOpen, ShieldCheck, Sparkles, Package, CheckCircle2,
   Award, Gem, Gauge, Smile, Brain, TrendingUp, AlertTriangle, ChevronRight, Activity, ChevronDown,
+  Factory, Power, ArrowRight, Inbox,
 } from "lucide-react";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import { FactoryResilience } from "@/components/FactoryResilience";
+
+function AutonomyMissionWidget({ navigate }) {
+  const [ov, setOv] = useState(null);
+  useEffect(() => { api.get("/autonomy-engine/overview").then((r) => setOv(r.data)).catch(() => {}); }, []);
+  if (!ov) return null;
+  const m = ov.metrics;
+  const on = ov.settings.enabled;
+  const cells = [
+    { label: "Manufacturing", value: m.manufacturing_queue },
+    { label: "Waiting for You", value: m.founder_decisions_waiting, tone: "text-gold" },
+    { label: "Blocked", value: m.blocked_items, tone: m.blocked_items ? "text-red-300" : "" },
+    { label: "Made Today", value: m.products_today },
+    { label: "Hours Saved", value: `${m.founder_hours_saved}h`, tone: "text-emerald-300" },
+    { label: "Confidence", value: `${m.avg_factory_confidence}%` },
+  ];
+  return (
+    <div className="rounded-2xl p-5 mb-8 text-white" style={{ background: "hsl(var(--navy))" }} data-testid="mission-autonomy-widget">
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
+        <div className="flex items-center gap-2">
+          <Factory className="w-5 h-5" style={{ color: "hsl(var(--gold))" }} />
+          <h3 className="font-heading font-bold">Autonomous Manufacturing Engine™</h3>
+          <span className={`text-[11px] px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${on ? "bg-gold text-navy" : "bg-white/15"}`}><Power className="w-3 h-3" /> {on ? "ON" : "OFF"}</span>
+        </div>
+        <button data-testid="mission-open-autonomy" onClick={() => navigate("/autonomy")}
+          className="text-xs inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-sm">
+          Open Autonomy Center <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-3">
+        {cells.map((c) => (
+          <div key={c.label}>
+            <p className="text-[10px] text-white/60 leading-tight">{c.label}</p>
+            <p className={`font-heading text-xl font-bold ${c.tone || ""}`} style={c.tone ? {} : { color: "hsl(var(--gold))" }}>{c.value}</p>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-start gap-2 bg-white/10 rounded-sm p-2.5">
+        <ArrowRight className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "hsl(var(--gold))" }} />
+        <div className="min-w-0">
+          <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: "hsl(var(--gold))" }}>Next Recommended Action™</p>
+          <p className="text-sm">{ov.next_recommended_action}</p>
+        </div>
+        {m.founder_decisions_waiting > 0 && (
+          <button data-testid="mission-open-inbox" onClick={() => navigate("/founder-inbox")}
+            className="ml-auto text-xs inline-flex items-center gap-1 bg-gold text-navy px-2.5 py-1.5 rounded-sm shrink-0 font-medium">
+            <Inbox className="w-3.5 h-3.5" /> Review {m.founder_decisions_waiting}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const ICONS = { users: Users, heart: Heart, book: BookOpen, shield: ShieldCheck, sparkles: Sparkles,
   package: Package, check: CheckCircle2, award: Award, gem: Gem, gauge: Gauge, smile: Smile, brain: Brain };
@@ -85,6 +138,8 @@ export default function MissionControl() {
       </div>
 
       <FactoryResilience />
+
+      <AutonomyMissionWidget navigate={navigate} />
 
       {/* Mission + Money */}
       <div className="mb-8">

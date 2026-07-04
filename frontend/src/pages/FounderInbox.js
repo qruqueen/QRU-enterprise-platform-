@@ -46,10 +46,10 @@ export default function FounderInbox() {
     catch (e) { setEv(null); toast.error("Could not load evidence"); }
   };
 
-  const doAction = async (pid, action) => {
+  const doAction = async (pid, action, note) => {
     setBusy(true);
     try {
-      const { data: res } = await api.post(`/founder-inbox/${pid}/action`, { action });
+      const { data: res } = await api.post(`/founder-inbox/${pid}/action`, { action, note });
       toast[res.ok ? "success" : "error"](res.message);
       load();
     } catch (e) { toast.error(e.response?.data?.detail || "Action failed"); }
@@ -197,7 +197,7 @@ export default function FounderInbox() {
       {/* MO-040 — Evidence-Based Decision Center™ */}
       {ev && (
         <EvidenceCenter ev={ev} busy={busy} onClose={() => setEv(null)}
-          onDecide={async (pid, action) => { await doAction(pid, action); setEv(null); }} />
+          onDecide={async (pid, action, note) => { await doAction(pid, action, note); setEv(null); }} />
       )}
     </div>
   );
@@ -227,6 +227,8 @@ function Ev({ label, value }) {
 
 function EvidenceCenter({ ev, busy, onClose, onDecide }) {
   const abs = (u) => (u ? (u.startsWith("http") ? u : `${BACKEND}${u}`) : null);
+  const [reviseOpen, setReviseOpen] = useState(false);
+  const [note, setNote] = useState("");
   if (ev.loading) {
     return (
       <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" data-testid="evidence-center">
@@ -384,13 +386,28 @@ function EvidenceCenter({ ev, busy, onClose, onDecide }) {
             <div className="grid sm:grid-cols-2 gap-2" data-testid="evidence-decisions">
               {DECISIONS.map((b) => (
                 <button key={b.action} data-testid={`decide-${b.action}`} disabled={busy}
-                  onClick={() => onDecide(d.id, b.action)}
-                  className={`text-left rounded-sm px-3 py-2.5 text-sm flex items-start gap-2 disabled:opacity-60 ${b.cls}`}>
+                  onClick={() => { if (b.action === "revise") { setReviseOpen((v) => !v); } else { onDecide(d.id, b.action); } }}
+                  className={`text-left rounded-sm px-3 py-2.5 text-sm flex items-start gap-2 disabled:opacity-60 ${b.cls} ${b.action === "revise" && reviseOpen ? "ring-2 ring-royal" : ""}`}>
                   <b.icon className="w-4 h-4 mt-0.5 shrink-0" />
                   <span><span className="font-semibold block">{b.label}</span><span className="text-[11px] opacity-80">{b.desc}</span></span>
                 </button>
               ))}
             </div>
+            {reviseOpen && (
+              <div className="mt-3 border rounded-sm p-3 bg-muted/30" data-testid="revise-note-panel">
+                <label className="text-xs font-semibold text-navy">Revision note (optional) — tell the factory exactly what to correct</label>
+                <textarea data-testid="revise-note-input" value={note} onChange={(e) => setNote(e.target.value)} rows={3}
+                  placeholder="e.g. Tighten the intro, use the updated cover, expand the practice section…"
+                  className="w-full mt-1 border rounded-sm p-2 text-sm" />
+                <div className="flex gap-2 mt-2">
+                  <button data-testid="revise-confirm" disabled={busy} onClick={() => onDecide(d.id, "revise", note.trim() || null)}
+                    className="inline-flex items-center gap-1.5 bg-royal text-white text-sm px-3 py-1.5 rounded-sm disabled:opacity-60">
+                    <Pencil className="w-3.5 h-3.5" /> Send Revision Request
+                  </button>
+                  <button data-testid="revise-cancel" onClick={() => { setReviseOpen(false); setNote(""); }} className="text-sm border px-3 py-1.5 rounded-sm hover:border-primary">Cancel</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

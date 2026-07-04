@@ -239,7 +239,7 @@ async def evidence(pid: str, user=Depends(get_current_user)):
 
 
 
-async def _apply(pid, action, actor):
+async def _apply(pid, action, actor, note=None):
     p = await db.products.find_one({"id": pid})
     if not p:
         return {"id": pid, "ok": False, "message": "Not found"}
@@ -258,8 +258,12 @@ async def _apply(pid, action, actor):
         await db.products.update_one({"id": pid}, {"$set": {"status": "Needs Review", "creative_status": "Needs Revision", "updated_at": now}})
         msg, ok = "Returned to Factory — Creative Studio™ & Design Director™ will re-run.", True
     elif action == "revise":
-        await db.products.update_one({"id": pid}, {"$set": {"status": "Needs Revision", "creative_status": "Needs Revision", "founder_revision_requested_at": now, "updated_at": now}})
-        msg, ok = "Revision requested — routed back for correction with your notes.", True
+        upd = {"status": "Needs Revision", "creative_status": "Needs Revision", "founder_revision_requested_at": now, "updated_at": now}
+        if note:
+            upd["founder_revision_note"] = note
+        await db.products.update_one({"id": pid}, {"$set": upd})
+        msg = "Revision requested" + (" with your note." if note else " — routed back for correction.")
+        ok = True
     elif action == "verify":
         await db.products.update_one({"id": pid}, {"$set": {"status": "Needs Verification", "verified": False, "updated_at": now}})
         msg, ok = "Sent to Verification™ — Product Protection™ will re-verify before it returns.", True
@@ -284,13 +288,14 @@ _ACTIONS = ("approve", "return", "revise", "verify", "reject", "archive", "hide"
 
 class ActionInput(BaseModel):
     action: str
+    note: Optional[str] = None
 
 
 @router.post("/{pid}/action")
 async def action(pid: str, data: ActionInput, user=Depends(get_current_user)):
     if data.action not in _ACTIONS:
         raise HTTPException(400, "Invalid action")
-    return await _apply(pid, data.action, user["name"])
+    return await _apply(pid, data.action, user["name"], data.note)
 
 
 class BulkInput(BaseModel):
