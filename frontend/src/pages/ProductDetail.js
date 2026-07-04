@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import api from "@/lib/api";
 import { StatusBadge, Markdown } from "@/components/shared";
+import { normalizeProduct } from "@/lib/safeRender";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, CheckCircle2, Send, Archive, Wand2, Sparkles, FileText, BookOpen, Presentation, Image as ImageIcon, FileType2, Download, Eye, PackageCheck, Megaphone } from "lucide-react";
 
@@ -17,7 +18,7 @@ export default function ProductDetail() {
   const [kitBusy, setKitBusy] = useState(false);
   const BACKEND = process.env.REACT_APP_BACKEND_URL;
   const abs = (u) => (u ? (u.startsWith("http") ? u : `${BACKEND}${u}`) : null);
-  const load = () => api.get(`/products/${id}`).then((r) => setP(r.data)).catch(() => {});
+  const load = () => api.get(`/products/${id}`).then((r) => setP(normalizeProduct(r.data))).catch(() => {});
   const loadKit = () => api.get(`/marketing/${id}`).then((r) => setKit(r.data)).catch(() => {});
   useEffect(() => { load(); loadKit(); }, [id]);
 
@@ -302,7 +303,6 @@ export default function ProductDetail() {
             </div>
           )}
         </div>
-      )}
 
       <div className="bg-card border rounded-md p-8 max-w-4xl">
         <Markdown text={p.content} />

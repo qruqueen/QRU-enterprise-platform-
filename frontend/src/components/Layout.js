@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { NavLink, useNavigate, Outlet } from "react-router-dom";
+import { NavLink, useNavigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useMode } from "@/context/ModeContext";
 import MusicControl from "@/components/MusicControl";
 import FounderSecurityBanner from "@/components/FounderSecurityBanner";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
@@ -74,6 +75,7 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const { canToggle, switchMode } = useMode();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [q, setQ] = useState("");
 
@@ -177,7 +179,9 @@ export default function Layout() {
         </header>
         <main className="flex-1 p-4 sm:p-8 max-w-[1600px] w-full mx-auto">
           <FounderSecurityBanner />
-          <Outlet />
+          <ErrorBoundary routeKey={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>
