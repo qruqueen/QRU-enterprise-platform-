@@ -1,28 +1,37 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import { PageHeader } from "@/components/shared";
 import { toast } from "sonner";
 import {
   Plug, Loader2, CheckCircle2, AlertTriangle, ShieldCheck, KeyRound, ExternalLink, X,
-  Radio, Upload, Store, Settings2, Unplug, XCircle, CircleDot,
+  Radio, Upload, Store, Settings2, Unplug, XCircle, CircleDot, Wrench, RefreshCw, Lock,
 } from "lucide-react";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
+const ADMIN_ROLES = ["Founder & CEO", "Administrator"];
 
 const STATUS_STYLE = {
-  "Connected Healthy": "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "Ready to Publish": "bg-emerald-50 text-emerald-700 border-emerald-200",
   "Connected": "bg-emerald-50 text-emerald-700 border-emerald-200",
-  "Test Passed": "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "Published": "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "Publishing": "bg-royal/10 text-royal border-royal/30",
   "Needs Authorization": "bg-amber-50 text-amber-700 border-amber-200",
-  "Developer Configuration Required": "bg-blue-50 text-blue-700 border-blue-200",
-  "Setup Required": "bg-blue-50 text-blue-700 border-blue-200",
-  "Disconnected": "bg-slate-100 text-slate-500 border-slate-200",
+  "Developer Setup Required": "bg-blue-50 text-blue-700 border-blue-200",
+  "Developer Setup Complete": "bg-blue-50 text-blue-700 border-blue-200",
+  "Connection Expired": "bg-amber-50 text-amber-700 border-amber-200",
+  "Reconnect Required": "bg-amber-50 text-amber-700 border-amber-200",
+  "Not Connected": "bg-slate-100 text-slate-500 border-slate-200",
+  "Failed": "bg-red-50 text-red-700 border-red-200",
   "Connection Error": "bg-red-50 text-red-700 border-red-200",
 };
 
 const LIFECYCLE = ["Connect", "Test", "Manufacture", "Preview", "Publish"];
 
 export default function Connectors() {
+  const { user } = useAuth();
+  const isAdmin = ADMIN_ROLES.includes(user?.role);
+  const [devMode, setDevMode] = useState(false);
   const [items, setItems] = useState(null);
   const [connectDlg, setConnectDlg] = useState(null);
   const [publishDlg, setPublishDlg] = useState(null);
@@ -84,14 +93,27 @@ export default function Connectors() {
         description="Every platform, one experience: Connect → official provider login → Approve → Connected → Test → Publish. You never see tokens or credentials — QRU handles the technical differences behind the scenes."
       />
 
-      <div className="flex items-center gap-2 flex-wrap mb-5 text-xs" data-testid="connector-lifecycle">
-        {LIFECYCLE.map((s, i) => (
-          <span key={s} className="flex items-center gap-2">
-            <span className="px-2.5 py-1 rounded-full bg-navy/5 text-navy font-medium">{i + 1}. {s}</span>
-            {i < LIFECYCLE.length - 1 && <span className="text-muted-foreground">→</span>}
-          </span>
-        ))}
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
+        <div className="flex items-center gap-2 flex-wrap text-xs" data-testid="connector-lifecycle">
+          {LIFECYCLE.map((s, i) => (
+            <span key={s} className="flex items-center gap-2">
+              <span className="px-2.5 py-1 rounded-full bg-navy/5 text-navy font-medium">{i + 1}. {s}</span>
+              {i < LIFECYCLE.length - 1 && <span className="text-muted-foreground">→</span>}
+            </span>
+          ))}
+        </div>
+        {isAdmin && (
+          <button data-testid="developer-mode-toggle" onClick={() => setDevMode((v) => !v)}
+            className={`text-xs inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm border font-medium ${devMode ? "bg-navy text-white border-navy" : "text-navy border-navy/30 hover:border-navy"}`}>
+            <Wrench className="w-3.5 h-3.5" /> Developer Mode {devMode ? "ON" : "OFF"}
+          </button>
+        )}
       </div>
+      {devMode && (
+        <div className="mb-5 bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800 flex items-start gap-2" data-testid="developer-mode-banner">
+          <Lock className="w-4 h-4 shrink-0 mt-0.5" /> <span><b>Developer Mode</b> — administrator-only. Configure each platform's OAuth app / API credentials here. These are encrypted and never shown to the Founder during normal use.</span>
+        </div>
+      )}
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="connector-grid">
         {items.map((c) => (
@@ -118,50 +140,47 @@ export default function Connectors() {
             {c.auth_method === "oauth" && c.oauth_supported === false && (
               <p className="text-[11px] text-muted-foreground mb-2 flex items-start gap-1" data-testid={`connector-unsupported-${c.id}`}><AlertTriangle className="w-3 h-3 mt-0.5 shrink-0 text-amber-500" /> {c.oauth_unsupported_reason}</p>
             )}
-            {c.auth_method === "oauth" && c.oauth_supported !== false && !c.developer_configured && (
-              <p className="text-[11px] text-blue-700 mb-2 flex items-start gap-1"><Settings2 className="w-3 h-3 mt-0.5 shrink-0" /> An admin must configure this platform's OAuth app before you can connect.</p>
+            {c.oauth_supported !== false && !c.developer_configured && !devMode && (
+              <p className="text-[11px] text-blue-700 mb-2 flex items-start gap-1" data-testid={`connector-setup-note-${c.id}`}><Settings2 className="w-3 h-3 mt-0.5 shrink-0" /> An administrator must complete developer setup before this platform can be connected.</p>
             )}
 
             <div className="mt-auto flex flex-wrap gap-1.5">
-              {/* OAuth flow */}
-              {c.auth_method === "oauth" && c.oauth_supported !== false && (
-                <>
-                  <button data-testid={`connector-devconfig-${c.id}`} onClick={() => setDevDlg(c)}
-                    className="text-xs inline-flex items-center gap-1 border px-2.5 py-1.5 rounded-sm hover:border-primary">
-                    <Settings2 className="w-3.5 h-3.5" /> Developer Setup
-                  </button>
-                  {c.developer_configured && !c.authorized && (
-                    <button data-testid={`connector-connect-${c.id}`} onClick={() => connectOAuth(c)} disabled={busy === c.id}
-                      className="text-xs inline-flex items-center gap-1 bg-navy text-white px-2.5 py-1.5 rounded-sm disabled:opacity-60">
-                      {busy === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5" />} Connect
-                    </button>
-                  )}
-                  {c.authorized && (
-                    <button data-testid={`connector-disconnect-${c.id}`} onClick={() => disconnect(c)} disabled={busy === c.id}
-                      className="text-xs inline-flex items-center gap-1 border px-2.5 py-1.5 rounded-sm hover:border-red-300 text-red-600">
-                      <Unplug className="w-3.5 h-3.5" /> Disconnect
-                    </button>
-                  )}
-                </>
+              {/* Developer Setup — administrator-only, Developer Mode only */}
+              {devMode && c.oauth_supported !== false && (
+                <button data-testid={`connector-devconfig-${c.id}`}
+                  onClick={() => (c.auth_method === "oauth" ? setDevDlg(c) : setConnectDlg(c))}
+                  className="text-xs inline-flex items-center gap-1 border border-navy/40 text-navy px-2.5 py-1.5 rounded-sm hover:border-navy">
+                  <Settings2 className="w-3.5 h-3.5" /> Developer Setup
+                </button>
               )}
 
-              {/* API-key flow */}
-              {c.auth_method === "api_key" && (
-                !c.connected ? (
-                  <button data-testid={`connector-connect-${c.id}`} onClick={() => setConnectDlg(c)}
-                    className="text-xs inline-flex items-center gap-1 bg-navy text-white px-2.5 py-1.5 rounded-sm">
-                    <Plug className="w-3.5 h-3.5" /> Connect
-                  </button>
-                ) : (
-                  <span className="text-xs inline-flex items-center gap-1 text-emerald-700 px-2 py-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> Connected</span>
-                )
+              {/* Founder Connect / Reconnect — only after developer setup is complete */}
+              {c.auth_method === "oauth" && c.oauth_supported !== false && c.developer_configured && !c.authorized && (
+                <button data-testid={`connector-connect-${c.id}`} onClick={() => connectOAuth(c)} disabled={busy === c.id}
+                  className="text-xs inline-flex items-center gap-1 bg-navy text-white px-2.5 py-1.5 rounded-sm disabled:opacity-60">
+                  {busy === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5" />} Connect
+                </button>
+              )}
+              {c.auth_method === "oauth" && c.reconnect_required && (
+                <button data-testid={`connector-reconnect-${c.id}`} onClick={() => connectOAuth(c)} disabled={busy === c.id}
+                  className="text-xs inline-flex items-center gap-1 bg-amber-500 text-white px-2.5 py-1.5 rounded-sm disabled:opacity-60">
+                  <RefreshCw className="w-3.5 h-3.5" /> Reconnect
+                </button>
               )}
 
-              {/* Test — available for any supported connector */}
-              {(c.auth_method === "native" || c.oauth_supported !== false) && (
+              {/* Test Connection — once developer setup is complete */}
+              {(c.auth_method === "native" || (c.oauth_supported !== false && c.developer_configured)) && (
                 <button data-testid={`connector-test-${c.id}`} onClick={() => test(c)} disabled={busy === c.id}
                   className="text-xs inline-flex items-center gap-1 border px-2.5 py-1.5 rounded-sm hover:border-primary disabled:opacity-60">
                   {busy === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Radio className="w-3.5 h-3.5" />} Test
+                </button>
+              )}
+
+              {/* Disconnect */}
+              {c.authorized && (
+                <button data-testid={`connector-disconnect-${c.id}`} onClick={() => disconnect(c)} disabled={busy === c.id}
+                  className="text-xs inline-flex items-center gap-1 border px-2.5 py-1.5 rounded-sm hover:border-red-300 text-red-600">
+                  <Unplug className="w-3.5 h-3.5" /> Disconnect
                 </button>
               )}
 
@@ -178,7 +197,7 @@ export default function Connectors() {
                 </button>
               )}
             </div>
-            {!c.can_publish && c.publish_disabled_reason && c.oauth_supported !== false && (
+            {!c.can_publish && c.publish_disabled_reason && c.oauth_supported !== false && (c.developer_configured || c.auth_method === "native") && (
               <p className="text-[10px] text-muted-foreground mt-1.5">Publish: {c.publish_disabled_reason}</p>
             )}
           </div>

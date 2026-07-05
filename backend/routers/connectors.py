@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 
-from auth import get_current_user
+from auth import get_current_user, require_super_admin
 import connectors as cx
 import oauth_framework as oauth
 
@@ -76,14 +76,14 @@ class DeveloperConfigInput(BaseModel):
 
 
 @router.get("/{platform_id}/developer-config")
-async def get_developer_config(platform_id: str, user=Depends(get_current_user)):
+async def get_developer_config(platform_id: str, user=Depends(require_super_admin)):
     if not oauth.provider(platform_id):
         raise HTTPException(404, "Unknown platform")
     return await oauth.get_developer_config(platform_id)
 
 
 @router.post("/{platform_id}/developer-config")
-async def set_developer_config(platform_id: str, data: DeveloperConfigInput, user=Depends(get_current_user)):
+async def set_developer_config(platform_id: str, data: DeveloperConfigInput, user=Depends(require_super_admin)):
     res, err = await oauth.set_developer_config(
         platform_id, data.client_id, data.client_secret, data.redirect_uri, user["name"])
     if err:
@@ -92,7 +92,7 @@ async def set_developer_config(platform_id: str, data: DeveloperConfigInput, use
 
 
 @router.delete("/{platform_id}/developer-config")
-async def delete_developer_config(platform_id: str, user=Depends(get_current_user)):
+async def delete_developer_config(platform_id: str, user=Depends(require_super_admin)):
     await oauth.delete_developer_config(platform_id)
     return {"deleted": True}
 

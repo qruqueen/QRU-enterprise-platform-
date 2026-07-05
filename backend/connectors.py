@@ -88,17 +88,34 @@ CONNECTOR_REGISTRY = [
     {"id": "canva", "name": "Canva", "category": "Design", "auth_method": "oauth",
      "operational": False, "asset_types": ["Design", "Graphic"], "capabilities": ["publish", "preview"],
      "setup_hint": "Requires Canva OAuth authorization."},
+    {"id": "github", "name": "GitHub", "category": "Development", "auth_method": "oauth",
+     "operational": False, "asset_types": ["Repository File", "Release Asset"], "capabilities": ["publish"],
+     "setup_hint": "Requires GitHub OAuth authorization."},
+    {"id": "google_sheets", "name": "Google Sheets", "category": "Storage", "auth_method": "oauth",
+     "operational": False, "asset_types": ["Spreadsheet"], "capabilities": ["publish", "preview"],
+     "setup_hint": "Requires Google OAuth authorization to Sheets."},
+    {"id": "woocommerce", "name": "WooCommerce", "category": "Commerce", "auth_method": "api_key",
+     "operational": False, "asset_types": ["Store Listing", "Product Image", "Digital Download"],
+     "capabilities": ["publish", "pricing", "metadata"],
+     "setup_hint": "Requires your WooCommerce store URL + REST API key/secret."},
 ]
 _BY_ID = {c["id"]: c for c in CONNECTOR_REGISTRY}
 
-# Uniform Founder-facing statuses (never raw API errors).
-S_HEALTHY = "Connected Healthy"
+# Uniform Founder-facing statuses (Production vocabulary; never raw API errors).
+S_HEALTHY = "Ready to Publish"          # native/operational + connected
 S_CONNECTED = "Connected"
+S_READY = "Ready to Publish"
 S_NEEDS_AUTH = "Needs Authorization"
-S_DEV_CONFIG = "Developer Configuration Required"
-S_TEST_PASSED = "Test Passed"
-S_DISCONNECTED = "Disconnected"
-S_SETUP = "Setup Required"
+S_DEV_SETUP = "Developer Setup Required"
+S_DEV_COMPLETE = "Developer Setup Complete"
+S_TEST_PASSED = "Ready to Publish"
+S_EXPIRED = "Connection Expired"
+S_RECONNECT = "Reconnect Required"
+S_PUBLISHING = "Publishing"
+S_PUBLISHED = "Published"
+S_DISCONNECTED = "Not Connected"
+S_SETUP = "Developer Setup Required"
+S_FAILED = "Failed"
 S_ERROR = "Connection Error"
 
 LIFECYCLE = ["Connect", "Test", "Manufacture", "Preview", "Publish"]
@@ -115,25 +132,34 @@ async def _state(platform_id):
 
 async def _status_for(reg, state):
     if reg["auth_method"] == "native":
-        return S_HEALTHY
+        return S_READY
     if reg["auth_method"] == "oauth":
         os_state = await oauth.public_state(reg["id"]) or {}
         if not os_state.get("oauth_supported", True):
-            return S_SETUP
+            return S_DEV_SETUP
         if not os_state.get("developer_configured"):
-            return S_DEV_CONFIG
+            return S_DEV_SETUP
         if not os_state.get("authorized"):
             return S_NEEDS_AUTH
-        return os_state.get("status") or S_CONNECTED
-    # api_key
+        if os_state.get("reconnect_required"):
+            return S_RECONNECT
+        if os_state.get("expired"):
+            return S_EXPIRED
+        st = os_state.get("status")
+        if st == "Test Passed":
+            return S_CONNECTED  # honest: connected+tested, but automated file-publish not yet wired
+        return st or S_CONNECTED
+    # api_key — the key is a developer credential; not set means admin setup pending.
+    if reg["id"] == "stripe" and os.environ.get("STRIPE_API_KEY"):
+        return S_CONNECTED  # Stripe is configured via environment (test mode active)
     if not state or not state.get("connected"):
-        return S_SETUP
+        return S_DEV_SETUP
     return state.get("status") or S_CONNECTED
 
 
 async def _public(reg, state):
     status = await _status_for(reg, state)
-    connected = status in (S_HEALTHY, S_CONNECTED, S_TEST_PASSED)
+    connected = status in (S_HEALTHY, S_CONNECTED, S_READY)
     os_state = await oauth.public_state(reg["id"]) if reg["auth_method"] == "oauth" else {}
     os_state = os_state or {}
     return {
@@ -143,11 +169,15 @@ async def _public(reg, state):
         "setup_hint": reg["setup_hint"], "status": status, "connected": connected,
         "oauth_supported": os_state.get("oauth_supported", reg["auth_method"] == "oauth"),
         "oauth_unsupported_reason": os_state.get("reason"),
-        "developer_configured": os_state.get("developer_configured"),
+        "developer_configured": (os_state.get("developer_configured") if reg["auth_method"] == "oauth"
+                                 else bool(state.get("connected"))
+                                      or (reg["id"] == "stripe" and bool(os.environ.get("STRIPE_API_KEY")))),
         "authorized": os_state.get("authorized"),
+        "reconnect_required": os_state.get("reconnect_required"),
         "can_publish": bool(reg["operational"] and "publish" in reg["capabilities"] and connected),
         "publish_disabled_reason": (None if (reg["operational"] and connected)
-                                    else (reg["setup_hint"] if not reg["operational"]
+                                    else ("Automated publishing to this platform isn't wired yet — connect & test work today."
+                                          if (reg["auth_method"] != "native" and not reg["operational"])
                                           else "Connect this platform first.")),
         "account": os_state.get("account") or state.get("account"),
         "connected_at": os_state.get("connected_at") or state.get("connected_at"),
@@ -196,7 +226,7 @@ async def connect(platform_id, credentials, actor):
     if not key:
         return None, f"{reg['name']} needs an API key to connect."
     await db.connectors.update_one({"platform_id": platform_id}, {"$set": {
-        "platform_id": platform_id, "connected": True, "status": S_HEALTHY,
+        "platform_id": platform_id, "connected": True, "status": S_CONNECTED,
         "auth_method": "api_key", "secret": _obfuscate(key),
         "account": (credentials or {}).get("account") or "Connected account",
         "connected_at": now_iso(), "last_checked": now_iso(), "connected_by": actor,

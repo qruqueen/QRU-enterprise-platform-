@@ -141,6 +141,20 @@ PROVIDERS = {
         "userinfo": "https://api.canva.com/rest/v1/users/me",
         "scopes": ["design:content:read", "design:content:write"], "uses_pkce": True, "supported": True,
     },
+    "github": {
+        "authorize": "https://github.com/login/oauth/authorize",
+        "token": "https://github.com/login/oauth/access_token",
+        "userinfo": "https://api.github.com/user",
+        "scopes": ["repo", "read:user"], "supported": True,
+    },
+    "google_sheets": {
+        "authorize": "https://accounts.google.com/o/oauth2/v2/auth",
+        "token": "https://oauth2.googleapis.com/token",
+        "userinfo": "https://www.googleapis.com/oauth2/v2/userinfo",
+        "scopes": ["https://www.googleapis.com/auth/spreadsheets",
+                   "https://www.googleapis.com/auth/drive.file", "openid", "email", "profile"],
+        "extra_auth": {"access_type": "offline", "prompt": "consent"}, "supported": True,
+    },
     # Amazon KDP & Teachers Pay Teachers expose NO public OAuth publishing API today.
     "amazon_kdp": {"supported": False,
                    "reason": "Amazon KDP has no public OAuth publishing API. Publishing is done in the KDP dashboard."},
@@ -457,9 +471,14 @@ async def public_state(platform_id):
     configured = await is_configured(platform_id)
     state = await db.connectors.find_one({"platform_id": platform_id}) or {}
     has_token = bool(state.get("access_token_enc"))
+    has_refresh = bool(state.get("refresh_token_enc"))
+    expired = bool(has_token and state.get("expires_at", 0) and state["expires_at"] < time.time())
+    # Expired with no way to auto-refresh → the Founder must reconnect.
+    reconnect_required = bool(expired and not has_refresh)
     return {
         "oauth_supported": True, "developer_configured": configured, "authorized": has_token,
         "account": state.get("account") if has_token else None,
         "status": state.get("status"), "connected_at": state.get("connected_at"),
         "last_checked": state.get("last_checked"),
+        "expired": expired, "has_refresh": has_refresh, "reconnect_required": reconnect_required,
     }

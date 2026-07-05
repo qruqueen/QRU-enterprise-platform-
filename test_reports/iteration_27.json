@@ -1,0 +1,73 @@
+{
+  "summary": "MO-046 Founder Beta Production Readiness (Developer vs Founder Mode). 24/24 backend pytest cases PASSED. Frontend: 23 connectors visible, Founder-Mode hides ALL developer credentials (verified: no 'Client ID', 'Client Secret', or 'Redirect URI' anywhere in body), 17 setup notes for OAuth connectors, Developer-Mode toggle works, devconfig dialog opens with pre-filled backend redirect_uri, saving dummy config transitions github to 'Needs Authorization', Founder-mode then reveals Connect button, Test Connection opens test-result-dialog with checks, cleanup restores 'Developer Setup Required'. All 11 nav routes render without crash. Evidence metric-card-connector_status shows LIVE 2/23 Operational Connectors. Bad-state OAuth callback redirects to /connectors and toasts error. Production status vocabulary confirmed — only 'Connected', 'Developer Setup Required', 'Needs Authorization', 'Ready to Publish' seen; NO legacy 'Connected Healthy' / 'Setup Required' / 'Developer Configuration Required'. Cleaned up: deleted github developer-config after tests. Two minor bugs found (see below).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Connectors.js — Developer Mode api_key connectors", "issue": "In Developer Mode, api_key connectors (woocommerce, amazon_kdp, tpt, shopify) do NOT show a 'Developer Setup' button. Root cause: the render condition is `{devMode && c.oauth_supported !== false && (...)}` — for api_key connectors backend returns oauth_supported=false, so the button is filtered out. The spec (feature #5) explicitly requires that clicking Developer Setup on an api_key connector like woocommerce opens the connect-dialog with connect-apikey-input. Currently there is NO way for the admin to open the API-key dialog in Developer Mode. Fix: change condition to `{devMode && (c.auth_method !== 'oauth' || c.oauth_supported !== false) && (...)}` OR simply `{devMode && (...)}` — the branching by auth_method inside onClick already handles routing.", "selector": "[data-testid='connector-devconfig-woocommerce']", "priority": "HIGH"},
+      {"component": "Connectors.js — disabled Publish tooltip for stripe", "issue": "`connector-publish-disabled-stripe` has NO title tooltip (empty). Backend `publish_disabled_reason` returns None because stripe is operational=true AND connected=true, but stripe capabilities don't include 'publish' so can_publish=false. Every disabled Publish button MUST expose a reason per the requirement. Fix: in connectors.py _public, add a branch for operational+connected connectors that lack 'publish' capability (e.g. stripe): 'Stripe handles pricing & checkout automatically for QRU Store™ products — it isn't a standalone publish target.'", "selector": "[data-testid='connector-publish-disabled-stripe']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration27_founder_beta.py",
+    "/app/test_reports/pytest/iteration27.xml"
+  ],
+  "action_items": [
+    "Fix Connectors.js gate: allow api_key connectors to show `connector-devconfig-<id>` button in Developer Mode (currently only shown when oauth_supported !== false).",
+    "Fix connectors.py `_public.publish_disabled_reason`: return a non-null reason for stripe (and any operational connector lacking the 'publish' capability) so the tooltip is never blank."
+  ],
+  "critical_code_review_comments": [
+    "Connectors.js line 149: `{devMode && c.oauth_supported !== false && (...)` — this render gate breaks the universal lifecycle for api_key connectors. Consider decoupling the gate from oauth_supported and letting auth_method determine which dialog to open (as the onClick already does).",
+    "connectors.py _public: `publish_disabled_reason` computed as (operational + connected -> None). This assumes operational=True means 'has publish capability', which is false for stripe. Reason should be derived per-capability instead of per-operational-flag.",
+    "Founder-Mode `connector-setup-note-<id>` is only rendered when `c.oauth_supported !== false`. This means api_key connectors (woocommerce, amazon_kdp, tpt, shopify) with status 'Developer Setup Required' show NO explanatory note to the Founder — the founder sees a bare status chip. Consider showing the same note for any non-configured connector regardless of auth method.",
+    "23 connectors on one page is a lot; consider grouping by category in Founder view or adding a search/filter (minor UX).",
+    "Founder-Mode devMode is client-side state only — an admin could bypass the toggle via devtools; backend already enforces super-admin on developer-config endpoints so this is defense-in-depth, but worth documenting."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration27_founder_beta.py (new)"
+  ],
+  "success_rate": {"backend": "100% (24/24)", "frontend": "~90% (2 UX bugs: api_key devconfig hidden in Dev Mode; stripe disabled-publish has empty tooltip)"},
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (from /app/memory/test_credentials.md, verified role=Founder & CEO = super-admin)",
+  "seed_data_creation": "Created dummy github developer-config (client_id='test.apps.googleusercontent.com', client_secret='dummy', redirect_uri=<backend>/api/oauth/callback) then DELETED it via devconfig-remove and DELETE /api/connectors/github/developer-config. Final github status confirmed as 'Developer Setup Required'.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Both bugs are strictly frontend + one backend logic tweak: (1) Connectors.js render gate for `connector-devconfig-<id>` must include api_key connectors; (2) connectors.py `_public.publish_disabled_reason` must return a non-null reason for stripe. Backend test file /app/backend/tests/test_iteration27_founder_beta.py covers: 23-connector count, new-connector auth methods, production status vocabulary, founder-role gating on developer-config, verify checklist, oauth callback error, 10 nav-route API health, and metrics/summary 'X/23' display. Rerun with: `python -m pytest backend/tests/test_iteration27_founder_beta.py -v`.",
+  "verified_features": [
+    "GET /api/connectors → count=23; github/google_sheets are oauth, woocommerce is api_key",
+    "All statuses in production vocab (no 'Connected Healthy' / 'Setup Required' / 'Developer Configuration Required')",
+    "qru_store='Ready to Publish', stripe='Connected', github/google_sheets/woocommerce='Developer Setup Required'",
+    "POST /api/connectors/github/developer-config with founder token → 200; secret never in response body",
+    "After dev-config, github status transitions to 'Needs Authorization'",
+    "DELETE /api/connectors/github/developer-config → status reverts to 'Developer Setup Required'",
+    "No-auth GET /api/connectors/github/developer-config → 401/403",
+    "POST /api/connectors/github/verify returns checks[] (never silent)",
+    "GET /api/oauth/callback?state=bad&code=x → 307 redirect with oauth=error",
+    "Metrics summary: connector_status.display='2/23'",
+    "FRONTEND Founder Mode: 0 devconfig buttons, 17 setup notes, no 'Client ID/Secret/Redirect URI' text anywhere",
+    "FRONTEND Developer Mode toggle visible for Founder (admin); toggling ON shows developer-mode-banner + 17 devconfig buttons on OAuth connectors",
+    "FRONTEND devconfig-dialog opens for github with pre-filled redirect_uri containing /api/oauth/callback",
+    "FRONTEND after Save Config, github status = 'Needs Authorization'; toggling to Founder Mode shows connector-connect-github and hides connector-devconfig-github",
+    "FRONTEND connector-test-github opens test-result-dialog with test-checks (2 checks rendered)",
+    "FRONTEND devconfig-remove works and reverts to 'Developer Setup Required'",
+    "FRONTEND qru_store connector-publish-qru_store enabled; 22 disabled publish buttons total",
+    "INTERACTION AUDIT: all 11 routes (/, /evidence, /connectors, /founder-inbox, /products, /store, /manufacturing, /workflows, /autonomy, /analytics, /customers) render without crash/blank",
+    "REGRESSION: /evidence metric-card-connector_status shows LIVE 2/23 Operational Connectors",
+    "REGRESSION: bad OAuth callback redirects to /connectors (toast error shown)"
+  ],
+  "rca of the issue": {
+    "bug1_api_key_devconfig_hidden": {
+      "reproduction": "Login as Founder → /connectors → click Developer Mode toggle ON → look at woocommerce/shopify/amazon_kdp/tpt cards. NO connector-devconfig-<id> button appears. Spec requires clicking Developer Setup on woocommerce (api_key) opens the connect-dialog.",
+      "rca": "Connectors.js line 149 render gate: `{devMode && c.oauth_supported !== false && ...}`. Backend _public sets oauth_supported=false for api_key connectors. This gate correctly hides devconfig for connectors that don't support OAuth, but api_key connectors DO need their own developer-setup flow (API key entry). The gate is over-broad.",
+      "mitigation": "Change gate to `{devMode && (c.auth_method === 'oauth' ? c.oauth_supported !== false : true) && ...}` OR simply `{devMode && c.auth_method !== 'native' && ...}` — the onClick already handles which dialog to open."
+    },
+    "bug2_stripe_disabled_publish_no_tooltip": {
+      "reproduction": "Login → /connectors → hover stripe's disabled Publish button → no tooltip appears. `connector-publish-disabled-stripe` has empty title attribute.",
+      "rca": "connectors.py _public.publish_disabled_reason logic: `(None if (reg['operational'] and connected) else ...)`. Stripe is operational=True AND connected (status='Connected'), so publish_disabled_reason=None. But stripe.can_publish is False because 'publish' is not in stripe.capabilities. The reason is incorrectly gated by operational+connected instead of by can_publish.",
+      "mitigation": "Rework `publish_disabled_reason` to be non-null whenever `can_publish` is False. Special-case stripe with a friendly message like 'Stripe handles pricing & checkout automatically for QRU Store™ products — it isn't a standalone publish target.'"
+    }
+  }
+}
