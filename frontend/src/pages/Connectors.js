@@ -141,7 +141,11 @@ export default function Connectors() {
               <p className="text-[11px] text-muted-foreground mb-2 flex items-start gap-1" data-testid={`connector-unsupported-${c.id}`}><AlertTriangle className="w-3 h-3 mt-0.5 shrink-0 text-amber-500" /> {c.oauth_unsupported_reason}</p>
             )}
             {c.configurable && !c.developer_configured && !devMode && (
-              <p className="text-[11px] text-blue-700 mb-2 flex items-start gap-1" data-testid={`connector-setup-note-${c.id}`}><Settings2 className="w-3 h-3 mt-0.5 shrink-0" /> An administrator must complete developer setup before this platform can be connected.</p>
+              <p className="text-[11px] text-blue-700 mb-2 flex items-start gap-1" data-testid={`connector-setup-note-${c.id}`}><Settings2 className="w-3 h-3 mt-0.5 shrink-0" />
+                {isAdmin
+                  ? "Turn on Developer Mode (top-right) → click Developer Setup to paste the Client ID & Secret. The status will change to “Needs Authorization”, then you can Connect."
+                  : "An administrator must complete developer setup before this platform can be connected."}
+              </p>
             )}
             {devMode && c.configurable && (
               <p className="text-[11px] text-muted-foreground mb-2" data-testid={`connector-cred-needs-${c.id}`}><b className="text-navy">Needs:</b> {c.credential_needs}</p>
