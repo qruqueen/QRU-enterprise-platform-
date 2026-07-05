@@ -1,0 +1,45 @@
+{
+  "summary": "Retest of iteration_27's two UX bugs + full 23-connector Founder UX audit. BOTH BUGS FIXED. Backend: 59/59 pytest cases PASSED (24 iteration_27 regression + 35 iteration_28 new). Frontend: verified in browser as Founder — Founder Mode hides ALL dev credentials (no 'Client ID/Secret/Redirect URI/Needs:'), 21 setup notes visible, 22 publish-reason lines rendered, stripe disabled-Publish title tooltip = 'Stripe powers checkout & payments for QRU Store™ products — it isn't a publishing destination…' AND visible connector-publish-reason-stripe line, 23 connector-next-step-<id> lines rendered. Dev Mode: 22 connector-devconfig-<id> buttons (17 OAuth + 4 api_key + stripe editable) — INCLUDING woocommerce/shopify/amazon_kdp/tpt. Clicking woocommerce Developer Setup opens connect-dialog with connect-apikey-input; clicking youtube opens devconfig-dialog. Youtube OAuth authorize-url returns accounts.google.com endpoint (backend verified). Evidence Dashboard shows LIVE 2/23 Operational Connectors. qru_store Test triggers toast, github Test hidden until dev-config, stripe Test button exists. Cleanup: youtube dev-config deleted; state restored.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration27_founder_beta.py",
+    "/app/backend/tests/test_iteration28_connector_ux.py",
+    "/app/test_reports/pytest/iteration28.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Connectors.js line 152 `{devMode && c.configurable && (...)}` — correctly gated on `configurable` (backend-computed). Good separation of concerns; onClick dispatches to devconfig-dialog (oauth) vs connect-dialog (api_key) based on auth_method.",
+    "connectors.py `_publish_reason` now derives reason from (a) can_publish flag, (b) capability check, (c) operational flag, (d) connected flag — never returns None when can_publish=False. Stripe gets a friendly branded message.",
+    "connectors.py `_next_step` returns per-status guidance mapped from status → action prompt. Good centralization; consider extracting to a table if more statuses are added.",
+    "Connectors.js 22 configurable connectors show connector-cred-needs-<id> in Dev Mode — including stripe (which is env-configured). Slight redundancy but harmless: an admin can rotate the Stripe key via the same dialog if needed.",
+    "23 connectors on one page — consider category grouping or a filter for scalability (unchanged since iteration_27; low priority).",
+    "developer-mode is client-side state only. Backend enforces super-admin on POST/DELETE /developer-config endpoints (verified). Acceptable defense-in-depth."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration28_connector_ux.py (new — 35 tests: bug1 configurable, bug2 disabled-reason, universal next_step, credential_needs, youtube authorize-url flow, verify checklist)"
+  ],
+  "success_rate": {"backend": "100% (59/59)", "frontend": "100% (both UX bugs fixed; all 23-connector UX contracts satisfied)"},
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Test suite creates dummy youtube developer-config (client_id='test.apps.googleusercontent.com') then DELETES it. Post-test state: youtube = 'Developer Setup Required' (verified by re-fetching /api/connectors after cleanup).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Both iteration_27 bugs verified fixed. Backend contract for connectors is now: every connector has `configurable`, `next_step`, `credential_needs`, `publish_disabled_reason` (never null when can_publish=False). Test file /app/backend/tests/test_iteration28_connector_ux.py covers Bug1, Bug2, universal audits and OAuth authorize-url smoke. Rerun with: `python -m pytest backend/tests/test_iteration27_founder_beta.py backend/tests/test_iteration28_connector_ux.py -v`. Only qru_store publishes; stripe is Connected but not a publish target (correct). Real OAuth completion still requires registered provider apps (expected/out of scope).",
+  "verified_features": [
+    "BUGFIX 1 VERIFIED: 4 api_key connectors (woocommerce, shopify, amazon_kdp, tpt) all show connector-devconfig-<id> in Dev Mode",
+    "BUGFIX 1 VERIFIED: click Dev Setup on woocommerce → connect-dialog opens with connect-apikey-input",
+    "BUGFIX 1 VERIFIED: click Dev Setup on youtube → devconfig-dialog opens (OAuth flow)",
+    "BUGFIX 2 VERIFIED: connector-publish-disabled-stripe title tooltip is non-empty and describes stripe as non-publishing destination",
+    "BUGFIX 2 VERIFIED: connector-publish-reason-stripe line visible under the card",
+    "UNIVERSAL: 23/23 connectors have non-empty next_step (connector-next-step-<id> rendered)",
+    "UNIVERSAL: 22/22 disabled Publish buttons have non-null publish_disabled_reason",
+    "UNIVERSAL: 22 configurable connectors (17 OAuth + 5 api_key) have configurable=True",
+    "FOUNDER MODE: 0 devconfig buttons, no 'Client ID/Secret/Redirect URI/Needs:' text visible; 21 setup-notes",
+    "DEV MODE: 22 devconfig buttons + 22 connector-cred-needs-<id> 'Needs:' lines",
+    "OAuth flow: youtube dev-config → status transitions to 'Needs Authorization' → authorize-url returns accounts.google.com endpoint",
+    "Test Connection: qru_store test → success toast; github test hidden until dev-config; verify returns checks[] for github, structured for stripe/woocommerce",
+    "Evidence Dashboard: metric-card-connector_status shows LIVE 2/23 Operational Connectors",
+    "REGRESSION: bad OAuth callback /api/oauth/callback?state=bad&code=x still redirects with oauth=error",
+    "REGRESSION: qru_store='Ready to Publish' (can_publish=True, no disabled reason); stripe='Connected'"
+  ]
+}

@@ -157,28 +157,70 @@ async def _status_for(reg, state):
     return state.get("status") or S_CONNECTED
 
 
+def _publish_reason(reg, connected, can_publish):
+    if can_publish:
+        return None
+    if "publish" not in reg["capabilities"]:
+        if reg["id"] == "stripe":
+            return "Stripe powers checkout & payments for QRU Store™ products — it isn't a publishing destination, so there's nothing to publish here."
+        return f"{reg['name']} isn't a publishing destination — it handles {', '.join(reg['capabilities'])}."
+    if reg["auth_method"] != "native" and not reg["operational"]:
+        return (f"Connect & Test work today, but automated publishing of the finished file to {reg['name']} "
+                f"isn't wired yet. Publish to QRU Store™ now; {reg['name']} auto-publishing is a planned milestone.")
+    if not connected:
+        return f"Connect {reg['name']} first (complete Developer Setup, then Connect)."
+    return f"{reg['name']} isn't ready to publish yet."
+
+
+def _next_step(reg, status, connected):
+    if reg["auth_method"] == "native":
+        return "Select a review-passed product and click Publish."
+    return {
+        S_DEV_SETUP: f"An administrator must complete Developer Setup for {reg['name']} in Developer Mode (add the required credentials).",
+        S_NEEDS_AUTH: f"Click Connect to sign in with {reg['name']} and approve access — no tokens to copy.",
+        S_CONNECTED: "Click Test Connection to verify authentication, permissions and readiness.",
+        S_READY: "Ready — select a review-passed product and click Publish.",
+        S_RECONNECT: f"Click Reconnect to re-authorize {reg['name']} (the previous session expired).",
+        S_EXPIRED: f"Click Reconnect to refresh access to {reg['name']}.",
+        S_DISCONNECTED: f"Click Connect to authorize {reg['name']}.",
+    }.get(status, reg["setup_hint"])
+
+
+def _credential_needs(reg):
+    if reg["auth_method"] == "oauth":
+        return "OAuth Client ID, Client Secret and the exact Redirect URI (from the provider's developer console)."
+    if reg["auth_method"] == "api_key":
+        return reg["setup_hint"]
+    return None
+
+
 async def _public(reg, state):
     status = await _status_for(reg, state)
     connected = status in (S_HEALTHY, S_CONNECTED, S_READY)
     os_state = await oauth.public_state(reg["id"]) if reg["auth_method"] == "oauth" else {}
     os_state = os_state or {}
+    oauth_supported = os_state.get("oauth_supported") if reg["auth_method"] == "oauth" else None
+    developer_configured = (os_state.get("developer_configured") if reg["auth_method"] == "oauth"
+                            else bool(state.get("connected"))
+                                 or (reg["id"] == "stripe" and bool(os.environ.get("STRIPE_API_KEY"))))
+    can_publish = bool(reg["operational"] and "publish" in reg["capabilities"] and connected)
+    # A connector can hold credentials (Developer Setup) if it uses oauth (supported) or an api key.
+    configurable = (reg["auth_method"] == "oauth" and oauth_supported is not False) or reg["auth_method"] == "api_key"
     return {
         "id": reg["id"], "name": reg["name"], "category": reg["category"],
         "auth_method": reg["auth_method"], "operational": reg["operational"],
         "asset_types": reg["asset_types"], "capabilities": reg["capabilities"],
         "setup_hint": reg["setup_hint"], "status": status, "connected": connected,
-        "oauth_supported": os_state.get("oauth_supported", reg["auth_method"] == "oauth"),
+        "configurable": configurable,
+        "oauth_supported": oauth_supported,
         "oauth_unsupported_reason": os_state.get("reason"),
-        "developer_configured": (os_state.get("developer_configured") if reg["auth_method"] == "oauth"
-                                 else bool(state.get("connected"))
-                                      or (reg["id"] == "stripe" and bool(os.environ.get("STRIPE_API_KEY")))),
+        "developer_configured": developer_configured,
         "authorized": os_state.get("authorized"),
         "reconnect_required": os_state.get("reconnect_required"),
-        "can_publish": bool(reg["operational"] and "publish" in reg["capabilities"] and connected),
-        "publish_disabled_reason": (None if (reg["operational"] and connected)
-                                    else ("Automated publishing to this platform isn't wired yet — connect & test work today."
-                                          if (reg["auth_method"] != "native" and not reg["operational"])
-                                          else "Connect this platform first.")),
+        "can_publish": can_publish,
+        "publish_disabled_reason": _publish_reason(reg, connected, can_publish),
+        "credential_needs": _credential_needs(reg),
+        "next_step": _next_step(reg, status, connected),
         "account": os_state.get("account") or state.get("account"),
         "connected_at": os_state.get("connected_at") or state.get("connected_at"),
         "last_checked": os_state.get("last_checked") or state.get("last_checked"),

@@ -137,16 +137,19 @@ export default function Connectors() {
               {c.asset_types.length > 4 && <span className="text-[10px] text-muted-foreground">+{c.asset_types.length - 4}</span>}
             </div>
 
-            {c.auth_method === "oauth" && c.oauth_supported === false && (
+            {c.oauth_supported === false && c.oauth_unsupported_reason && (
               <p className="text-[11px] text-muted-foreground mb-2 flex items-start gap-1" data-testid={`connector-unsupported-${c.id}`}><AlertTriangle className="w-3 h-3 mt-0.5 shrink-0 text-amber-500" /> {c.oauth_unsupported_reason}</p>
             )}
-            {c.oauth_supported !== false && !c.developer_configured && !devMode && (
+            {c.configurable && !c.developer_configured && !devMode && (
               <p className="text-[11px] text-blue-700 mb-2 flex items-start gap-1" data-testid={`connector-setup-note-${c.id}`}><Settings2 className="w-3 h-3 mt-0.5 shrink-0" /> An administrator must complete developer setup before this platform can be connected.</p>
+            )}
+            {devMode && c.configurable && (
+              <p className="text-[11px] text-muted-foreground mb-2" data-testid={`connector-cred-needs-${c.id}`}><b className="text-navy">Needs:</b> {c.credential_needs}</p>
             )}
 
             <div className="mt-auto flex flex-wrap gap-1.5">
               {/* Developer Setup — administrator-only, Developer Mode only */}
-              {devMode && c.oauth_supported !== false && (
+              {devMode && c.configurable && (
                 <button data-testid={`connector-devconfig-${c.id}`}
                   onClick={() => (c.auth_method === "oauth" ? setDevDlg(c) : setConnectDlg(c))}
                   className="text-xs inline-flex items-center gap-1 border border-navy/40 text-navy px-2.5 py-1.5 rounded-sm hover:border-navy">
@@ -155,7 +158,7 @@ export default function Connectors() {
               )}
 
               {/* Founder Connect / Reconnect — only after developer setup is complete */}
-              {c.auth_method === "oauth" && c.oauth_supported !== false && c.developer_configured && !c.authorized && (
+              {c.auth_method === "oauth" && c.oauth_supported !== false && c.developer_configured && !c.authorized && !c.reconnect_required && (
                 <button data-testid={`connector-connect-${c.id}`} onClick={() => connectOAuth(c)} disabled={busy === c.id}
                   className="text-xs inline-flex items-center gap-1 bg-navy text-white px-2.5 py-1.5 rounded-sm disabled:opacity-60">
                   {busy === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5" />} Connect
@@ -169,7 +172,7 @@ export default function Connectors() {
               )}
 
               {/* Test Connection — once developer setup is complete */}
-              {(c.auth_method === "native" || (c.oauth_supported !== false && c.developer_configured)) && (
+              {(c.auth_method === "native" || (c.configurable && c.developer_configured)) && (
                 <button data-testid={`connector-test-${c.id}`} onClick={() => test(c)} disabled={busy === c.id}
                   className="text-xs inline-flex items-center gap-1 border px-2.5 py-1.5 rounded-sm hover:border-primary disabled:opacity-60">
                   {busy === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Radio className="w-3.5 h-3.5" />} Test
@@ -191,14 +194,19 @@ export default function Connectors() {
                   <Upload className="w-3.5 h-3.5" /> Publish
                 </button>
               ) : (
-                <button data-testid={`connector-publish-disabled-${c.id}`} disabled title={c.publish_disabled_reason}
+                <button data-testid={`connector-publish-disabled-${c.id}`} disabled title={c.publish_disabled_reason || "Publishing unavailable"}
                   className="text-xs inline-flex items-center gap-1 border px-2.5 py-1.5 rounded-sm opacity-50 cursor-not-allowed">
                   <Upload className="w-3.5 h-3.5" /> Publish
                 </button>
               )}
             </div>
-            {!c.can_publish && c.publish_disabled_reason && c.oauth_supported !== false && (c.developer_configured || c.auth_method === "native") && (
-              <p className="text-[10px] text-muted-foreground mt-1.5">Publish: {c.publish_disabled_reason}</p>
+
+            {/* Always tell the Founder the exact next step (Treasure Standard™) */}
+            <p className="text-[10px] text-navy/70 mt-2 flex items-start gap-1" data-testid={`connector-next-step-${c.id}`}>
+              <span className="font-semibold shrink-0">Next:</span> {c.next_step}
+            </p>
+            {!c.can_publish && c.publish_disabled_reason && (
+              <p className="text-[10px] text-muted-foreground mt-1" data-testid={`connector-publish-reason-${c.id}`}>Publish: {c.publish_disabled_reason}</p>
             )}
           </div>
         ))}
