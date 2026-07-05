@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
+import { StatusChip, Panel } from "@/components/qru";
 import { toast } from "sonner";
 import {
   Loader2, Save, FileText, CheckCircle2, Clock, ChevronDown, ChevronRight, Layers, Boxes,
@@ -44,7 +45,7 @@ function SectionCard({ krId, section, onSaved }) {
           {section.manufacturing_ready && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${STATUS_STYLE[section.status]}`}>{section.status}</span>
+          <StatusChip status={section.status} />
           {section.version > 0 && <span className="text-[9px] text-muted-foreground">v{section.version}</span>}
         </div>
       </button>
@@ -101,16 +102,16 @@ export default function KnowledgeRecord2() {
 
       {!kr ? <div className="flex justify-center py-16"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div> : (
         <>
-          <div className="bg-card border rounded-xl p-4 mb-6" data-testid="kr2-completeness">
-            <div className="flex items-center justify-between mb-2">
-              <p className="font-heading font-bold text-navy flex items-center gap-2"><FileText className="w-4 h-4 text-royal" /> {kr.kr_code} — {kr.title}</p>
-              <span className="text-xs text-muted-foreground">{kr.completeness.complete}/{kr.completeness.total} sections · {kr.completeness.verified} verified</span>
+          <Panel testid="kr2-completeness" accent="gold" className="mb-6">
+            <div className="flex items-center justify-between mb-2.5">
+              <p className="font-heading font-bold text-navy flex items-center gap-2 text-lg"><FileText className="w-4 h-4 text-royal" /> {kr.kr_code} — {kr.title}</p>
+              <span className="text-xs text-muted-foreground font-medium">{kr.completeness.complete}/{kr.completeness.total} sections · {kr.completeness.verified} verified</span>
             </div>
-            <div className="h-2 rounded-full bg-muted overflow-hidden"><div className="h-full bg-gold" style={{ width: `${kr.completeness.percent}%` }} /></div>
-            <p className="text-[11px] text-muted-foreground mt-1">{kr.completeness.percent}% complete · schema v{kr.schema_version}</p>
-          </div>
+            <div className="h-2.5 rounded-full bg-muted overflow-hidden"><div className="h-full bg-gold transition-[width] duration-500 ease-out" style={{ width: `${kr.completeness.percent}%` }} /></div>
+            <p className="text-[11px] text-muted-foreground mt-1.5">{kr.completeness.percent}% complete · schema v{kr.schema_version}</p>
+          </Panel>
 
-          <p className="overline text-primary mb-3 flex items-center gap-1.5"><Layers className="w-3.5 h-3.5" /> Sections ({kr.sections.length})</p>
+          <p className="overline text-royal mb-3 flex items-center gap-1.5"><Layers className="w-3.5 h-3.5" /> Sections ({kr.sections.length})</p>
           <div className="space-y-2" data-testid="kr2-sections">
             {kr.sections.map((s) => <SectionCard key={s.section_id} krId={kr.id} section={s} onSaved={load} />)}
           </div>

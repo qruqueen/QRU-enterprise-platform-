@@ -5,13 +5,18 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['IBM Plex Sans', 'sans-serif'],
-        heading: ['Outfit', 'sans-serif'],
+        sans: ['Manrope', 'sans-serif'],
+        heading: ['Playfair Display', 'Georgia', 'serif'],
+        serif: ['Playfair Display', 'Georgia', 'serif'],
       },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)'
+      },
+      boxShadow: {
+        'qru': '0 8px 24px -14px hsl(222 47% 11% / 0.28)',
+        'qru-lg': '0 20px 48px -24px hsl(222 47% 11% / 0.35)',
       },
       colors: {
         background: 'hsl(var(--background))',

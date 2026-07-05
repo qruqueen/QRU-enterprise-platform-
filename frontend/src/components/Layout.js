@@ -5,6 +5,7 @@ import { useMode } from "@/context/ModeContext";
 import MusicControl from "@/components/MusicControl";
 import FounderSecurityBanner from "@/components/FounderSecurityBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { QRUShield } from "@/components/qru";
 import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
@@ -102,10 +103,10 @@ export default function Layout() {
         }`}
       >
         <div className="h-16 flex items-center gap-2.5 px-5 border-b border-white/10 shrink-0">
-          <img src="/qru-shield-light.png" alt="QRU" className="w-8 h-8 object-contain" />
+          <QRUShield className="w-8 h-8 shrink-0" />
           <div className="leading-none">
-            <p className="font-heading font-bold text-[15px] tracking-tight text-white">QRU FACTORY™</p>
-            <p className="text-[9px] text-gold tracking-[0.18em]">UNDERSTANDING OS</p>
+            <p className="font-heading font-bold text-[16px] tracking-tight text-white">QRU FACTORY™</p>
+            <p className="text-[8.5px] text-gold tracking-[0.2em] font-semibold mt-0.5">KNOWLEDGE MANUFACTURING OS</p>
           </div>
         </div>
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
@@ -121,10 +122,10 @@ export default function Layout() {
                 title={item.q ? `${item.label} — "${item.q}"` : item.label}
                 onClick={() => setMobileOpen(false)}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2 rounded-sm text-sm transition-colors ${
+                  `flex items-center gap-3 px-3 py-2 rounded-sm text-sm transition-colors duration-150 ${
                     isActive
-                      ? "bg-gold text-navy font-semibold"
-                      : "text-white/70 hover:bg-white/10 hover:text-white"
+                      ? "bg-gold text-navy font-bold shadow-sm"
+                      : "text-white/65 hover:bg-white/10 hover:text-white"
                   }`
                 }
               >

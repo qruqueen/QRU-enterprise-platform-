@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { PageHeader } from "@/components/shared";
+import { StageTimeline, StatusChip } from "@/components/qru";
 import { toast } from "sonner";
 import {
   Plug, Loader2, CheckCircle2, AlertTriangle, ShieldCheck, KeyRound, ExternalLink, X,
@@ -102,14 +103,7 @@ export default function Connectors() {
       />
 
       <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
-        <div className="flex items-center gap-2 flex-wrap text-xs" data-testid="connector-lifecycle">
-          {LIFECYCLE.map((s, i) => (
-            <span key={s} className="flex items-center gap-2">
-              <span className="px-2.5 py-1 rounded-full bg-navy/5 text-navy font-medium">{i + 1}. {s}</span>
-              {i < LIFECYCLE.length - 1 && <span className="text-muted-foreground">→</span>}
-            </span>
-          ))}
-        </div>
+        <StageTimeline steps={LIFECYCLE} current={-1} testid="connector-lifecycle" />
         {isAdmin && (
           <button data-testid="developer-mode-toggle" onClick={() => setDevMode((v) => !v)}
             className={`text-xs inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm border font-medium ${devMode ? "bg-navy text-white border-navy" : "text-navy border-navy/30 hover:border-navy"}`}>
@@ -131,7 +125,7 @@ export default function Connectors() {
                 <p className="font-heading font-bold text-navy">{c.name}</p>
                 <p className="text-[11px] text-muted-foreground">{c.category} · {c.auth_method === "native" ? "Built-in" : c.auth_method === "oauth" ? "OAuth" : "API key"}</p>
               </div>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full border ${STATUS_STYLE[c.status] || "bg-slate-100 text-slate-500 border-slate-200"}`} data-testid={`connector-status-${c.id}`}>{c.status}</span>
+              <StatusChip status={c.status} testid={`connector-status-${c.id}`} />
             </div>
 
             {c.account && (c.authorized || c.connected) && (

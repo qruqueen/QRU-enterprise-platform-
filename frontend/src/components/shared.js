@@ -102,10 +102,10 @@ export function StatusBadge({ status, testid }) {
 export function PageHeader({ overline, title, description, actions }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 animate-fade-up">
-      <div>
-        {overline && <p className="overline text-primary mb-2">{overline}</p>}
-        <h1 className="font-heading text-3xl sm:text-4xl font-bold tracking-tight text-foreground">{title}</h1>
-        {description && <p className="text-muted-foreground mt-2 max-w-2xl">{description}</p>}
+      <div className="pl-4 border-l-2 border-gold">
+        {overline && <p className="overline text-royal mb-2">{overline}</p>}
+        <h1 className="font-heading text-4xl sm:text-5xl font-bold tracking-tight text-navy leading-[1.05]">{title}</h1>
+        {description && <p className="text-muted-foreground mt-3 max-w-2xl text-[15px] leading-relaxed">{description}</p>}
       </div>
       {actions && <div className="flex gap-2 shrink-0">{actions}</div>}
     </div>

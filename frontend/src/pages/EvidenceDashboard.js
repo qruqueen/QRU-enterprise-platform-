@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
+import { MetricCard } from "@/components/qru";
 import {
   Loader2, X, ShieldCheck, CheckCircle2, AlertTriangle, Info, ChevronRight,
   Database, ShoppingCart, Factory, UploadCloud, ExternalLink,
@@ -165,22 +166,17 @@ export default function EvidenceDashboard() {
         const GIcon = GROUP_ICON[g.name] || Database;
         return (
           <div key={g.name} className="mb-8">
-            <p className="overline text-primary mb-3 flex items-center gap-1.5"><GIcon className="w-3.5 h-3.5" /> {g.name}</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" data-testid={`metric-group-${g.name}`}>
+            <p className="overline text-royal mb-3 flex items-center gap-1.5"><GIcon className="w-3.5 h-3.5" /> {g.name}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" data-testid={`metric-group-${g.name}`}>
               {g.items.map((m) => (
-                <button
+                <MetricCard
                   key={m.id}
+                  testid={`metric-card-${m.id}`}
+                  label={m.label}
+                  value={m.display}
+                  provenance={m.provenance}
                   onClick={() => setActive(m)}
-                  data-testid={`metric-card-${m.id}`}
-                  className="text-left bg-card border border-border rounded-xl p-4 hover:border-primary hover:shadow-sm transition-colors group"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <ProvBadge p={m.provenance} />
-                    <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </div>
-                  <p className="font-heading text-2xl font-bold text-navy">{m.display}</p>
-                  <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">{m.label}</p>
-                </button>
+                />
               ))}
             </div>
           </div>

@@ -1,59 +1,87 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Manrope:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   QRU Master Design Language™ (MO-004)
+   Foundation: Deep Navy · Excellence: QRU Gold · Clarity: White
+   Signature Accent: Royal Purple (used sparingly)
+   Headings: Playfair Display (museum-quality authority)
+   Body: Manrope (maximum readability)
+   ============================================================ */
+
 body {
     margin: 0;
-    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.003em;
 }
 
 h1, h2, h3, h4, h5, .font-heading {
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Playfair Display', Georgia, serif;
+    letter-spacing: -0.01em;
 }
+
+.font-body { font-family: 'Manrope', sans-serif; }
 
 .overline {
     text-transform: uppercase;
-    letter-spacing: 0.2em;
-    font-size: 0.68rem;
-    font-weight: 600;
+    letter-spacing: 0.22em;
+    font-size: 0.66rem;
+    font-weight: 700;
+    font-family: 'Manrope', sans-serif;
 }
 
 @layer base {
     :root {
-        --background: 250 30% 98%;
-        --foreground: 252 40% 12%;
+        /* Neutral canvas — a whisper of cool navy so white cards feel like museum plinths */
+        --background: 210 40% 98%;
+        --foreground: 222 47% 11%;
         --card: 0 0% 100%;
-        --card-foreground: 252 40% 12%;
+        --card-foreground: 222 47% 11%;
         --popover: 0 0% 100%;
-        --popover-foreground: 252 40% 12%;
-        --primary: 266 74% 24%;
+        --popover-foreground: 222 47% 11%;
+
+        /* PRIMARY — Deep Navy (foundation, structure, trust) */
+        --primary: 222 47% 11%;
         --primary-foreground: 0 0% 100%;
-        --secondary: 252 30% 94%;
-        --secondary-foreground: 252 40% 18%;
-        --muted: 252 24% 95%;
-        --muted-foreground: 252 12% 45%;
-        --accent: 42 91% 53%;
-        --accent-foreground: 252 45% 14%;
-        --destructive: 0 72% 51%;
+
+        /* SECONDARY — QRU Gold (verified excellence) */
+        --secondary: 43 74% 49%;
+        --secondary-foreground: 222 47% 11%;
+
+        --muted: 215 30% 95.5%;
+        --muted-foreground: 215 16% 42%;
+
+        /* ACCENT — Royal Purple (signature, discovery — use sparingly) */
+        --accent: 271 62% 42%;
+        --accent-foreground: 0 0% 100%;
+
+        --destructive: 0 72% 48%;
         --destructive-foreground: 0 0% 100%;
-        --border: 252 20% 90%;
-        --input: 252 20% 90%;
-        --ring: 266 74% 24%;
-        --success: 160 84% 34%;
-        --warning: 42 91% 53%;
-        --gold: 42 91% 53%;
-        --navy: 252 45% 18%;
-        --royal: 266 74% 24%;
-        --chart-1: 266 74% 34%;
-        --chart-2: 42 91% 53%;
-        --chart-3: 160 84% 39%;
-        --chart-4: 252 45% 30%;
-        --chart-5: 199 89% 48%;
-        --radius: 0.35rem;
+
+        --border: 214 26% 89%;
+        --input: 214 26% 89%;
+        --ring: 222 47% 11%;
+
+        --success: 158 74% 34%;
+        --warning: 38 92% 48%;
+
+        /* Named brand tokens (used directly across the app) */
+        --gold: 43 74% 49%;
+        --navy: 222 47% 11%;
+        --royal: 271 62% 42%;
+
+        --chart-1: 222 47% 24%;
+        --chart-2: 43 74% 49%;
+        --chart-3: 271 62% 42%;
+        --chart-4: 158 74% 34%;
+        --chart-5: 205 80% 42%;
+
+        --radius: 0.375rem;
     }
 }
 
@@ -66,22 +94,50 @@ h1, h2, h3, h4, h5, .font-heading {
     }
 }
 
-::-webkit-scrollbar { width: 9px; height: 9px; }
+/* Refined scrollbars — quiet, structural */
+::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: hsl(220 13% 82%); border-radius: 6px; }
-::-webkit-scrollbar-thumb:hover { background: hsl(220 13% 70%); }
+::-webkit-scrollbar-thumb { background: hsl(214 20% 80%); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: hsl(222 30% 55%); background-clip: content-box; }
 
+::selection { background: hsl(var(--secondary) / 0.35); color: hsl(var(--navy)); }
+
+/* Subtle, confident motion */
 @keyframes fade-up {
-    from { opacity: 0; transform: translateY(8px); }
+    from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
-.animate-fade-up { animation: fade-up 0.4s ease-out both; }
+.animate-fade-up { animation: fade-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
-.prose-qru h1 { font-size: 1.6rem; font-weight: 700; margin: 0.6em 0 0.4em; font-family: 'Outfit'; }
-.prose-qru h2 { font-size: 1.3rem; font-weight: 600; margin: 0.8em 0 0.3em; font-family: 'Outfit'; }
-.prose-qru h3 { font-size: 1.1rem; font-weight: 600; margin: 0.7em 0 0.3em; }
-.prose-qru p { margin: 0.5em 0; line-height: 1.7; }
-.prose-qru ul, .prose-qru ol { margin: 0.5em 0; padding-left: 1.4em; line-height: 1.7; }
+@keyframes qru-sheen {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* Enterprise card — museum-quality flat surface with quiet hover lift */
+.qru-card {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
+}
+.qru-interactive:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px -14px hsl(222 47% 11% / 0.28);
+    border-color: hsl(var(--navy) / 0.35);
+}
+
+/* Gold hairline accent used on premium panels */
+.qru-goldline { box-shadow: inset 3px 0 0 hsl(var(--gold)); }
+.qru-navyline { box-shadow: inset 3px 0 0 hsl(var(--navy)); }
+.qru-royalline { box-shadow: inset 3px 0 0 hsl(var(--royal)); }
+
+/* Knowledge prose */
+.prose-qru h1 { font-size: 1.6rem; font-weight: 700; margin: 0.6em 0 0.4em; font-family: 'Playfair Display', serif; }
+.prose-qru h2 { font-size: 1.3rem; font-weight: 600; margin: 0.8em 0 0.3em; font-family: 'Playfair Display', serif; }
+.prose-qru h3 { font-size: 1.1rem; font-weight: 700; margin: 0.7em 0 0.3em; }
+.prose-qru p { margin: 0.5em 0; line-height: 1.75; }
+.prose-qru ul, .prose-qru ol { margin: 0.5em 0; padding-left: 1.4em; line-height: 1.75; }
 .prose-qru li { margin: 0.2em 0; }
-.prose-qru strong { font-weight: 600; }
-.prose-qru hr { margin: 1em 0; border-color: hsl(220 13% 90%); }
+.prose-qru strong { font-weight: 700; }
+.prose-qru hr { margin: 1em 0; border-color: hsl(var(--border)); }
