@@ -90,6 +90,7 @@ function BetaStatusPanel() {
 function DrilldownModal({ metric, onClose }) {
   const [d, setD] = useState(null);
   useEffect(() => {
+    setD(null);
     api.get(`/metrics/${metric.id}/evidence`).then((r) => setD(r.data)).catch(() => setD({ records: [], columns: [], empty_message: "Could not load evidence." }));
   }, [metric.id]);
   return (
