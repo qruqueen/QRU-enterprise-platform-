@@ -18,7 +18,26 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - Auth: JWT founder login. Stripe: TEST mode (sk_test).
 
 ## Completed (recent → older)
-### MO-045 — Founder Beta Stabilization & Evidence Completion (2026-07-05) · VERIFIED (testing_agent iteration_25, 18/18 backend, 100% frontend)
+### MO-046 — Founder Beta Completion™ · Universal OAuth Framework™ (2026-07-05) · VERIFIED (testing_agent iteration_26: backend 16/16, frontend 100%)
+- **`oauth_framework.py`** — one config-driven OAuth 2.0 engine for 15 providers (YouTube, Google
+  Drive/Docs/Slides, Microsoft, OneDrive, Dropbox, Etsy, LinkedIn, Facebook, Instagram, Pinterest,
+  TikTok, X, Canva). Standard authorize/token/userinfo endpoints + scopes; PKCE for Etsy/X/TikTok/Canva.
+  Amazon KDP & TPT honestly marked unsupported (no public OAuth publishing API).
+- **Developer-side config** (`db.connector_configs`): admin sets Client ID / Secret / Redirect URI;
+  secret encrypted at rest (Fernet, reuses `INTEGRATION_ENC_KEY`) and NEVER returned to the client.
+- **Founder flow**: Connect → `GET /authorize-url` (real provider URL) → official provider login →
+  `GET /api/oauth/callback` (public) exchanges code→tokens (encrypted), fetches account name →
+  Connected. Automatic token refresh. Founder never sees tokens/credentials.
+- **Honest statuses**: Developer Configuration Required → Needs Authorization → Connected → Test Passed
+  / Disconnected. **Test Connection** returns an evidence checklist (auth, account ownership, token
+  validity via live userinfo call, publish/read permission from granted scopes, refresh capability,
+  Ready to Publish). Disconnect + delete-config revert cleanly.
+- **Frontend** `Connectors.js`: Developer Setup dialog, OAuth Connect (redirect to provider),
+  Test Connection checklist dialog, Disconnect; callback return (`?oauth=success|error`) toasts +
+  reloads. No dead/silent buttons — disabled Publish always shows a reason.
+- Founder Beta Status™ answers updated to reflect the OAuth framework honestly.
+
+### MO-045 — Founder Beta Stabilization & Evidence Completion (2026-07-05) · VERIFIED (iteration_25)
 - **Evidence Metrics Engine™** (`routers/metrics.py`): `GET /api/metrics/summary` returns 15 metrics
   across Commerce/Manufacturing/Publishing, each with a provenance label (LIVE / TEST / SIMULATED /
   NOT_TRACKED). `GET /api/metrics/{id}/evidence` drills into the exact underlying records with full
@@ -42,11 +61,20 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 ### MO-038…MO-043 — Autonomy, Design Director, Evidence Decision Center, Self-Guiding Gates,
 Founder Beta Dashboard, Automatic Knowledge Extraction, PreviewViewer. (all VERIFIED)
 
-## Known Limitations (as of MO-045)
+## Known Limitations (as of MO-046)
+- **OAuth end-to-end requires registered provider apps**: the framework is complete and honest, but a
+  developer/admin must register an OAuth app at each provider and enter Client ID/Secret/Redirect URI
+  before Connect works. Live authorization can only be verified once real credentials exist.
+- **Automated file publishing** to OAuth connectors (uploading the actual video/doc/listing) is NOT
+  yet wired — connect + test connection are operational; the publish-the-file step is a next milestone.
 - Stripe TEST mode only — no live payments; email delivery not wired (downloads shown in-app).
-- External connectors (YouTube/KDP/Etsy/etc.) are honest "Needs Authorization / Setup Required" — not operational.
-- `analytics.py` still emits a synthetic `knowledge_growth` trend chart (Analytics page only, not a headline metric). Flag/replace for full Treasure Standard™ if desired.
+- Amazon KDP & Teachers Pay Teachers have no public OAuth publishing API (honestly shown).
+- `analytics.py` still emits a synthetic `knowledge_growth` trend chart (Analytics page only).
 - LLM text/image generation CAPPED — deterministic $0 fallbacks in use.
+
+## Production Blockers
+- Live Stripe keys (currently sk_test) · Email delivery for customer downloads · Registered OAuth apps
+  + automated publish-the-file step for external connectors.
 
 ## Backlog / Next Milestones (P-ordered, awaiting Founder direction)
 - P1: Reach Founder Beta Complete™ (25 consecutive clean manufacturing runs).
