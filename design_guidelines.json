@@ -1,85 +1,100 @@
 {
-  "project_name": "QRU FACTORY™",
-  "domain": "Enterprise SaaS / Knowledge Manufacturing Operating System",
-  "theme": "Light",
-  "archetype": "4 (Swiss & High-Contrast)",
-  "design_philosophy": "Modern enterprise, professional, minimal, fast, responsive, highly organized, accessible. Clarity over decoration. Authority, clarity, function-first.",
+  "theme": "Light (with Dark Structural Navigation)",
+  "archetype": "4 (Swiss & High-Contrast) + 5 (Luxury) Hybrid - 'Old Money Tech'",
+  "brand_motto": "Knowledge First. Excellence Second. Clarity Always. Imagination Where It Matters.",
   "typography": {
-    "headings_font": "Outfit",
-    "body_font": "IBM Plex Sans",
-    "strategy": "Swiss Brutalist tech vibe: High contrast weights. Headings use 'tracking-tight'. Overlines/Labels are Uppercase + tracking-[0.2em]."
-  },
-  "colors": {
-    "background": "#F8F9FA",
-    "foreground": "#0A0A0A",
-    "card": "#FFFFFF",
-    "card_foreground": "#0A0A0A",
-    "primary": "#0047FF",
-    "primary_foreground": "#FFFFFF",
-    "secondary": "#E5E7EB",
-    "secondary_foreground": "#0A0A0A",
-    "muted": "#F3F4F6",
-    "muted_foreground": "#6B7280",
-    "accent": "#F3F4F6",
-    "accent_foreground": "#0A0A0A",
-    "destructive": "#EF4444",
-    "destructive_foreground": "#FFFFFF",
-    "border": "#E5E7EB",
-    "input": "#E5E7EB",
-    "ring": "#0047FF",
-    "success": "#10B981",
-    "warning": "#F59E0B"
-  },
-  "spacing_and_layout": {
-    "philosophy": "Control Room Grid for Dashboards: Density, Data Correlation, Scanability.",
-    "grid_strategy": "Base grid-cols-1 md:grid-cols-3 lg:grid-cols-4, tight gaps (gap-4 or gap-6).",
-    "alignment": "Left-align for data, inputs, and dense content. Center only for isolated cards or empty states."
-  },
-  "components_rules": {
-    "cards_and_surfaces": "Flat solid background, subtle 1px border, max 4px radius (rounded-sm or rounded-md). No shadows by default. On hover: slight lift (-translate-y-1) and subtle shadow (shadow-sm).",
-    "buttons": "Sharp, clean, high contrast. Only use primary color for main CTAs.",
-    "tables_and_grids": "Dense, highly organized data grids with clear column headers. Striped rows or border-b for separation.",
-    "glassmorphism": "Avoid glassmorphism. Use solid backgrounds to maintain data clarity and enterprise authority."
-  },
-  "icons": "lucide-react",
-  "media": {
-    "image_urls": [
-      {
-        "url": "https://images.unsplash.com/photo-1707730318002-6fbd8ecd6b77?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwzfHxhYnN0cmFjdCUyMGJsdWUlMjBnZW9tZXRyaWMlMjBiYWNrZ3JvdW5kfGVufDB8fHx8MTc4MzAxMjk5Nnww&ixlib=rb-4.1.0&q=85",
-        "category": "Hero / Command Center Background",
-        "description": "Abstract blue and white geometric background for the Executive Command Center header."
-      },
-      {
-        "url": "https://images.pexels.com/photos/31869537/pexels-photo-31869537.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-        "category": "User Profile / AI Digital Employee",
-        "description": "Professional headshot for the 'Chief Executive Agent' or User Profile."
-      },
-      {
-        "url": "https://images.pexels.com/photos/29852895/pexels-photo-29852895.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-        "category": "User Profile / AI Digital Employee",
-        "description": "Professional headshot for the 'Research Director' or other AI agent."
-      },
-      {
-        "url": "https://images.pexels.com/photos/36631701/pexels-photo-36631701.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-        "category": "Auth Background / Empty State",
-        "description": "Spacious and bright modern corporate office area for login page or empty states."
-      }
+    "heading": {
+      "family": "Playfair Display",
+      "type": "Serif",
+      "weights": ["400", "600", "700", "900"],
+      "usage": "Used for Headings, Titles, Dashboard primary metrics, and Hero sections. Communicates museum-quality authority, permanence, and enterprise trust."
+    },
+    "body": {
+      "family": "Manrope",
+      "type": "Sans-serif",
+      "weights": ["400", "500", "600", "700"],
+      "usage": "Used for UI elements, paragraphs, tables, forms, and dense data displays. Prioritizes maximum readability and clarity."
+    },
+    "rules": [
+      "H1 (Hero/Main Heading): text-4xl sm:text-5xl lg:text-6xl with tracking-tight. NEVER exceed text-6xl.",
+      "H2 (Section Heading): text-2xl sm:text-3xl lg:text-4xl.",
+      "Never center default headings; prioritize clear left alignment for reading and logical flow.",
+      "CRITICAL: Do NOT use Inter, Roboto, Lato, or Open Sans. They dilute the enterprise museum-quality standard."
     ]
   },
-  "accessibility_and_testing": {
-    "contrast": "Strict APCA/WCAG contrast compliance. Text on primary elements must be white (#FFFFFF). Tint greys towards blue/cool.",
-    "testing_attributes": "All interactive and key informational elements MUST include a data-testid attribute in kebab-case (e.g., data-testid='submit-button')."
+  "colors": {
+    "hierarchy_rules": [
+      "1. PRIMARY (Navy): The foundation. Use for branding, headers, dashboards, sidebar navigation, major backgrounds, and interface structure. Establishes serious enterprise trust.",
+      "2. SECONDARY (Gold): Verified excellence. Use for Treasure Standard™ badges, certifications, verified status, highlights, and progress metrics. Gold should NEVER overpower Navy.",
+      "3. NEUTRAL (White): Clarity and readability. Use for learning pages, documents, cards, and content backgrounds. Creates breathing room and reduces cognitive load.",
+      "4. SIGNATURE ACCENT (Purple): Inspire curiosity. Use SPARINGLY. Apply to key CTAs, interactive elements, learning pathways, and discovery moments. Guide attention rather than dominate."
+    ],
+    "shadcn_css_variables": {
+      "light": {
+        "--background": "0 0% 100%",
+        "--foreground": "222 47% 11%",
+        "--card": "0 0% 100%",
+        "--card-foreground": "222 47% 11%",
+        "--popover": "0 0% 100%",
+        "--popover-foreground": "222 47% 11%",
+        "--primary": "222 47% 11%",
+        "--primary-foreground": "0 0% 100%",
+        "--secondary": "46 65% 52%",
+        "--secondary-foreground": "222 47% 11%",
+        "--muted": "210 40% 96.1%",
+        "--muted-foreground": "215.4 16.3% 46.9%",
+        "--accent": "273 67% 39%",
+        "--accent-foreground": "0 0% 100%",
+        "--destructive": "0 84.2% 60.2%",
+        "--destructive-foreground": "210 40% 98%",
+        "--border": "214.3 31.8% 91.4%",
+        "--input": "214.3 31.8% 91.4%",
+        "--ring": "222 47% 11%",
+        "--radius": "0.25rem"
+      }
+    }
+  },
+  "layout_and_spacing": {
+    "philosophy": "Generous Spacing Philosophy. Trust before excitement; Simplicity before clutter; Professionalism before decoration.",
+    "container_padding": "p-8 to p-12 for major section wrappers.",
+    "card_padding": "p-6 internal padding for content blocks.",
+    "grids": "Use Mode B: 'Control Room' grid for dashboards (Manufacturing Command Center, Evidence Metrics). Dense, scanable, structural: grid-cols-1 md:grid-cols-3 lg:grid-cols-4 with gap-6.",
+    "alignment": "Strict left-alignment for dense content, data, and forms to ensure cognitive ease."
+  },
+  "components": {
+    "navigation_shell": "Sidebar/Header MUST be Deep Navy (bg-primary) with White text (text-primary-foreground) to anchor the enterprise system.",
+    "cards": "White surface (bg-card), sharp/subtle border-radius (rounded-sm or rounded-md), very subtle 1px border (border-border). Avoid heavy or muddy drop shadows. Museum-quality flat surfaces.",
+    "buttons": {
+      "standard": "Deep Navy (bg-primary text-primary-foreground).",
+      "verified_action": "QRU Gold (bg-secondary text-secondary-foreground).",
+      "discovery_cta": "Royal Purple (bg-accent text-accent-foreground) - Use sparingly for major conversions/publish actions."
+    },
+    "badges_and_chips": "Gold background for 'Verified', 'Treasure Standard', or success. Navy background for 'Draft', 'Architecture', or standard tags.",
+    "tables": "Strict structural lines. Clear padding. Avoid distracting row-striping. Professional and un-cluttered."
+  },
+  "motion": {
+    "philosophy": "Motion should ONLY signify state changes and guide workflow, never entertain.",
+    "transitions": "Use subtle fade-ins. transition-opacity duration-200 ease-out.",
+    "hover_states": "-translate-y-[1px] on cards with a slight shadow increase. Simple background darkening on buttons. No bouncy effects."
+  },
+  "assets": {
+    "qru_shield_svg": "<svg viewBox='0 0 100 120' fill='none' xmlns='http://www.w3.org/2000/svg' className='w-full h-full'><path d='M50 0C50 0 10 15 10 40C10 75 50 120 50 120C50 120 90 75 90 40C90 15 50 0 50 0Z' fill='currentColor' className='text-primary' stroke='currentColor' strokeWidth='4'/><path d='M25 40L50 60L75 40' stroke='currentColor' className='text-secondary' strokeWidth='4' strokeLinecap='round' strokeLinejoin='round'/><path d='M50 20V60' stroke='currentColor' className='text-secondary' strokeWidth='4' strokeLinecap='round'/></svg>",
+    "treasure_standard_seal_svg": "<svg viewBox='0 0 100 100' fill='none' xmlns='http://www.w3.org/2000/svg' className='w-full h-full'><circle cx='50' cy='50' r='45' fill='currentColor' className='text-secondary'/><circle cx='50' cy='50' r='38' stroke='currentColor' className='text-primary' strokeWidth='1.5' strokeDasharray='4 4'/><text x='50' y='54' fontFamily='Playfair Display, serif' fontSize='16' fontWeight='700' fill='currentColor' className='text-primary' textAnchor='middle'>QRU</text><text x='50' y='72' fontFamily='Manrope, sans-serif' fontSize='8' fontWeight='600' fill='currentColor' className='text-primary' textAnchor='middle' letterSpacing='0.1em'>VERIFIED</text><path d='M30 35L50 20L70 35' stroke='currentColor' className='text-primary' strokeWidth='2' fill='none'/></svg>",
+    "rules": "SVGs must be used purely as code components. No image files or generations should be used. The SVGs dynamically adapt colors using Tailwind's 'text-primary' (Navy) and 'text-secondary' (Gold) utility classes."
+  },
+  "testing_guidelines": {
+    "attributes": "All interactive and key informational elements MUST include a `data-testid` attribute. Crucial for enterprise reliability.",
+    "convention": "Use kebab-case, role-based identifiers. Example: `data-testid='publish-connector-button'`, `data-testid='knowledge-record-editor'`",
+    "scope": "Applies to buttons, links, form inputs, menus, error messages, metric cards, and confirmation text."
   },
   "instructions_to_main_agent": [
-    "Use React with .jsx/.js extensions. Do not use TypeScript (.tsx).",
-    "Set up a global layout with a collapsible sidebar (navigation to all enterprise divisions) and top header.",
-    "Integrate 'Outfit' font for headings and 'IBM Plex Sans' for body text.",
-    "Build the Executive Command Center: KPI cards, charts (using Recharts or Shadcn charts), and a Workflow timeline/visualization.",
-    "Build the Knowledge Records page using a data grid/table for fast scanning.",
-    "Build the Manufacturing Orders page using a Kanban board with drag-and-drop or visual lane states.",
-    "Build the AI Digital Workforce section displaying employee cards (using the provided headshot URLs).",
-    "Implement the Conversational Command Center (chat interface) as a slide-out panel or a dedicated central view for executive commands.",
-    "Customize Shadcn components heavily: 4px border radius, 1px solid borders, and remove heavy default box-shadows.",
-    "Ensure 'data-testid' is strictly added to all buttons, inputs, links, tabs, and actionable components for robust testing."
+    "NOTE: The codebase uses standard Javascript (.js), NOT Typescript (.tsx). Ensure all React component modifications are written in .js.",
+    "Apply the exact HSL token values provided in `colors.shadcn_css_variables` to your globals.css to establish the permanent QRU hierarchy.",
+    "Update tailwind.config.js to import and set the fonts: 'Playfair Display' for serif/headings, 'Manrope' for sans/body.",
+    "Implement the Layout Shell: Ensure the Sidebar Navigation uses the Navy background (`bg-primary`) to ground the application.",
+    "Implement the specific Enterprise features (Manufacturing Command Center, Evidence Metrics, Quality Gates, Knowledge Architecture, Publishing Connectors) using the strict 'Control Room' grid layout and the precise color hierarchy. NO trends, NO clutter.",
+    "Build reusable `QRUShield` and `TreasureStandardSeal` functional components using the provided SVG strings. Ensure they accept className props for sizing.",
+    "For all interactive elements throughout the app, meticulously add the `data-testid` attribute as specified in testing_guidelines.",
+    "Only use Purple (`bg-accent`) for highly specific discovery or major interaction moments (e.g., 'Authorize OAuth', 'Publish Connectors')."
   ]
 }
