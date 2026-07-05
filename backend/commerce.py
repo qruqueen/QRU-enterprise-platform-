@@ -93,7 +93,13 @@ async def create_checkout(product_id, origin_url, host_url, user):
     stripe = _client(host_url)
     req = CheckoutSessionRequest(amount=float(amount), currency="usd",
                                  success_url=success_url, cancel_url=cancel_url, metadata=metadata)
-    session: CheckoutSessionResponse = await stripe.create_checkout_session(req)
+    try:
+        session: CheckoutSessionResponse = await stripe.create_checkout_session(req)
+    except Exception as e:
+        logger.error(f"Stripe checkout failed: {e}")
+        if not STRIPE_API_KEY:
+            return None, "Payments aren't enabled on this store yet. Please check back soon."
+        return None, "We couldn't start checkout right now. Please try again in a moment."
     await db.payment_transactions.insert_one({
         "id": gen_id(), "session_id": session.session_id, "product_id": product_id,
         "product_code": product.get("product_code", ""), "title": product.get("title", ""),
@@ -147,6 +153,46 @@ async def handle_webhook(body: bytes, signature: str, host_url: str):
             {"session_id": resp.session_id},
             {"$set": {"status": "complete", "payment_status": "paid", "updated_at": now_iso()}})
     return {"received": True}
+
+
+import rendering_engine as _re
+
+
+async def purchase_download(session_id, user):
+    """Deliver the manufactured product files to a paying customer.
+    Verifies the payment is paid, then returns only files that actually exist on disk.
+    Returns (payload, error) — error is a clear, customer-facing message, never generic."""
+    txn = await db.payment_transactions.find_one({"session_id": session_id})
+    if not txn:
+        return None, "We couldn't find this purchase."
+    if txn.get("payment_status") != "paid":
+        return None, "This payment hasn't completed yet. Once it clears, your download will appear here."
+    product = await db.products.find_one({"id": txn.get("product_id")})
+    if not product:
+        return None, "This product is no longer available. Please contact support for a copy."
+
+    cd = product.get("customer_deliverable") or {}
+    raw_files = list(cd.get("files") or [])
+    # Fall back to the primary customer file / cover if the deliverable list is empty.
+    if not raw_files:
+        for k, fmt in (("customer_url", "html"), ("preview_pdf_url", "pdf"), ("cover_url", "png")):
+            if product.get(k):
+                raw_files.append({"format": fmt, "url": product[k], "label": fmt.upper()})
+
+    files = []
+    for f in raw_files:
+        url = f.get("url") or ""
+        fname = url.rsplit("/", 1)[-1] if url else ""
+        exists = bool(fname) and os.path.exists(os.path.join(_re.ASSET_DIR, fname))
+        if exists:
+            label = f.get("label") or f.get("format", "File").upper()
+            dl = f"{url}?download=true&name={product.get('title','QRU Product')} - {label}"
+            files.append({"format": f.get("format"), "label": label, "url": url, "download_url": dl})
+
+    if not files:
+        return None, "Your product file is being finalized — it will be ready in a moment. Please refresh shortly."
+    return {"title": product.get("title"), "product_code": product.get("product_code"),
+            "files": files, "primary_format": cd.get("primary_format")}, None
 
 
 async def revenue_summary():

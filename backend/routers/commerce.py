@@ -49,6 +49,14 @@ async def checkout_status(session_id: str, request: Request, user=Depends(get_cu
     return res
 
 
+@router.get("/download/{session_id}")
+async def purchase_download(session_id: str, user=Depends(get_current_user)):
+    res, err = await commerce.purchase_download(session_id, user)
+    if err:
+        raise HTTPException(404, err)
+    return res
+
+
 @router.get("/transactions")
 async def transactions(user=Depends(get_current_user)):
     return clean(await db.payment_transactions.find().sort("created_at", -1).to_list(300))

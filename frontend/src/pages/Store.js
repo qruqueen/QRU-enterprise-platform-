@@ -162,9 +162,8 @@ export default function Store() {
                 {Object.entries(formats).map(([key, f]) => (
                   <a
                     key={key}
-                    href={`${process.env.REACT_APP_BACKEND_URL}${f.url}`}
+                    href={`${process.env.REACT_APP_BACKEND_URL}${f.url}?download=true&name=${encodeURIComponent(`${formatsFor.title} - ${f.label}`)}`}
                     target="_blank" rel="noreferrer"
-                    download
                     data-testid={`format-download-${key}`}
                     className="flex items-center gap-2 border rounded-sm p-2 hover:bg-muted transition-colors"
                   >

@@ -1,0 +1,33 @@
+{
+  "summary": "Customer Delivery Pipeline verified END-TO-END: Buy → Stripe TEST checkout → payment with 4242 4242 4242 4242 → return to /checkout/success → delivery-panel appears with 3 downloadable files → download link returned HTTP 200 with Content-Disposition: attachment and a real 2.1 MB HTML file. Formats dialog on Store lists 10 optimized formats; every tested format-download-* link resolves to /api/rendering/asset/... with ?download=true and returns HTTP 200 attachment (KDP eBook, KDP Print 6x9, Etsy Listing all verified). Read Sample links return 302 → real preview HTML asset (HTTP 200, 2.1 MB). Backend contract: unknown session download → HTTP 404 with clear customer-facing message (`We couldn't find this purchase.`). Pending/unpaid session download → HTTP 404 with `This payment hasn't completed yet...`. Unknown product checkout → HTTP 400 with `Product not found`. No 'Something went wrong' anywhere. 8/8 pytest backend tests pass; all 3 frontend browser flows pass (Buy→Stripe, full paid E2E with delivery, Formats+Preview+bogus session).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/checkout/success with unknown session_id", "issues": ["Minor UX: An unknown session_id currently ends in the 'Payment is processing' state after 6 poll attempts (~12s) because CheckoutSuccess.js swallows the 404 from /commerce/checkout/status inside a bare try/except. Not a bug per problem statement (no generic error is shown, requirement met), but a strict fallback would render the 'We couldn't confirm the payment' error state on a 404 rather than optimistically polling. Consider distinguishing 404 (definitively unknown) from transient 5xx in the poll loop."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration24_delivery.py",
+    "/app/test_reports/pytest/iteration24_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "CheckoutSuccess.js line ~45: `catch (_) {}` inside the poll swallows all errors including a 404 (unknown session_id) and a 401/403 (unauthenticated). Consider treating a 404 on status as an immediate 'error' state instead of continuing to poll — improves UX for genuinely bad session IDs (currently degrades to 'Payment is processing' after 12s).",
+    "commerce.py purchase_download: currently returns the first customer file / cover as a fallback if `customer_deliverable.files` is empty (lines 176-181). This is a good graceful fallback but means we may deliver a preview PDF or the cover PNG as the 'purchased file' when a product has not yet been fully manufactured. Consider gating fallback behind an explicit product flag or logging a warning when fallback is used, so partial manufacture doesn't silently ship low-quality deliverables.",
+    "Store.js Formats modal (line ~163): `format-download-*` anchors always target=_blank. Good. But they open on the current page's window origin; if REACT_APP_BACKEND_URL is misconfigured the concatenated href silently breaks. Consider validating REACT_APP_BACKEND_URL once at module load and throwing early (not a fix needed now, tested URL is correct).",
+    "commerce.py create_checkout: the error string 'We couldn't start checkout right now. Please try again in a moment.' is customer-facing and clear — good. However, the underlying Stripe exception is only logger.error'd — no alert/observability hook. Consider integrating log_org(...'error') so Founders see Stripe failures in the Command Console.",
+    "No cleanup of TEST_ prefixed data: test_iteration24_delivery.py currently leaves `initiated` payment_transactions in the DB for every checkout test run. Low priority — they aren't paid so they don't impact revenue metrics — but a teardown fixture would tidy this."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration24_delivery.py (new pytest suite for the delivery pipeline)"
+  ],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100% (Buy→Stripe redirect, full paid E2E flow with real download, Formats, Preview, bogus-session graceful state)"},
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (temporary, do NOT change). Stripe TEST card 4242 4242 4242 4242 exp 12/34 CVC 123.",
+  "seed_data_creation": "Real Stripe test payment completed against product PRD-00117 (Brain Deconstructed™ — Book, $14.99). Session cs_test_a1vI2b4As5f9OUrPo9tGfXKClQQ4myBoVnL3aRz2gLry99W3WkH14i1jF1 is now recorded as paid in payment_transactions and a purchase row exists for the Founder. Additional 32+ 'initiated' (unpaid) transactions were created by test runs and cancelled — they will not affect revenue metrics.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "MT-038 Customer Delivery Pipeline is fully working: Store Buy → real Stripe cs_test URL → Pay 4242 → /checkout/success shows delivery-panel with real downloadable files (Content-Disposition: attachment, 2+ MB payloads). Formats dialog + Read Sample also verified. Only cosmetic follow-up is CheckoutSuccess.js poll behavior for a definitively-404 session (see design_issues). Pytest suite at /app/backend/tests/test_iteration24_delivery.py can be reused for regression.",
+  "rca of the issue": "Not applicable — this iteration verifies a bug-fix already implemented by E1. All target behaviors work: Buy button no longer returns 'Something went wrong', Download panel appears after paid, format-download-* links now include ?download=true and resolve to real HTTP 200 files, unknown session returns 404 with a clear customer-facing message. Files created on disk (deliverable-html-*.html, deliverable-epub-*.epub, deliverable-pdf-*.pdf, fmt-*.png, preview-html-*.html) all served correctly by /api/rendering/asset/{fname} with attachment disposition."
+}
