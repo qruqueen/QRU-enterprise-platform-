@@ -386,6 +386,13 @@ async def manufacture_package(kr_id, product_types, owner_id, actor, config=None
     valid = [p for p in product_types if p in RECIPES]
     if not valid:
         return None, "No valid product types selected"
+    # QRU Manufacturing Inspection System™ (P4) — pause manufacturing if quality gates fail.
+    import inspection_system as insp
+    gate = insp.inspect_kr_for_manufacture(kr, valid, RECIPES)
+    if not gate["manufacturing_allowed"]:
+        report = gate["director_report"]
+        return None, ("Manufacturing paused by the Inspection System™ — "
+                      + report["verdict"] + " Missing: " + "; ".join(report["missing_information"][:4]))
     order = {
         "id": gen_id(), "kr_id": kr_id, "kr_code": kr.get("kr_code"), "kr_title": kr.get("title"),
         "items": [{"product_type": p, "status": "queued", "product_id": None} for p in valid],

@@ -67,6 +67,7 @@ import Settings from "@/pages/Settings";
 import SearchResults from "@/pages/SearchResults";
 import Connectors from "@/pages/Connectors";
 import EvidenceDashboard from "@/pages/EvidenceDashboard";
+import ManufacturingInspection from "@/pages/ManufacturingInspection";
 import ConsumerHome from "@/pages/consumer/ConsumerHome";
 import ConsumerLearn from "@/pages/consumer/ConsumerLearn";
 import ConsumerMyLearning from "@/pages/consumer/ConsumerMyLearning";
@@ -147,6 +148,7 @@ function EnterpriseRoutes() {
         <Route path="checkout/success" element={<CheckoutSuccess />} />
         <Route path="command-center" element={<EnterpriseCommandCenter />} />
         <Route path="evidence" element={<EvidenceDashboard />} />
+        <Route path="inspection" element={<ManufacturingInspection />} />
         <Route path="connectors" element={<Connectors />} />
         <Route path="ai-services" element={<AIServices />} />
         <Route path="notifications" element={<Notifications />} />

@@ -31,6 +31,7 @@ const NAV = [
   { section: "Mission Control" },
   { to: "/", label: "Founder Console", icon: LayoutDashboard, end: true, testid: "nav-dashboard", q: "Where should the Founder focus today?" },
   { to: "/evidence", label: "Evidence Dashboard™", icon: Database, testid: "nav-evidence", q: "Where did this number come from — show me the evidence?" },
+  { to: "/inspection", label: "Quality Gates™", icon: ShieldHalf, testid: "nav-inspection", q: "Is this product good enough to manufacture and publish?" },
   { to: "/command", label: "Command Console", icon: MessageSquareText, testid: "nav-command", q: "What do you want done — in your own words?" },
   { to: "/enterprise-health", label: "Enterprise Health", icon: Activity, testid: "nav-health-dash", q: "Is the enterprise healthy — and if not, why?" },
   { to: "/organization", label: "Organization", icon: Building2, testid: "nav-organization", q: "Who is doing the work?" },
