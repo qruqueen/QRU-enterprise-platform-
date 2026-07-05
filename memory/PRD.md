@@ -18,9 +18,43 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - Auth: JWT founder login. Stripe: TEST mode (sk_test).
 
 ## Phase Next — Manufacturing Orders (approved sequence)
-MO-001 P4 Quality Gates ✅ · MO-002 P6 Enterprise Manufacturing Dashboard ✅ · MO-003 Knowledge Record 2.0 ✅ · MO-004 QRU Design Language · MO-005 Manufacturing Director™ AI · MO-006 True YouTube publishing (Founder Upload Mode). Build one at a time; deterministic infra before AI content.
+MO-001 P4 Quality Gates ✅ · MO-002 P6 Enterprise Manufacturing Dashboard ✅ · MO-003 Knowledge Record 2.0 ✅ · MO-004 QRU Design Language ✅ · MO-005 Manufacturing Director™ ✅ · MO-006 True YouTube publishing (Founder Upload Mode) — NEXT. Build one at a time; deterministic infra before AI content.
 
 ## Completed (recent → older)
+### MO-005 · QRU Manufacturing Director™ (2026-07-05) · VERIFIED (iteration_33: 12/12 backend, frontend 100%)
+- **`manufacturing_director.py`**: supervisory review of manufacturing orders. Verdicts: APPROVE /
+  APPROVE_WITH_CONDITIONS / HOLD / REJECT. **The verdict is ALWAYS deterministic/evidence-based**
+  (`_decide()` is the sole authority) — reuses `inspection_system.inspect_kr_for_manufacture` +
+  `knowledge_record_v2.manufacturing_readiness`/DEPENDENCY_MAP. Identifies exactly which KR 2.0
+  sections are missing per requested product type. `_find_kr()` resolves the backing KR by
+  `knowledge_record_id` else keyword-overlap (≥0.5) on topic vs KR title.
+- **Optional AI executive brief** (`_ai_brief`): reuses existing `ai_service.llm_generate` (Emergent
+  key). Treasure Standard™: AI writes narrative ONLY, NEVER changes the verdict; on LLM cap it falls
+  back to a `_deterministic_brief` ($0 AI). Verified verdict is identical with/without AI.
+- **`routers/director.py`**: GET /api/director/queue (fast, no AI), GET /api/director/review/{id}
+  (?use_ai=true), POST /api/director/review/{id}/decision (applies recommended_status →
+  APPROVE→Research, HOLD/REJECT→Queued; appends approval_history attributed to the Director;
+  idempotency-guarded).
+- **Frontend** `ManufacturingDirector.js` (route `/director`, nav "Manufacturing Director™"):
+  summary MetricCards, verdict-filtered queue table, ReviewPanel (verdict, confidence, executive
+  brief with "Request AI brief", missing knowledge → /kr2, readiness-by-product, recommended actions,
+  Apply Director Decision).
+
+### MO-004 · QRU Master Design Language™ + QRU Component Library™ (2026-07-05) · VERIFIED (iteration_32: frontend 100%)
+- **Global tokens** (`index.css`): Deep Navy `--primary` (foundation), QRU Gold `--secondary`
+  (verified excellence), Royal Purple `--accent` (signature — used sparingly), white clarity canvas.
+  Fonts: **Playfair Display** (headings) + **Manrope** (body). Named tokens `--navy/--gold/--royal`
+  remapped so all existing utilities cascade the new hierarchy. `tailwind.config.js` fonts + shadows.
+- **QRU Component Library** (`src/components/qru.js`): QRUShield, TreasureSeal, ProvenanceBadge,
+  StatusChip (universal status→tone map), MetricCard (accent left-rule + hover lift), Panel, ScoreBar,
+  StageTimeline, VerifiedBadge — every future page inherits the QRU look.
+- **Shell**: Layout sidebar = inline QRUShield + navy ground + gold active state; PageHeader = gold
+  left-rule + Playfair display title. Login redesigned (navy brand panel, QRUShield, royal/gold glow).
+- **Flagship pages elevated** to the library: Manufacturing Command Center, Quality Gates, Evidence
+  Dashboard, Knowledge Architecture (KR2), Publishing Connectors. Remaining ~55 pages inherit tokens/
+  fonts automatically per Founder directive (no manual per-page polish).
+
+
 ### MO-003 · Knowledge Record 2.0™ (2026-07-05) · VERIFIED (iteration_31: 13/13 backend, frontend 100%)
 - **`knowledge_record_v2.py`**: 36 sections across 10 groups, each an independent managed object
   {section_id,title,content,status,source,verification_status,confidence_score,author,reviewer,

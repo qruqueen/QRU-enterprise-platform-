@@ -38,6 +38,10 @@ async def apply_decision(order_id: str, user=Depends(get_current_user)):
     r = await director.review_order(o, use_ai=False)
     new_status = r["recommended_status"]
     history = o.get("approval_history", [])
+    # Idempotency: skip if the order is already at the recommended status via the same Director verdict.
+    if o.get("status") == new_status and o.get("director_verdict") == r["verdict"]:
+        return {"applied": False, "verdict": r["verdict"], "new_status": new_status,
+                "confidence": r["confidence"], "note": "Already applied — no change."}
     history.append({
         "stage": new_status,
         "by": f"Manufacturing Director™ (on behalf of {user['name']})",

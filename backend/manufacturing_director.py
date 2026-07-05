@@ -125,11 +125,8 @@ def _decide(kr, kr_source, gate, by_product, missing_knowledge):
     if missing_knowledge:
         reasons.append(f"{len(missing_knowledge)} required knowledge section(s) are missing for the requested products.")
 
-    # HOLD when knowledge is missing or a blocking gate fails.
+    # HOLD when knowledge is missing or a blocking gate fails (the KR has content, so it is fillable).
     if blocking or missing_knowledge:
-        # REJECT only when there is genuinely nothing verified to build on.
-        if verification not in ("Verified",) and not _kr_has_any_content(kr):
-            return REJECT, reasons or ["Knowledge foundation is not verified."]
         return HOLD, reasons
 
     # Everything required is present. Distinguish full approval from conditional.
