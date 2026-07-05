@@ -39,8 +39,9 @@ async def dashboard_stats(user=Depends(get_current_user)):
     workforce_ratio = (employees_active / employees) if employees else 0
     enterprise_health = round((verified_ratio * 0.4 + published_ratio * 0.3 + workforce_ratio * 0.3) * 100)
 
-    # Revenue (synthetic from licensed customers & published products)
-    revenue = prod_published * 1250 + customers * 3400
+    # Revenue — REAL Stripe payment records only (no synthetic math). Treasure Standard™.
+    paid = await db.payment_transactions.find({"payment_status": "paid"}).to_list(2000)
+    revenue = round(sum(t.get("amount", 0) or 0 for t in paid), 2)
 
     return {
         "knowledge_records": kr_total,

@@ -7,6 +7,7 @@ department status cards, and an intelligent recommendation panel.
 """
 from fastapi import APIRouter, Depends
 from datetime import datetime, timezone
+import os
 
 from database import db
 from auth import get_current_user
@@ -116,6 +117,9 @@ async def mission_impact(user=Depends(get_current_user)):
     c = await _counts()
     # Understanding Impact™ — QRU's human mission, computed from live data.
     people_reached = c["enrollments"] * 37 + c["products_published"] * 120
+    # Revenue — REAL Stripe payment records only (no synthetic math). Treasure Standard™.
+    paid = await db.payment_transactions.find({"payment_status": "paid"}).to_list(2000)
+    real_revenue = round(sum(t.get("amount", 0) or 0 for t in paid), 2)
     return {
         "impact": [
             {"label": "People Reached", "value": people_reached, "icon": "users", "kind": "mission"},
@@ -132,7 +136,8 @@ async def mission_impact(user=Depends(get_current_user)):
             {"label": "Memory Retention", "value": 88, "suffix": "%", "icon": "brain", "kind": "mission"},
         ],
         "business": [
-            {"label": "Revenue", "value": 11450 + c["certificates"] * 49, "prefix": "$", "kind": "business"},
+            {"label": "Revenue", "value": real_revenue, "prefix": "$", "kind": "business",
+             "provenance": "TEST" if str(os.environ.get("STRIPE_API_KEY", "")).startswith("sk_test_") else "LIVE"},
             {"label": "Active Learners", "value": c["enrollments"], "kind": "business"},
             {"label": "Published Catalog", "value": c["products_published"], "kind": "business"},
         ],

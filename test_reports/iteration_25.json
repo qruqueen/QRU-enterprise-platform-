@@ -1,0 +1,50 @@
+{
+  "summary": "Iteration 25 — Evidence Metrics Engine™, Founder Beta Status™, and Universal Connector Framework™ tested end-to-end. All 18 backend pytest cases and all frontend flows PASSED. Revenue is real ($14.99 from 1 paid Stripe TEST order) — no synthetic 11,450 anywhere. Provenance badges (LIVE/TEST/NOT TRACKED YET) render correctly, drilldown modals load real records or honest empty states, Beta Status panel shows Founder Preview (Private Beta) with 19 Q&A items, and Connectors page reachable with 14 connectors and honest disabled-Publish reasons.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/api/metrics/summary vs /api/metrics/products/evidence",
+        "issue": "Products count differs between summary (117) and evidence records (122). Likely races (records added between calls) or count_documents vs find() nuance. Recommend using a single source of truth or fetching count from the same find() to preserve Treasure Standard™ consistency."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration25_evidence_metrics.py",
+    "/app/test_reports/pytest/iteration25.xml"
+  ],
+  "action_items": [
+    "(Minor / optional) Align Products metric count with drilldown row count in metrics.py — either use len(find()) or fetch both from the same list to prevent 117-vs-122 style drift."
+  ],
+  "critical_code_review_comments": [
+    "DrilldownModal in EvidenceDashboard.js does not reset `d` to null when metric.id changes. Since setActive(null) currently unmounts, this works today, but if the parent ever changes metric without unmounting, stale evidence would leak. Add `setD(null)` at the start of the useEffect for safety.",
+    "STRIPE_API_KEY is read once at import time in metrics.py — if env changes, the process must restart. Acceptable but worth documenting.",
+    "analytics.py still emits a synthetic knowledge_growth trend (base + i*3). Not part of this iteration, but for full Treasure Standard™ this should be moved to real time-series or flagged provenance=SIMULATED."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration25_evidence_metrics.py (new)"
+  ],
+  "success_rate": {"backend": "100% (18/18)", "frontend": "100% (all flows)"},
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None — used existing data (1 paid $14.99 TEST Stripe txn, 117 products, 47 knowledge records, 32 published).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Evidence Dashboard route /evidence, Connectors /connectors. All metric-card-<id>, prov-<PROV>, drilldown-modal/table/empty, beta-status-panel testids are stable. Backend endpoints: /api/metrics/summary, /api/metrics/{id}/evidence, /api/metrics/beta-status?host=..., /api/connectors. Revenue single source of truth = db.payment_transactions with payment_status='paid'.",
+  "verified_features": [
+    "Founder login + nav to /evidence via [data-testid=nav-evidence]",
+    "beta-status-panel shows Shareable=LIMITED, Payments=SANDBOX (TEST), Founder Preview (Private Beta) chip, 19 questions, blocks_promotion list",
+    "All 15 metric cards render across Commerce/Manufacturing/Publishing with correct provenance badges (6 TEST, 7 LIVE, 2 NOT_TRACKED)",
+    "metric-card-revenue = $14.99 (real Stripe TEST payment_transactions, NOT synthetic 11,450)",
+    "metric-card-connector_status displays 2/14 LIVE",
+    "Drilldown modal for revenue shows real order row with all columns (Order ID, Product, Customer, Date, Time, Provider, Payment, Live/Test [TEST badge], Revenue $, Taxes, Discounts, Fulfillment, Delivered, Platform, Transaction ID)",
+    "Drilldown for refunds and subscriptions renders drilldown-empty with honest messages (no crash, no fake numbers)",
+    "Drilldown for products (122 rows) and knowledge_records (47 rows) populated",
+    "/connectors route reachable via nav-connectors, connector-lifecycle banner (Connect→Test→Manufacture→Preview→Publish) present, connector-grid rendered with 14 connectors, QRU Store™ = 'Connected Healthy', Stripe operational, 13 non-operational connectors show disabled Publish with reason (no silent failures)",
+    "Regression: dashboard/stats and command-center/mission-impact both return real revenue tied to payment_transactions; no synthetic 11450 anywhere on Mission Control home"
+  ]
+}

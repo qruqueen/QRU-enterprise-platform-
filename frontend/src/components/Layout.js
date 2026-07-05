@@ -9,7 +9,7 @@ import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard,
-  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp,
+  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud,
 } from "lucide-react";
 
 const NAV = [
@@ -30,6 +30,7 @@ const NAV = [
   { to: "/qiks", label: "Institutional Knowledge™", icon: BookOpenCheck, testid: "nav-qiks", q: "What has QRU already learned?" },
   { section: "Mission Control" },
   { to: "/", label: "Founder Console", icon: LayoutDashboard, end: true, testid: "nav-dashboard", q: "Where should the Founder focus today?" },
+  { to: "/evidence", label: "Evidence Dashboard™", icon: Database, testid: "nav-evidence", q: "Where did this number come from — show me the evidence?" },
   { to: "/command", label: "Command Console", icon: MessageSquareText, testid: "nav-command", q: "What do you want done — in your own words?" },
   { to: "/enterprise-health", label: "Enterprise Health", icon: Activity, testid: "nav-health-dash", q: "Is the enterprise healthy — and if not, why?" },
   { to: "/organization", label: "Organization", icon: Building2, testid: "nav-organization", q: "Who is doing the work?" },
@@ -64,6 +65,7 @@ const NAV = [
   { to: "/analytics", label: "Analytics", icon: BarChart3, testid: "nav-analytics", q: "What do the numbers tell us?" },
   { to: "/customers", label: "Customers", icon: Users, testid: "nav-customers", q: "Who are we serving?" },
   { to: "/store", label: "QRU Store™", icon: Store, testid: "nav-store", q: "How do people buy what we make?" },
+  { to: "/connectors", label: "Publishing Connectors™", icon: UploadCloud, testid: "nav-connectors", q: "Where can we publish — and what's the one way to do it?" },
   { section: "Administration" },
   { to: "/integration-hub", label: "Integration Hub™", icon: Plug, testid: "nav-integration-hub", q: "What are we connected to?" },
   { to: "/ai-services", label: "AI Services™", icon: Cpu, testid: "nav-ai-services", q: "What AI powers can we use right now?" },
