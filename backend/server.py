@@ -64,6 +64,7 @@ from routers.inspection import router as inspection_router
 from routers.manufacturing_dashboard import router as mfg_dashboard_router
 from routers.knowledge_v2 import router as kr2_router
 from routers.director import router as director_router
+from routers.youtube import router as youtube_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
 from routers.misc import (
@@ -108,6 +109,7 @@ for r in [
     mfg_dashboard_router,
     kr2_router,
     director_router,
+    youtube_router,
 ]:
     app.include_router(r)
 

@@ -203,12 +203,16 @@ export default function MediaStudio() {
                   <div className="bg-card border rounded-xl p-4">
                     <p className="overline text-primary mb-2 flex items-center gap-1.5"><Send className="w-3.5 h-3.5" /> Publish destinations</p>
                     <p className="text-xs text-muted-foreground mb-2" data-testid="media-publish-note">
-                      Automated upload isn't wired yet — QRU manufactures &amp; QC-certifies this media, but does not yet upload it to external platforms, so nothing is marked “Published” without a real upload (e.g. a YouTube video ID). Connect &amp; manage destinations in <b>Publishing Connectors™</b>.
+                      <b>YouTube publishing is live</b> — upload the finished MP4 in <a href="/youtube" className="text-royal font-semibold underline">YouTube Publisher™</a> and QRU uploads it to your channel with a real Video ID. Other destinations use automated upload that isn't wired yet (a planned milestone of the Universal Publishing Engine™). Manage connections in <b>Publishing Connectors™</b>.
                     </p>
                     <div className="flex flex-wrap gap-2" data-testid="publish-destinations">
-                      {destinations.map((dst) => (
+                      <a href="/youtube" data-testid="publish-youtube"
+                        className="text-xs px-3 py-1.5 rounded-full border border-navy bg-navy text-white font-semibold inline-flex items-center gap-1">
+                        <Send className="w-3 h-3" /> Publish to YouTube →
+                      </a>
+                      {destinations.filter((d) => d.toLowerCase() !== "youtube").map((dst) => (
                         <button key={dst} data-testid={`publish-${dst}`} disabled
-                          title={`Automated upload to ${dst} isn't wired yet — it's a planned milestone.`}
+                          title={`Automated upload to ${dst} isn't wired yet — a planned milestone.`}
                           className="text-xs px-3 py-1.5 rounded-full border opacity-40 cursor-not-allowed">
                           {dst} · Coming Soon
                         </button>

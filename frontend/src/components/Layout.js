@@ -10,7 +10,7 @@ import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard,
-  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud, Gavel,
+  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud, Gavel, Youtube,
 } from "lucide-react";
 
 const NAV = [
@@ -71,6 +71,7 @@ const NAV = [
   { to: "/customers", label: "Customers", icon: Users, testid: "nav-customers", q: "Who are we serving?" },
   { to: "/store", label: "QRU Store™", icon: Store, testid: "nav-store", q: "How do people buy what we make?" },
   { to: "/connectors", label: "Publishing Connectors™", icon: UploadCloud, testid: "nav-connectors", q: "Where can we publish — and what's the one way to do it?" },
+  { to: "/youtube", label: "YouTube Publisher™", icon: Youtube, testid: "nav-youtube", q: "How do we publish a real video to YouTube?" },
   { section: "Administration" },
   { to: "/integration-hub", label: "Integration Hub™", icon: Plug, testid: "nav-integration-hub", q: "What are we connected to?" },
   { to: "/ai-services", label: "AI Services™", icon: Cpu, testid: "nav-ai-services", q: "What AI powers can we use right now?" },
