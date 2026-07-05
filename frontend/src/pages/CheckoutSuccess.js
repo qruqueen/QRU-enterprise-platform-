@@ -42,7 +42,9 @@ export default function CheckoutSuccess() {
           setState("error");
           return;
         }
-      } catch (_) {}
+      } catch (e) {
+        if (e.response?.status === 404) { setState("error"); return; }
+      }
       if (attempts >= 6) {
         setState("pending");
         return;
