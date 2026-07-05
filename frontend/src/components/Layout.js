@@ -10,7 +10,7 @@ import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard,
-  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud,
+  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud, Gavel,
 } from "lucide-react";
 
 const NAV = [
@@ -34,6 +34,7 @@ const NAV = [
   { to: "/evidence", label: "Evidence Dashboard™", icon: Database, testid: "nav-evidence", q: "Where did this number come from — show me the evidence?" },
   { to: "/mfg-command", label: "Manufacturing Command™", icon: Gauge, testid: "nav-mfg-command", q: "What is the whole factory doing right now?" },
   { to: "/inspection", label: "Quality Gates™", icon: ShieldHalf, testid: "nav-inspection", q: "Is this product good enough to manufacture and publish?" },
+  { to: "/director", label: "Manufacturing Director™", icon: Gavel, testid: "nav-director", q: "Should we manufacture this order — and what's missing?" },
   { to: "/kr2", label: "Knowledge Architecture™", icon: BookOpenCheck, testid: "nav-kr2", q: "What does QRU truly know — and can it manufacture from it?" },
   { to: "/command", label: "Command Console", icon: MessageSquareText, testid: "nav-command", q: "What do you want done — in your own words?" },
   { to: "/enterprise-health", label: "Enterprise Health", icon: Activity, testid: "nav-health-dash", q: "Is the enterprise healthy — and if not, why?" },
