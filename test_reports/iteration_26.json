@@ -1,0 +1,57 @@
+{
+  "summary": "MO-046 Universal OAuth Framework™ tested end-to-end. All 16 backend pytest cases and all frontend flows PASSED. Developer-side OAuth configuration works honestly: OAuth connectors show 'Developer Configuration Required' → after admin adds Client ID/Secret/Redirect URI they show 'Needs Authorization' → Connect launches a real accounts.google.com OAuth URL → Test opens a checklist. Secrets/tokens are NEVER returned in any API response. Bad-state OAuth callback redirects to /connectors?oauth=error (no crash). PKCE providers (etsy verified) include code_challenge=S256 in authorize URL. Amazon KDP & TPT are honestly api_key (oauth_supported=false). All test data cleaned up (youtube + etsy dev-configs deleted). Evidence Dashboard regression confirms connector_status metric shows 2/20 operational (qru_store + stripe).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration26_oauth_framework.py",
+    "/app/test_reports/pytest/iteration26.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "oauth_framework.set_developer_config: when the caller omits client_secret on an update, the existing secret_enc is preserved (nice) BUT if the caller explicitly sends client_secret='' to clear it, it's also silently kept. Consider distinguishing None vs empty string, or documenting the behavior in the API docs.",
+    "oauth_framework.handle_callback deletes oauth_states BEFORE token exchange succeeds. If the provider call fails, the state row is already gone (no retry possible with same code). Currently this is fine because OAuth codes are single-use, but worth a comment.",
+    "oauth_states are never TTL-cleaned. Consider a background job or a MongoDB TTL index on `ts` to auto-expire stale authorization states (they leak forever otherwise). This is a minor housekeeping/security consideration.",
+    "oauth_framework._valid_access_token returns a possibly-stale token when refresh fails. The comment says 'test will surface validity' — acceptable, but a live publish path could still attempt calls with an expired token. Consider returning (None, state) on refresh failure to force a clean re-auth prompt.",
+    "Connectors.js uses `busy` as a single string — it disables Test/Connect/Disconnect for the same connector at once. This is fine but slightly ambiguous UX (a user testing while another operation is in flight sees all buttons disabled).",
+    "connectors.py._public: `authorized` is used to decide the Disconnect button but the API returns `authorized` only for oauth. Native/api_key can still be `connected` — Disconnect could be added there too if desired (currently intentional per lifecycle)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration26_oauth_framework.py (new)"
+  ],
+  "success_rate": {"backend": "100% (16/16)", "frontend": "100% (all flows)"},
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Created and deleted dummy dev-config for youtube (client_id='test-client-id.apps.googleusercontent.com', client_secret='GOCSPX-dummy') and etsy (client_id='etsy-dummy-cid'). All cleaned up in cleanup tests — final state is Developer Configuration Required for both.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "OAuth framework endpoints: GET/POST/DELETE /api/connectors/{id}/developer-config, GET /api/connectors/{id}/authorize-url?frontend_origin=, POST /api/connectors/{id}/disconnect, POST /api/connectors/{id}/verify, GET /api/oauth/callback (public). Frontend testids: connector-devconfig-<id>, connector-connect-<id>, connector-test-<id>, connector-status-<id>, connector-publish-disabled-<id>, devconfig-dialog, devconfig-client-id, devconfig-client-secret, devconfig-redirect-uri, devconfig-save, devconfig-remove, test-result-dialog, test-checks. Stable module: oauth_framework.PROVIDERS registry (17 supported OAuth providers + 2 honest non-OAuth: amazon_kdp, tpt). PKCE providers: etsy, x, tiktok, canva. Backend BASE_URL loaded from /app/frontend/.env via python-dotenv.",
+  "verified_features": [
+    "GET /api/connectors returns 20 connectors, count=20, correct statuses",
+    "OAuth connectors initially show 'Developer Configuration Required' with developer_configured=false",
+    "amazon_kdp & tpt honestly marked auth_method=api_key (no fake OAuth)",
+    "qru_store = Connected Healthy, stripe = Connected Healthy / Setup Required",
+    "POST /api/connectors/youtube/developer-config returns configured=true + client_id_masked; secret NEVER in response body (verified by scanning full response text)",
+    "GET /api/connectors/youtube/developer-config returns has_secret=true, NO raw secret",
+    "After POST config → status transitions to 'Needs Authorization', developer_configured=true, authorized=false",
+    "GET /api/connectors/youtube/authorize-url returns real accounts.google.com URL with client_id, redirect_uri, response_type=code, scope, state, access_type=offline",
+    "GET /api/connectors/etsy/authorize-url (PKCE) includes code_challenge and code_challenge_method=S256",
+    "Before dev-config, authorize-url returns HTTP 400 with 'Developer Configuration Required' message (no crash)",
+    "POST /api/connectors/youtube/verify: needs_config before config, needs_auth after config-not-yet-authorized; checks[] list is present and human-readable ('Authentication: not authorized yet — click Connect to sign in with the provider.')",
+    "GET /api/oauth/callback?state=badstate&code=xyz → HTTP 307 redirect to /connectors?oauth=error&... (no crash, honest error)",
+    "POST /api/connectors/youtube/disconnect and DELETE /api/connectors/youtube/developer-config both succeed and revert status to 'Developer Configuration Required'",
+    "FRONTEND: /connectors reachable via nav-connectors, renders 20 cards in data-testid connector-grid",
+    "FRONTEND: Every OAuth card has Developer Setup button (connector-devconfig-<id>) + status chip (connector-status-<id>)",
+    "FRONTEND: DevConfig dialog (devconfig-dialog) with devconfig-client-id, devconfig-client-secret, devconfig-redirect-uri fields; redirect_uri pre-filled with backend URL/api/oauth/callback",
+    "FRONTEND: After Save Configuration, Connect button (connector-connect-<id>) appears and clicking it navigates to real accounts.google.com OAuth URL (external redirect verified)",
+    "FRONTEND: Developer Setup → Remove (devconfig-remove) cleans up and reverts status to Developer Configuration Required",
+    "FRONTEND: Test button (connector-test-<id>) opens test-result-dialog with test-checks checklist (2 checks rendered for needs_auth state) — no silent failure",
+    "FRONTEND: All disabled Publish buttons (connector-publish-disabled-<id>) have title tooltip with reason (e.g. 'Requires Google OAuth authorization to your YouTube channel.'); qru_store shows Publish enabled",
+    "REGRESSION: Evidence Dashboard /evidence still loads, metric-card-connector_status shows 2/20 Operational Connectors (LIVE provenance)"
+  ]
+}

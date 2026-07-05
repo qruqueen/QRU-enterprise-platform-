@@ -15,6 +15,7 @@ from database import db
 from models import now_iso
 
 import factory_confidence as fc
+import oauth_framework as oauth
 
 # auth methods: "native" (QRU-owned, always live) | "oauth" | "api_key"
 # operational=True means the Publish lifecycle is fully wired end-to-end today.
@@ -69,6 +70,24 @@ CONNECTOR_REGISTRY = [
     {"id": "onedrive", "name": "OneDrive", "category": "Storage", "auth_method": "oauth",
      "operational": False, "asset_types": ["Any File"], "capabilities": ["publish"],
      "setup_hint": "Requires Microsoft OAuth authorization."},
+    {"id": "google_docs", "name": "Google Docs", "category": "Storage", "auth_method": "oauth",
+     "operational": False, "asset_types": ["Document"], "capabilities": ["publish", "preview"],
+     "setup_hint": "Requires Google OAuth authorization to Docs."},
+    {"id": "google_slides", "name": "Google Slides", "category": "Storage", "auth_method": "oauth",
+     "operational": False, "asset_types": ["Presentation"], "capabilities": ["publish", "preview"],
+     "setup_hint": "Requires Google OAuth authorization to Slides."},
+    {"id": "microsoft", "name": "Microsoft 365", "category": "Storage", "auth_method": "oauth",
+     "operational": False, "asset_types": ["Any File"], "capabilities": ["publish"],
+     "setup_hint": "Requires Microsoft OAuth authorization."},
+    {"id": "tiktok", "name": "TikTok", "category": "Social", "auth_method": "oauth",
+     "operational": False, "asset_types": ["Short Video", "Metadata"], "capabilities": ["publish", "metadata"],
+     "setup_hint": "Requires TikTok OAuth authorization."},
+    {"id": "x", "name": "X (Twitter)", "category": "Social", "auth_method": "oauth",
+     "operational": False, "asset_types": ["Post", "Social Graphic"], "capabilities": ["publish", "metadata"],
+     "setup_hint": "Requires X (Twitter) OAuth authorization."},
+    {"id": "canva", "name": "Canva", "category": "Design", "auth_method": "oauth",
+     "operational": False, "asset_types": ["Design", "Graphic"], "capabilities": ["publish", "preview"],
+     "setup_hint": "Requires Canva OAuth authorization."},
 ]
 _BY_ID = {c["id"]: c for c in CONNECTOR_REGISTRY}
 
@@ -76,6 +95,9 @@ _BY_ID = {c["id"]: c for c in CONNECTOR_REGISTRY}
 S_HEALTHY = "Connected Healthy"
 S_CONNECTED = "Connected"
 S_NEEDS_AUTH = "Needs Authorization"
+S_DEV_CONFIG = "Developer Configuration Required"
+S_TEST_PASSED = "Test Passed"
+S_DISCONNECTED = "Disconnected"
 S_SETUP = "Setup Required"
 S_ERROR = "Connection Error"
 
@@ -91,37 +113,52 @@ async def _state(platform_id):
     return await db.connectors.find_one({"platform_id": platform_id}) or {}
 
 
-def _status_for(reg, state):
+async def _status_for(reg, state):
     if reg["auth_method"] == "native":
         return S_HEALTHY
+    if reg["auth_method"] == "oauth":
+        os_state = await oauth.public_state(reg["id"]) or {}
+        if not os_state.get("oauth_supported", True):
+            return S_SETUP
+        if not os_state.get("developer_configured"):
+            return S_DEV_CONFIG
+        if not os_state.get("authorized"):
+            return S_NEEDS_AUTH
+        return os_state.get("status") or S_CONNECTED
+    # api_key
     if not state or not state.get("connected"):
-        return S_NEEDS_AUTH if reg["auth_method"] == "oauth" else S_SETUP
+        return S_SETUP
     return state.get("status") or S_CONNECTED
 
 
-def _public(reg, state):
-    status = _status_for(reg, state)
+async def _public(reg, state):
+    status = await _status_for(reg, state)
+    connected = status in (S_HEALTHY, S_CONNECTED, S_TEST_PASSED)
+    os_state = await oauth.public_state(reg["id"]) if reg["auth_method"] == "oauth" else {}
+    os_state = os_state or {}
     return {
         "id": reg["id"], "name": reg["name"], "category": reg["category"],
         "auth_method": reg["auth_method"], "operational": reg["operational"],
         "asset_types": reg["asset_types"], "capabilities": reg["capabilities"],
-        "setup_hint": reg["setup_hint"], "status": status,
-        "connected": status in (S_HEALTHY, S_CONNECTED),
-        "can_publish": bool(reg["operational"] and "publish" in reg["capabilities"]
-                            and status in (S_HEALTHY, S_CONNECTED)),
-        "publish_disabled_reason": (None if (reg["operational"] and status in (S_HEALTHY, S_CONNECTED))
+        "setup_hint": reg["setup_hint"], "status": status, "connected": connected,
+        "oauth_supported": os_state.get("oauth_supported", reg["auth_method"] == "oauth"),
+        "oauth_unsupported_reason": os_state.get("reason"),
+        "developer_configured": os_state.get("developer_configured"),
+        "authorized": os_state.get("authorized"),
+        "can_publish": bool(reg["operational"] and "publish" in reg["capabilities"] and connected),
+        "publish_disabled_reason": (None if (reg["operational"] and connected)
                                     else (reg["setup_hint"] if not reg["operational"]
                                           else "Connect this platform first.")),
-        "account": state.get("account"),
-        "connected_at": state.get("connected_at"),
-        "last_checked": state.get("last_checked"),
+        "account": os_state.get("account") or state.get("account"),
+        "connected_at": os_state.get("connected_at") or state.get("connected_at"),
+        "last_checked": os_state.get("last_checked") or state.get("last_checked"),
     }
 
 
 async def list_connectors():
     out = []
     for reg in CONNECTOR_REGISTRY:
-        out.append(_public(reg, await _state(reg["id"])))
+        out.append(await _public(reg, await _state(reg["id"])))
     # Native + operational first, then by category.
     out.sort(key=lambda c: (not c["operational"], c["category"], c["name"]))
     return out
@@ -131,26 +168,28 @@ async def get_connector(platform_id):
     reg = _BY_ID.get(platform_id)
     if not reg:
         return None
-    return _public(reg, await _state(platform_id))
+    return await _public(reg, await _state(platform_id))
 
 
 async def connect(platform_id, credentials, actor):
-    """CONNECT + VERIFY. Native = always healthy. api_key = store (obfuscated) + mark connected.
-    oauth = returns a guided 'authorize' instruction (real OAuth requires platform credentials)."""
+    """CONNECT. Native = always healthy. api_key = store (obfuscated) + mark connected.
+    oauth = handled by the Universal OAuth Framework™ (authorize-url → provider login → callback)."""
     reg = _BY_ID.get(platform_id)
     if not reg:
         return None, "Unknown connector."
     if reg["auth_method"] == "native":
         return await get_connector(platform_id), None
     if reg["auth_method"] == "oauth":
-        # We do not fabricate an OAuth success. Record intent + guide the Founder.
-        await db.connectors.update_one({"platform_id": platform_id}, {"$set": {
-            "platform_id": platform_id, "status": S_NEEDS_AUTH, "connected": False,
-            "auth_method": "oauth", "updated_at": now_iso()}}, upsert=True)
-        return {"guided": True, "auth_method": "oauth",
-                "message": f"{reg['name']} uses secure OAuth. To finish, QRU needs the {reg['name']} "
-                           f"app credentials configured. Provide them and QRU will launch the official "
-                           f"authorization flow — you'll approve access on {reg['name']} directly.",
+        os_state = await oauth.public_state(platform_id) or {}
+        if not os_state.get("oauth_supported", True):
+            return None, os_state.get("reason", "This platform does not support OAuth.")
+        if not os_state.get("developer_configured"):
+            return {"needs_developer_config": True, "auth_method": "oauth",
+                    "message": f"{reg['name']} needs its OAuth app configured by an admin "
+                               f"(Client ID, Secret, Redirect URI) before the Founder can connect.",
+                    "connector": await get_connector(platform_id)}, None
+        # Configured — the Founder should use the authorize-url flow.
+        return {"use_authorize_url": True, "auth_method": "oauth",
                 "connector": await get_connector(platform_id)}, None
     # api_key
     key = (credentials or {}).get("api_key")
@@ -166,15 +205,25 @@ async def connect(platform_id, credentials, actor):
 
 
 async def verify(platform_id):
-    """TEST / MONITOR — returns a uniform health status, never a raw API error."""
+    """TEST / MONITOR. OAuth connectors run the full Universal OAuth Framework™ checklist;
+    others return a uniform health status, never a raw API error."""
     reg = _BY_ID.get(platform_id)
     if not reg:
         return None, "Unknown connector."
+    if reg["auth_method"] == "oauth":
+        res, err = await oauth.test_connection(platform_id)
+        if err:
+            return None, err
+        healthy = res.get("overall") == "passed"
+        msg = res.get("message", "")
+        return {"id": platform_id, "status": (await _status_for(reg, await _state(platform_id))),
+                "healthy": healthy, "message": msg, "checks": res.get("checks", []),
+                "overall": res.get("overall"), "account": res.get("account")}, None
     state = await _state(platform_id)
-    status = _status_for(reg, state)
+    status = await _status_for(reg, state)
     await db.connectors.update_one({"platform_id": platform_id},
                                    {"$set": {"last_checked": now_iso()}}, upsert=True)
-    healthy = status in (S_HEALTHY, S_CONNECTED)
+    healthy = status in (S_HEALTHY, S_CONNECTED, S_TEST_PASSED)
     return {"id": platform_id, "status": status, "healthy": healthy,
             "message": ("Connection healthy — ready to publish." if healthy
                         else reg["setup_hint"])}, None

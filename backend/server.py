@@ -58,7 +58,7 @@ from routers.founder_inbox import router as founder_inbox_router
 from routers.autonomy_engine import router as autonomy_engine_router
 from routers.asset_manufacturing import router as asset_manufacturing_router
 from routers.library_import import router as library_import_router
-from routers.connectors import router as connectors_router
+from routers.connectors import router as connectors_router, oauth_router as oauth_callback_router
 from routers.metrics import router as metrics_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
@@ -98,6 +98,7 @@ for r in [
     asset_manufacturing_router,
     library_import_router,
     connectors_router,
+    oauth_callback_router,
     metrics_router,
 ]:
     app.include_router(r)

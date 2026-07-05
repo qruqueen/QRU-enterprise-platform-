@@ -327,7 +327,7 @@ async def beta_status(request: Request, host: str = "", user=Depends(get_current
     blocks_promotion = [
         "Stripe is in TEST mode — no real payments can be accepted until live keys are added.",
         "Email delivery is not yet wired — customers are not emailed their downloads.",
-        f"{len(under_dev)} publishing connectors still require authorization/credentials.",
+        f"Automated file publishing is not yet wired for {len(under_dev)} OAuth connectors (connect + test connection are operational via the Universal OAuth Framework™).",
     ]
 
     questions = [
@@ -339,16 +339,16 @@ async def beta_status(request: Request, host: str = "", user=Depends(get_current
         {"q": "Are payments real or sandbox?", "a": "Sandbox (Stripe test keys). No real money moves.", "status": "warn"},
         {"q": "Are downloads real or simulated?", "a": "Real. Paying customers receive the actual manufactured files.", "status": "ok"},
         {"q": "Can products actually be published?", "a": "Yes — to the QRU Store™ (native connector). External platforms are guided-setup only.", "status": "ok"},
-        {"q": "Which publishing platforms are operational?", "a": ", ".join(operational) or "None", "status": "ok"},
-        {"q": "Which platforms are under development?", "a": ", ".join(under_dev) or "None", "status": "warn"},
-        {"q": "Can YouTube publishing be tested?", "a": "Not yet — YouTube requires Google OAuth authorization (Needs Authorization).", "status": "warn"},
+        {"q": "Which platforms are operational?", "a": (", ".join(operational) or "None") + ". Others can now be Connected & Tested via the Universal OAuth Framework™ once an admin configures each provider's OAuth app.", "status": "ok"},
+        {"q": "Which platforms are under development?", "a": (", ".join(under_dev) or "None") + " — connect/test works after Developer Setup; automated publishing of the file is not yet wired for these.", "status": "warn"},
+        {"q": "Can YouTube publishing be tested?", "a": "Yes — once an admin completes Developer Setup (OAuth app), the Founder can Connect via Google and Test the connection. Automated video upload is not yet wired.", "status": "warn"},
         {"q": "Can Stripe accept real payments?", "a": "No — test keys only. Add live keys to accept real payments.", "status": "warn"},
-        {"q": "Can Amazon KDP publish?", "a": "Not yet — KDP requires your Amazon credentials (Setup Required).", "status": "warn"},
+        {"q": "Can Amazon KDP publish?", "a": "No — Amazon KDP has no public OAuth publishing API; books are uploaded in the KDP dashboard.", "status": "warn"},
         {"q": "Can QRU Store process orders?", "a": "Yes — QRU Store™ is fully operational (native).", "status": "ok"},
         {"q": "Can customers create accounts?", "a": "Yes — account creation and login are operational.", "status": "ok"},
         {"q": "Is email delivery operational?", "a": "No — email delivery is not wired yet. Downloads appear in-app after checkout.", "status": "warn"},
         {"q": "What is currently disabled?", "a": "Real payments, email delivery, and external publishing connectors (OAuth/API-key setup pending).", "status": "warn"},
-        {"q": "What is still being built?", "a": f"Authorization for {len(under_dev)} external connectors; email delivery; live payments.", "status": "info"},
+        {"q": "What is still being built?", "a": f"Automated file publishing for {len(under_dev)} OAuth connectors (connect/test is ready); email delivery; live payments.", "status": "info"},
         {"q": "What is the recommended next milestone?", "a": "Reach Founder Beta Complete™ (25 consecutive clean runs), then add live Stripe keys + email delivery for a public launch.", "status": "info"},
     ]
 
