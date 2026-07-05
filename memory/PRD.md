@@ -18,9 +18,23 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - Auth: JWT founder login. Stripe: TEST mode (sk_test).
 
 ## Phase Next — Manufacturing Orders (approved sequence)
-MO-001 P4 Quality Gates ✅ · MO-002 P6 Enterprise Manufacturing Dashboard ✅ · MO-003 Knowledge Record 2.0 (deterministic schema first) · MO-004 QRU Design Language · MO-005 Manufacturing Director™ AI · MO-006 True YouTube publishing (Founder Upload Mode). Build one at a time; deterministic infra before AI content.
+MO-001 P4 Quality Gates ✅ · MO-002 P6 Enterprise Manufacturing Dashboard ✅ · MO-003 Knowledge Record 2.0 ✅ · MO-004 QRU Design Language · MO-005 Manufacturing Director™ AI · MO-006 True YouTube publishing (Founder Upload Mode). Build one at a time; deterministic infra before AI content.
 
 ## Completed (recent → older)
+### MO-003 · Knowledge Record 2.0™ (2026-07-05) · VERIFIED (iteration_31: 13/13 backend, frontend 100%)
+- **`knowledge_record_v2.py`**: 36 sections across 10 groups, each an independent managed object
+  {section_id,title,content,status,source,verification_status,confidence_score,author,reviewer,
+  created_at,updated_at,version,evidence_links,dependencies,manufacturing_ready}. Extensible — new
+  sections need no DB redesign. **Manufacturing Dependency Map** (product-family → required sections)
+  + reverse lookup. Non-destructive `migrate_kr` mapped legacy fields (verified_truth→Deep Explanation,
+  qru_translation→QRU Translation™, references→Scientific References evidence_links, etc.), preserved
+  unmapped legacy. All 47 KRs migrated (idempotent).
+- **`routers/knowledge_v2.py`**: /registry, /migrate (super-admin), /{id}, PUT /{id}/section/{sid},
+  /{id}/manufacturing-readiness, /dependency-map.
+- **Gate integration**: `manufacture_package` now pauses when required KR 2.0 sections are incomplete
+  (e.g. video needs YouTube Script + Image Concepts) and names the missing sections.
+- **Frontend** `KnowledgeRecord2.js` (route `/kr2`, nav "Knowledge Architecture™"): KR selector,
+  completeness bar, collapsible per-section editor (content/status/source, versioned).
 ### MO-002 · P6 — Enterprise Manufacturing Dashboard™ (2026-07-05) · VERIFIED (iteration_30: 18/18 backend, frontend 100%)
 - **`routers/manufacturing_dashboard.py`** `GET /api/manufacturing-dashboard`: deterministic command
   center aggregating KRs (total/verified), products (total/published), queue, connector status + health
