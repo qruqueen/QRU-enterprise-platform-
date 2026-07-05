@@ -393,6 +393,17 @@ async def manufacture_package(kr_id, product_types, owner_id, actor, config=None
         report = gate["director_report"]
         return None, ("Manufacturing paused by the Inspection System™ — "
                       + report["verdict"] + " Missing: " + "; ".join(report["missing_information"][:4]))
+    # Manufacturing Dependency Map (KR 2.0): each product type requires specific KR sections.
+    import knowledge_record_v2 as kr2
+    if kr.get("schema_version") == kr2.SCHEMA_VERSION:
+        blocked = []
+        for pt in valid:
+            r = kr2.manufacturing_readiness(kr, pt)
+            if not r["manufacturing_allowed"]:
+                blocked.append(f"{pt} needs: {', '.join(r['missing_sections'])}")
+        if blocked:
+            return None, ("Manufacturing paused — required Knowledge Record 2.0 sections are incomplete. "
+                          + " | ".join(blocked[:3]))
     order = {
         "id": gen_id(), "kr_id": kr_id, "kr_code": kr.get("kr_code"), "kr_title": kr.get("title"),
         "items": [{"product_type": p, "status": "queued", "product_id": None} for p in valid],

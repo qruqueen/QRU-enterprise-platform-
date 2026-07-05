@@ -62,6 +62,7 @@ from routers.connectors import router as connectors_router, oauth_router as oaut
 from routers.metrics import router as metrics_router
 from routers.inspection import router as inspection_router
 from routers.manufacturing_dashboard import router as mfg_dashboard_router
+from routers.knowledge_v2 import router as kr2_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
 from routers.misc import (
@@ -104,6 +105,7 @@ for r in [
     metrics_router,
     inspection_router,
     mfg_dashboard_router,
+    kr2_router,
 ]:
     app.include_router(r)
 
