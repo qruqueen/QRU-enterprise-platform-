@@ -109,12 +109,14 @@ def _review_readiness(kr, product_types):
     return by_product, missing_knowledge
 
 
-def _decide(kr, kr_source, gate, by_product, missing_knowledge):
+def _decide(kr, kr_source, gate, by_product, missing_knowledge, product_types):
     """Deterministic verdict — the single source of Director authority."""
     if kr is None:
         return REJECT, ["No Knowledge Record is linked to this order and none matched the topic."]
     if not _kr_has_any_content(kr):
         return REJECT, ["The Knowledge Record has no written content to manufacture from."]
+    if not product_types:
+        return HOLD, ["No product types requested — add at least one deliverable before manufacturing."]
 
     reasons = []
     verification = kr.get("verification_status", "Unverified")
@@ -221,7 +223,7 @@ async def review_order(order, use_ai=False):
                 "gates": [], "director_report": {"missing_information": ["No Knowledge Record linked."]}}
         by_product, missing_knowledge = [], []
 
-    verdict, reasons = _decide(kr, kr_source, gate, by_product, missing_knowledge)
+    verdict, reasons = _decide(kr, kr_source, gate, by_product, missing_knowledge, product_types)
     confidence = _confidence(gate, by_product)
     actions = _recommended_actions(verdict, missing_knowledge, gate)
 
@@ -256,6 +258,45 @@ async def review_order(order, use_ai=False):
         "executive_brief": brief,
         "brief_source": brief_source,
     }
+
+
+async def manufacture_cleared(owner_id, actor):
+    """Batch-launch manufacturing for every order the Director has CLEARED
+    (APPROVE / APPROVE_WITH_CONDITIONS). Each launch re-passes the deterministic gates inside
+    product_automation.manufacture_package. Returns a per-order summary — no silent failures."""
+    import product_automation as pa
+    from models import now_iso
+
+    orders = await db.manufacturing_orders.find().sort("created_at", -1).to_list(500)
+    launched, skipped = [], []
+    for o in orders:
+        r = await review_order(o, use_ai=False)
+        if r["verdict"] not in (APPROVE, APPROVE_WITH_CONDITIONS):
+            continue
+        kr = r.get("knowledge_record")
+        if not kr:
+            skipped.append({"mo_code": r["mo_code"], "reason": "No resolved Knowledge Record."})
+            continue
+        valid_types = [t for t in (o.get("product_types") or []) if t in getattr(pa, "RECIPES", {})]
+        if not valid_types:
+            skipped.append({"mo_code": r["mo_code"], "reason": "No requested product type matches a manufacturing recipe."})
+            continue
+        order, err = await pa.manufacture_package(kr["id"], valid_types, owner_id, actor)
+        if err:
+            skipped.append({"mo_code": r["mo_code"], "reason": err})
+            continue
+        history = o.get("approval_history", [])
+        history.append({"stage": "Manufacturing", "by": f"Manufacturing Director™ (batch, {actor})",
+                        "verdict": r["verdict"], "at": now_iso()})
+        await db.manufacturing_orders.update_one(
+            {"id": o["id"]},
+            {"$set": {"status": "Manufacturing", "approval_history": history,
+                      "director_verdict": r["verdict"], "production_order_id": order["id"],
+                      "director_reviewed_at": now_iso(), "updated_at": now_iso()}})
+        launched.append({"mo_code": r["mo_code"], "kr_code": kr.get("kr_code"),
+                         "product_types": valid_types, "production_order_id": order["id"]})
+    return {"launched": launched, "skipped": skipped,
+            "launched_count": len(launched), "skipped_count": len(skipped)}
 
 
 async def review_queue():

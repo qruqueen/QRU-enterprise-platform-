@@ -39,6 +39,11 @@ MO-001 P4 Quality Gates ✅ · MO-002 P6 Enterprise Manufacturing Dashboard ✅ 
   summary MetricCards, verdict-filtered queue table, ReviewPanel (verdict, confidence, executive
   brief with "Request AI brief", missing knowledge → /kr2, readiness-by-product, recommended actions,
   Apply Director Decision).
+- **One-click "Manufacture Cleared" batch** (POST /api/director/manufacture-cleared, super-admin):
+  launches `product_automation.manufacture_package` for every CLEARED order (re-passes Quality Gates);
+  returns launched[] + skipped[] with explicit reasons (no silent failures). Verified end-to-end:
+  MO-00021 (Poster ← verified KR-00008) → APPROVE → launched → production order completed 100% →
+  PRD-00129 Published. Orders with empty product_types now correctly return HOLD (nothing to make).
 
 ### MO-004 · QRU Master Design Language™ + QRU Component Library™ (2026-07-05) · VERIFIED (iteration_32: frontend 100%)
 - **Global tokens** (`index.css`): Deep Navy `--primary` (foundation), QRU Gold `--secondary`

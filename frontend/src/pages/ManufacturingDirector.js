@@ -6,7 +6,7 @@ import { MetricCard, Panel, StatusChip, ScoreBar, VerifiedBadge } from "@/compon
 import { toast } from "sonner";
 import {
   Loader2, X, Gavel, CheckCircle2, PauseCircle, XCircle, AlertTriangle, BookOpenCheck,
-  Sparkles, ChevronRight, Layers, ShieldCheck, ArrowRight,
+  Sparkles, ChevronRight, Layers, ShieldCheck, ArrowRight, Factory,
 } from "lucide-react";
 
 const VERDICT_TONE = {
@@ -190,9 +190,23 @@ export default function ManufacturingDirector() {
   const [data, setData] = useState(null);
   const [active, setActive] = useState(null);
   const [filter, setFilter] = useState("all");
+  const [batching, setBatching] = useState(false);
 
   const load = () => api.get("/director/queue").then((r) => setData(r.data)).catch(() => setData(false));
   useEffect(() => { load(); }, []);
+
+  const manufactureCleared = async () => {
+    if (!window.confirm(`Launch manufacturing for all ${data.cleared} cleared order(s)? Each will re-pass the Quality Gates.`)) return;
+    setBatching(true);
+    try {
+      const { data: res } = await api.post("/director/manufacture-cleared");
+      if (res.launched_count > 0) toast.success(`Manufacturing launched for ${res.launched_count} order(s).`);
+      if (res.skipped_count > 0) toast.message(`${res.skipped_count} skipped`, { description: res.skipped.map((s) => `${s.mo_code}: ${s.reason}`).join(" · ") });
+      if (res.launched_count === 0 && res.skipped_count === 0) toast.message("No cleared orders to manufacture.");
+      load();
+    } catch (e) { toast.error(e.response?.data?.detail || "Batch manufacture failed"); }
+    finally { setBatching(false); }
+  };
 
   if (data === null) return <div className="flex justify-center py-32"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
   if (data === false) return <p className="text-sm text-muted-foreground p-8">Could not load the Director queue.</p>;
@@ -208,7 +222,15 @@ export default function ManufacturingDirector() {
         overline="QRU Manufacturing Director™ · Supervisory Review"
         title="Manufacturing Director"
         description="The Director reviews every manufacturing order before production — verifying the knowledge foundation, identifying exactly what's missing, and approving or holding each order. Every verdict is evidence-based and deterministic; AI only writes the brief, never the decision."
-        actions={<VerifiedBadge label="Evidence-Based · $0 AI" testid="director-badge" />}
+        actions={
+          <div className="flex items-center gap-2">
+            <VerifiedBadge label="Evidence-Based · $0 AI" testid="director-badge" />
+            <button onClick={manufactureCleared} disabled={batching || data.cleared === 0} data-testid="director-manufacture-cleared"
+              className="text-sm inline-flex items-center gap-2 bg-gold text-navy px-4 py-2 rounded-sm font-bold disabled:opacity-40 hover:brightness-95 transition-all">
+              {batching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Factory className="w-4 h-4" />} Manufacture Cleared ({data.cleared})
+            </button>
+          </div>
+        }
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">

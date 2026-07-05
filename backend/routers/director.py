@@ -6,11 +6,18 @@ evidence-based; the optional AI executive brief never changes it (Treasure Stand
 from fastapi import APIRouter, Depends, HTTPException
 
 from database import db
-from auth import get_current_user
+from auth import get_current_user, require_super_admin
 from models import now_iso
 import manufacturing_director as director
 
 router = APIRouter(prefix="/api/director", tags=["director"])
+
+
+@router.post("/manufacture-cleared")
+async def manufacture_cleared(user=Depends(require_super_admin)):
+    """One-click: launch manufacturing for every Director-CLEARED order. Each launch re-passes the
+    deterministic Quality Gates; skipped orders are returned with an explicit reason."""
+    return await director.manufacture_cleared(user["id"], user["name"])
 
 
 @router.get("/queue")
