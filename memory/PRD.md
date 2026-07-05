@@ -18,10 +18,19 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - Auth: JWT founder login. Stripe: TEST mode (sk_test).
 
 ## Phase Next — Manufacturing Orders (approved sequence)
-MO-001 P4 Quality Gates ✅ · MO-002 P6 Enterprise Manufacturing Dashboard · MO-003 Knowledge Record 2.0 (deterministic schema first) · MO-004 QRU Design Language · MO-005 Manufacturing Director™ AI · MO-006 True YouTube publishing (Founder Upload Mode). Build one at a time; deterministic infra before AI content.
+MO-001 P4 Quality Gates ✅ · MO-002 P6 Enterprise Manufacturing Dashboard ✅ · MO-003 Knowledge Record 2.0 (deterministic schema first) · MO-004 QRU Design Language · MO-005 Manufacturing Director™ AI · MO-006 True YouTube publishing (Founder Upload Mode). Build one at a time; deterministic infra before AI content.
 
 ## Completed (recent → older)
-### MO-001 · P4 — Manufacturing Quality Gates / Inspection System™ (2026-07-05) · VERIFIED (iteration_29: 13/13 backend, frontend 100%)
+### MO-002 · P6 — Enterprise Manufacturing Dashboard™ (2026-07-05) · VERIFIED (iteration_30: 18/18 backend, frontend 100%)
+- **`routers/manufacturing_dashboard.py`** `GET /api/manufacturing-dashboard`: deterministic command
+  center aggregating KRs (total/verified), products (total/published), queue, connector status + health
+  (23 rows), publishing, REAL Stripe revenue (TEST provenance), licensing, throughput (7d), quality
+  scores (avg + cleared/paused from Inspection System™), Treasure Standard™ certified, and live
+  actionable alerts (paused products → /inspection, connectors needing auth → /connectors, etc.).
+- **Frontend** `ManufacturingDashboard.js` (route `/mfg-command`, nav "Manufacturing Command™"):
+  alerts, 10 provenance-badged metric cards (drill to /evidence, /inspection, /connectors), connector health table.
+
+### MO-001 · P4 — Manufacturing Quality Gates / Inspection System™ (2026-07-05) · VERIFIED (iteration_29)
 - **`inspection_system.py`** (deterministic, $0 AI): 9 gates — Knowledge/Verification Completeness,
   Educational Value, Consumer Clarity, Visual Readiness, Product Eligibility, Connector Readiness,
   Publication Readiness, Treasure Standard™. Blocking gates PAUSE manufacturing + Director report.
