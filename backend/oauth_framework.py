@@ -46,7 +46,8 @@ PROVIDERS = {
         "authorize": "https://accounts.google.com/o/oauth2/v2/auth",
         "token": "https://oauth2.googleapis.com/token",
         "userinfo": "https://www.googleapis.com/oauth2/v2/userinfo",
-        "scopes": ["openid", "email", "profile"],  # TEMP: scope-isolation diagnostic (sensitive YouTube scopes removed)
+        "scopes": ["https://www.googleapis.com/auth/youtube.upload",
+                   "https://www.googleapis.com/auth/youtube.readonly", "openid", "email", "profile"],
         "extra_auth": {"access_type": "offline", "prompt": "consent"}, "supported": True,
     },
     "google_drive": {

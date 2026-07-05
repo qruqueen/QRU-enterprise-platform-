@@ -70,14 +70,6 @@ export default function MediaStudio() {
     }, 3000);
   };
 
-  const publish = async (dest) => {
-    try {
-      const { data } = await api.post(`/media/${sel.id}/publish`, { destination: dest });
-      setSel(data); loadLibrary();
-      toast.success(`Published to ${dest}`);
-    } catch (e) { toast.error(e.response?.data?.detail || "Publish failed."); }
-  };
-
   const a = sel?.assets || {};
 
   return (
@@ -209,14 +201,18 @@ export default function MediaStudio() {
 
                   {/* Publishing */}
                   <div className="bg-card border rounded-xl p-4">
-                    <p className="overline text-primary mb-2 flex items-center gap-1.5"><Send className="w-3.5 h-3.5" /> Publish (modular destinations)</p>
-                    {!sel.publishing_ready && <p className="text-xs text-muted-foreground mb-2">Locked until Treasure Standard™ QC passes.</p>}
+                    <p className="overline text-primary mb-2 flex items-center gap-1.5"><Send className="w-3.5 h-3.5" /> Publish destinations</p>
+                    <p className="text-xs text-muted-foreground mb-2" data-testid="media-publish-note">
+                      Automated upload isn't wired yet — QRU manufactures &amp; QC-certifies this media, but does not yet upload it to external platforms, so nothing is marked “Published” without a real upload (e.g. a YouTube video ID). Connect &amp; manage destinations in <b>Publishing Connectors™</b>.
+                    </p>
                     <div className="flex flex-wrap gap-2" data-testid="publish-destinations">
-                      {destinations.map((dst) => {
-                        const done = (sel.publications || []).some((p) => p.destination === dst);
-                        return <button key={dst} data-testid={`publish-${dst}`} disabled={!sel.publishing_ready || done} onClick={() => publish(dst)}
-                          className="text-xs px-3 py-1.5 rounded-full border disabled:opacity-40 hover:border-primary">{done ? `✓ ${dst}` : dst}</button>;
-                      })}
+                      {destinations.map((dst) => (
+                        <button key={dst} data-testid={`publish-${dst}`} disabled
+                          title={`Automated upload to ${dst} isn't wired yet — it's a planned milestone.`}
+                          className="text-xs px-3 py-1.5 rounded-full border opacity-40 cursor-not-allowed">
+                          {dst} · Coming Soon
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>

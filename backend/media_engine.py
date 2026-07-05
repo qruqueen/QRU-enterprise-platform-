@@ -126,11 +126,12 @@ async def publish_media(mid, destination):
     m = await db.media_assets.find_one({"id": mid})
     if not m:
         return None, "Media not found"
-    if not m.get("publishing_ready"):
-        return None, "Media must pass Treasure Standard\u2122 QC before publishing."
     if destination not in PUBLISHING_DESTINATIONS:
         return None, "Unknown destination"
-    pub = {"destination": destination, "published_at": now_iso(), "status": "published"}
-    await db.media_assets.update_one({"id": mid}, {"$push": {"publications": pub}, "$set": {"updated_at": now_iso()}})
-    await log_org("Fulfillment\u2122", "Fulfillment", f"published media to {destination}:", m.get("media_code", ""), "success")
-    return clean(await db.media_assets.find_one({"id": mid})), None
+    # Honest guard (Treasure Standard™): QRU manufactures & QC-certifies media, but automated
+    # upload to external platforms (YouTube, Podcast, Social, etc.) is NOT wired yet. We never
+    # mark media as "Published" without a real, verifiable upload (e.g. a YouTube video ID).
+    return None, (f"Automated upload to {destination} isn't wired yet. This media has been "
+                  f"manufactured and QC-certified, but QRU does not yet perform the real upload, "
+                  f"so it cannot be marked Published. Connect {destination} in Publishing "
+                  f"Connectors™ — automated upload is a planned manufacturing milestone.")

@@ -67,13 +67,21 @@ export default function Connectors() {
 
   const connectOAuth = async (c) => {
     setBusy(c.id);
+    // Open a top-level tab synchronously (inside the click) so it isn't blocked and
+    // escapes the Emergent preview iframe — Google refuses to load its sign-in inside a frame.
+    const win = window.open("", "_blank");
     try {
       const { data } = await api.get(`/connectors/${c.id}/authorize-url?frontend_origin=${encodeURIComponent(window.location.origin)}`);
-      window.location.href = data.authorize_url; // official provider login
+      if (win) win.location.href = data.authorize_url;
+      else {
+        // Popup blocked — fall back to navigating the top-level window out of the iframe.
+        try { window.top.location.href = data.authorize_url; }
+        catch { window.location.href = data.authorize_url; }
+      }
     } catch (e) {
+      if (win) win.close();
       toast.error(e.response?.data?.detail || "Could not start authorization");
-      setBusy("");
-    }
+    } finally { setBusy(""); }
   };
 
   const disconnect = async (c) => {
