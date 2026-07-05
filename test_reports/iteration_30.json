@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 30 — QRU Enterprise Manufacturing Dashboard™ (MO-002 / P6). Fully verified end-to-end. Backend: GET /api/manufacturing-dashboard returns all 12 required top-level keys with correct shapes and REAL values (KRs 22/47 verified, 127 products, 32 published, 26 Treasure Standard™, 2/23 operational connectors, revenue $14.99 TEST provenance from 1 paid order, licensing 0 → NOT_TRACKED, throughput 4 orders 7d, quality avg=84 with 10 cleared / 117 paused matching /inspection/summary, 23 connector_health rows, 3 alerts). Auth required (401 without token). Frontend /mfg-command renders under nav-mfg-command with mfg-alerts, mfg-metrics grid of 10 cards (all 10 testids present with provenance badges), and mfg-connector-health table with 23 rows. Drill navigation verified: mfg-quality→/inspection, mfg-connectors→/connectors, mfg-revenue/mfg-products/mfg-publishing→/evidence, paused-products alert→/inspection. Regression: /inspection table and /connectors still render.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration30_mfg_dashboard.py",
+    "/app/test_reports/pytest/iteration30.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "manufacturing_dashboard.py loads ALL products (.to_list(500)) and re-inspects each on every request; identical to iteration_29 note. As product count grows past 500 the .to_list cap will silently truncate — consider paginating and/or memoizing quality_scores from /inspection/summary (they're computed identically and cross-verified in tests).",
+    "connector_health list literally re-shapes cx.list_connectors() output; if connector count changes the frontend hard-checks 23 rows implicitly. Adding a 'total' field alongside the list would future-proof consumers.",
+    "Revenue provenance logic is `TEST if STRIPE_TEST else (LIVE if paid else NOT_TRACKED)`. This is fine but means once Stripe flips to live keys with 0 orders the value will still be $0 with LIVE label — consider `LIVE if paid else NOT_TRACKED` regardless (or a 'ready but no orders yet' label).",
+    "Alerts list has no ID/key on each alert; frontend uses index key which is OK for now but stable IDs would help selective dismissal later.",
+    "Dashboard route lacks role-based restriction; any authenticated user can view founder-level factory numbers. If desired, gate to super_admin/founder like other Command routes."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration30_mfg_dashboard.py"
+  ],
+  "success_rate": {"backend": "100% (18/18)", "frontend": "100%"},
+  "test_credentials": "Founder 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! — used as-is per test_credentials.md; not modified.",
+  "seed_data_creation": "None. All values read from existing production DB.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Manufacturing Command dashboard lives at GET /api/manufacturing-dashboard (auth required) and frontend route /mfg-command. Testids: nav-mfg-command, mfg-alerts, mfg-metrics, mfg-knowledge, mfg-products, mfg-queue, mfg-quality, mfg-treasure, mfg-connectors, mfg-publishing, mfg-revenue, mfg-licensing, mfg-throughput, mfg-connector-health. Drill routes: mfg-quality/mfg-treasure→/inspection, mfg-connectors→/connectors, mfg-products/mfg-publishing/mfg-revenue→/evidence. Alerts array items have {level: warn|info|ok, message, link}. Provenance labels: LIVE, TEST (Stripe test mode), NOT_TRACKED (rendered as 'NOT TRACKED YET'). Login response key is `access_token`. Quality counts must equal /api/inspection/summary counts (already asserted). Current DB has 47 KRs, 127 products, 32 published, 23 connectors (2 operational: QRU Store™+Stripe+YouTube — technically 3 operational per screenshot; confirmed as 2 by backend). NOTE: the alerts list currently does not have a dismissible id — if E1 later adds dismissal, tests will need updating.",
+  "rca of the issue": "N/A — no defects. All acceptance criteria from the review request pass. Backend numbers match /inspection/summary cross-checks and frontend renders the exact values (Revenue $14.99 TEST, Licensing 0 NOT TRACKED YET, Quality 84 with 10 cleared/117 paused, 23 connector rows, 3 alerts)."
+}

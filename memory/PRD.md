@@ -17,8 +17,25 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - Frontend: React + Tailwind + Shadcn (`/app/frontend/src`, pages + components).
 - Auth: JWT founder login. Stripe: TEST mode (sk_test).
 
+## Phase Next — Manufacturing Orders (approved sequence)
+MO-001 P4 Quality Gates ✅ · MO-002 P6 Enterprise Manufacturing Dashboard · MO-003 Knowledge Record 2.0 (deterministic schema first) · MO-004 QRU Design Language · MO-005 Manufacturing Director™ AI · MO-006 True YouTube publishing (Founder Upload Mode). Build one at a time; deterministic infra before AI content.
+
 ## Completed (recent → older)
-### MO-046 — Founder Beta Completion™ · Universal OAuth Framework™ (2026-07-05) · VERIFIED (testing_agent iteration_26: backend 16/16, frontend 100%)
+### MO-001 · P4 — Manufacturing Quality Gates / Inspection System™ (2026-07-05) · VERIFIED (iteration_29: 13/13 backend, frontend 100%)
+- **`inspection_system.py`** (deterministic, $0 AI): 9 gates — Knowledge/Verification Completeness,
+  Educational Value, Consumer Clarity, Visual Readiness, Product Eligibility, Connector Readiness,
+  Publication Readiness, Treasure Standard™. Blocking gates PAUSE manufacturing + Director report.
+  `_kr_text` reads real KR fields (verified_truth, qru_translation, deep_roots, simple_answer…).
+- **`routers/inspection.py`**: /summary, /product/{id}, /knowledge-record/{id}, /gates.
+- Gate enforced in `product_automation.manufacture_package` (400 pause when blocking gates fail).
+- **Frontend** `ManufacturingInspection.js` (route `/inspection`, nav "Quality Gates™").
+
+### Connector UX honesty + Media Studio + YouTube live (2026-07-05)
+- Media Studio no longer fakes "Published" (destinations "· Coming Soon"; `publish_media` refuses fake publish).
+- YouTube connected via real Google OAuth (fixed iframe 403 by launching OAuth in a top-level tab).
+- Connectors: Developer/Founder mode, every disabled Publish has a reason, "Next:" step per card.
+
+### MO-046 — Founder Beta Completion™ · Universal OAuth Framework™ (2026-07-05) · VERIFIED (iteration_26: backend 16/16, frontend 100%)
 - **`oauth_framework.py`** — one config-driven OAuth 2.0 engine for 15 providers (YouTube, Google
   Drive/Docs/Slides, Microsoft, OneDrive, Dropbox, Etsy, LinkedIn, Facebook, Instagram, Pinterest,
   TikTok, X, Canva). Standard authorize/token/userinfo endpoints + scopes; PKCE for Etsy/X/TikTok/Canva.
