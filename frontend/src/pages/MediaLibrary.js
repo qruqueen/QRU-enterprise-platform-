@@ -64,8 +64,9 @@ export default function MediaLibrary() {
     try {
       const { data } = await api.post("/media-library/produce-proof", { provider_id: "pixabay_video", query: "peaceful forest sunrise", product_title: "Forex Foundations" });
       setProof(data); loadAssets();
-      toast.success("Milestone 001 — first live licensed media manufactured.");
-    } catch (e) { toast.error(e.response?.data?.detail || "Production pipeline failed."); }
+      if (data.ok) toast.success("Milestone 001 — first live licensed media manufactured.");
+      else toast.error(`Pipeline stopped at: ${(data.steps || []).filter((s) => ["failed", "blocked"].includes(s.status)).map((s) => s.step).join(", ") || "unknown stage"}`);
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not reach the production engine."); }
     finally { setProducing(false); }
   };
 
@@ -181,12 +182,21 @@ export default function MediaLibrary() {
         {proof && (
           <div className="grid md:grid-cols-2 gap-4" data-testid="ml-proof-result">
             <div className="space-y-1">
+              {!proof.ok && <p className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-sm p-2 mb-2" data-testid="ml-proof-failure">Pipeline stopped — see the failed stage below. Completed stages are preserved; fix the cause and re-run.</p>}
               {proof.steps.map((s, i) => (
                 <div key={i} className="flex items-start gap-2 text-[11px]" data-testid={`ml-step-${s.step}`}>
-                  {s.status === "ok" ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> : <ShieldAlert className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />}
+                  {s.status === "ok" ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> : s.status === "degraded" ? <ShieldAlert className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" /> : <X className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />}
                   <span><b className="text-navy capitalize">{s.step.replace(/_/g, " ")}</b> — <span className="text-muted-foreground">{s.detail}</span></span>
                 </div>
               ))}
+              {proof.summary && (
+                <div className="mt-3 border-t pt-2 text-[10px] text-muted-foreground space-y-0.5" data-testid="ml-proof-summary">
+                  <p><b className="text-navy">Job:</b> {proof.summary.job_id?.slice(0, 12)} · v{proof.summary.pipeline_version}</p>
+                  <p><b className="text-navy">Source:</b> {proof.summary.source_provider} · {proof.summary.license_type}</p>
+                  <p><b className="text-navy">Technical QA:</b> {proof.summary.technical_qa_score} · <b className="text-navy">Brand/Content QA:</b> {proof.summary.brand_content_qa_score}</p>
+                  <p><b className="text-navy">Checksum:</b> {String(proof.summary.checksum).slice(0, 20)}… · {proof.summary.distribution_status}</p>
+                </div>
+              )}
             </div>
             <div>
               {proof.showcase_asset && (
@@ -194,7 +204,7 @@ export default function MediaLibrary() {
                   <video src={`${API_BASE}/${proof.showcase_asset.qru_asset_id}/file`} controls className="w-full rounded-md border" data-testid="ml-proof-video" />
                   <p className="text-[11px] text-navy mt-2 font-mono">{proof.showcase_asset.qru_asset_id}</p>
                   <p className="text-[10px] text-muted-foreground">{proof.showcase_asset.width}×{proof.showcase_asset.height} · {proof.showcase_asset.duration_seconds}s · narration: {String(proof.showcase_asset.has_narration)} · checksum {String(proof.showcase_asset.checksum).slice(0, 16)}…</p>
-                  <p className="text-[10px] text-emerald-600 mt-1">Source: {proof.source_asset.qru_asset_id} · {proof.source_asset.creator_name} · {proof.source_asset.license_type}</p>
+                  <p className="text-[10px] text-emerald-600 mt-1">Source: {proof.source_asset.qru_asset_id} · {proof.source_asset.creator_name} · {proof.source_asset.license_name}</p>
                 </>
               )}
             </div>

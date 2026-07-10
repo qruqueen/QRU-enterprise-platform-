@@ -102,14 +102,14 @@ async def produce_proof(data: ProofInput, user=Depends(require_super_admin)):
     import media_production as mp
     res = await ml.search(data.provider_id, data.query, 5)
     if not res.get("results"):
-        raise HTTPException(400, res.get("reason") or res.get("error") or "No results to produce from.")
+        return {"ok": False, "job_id": None, "steps": [
+            {"step": "live_provider_search", "status": "failed",
+             "detail": res.get("reason") or res.get("error") or "No results to produce from."}]}
     item = dict(res["results"][0])
     item["search_query_used"] = data.query
-    out = await mp.produce_showcase(item, data.product_title, user["name"],
-                                    milestone={"code": "QRU-MILESTONE-001", "title": "First Live Licensed Media Acquisition"})
-    if not out.get("ok"):
-        raise HTTPException(500, f"Pipeline failed at: {[s['step'] for s in out['steps'] if s['status'] in ('failed','blocked')]}")
-    return out
+    return await mp.produce_showcase(item, data.product_title, user["name"],
+                                     milestone={"code": "QRU-MILESTONE-001", "title": "First Live Licensed Media Acquisition"},
+                                     project_id="QRU-PROJ-FOREX-FOUNDATIONS")
 
 
 @router.get("/milestones")
