@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Library, Loader2, Search, Network, Lightbulb, GitBranch, ShieldCheck, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Library, Loader2, Search, Network, Lightbulb, GitBranch, ShieldCheck, ArrowRight, CheckCircle2, FileText } from "lucide-react";
 
 const TABS = [
   { key: "standards", label: "Standards Registry™", icon: ShieldCheck },
@@ -226,8 +226,18 @@ export default function InstitutionalKnowledge() {
                   <Field label="Change History" value={open.change_history} />
                   <Field label="Superseded Versions" value={open.superseded_versions?.map(v => `v${v.version} — archived ${(v.archived_at||'').slice(0,10)}`)} />
                   <Field label="Date Adopted" value={open.date_adopted} />
+                  <Field label="Classification" value={open.classification} />
+                  <Field label="Source Document" value={open.source_document} />
                 </div>
               </div>
+              {open.document_content && (
+                <div className="mt-4 border-t border-border pt-4" data-testid="std-document">
+                  <p className="text-[11px] font-semibold tracking-wide text-gold uppercase mb-2 flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5" /> Full Document {open.word_count ? `· ${open.word_count.toLocaleString()} words` : ""} <span className="text-muted-foreground normal-case font-normal">(verbatim · Founder source)</span>
+                  </p>
+                  <pre className="text-[13px] leading-relaxed text-foreground/85 whitespace-pre-wrap font-body bg-muted/40 rounded-md p-4 max-h-[45vh] overflow-y-auto">{open.document_content}</pre>
+                </div>
+              )}
             </>
           )}
         </DialogContent>

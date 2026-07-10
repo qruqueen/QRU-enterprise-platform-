@@ -72,6 +72,7 @@ const NAV = [
   { to: "/store", label: "QRU Store™", icon: Store, testid: "nav-store", q: "How do people buy what we make?" },
   { to: "/connectors", label: "Publishing Connectors™", icon: UploadCloud, testid: "nav-connectors", q: "Where can we publish — and what's the one way to do it?" },
   { to: "/youtube", label: "YouTube Publisher™", icon: Youtube, testid: "nav-youtube", q: "How do we publish a real video to YouTube?" },
+  { to: "/distribution", label: "Distribution Center™", icon: Radio, testid: "nav-distribution", q: "How do we publish everywhere — verified — from one place?" },
   { section: "Administration" },
   { to: "/integration-hub", label: "Integration Hub™", icon: Plug, testid: "nav-integration-hub", q: "What are we connected to?" },
   { to: "/ai-services", label: "AI Services™", icon: Cpu, testid: "nav-ai-services", q: "What AI powers can we use right now?" },

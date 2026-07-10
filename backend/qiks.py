@@ -216,6 +216,41 @@ async def next_id():
     return f"STD-{n + 1:05d}"
 
 
+async def adopt_founder_document(*, name, category, description, purpose, content,
+                                 source_document, classification="", asset_type="",
+                                 reviewer="Founder"):
+    """Adopt a Founder-provided foundational document as a founding Institutional Standard™.
+    Knowledge-First: `content` is the verbatim extracted document text — never AI-generated.
+    Idempotent: dedupes on name (re-running updates the stored content as a new version)."""
+    existing = await STD_COL.find_one({"name": name})
+    if existing:
+        old_v = existing.get("version", "1.0")
+        major, minor = (old_v.split(".") + ["0"])[:2]
+        new_v = f"{major}.{int(minor) + 1}"
+        await STD_COL.update_one({"id": existing["id"]}, {
+            "$set": {"description": description, "purpose": purpose, "document_content": content,
+                     "word_count": len(content.split()), "source_document": source_document,
+                     "classification": classification, "asset_type": asset_type,
+                     "version": new_v, "updated_at": _now()},
+            "$push": {"change_history": {"version": new_v, "date": _now()[:10],
+                      "reason": "Re-adopted from updated Founder document.", "reviewer": reviewer,
+                      "founder_approval": True}}})
+        return _clean(await STD_COL.find_one({"id": existing["id"]}))
+    sid = await next_id()
+    doc = _std(sid, name, category, description, purpose, impl="Implemented")
+    doc.update({
+        "document_content": content, "word_count": len(content.split()),
+        "source_document": source_document, "classification": classification,
+        "asset_type": asset_type, "is_founder_document": True,
+    })
+    doc["change_history"] = [{"version": "1.0", "date": _now()[:10],
+                              "reason": f"Adopted verbatim from Founder document: {source_document}.",
+                              "reviewer": reviewer, "founder_approval": True}]
+    await STD_COL.insert_one({**doc})
+    return _clean(doc)
+
+
+
 async def create_standard(name, category, description, purpose, reviewer):
     sid = await next_id()
     doc = _std(sid, name, category, description, purpose, impl="Planned")

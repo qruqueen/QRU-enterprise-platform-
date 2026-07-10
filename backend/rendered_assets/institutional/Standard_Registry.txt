@@ -1,0 +1,364 @@
+QRU  Standards  Registry™  
+Version  1.0  
+The  Official  Catalog  of  QRU  Operating  Standards,  Quality  Gates,  and  
+Intellectual
+ 
+Property
+ 
+Architecture™
+ 
+Document  Classification:  Core  Governance  Asset  
+ 
+Asset
+ 
+Type:
+ 
+Standards
+ 
+Registry
+ 
+/
+ 
+Operating
+ 
+Control
+ 
+System
+ 
+ 
+Status:
+ 
+Founder
+ 
+Approved
+ 
+—
+ 
+Initial
+ 
+Framework
+ 
+Parent  Systems:  
+●  QRU  Intelligence  Constitution™  ●  QRU  Methodology  Manual™  ●  QRU  Knowledge  Architecture™  36-Layer  Intelligence  Manufacturing  Standard™  
+ 
+Introduction  
+The  Purpose  of  the  QRU  Standards  Registry™  
+Growth  creates  opportunity.  
+Growth  also  creates  responsibility.  
+As  QRU™  expands  into:  
+●  Books  ●  Courses  ●  Classrooms  ●  AI  learning  systems  ●  Media  ●  Partnerships  ●  Communities  ●  Future  technologies  
+the  greatest  risk  is  not  failure.  
+
+The  greatest  risk  is  losing  the  identity,  quality,  and  mission  that  made  QRU  valuable.  
+The  QRU  Standards  Registry™  exists  to  protect  the  consistency,  integrity,  and  purpose  of  every  
+QRU
+ 
+creation.
+ 
+Its  purpose:  
+“Ensure  every  QRU  creation  carries  the  same  standard  of  truth,  clarity,  connection,  and  human  
+empowerment.”
+ 
+ 
+Section  1  
+QRU  Core  Identity  Standards™  
+Every  QRU  creation  must  align  with  the  foundational  identity.  
+ 
+Standard  1.1  —  Understanding  Over  Information™  
+QRU  does  not  measure  success  by  how  much  information  is  delivered.  
+QRU  measures  success  by:  
+●  What  was  understood?  ●  What  changed?  ●  What  can  now  be  applied?  
+The  objective  is  transformation,  not  consumption.  
+ 
+Standard  1.2  —  Questions  Before  Answers™  
+Every  QRU  product  begins  with  meaningful  inquiry.  
+Required:  
+
+✓  Essential  Question  
+ 
+✓
+ 
+Learning
+ 
+Objective
+ 
+ 
+✓
+ 
+Real-World
+ 
+Connection
+ 
+QRU  believes  better  questions  create  better  understanding.  
+ 
+Standard  1.3  —  Truth  Without  Unnecessary  Complexity™  
+QRU  must  simplify  without  distortion.  
+The  standard:  
+“Make  it  easier  to  understand,  not  easier  to  misunderstand.”  
+ 
+Section  2  
+QRU  Knowledge  Creation  Standards™  
+Every  QRU  Knowledge  Record™  must  meet  minimum  requirements.  
+ 
+Required  Knowledge  Record™  Components:  
+Identity  Layer  
+●  Title  ●  Version  ●  Category  ●  Creation  Date  ●  Creator/Team  
+ 
+Understanding  Layer  
+
+●  Core  Question  ●  Simple  Explanation  ●  Deep  Explanation  ●  Key  Vocabulary  ●  Common  Misunderstandings  
+ 
+Verification  Layer  
+●  Research  Sources  ●  Evidence  Review  ●  Verification  Notes  ●  Confidence  Level  
+ 
+Translation  Layer  
+●  Beginner  Explanation  ●  Intermediate  Explanation  ●  Advanced  Explanation  
+ 
+Application  Layer  
+●  Examples  ●  Exercises  ●  Reflection  Questions  ●  Assessments  
+ 
+Section  3  
+QRU  Verification  Standards™  
+The  Verification  Lion™  Protocol  
+
+No  QRU  asset  becomes  official  without  verification.  
+The  Verification  Lion™  evaluates:  
+ 
+Accuracy  
+Is  the  information  correct?  
+ 
+Completeness  
+Are  important  perspectives  included?  
+ 
+Context  
+Could  someone  misunderstand  without  additional  information?  
+ 
+Ethics  
+Could  this  harm,  mislead,  or  manipulate?  
+ 
+Practical  Value  
+Can  this  improve  decisions,  understanding,  or  action?  
+ 
+Section  4  
+QRU  Treasure  Standard™  Certification  
+
+The  Treasure  Standard™  is  the  QRU  quality  seal.  
+Every  QRU  asset  must  pass:  
+The  Seven  Gates™  
+ 
+Gate  1  —  Truth  
+Verified  accuracy.  
+ 
+Gate  2  —  Clarity  
+Understandable  language.  
+ 
+Gate  3  —  Connection  
+Relevant  to  real  life.  
+ 
+Gate  4  —  Memory  
+Designed  for  retention.  
+ 
+Gate  5  —  Application  
+Creates  usable  knowledge.  
+ 
+Gate  6  —  Emotional  Intelligence  
+
+Respects  the  learner’s  experience.  
+ 
+Gate  7  —  Legacy  
+Supports  human  growth  and  future  generations.  
+ 
+Section  5  
+QRU  Translation  Standards™  
+Every  concept  must  be  translated  through  the  audience  lens.  
+The  Factory  asks:  
+ 
+Child  Lens  
+“Can  a  young  learner  understand  this?”  
+ 
+Family  Lens  
+“Can  this  create  meaningful  conversations?”  
+ 
+Educator  Lens  
+“Can  this  be  taught  effectively?”  
+ 
+Professional  Lens  
+
+“Can  this  improve  decisions?”  
+ 
+Expert  Lens  
+“Has  accuracy  been  preserved?”  
+ 
+Section  6  
+QRU  Product  Manufacturing  Standards™  
+Every  QRU  product  follows:  
+QRU  Universal  Production  Formula™  
+Question  
+↓  
+Understanding  
+↓  
+Research  
+↓  
+Verification  
+↓  
+Connections  
+↓  
+Simplification  
+↓  
+
+Story  
+↓  
+Visual  Design  
+↓  
+Knowledge  Card™  
+↓  
+Workbook  
+↓  
+Book  
+↓  
+Presentation  
+↓  
+Video  
+↓  
+Marketing  
+↓  
+Measurement  
+↓  
+Improvement  
+ 
+Section  7  
+QRU  AI  Factory™  Standards™  
+
+AI  systems  operating  inside  QRU  must  follow  these  principles:  
+ 
+Rule  1  
+AI  supports  human  thinking.  
+AI  does  not  replace  human  judgment.  
+ 
+Rule  2  
+AI-generated  information  requires  verification.  
+ 
+Rule  3  
+AI  must  preserve  QRU  teaching  philosophy.  
+ 
+Rule  4  
+AI  outputs  must  pass  QRU  Treasure  Standard™  review.  
+ 
+Section  8  
+QRU  Intellectual  Property  Classification  
+System™
+ 
+Every  QRU  asset  receives  a  classification.  
+ 
+
+Class  A  —  Public  Brand  Assets  
+Examples:  
+●  QRU™  ●  Quest  for  Real  Understanding™  ●  Public  educational  content  
+ 
+Class  B  —  Protected  Methodology  
+Examples:  
+●  QRU  Conversation-First™  Teaching  Methodology  ●  QRU  Treasure  Standard™  ●  QRU  Understanding  Transformation  Engine™  
+ 
+Class  C  —  Internal  Operating  Systems  
+Examples:  
+●  QRU  AI  Factory™  Pipeline  ●  Production  workflows  ●  Agent  instructions  ●  Verification  systems  
+ 
+Class  D  —  Strategic  Trade  Assets  
+Examples:  
+●  QRU  Knowledge  Database™  ●  QRU  Knowledge  Graph™  ●  Customer  insights  ●  Internal  performance  data  
+
+ 
+Section  9  
+QRU  Agent  Governance  Standards™  
+No  QRU  Agent  operates  independently.  
+Every  agent  must  have:  
+ 
+Assigned  Purpose  
+Why  does  this  role  exist?  
+ 
+Assigned  Stage  
+Where  does  it  operate?  
+ 
+Assigned  Authority  
+What  decisions  can  it  make?  
+ 
+Assigned  Review  
+Who  verifies  its  output?  
+ 
+Section  10  
+
+QRU  Continuous  Improvement  Standard™  
+QRU  follows:  
+Build  →  Measure  →  Learn  →  Improve  
+Every  product  creates  data.  
+Every  question  creates  opportunity.  
+Every  learner  interaction  improves  the  system.  
+The  Factory  becomes  more  intelligent  over  time.  
+ 
+Section  11  
+QRU  Non-Negotiable  Principles™  
+These  principles  cannot  be  removed:  
+1.  Understanding  before  information.  2.  Truth  before  popularity.  3.  Questions  before  assumptions.  4.  Clarity  without  oversimplification.  5.  Technology  serves  humanity.  6.  Knowledge  must  create  positive  action.  7.  Every  generation  should  leave  the  next  generation  stronger.  
+ 
+Founder  Standard  Declaration™  
+“QRU  is  not  defined  by  what  we  create.  QRU  is  defined  by  the  standard  by  which  we  create  it.”  
+The  QRU  Standards  Registry™  protects  that  standard.  
+
+ 
+QRU  Factory  Integration  Status  
+✅  QRU  Intelligence  Constitution™  
+ 
+✅
+ 
+QRU
+ 
+Methodology
+ 
+Manual™
+ 
+v1.0
+ 
+ 
+✅
+ 
+QRU
+ 
+Standards
+ 
+Registry™
+ 
+v1.0
+ 
+ 
+Next  Development  Phase  
+QRU  Agent  Training  Protocol™  v1.0  
+Purpose:  
+To  teach  every  future  QRU  human  collaborator  and  AI  agent:  
+●  How  to  think  like  QRU  ●  How  to  verify  like  QRU  ●  How  to  create  like  QRU  ●  How  to  protect  the  QRU  standard  
+ 
+Archive  Classification  
+Asset  Type:  Foundational  Intellectual  Property  
+ 
+Protection
+ 
+Level:
+ 
+Core
+ 
+QRU
+ 
+Internal
+ 
+Architecture
+ 
+ 
+Version
+ 
+Control
+ 
+Required:
+ 
+Yes
+ 
+Maintain  dated  external  copies  and  version  history  as  QRU  intellectual  property  develops.  
+ 

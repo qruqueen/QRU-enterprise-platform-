@@ -1,0 +1,381 @@
+QRU  Intellectual  Property  Registry™  
+Version  1.0  
+The  Official  Catalog  of  QRU  Assets,  Protection  Categories,  and  Strategic  
+Ownership
+ 
+Architecture™
+ 
+Document  Classification:  Core  Intellectual  Property  Governance  Asset  
+ 
+Asset
+ 
+Type:
+ 
+IP
+ 
+Registry
+ 
+/
+ 
+Asset
+ 
+Classification
+ 
+System
+ 
+ 
+Status:
+ 
+Founder
+ 
+Approved
+ 
+—
+ 
+Initial
+ 
+Framework
+ 
+Parent  Systems:  
+●  QRU  Intelligence  Constitution™  ●  QRU  Founder  Defense  Portfolio™  ●  QRU  Standards  Registry™  ●  QRU  Knowledge  Architecture™  36-Layer  Intelligence  Manufacturing  Standard™  
+ 
+Introduction  
+The  Purpose  of  the  QRU  Intellectual  Property  Registry™  
+As  QRU™  grows,  the  value  of  the  organization  will  exist  across  multiple  asset  categories:  
+●  Brand  identity  ●  Methodologies  ●  Knowledge  systems  ●  Databases  ●  Educational  products  ●  Artificial  intelligence  workflows  ●  Standards  ●  Research  infrastructure  
+The  QRU  Intellectual  Property  Registry™  exists  to  identify,  organize,  and  protect  these  assets.  
+Its  purpose:  
+
+“Know  what  QRU  creates,  understand  why  it  matters,  and  preserve  the  systems  that  create  
+future
+ 
+value.”
+ 
+ 
+Section  1  
+QRU  Intellectual  Property  Philosophy™  
+QRU  recognizes  four  forms  of  strategic  value:  
+1.  Identity  Assets  
+Who  QRU  is.  
+Examples:  
+●  Brand  ●  Mission  ●  Names  ●  Symbols  ●  Language  
+ 
+2.  Method  Assets  
+How  QRU  creates  understanding.  
+Examples:  
+●  Frameworks  ●  Processes  ●  Teaching  systems  ●  Quality  standards  
+ 
+3.  Intelligence  Assets  
+
+What  QRU  accumulates  over  time.  
+Examples:  
+●  Knowledge  Records™  ●  Databases  ●  Research  ●  Learning  insights  
+ 
+4.  Ecosystem  Assets  
+What  QRU  builds  around  the  mission.  
+Examples:  
+●  Partnerships  ●  Communities  ●  Educator  networks  ●  Future  platforms  
+ 
+Section  2  
+QRU  Asset  Classification  System™  
+Every  QRU  asset  receives  a  classification.  
+ 
+Class  A  
+Public  Brand  Assets™  
+Purpose:  
+
+Create  recognition  and  trust.  
+Examples:  
+●  QRU™  ●  Quest  for  Real  Understanding™  ●  QRU  visual  identity  ●  Public  mission  statements  ●  Public  educational  messages  
+Protection  Considerations:  
+Trademark  review  recommended.  
+ 
+Class  B  
+Protected  Methodology  Assets™  
+Purpose:  
+Protect  how  QRU  transforms  information  into  understanding.  
+Examples:  
+●  QRU  Knowledge  Architecture™  36-Layer  Intelligence  Manufacturing  Standard™  ●  QRU  Universal  Production  Formula™  ●  QRU  Conversation-First™  Teaching  Methodology  ●  QRU  Guided  Understanding  System™  ●  QRU  Understanding  Transformation  Engine™  ●  QRU  Treasure  Standard™  
+Protection  Considerations:  
+Documentation,  trademark  review,  controlled  publication.  
+ 
+Class  C  
+
+Internal  Operating  Assets™  
+Purpose:  
+Protect  the  Factory  operating  system.  
+Examples:  
+●  QRU  AI  Factory™  Pipeline  ●  Production  workflows  ●  Agent  instructions  ●  Internal  review  systems  ●  Manufacturing  procedures  
+Protection  Considerations:  
+Internal  documentation  and  trade  secret  management.  
+ 
+Class  D  
+Strategic  Intelligence  Assets™  
+Purpose:  
+Create  long-term  compounding  value.  
+Examples:  
+●  QRU  Knowledge  Database™  ●  QRU  Knowledge  Graph™  ●  Living  Intelligence  Library™  ●  Research  archives  ●  Assessment  data  ●  Product  performance  insights  
+Protection  Considerations:  
+Access  control,  backup  systems,  documentation.  
+
+ 
+Class  E  
+Product  Assets™  
+Purpose:  
+Deliver  QRU  value  to  customers.  
+Examples:  
+●  Books  ●  Workbooks  ●  Courses  ●  Videos  ●  Presentations  ●  Teacher  resources  ●  Learning  tools  
+Protection  Considerations:  
+Copyright  registration  where  appropriate.  
+ 
+Section  3  
+QRU  Core  Asset  Registry™  
+Asset  ID:  
+QRU-IP-001  
+Asset  Name:  
+
+QRU  Intelligence  Constitution™  
+Category:  
+Governance  Architecture  
+Classification:  
+Class  B  /  Class  C  
+Purpose:  
+Defines  the  foundational  laws  and  principles  of  QRU.  
+ 
+Asset  ID:  
+QRU-IP-002  
+Asset  Name:  
+QRU  Methodology  Manual™  
+Category:  
+Operating  Methodology  
+Classification:  
+Class  B  
+Purpose:  
+Defines  how  QRU  manufactures  understanding.  
+ 
+Asset  ID:  
+QRU-IP-003  
+Asset  Name:  
+
+QRU  Standards  Registry™  
+Category:  
+Quality  Control  System  
+Classification:  
+Class  B  /  Class  C  
+Purpose:  
+Maintains  consistency  across  QRU  products.  
+ 
+Asset  ID:  
+QRU-IP-004  
+Asset  Name:  
+QRU  Knowledge  Record  Master  Template™  
+Category:  
+Knowledge  Infrastructure  
+Classification:  
+Class  C  /  Class  D  
+Purpose:  
+Creates  standardized  intelligence  containers.  
+ 
+Asset  ID:  
+QRU-IP-005  
+Asset  Name:  
+
+QRU  Founder  Defense  Portfolio™  
+Category:  
+Strategic  Positioning  
+Classification:  
+Class  C  
+Purpose:  
+Documents  QRU  competitive  advantage.  
+ 
+Section  4  
+QRU  Trade  Secret  Protection  Principles™  
+Internal  assets  should  be  evaluated  by:  
+Value  
+Does  this  create  competitive  advantage?  
+Difficulty  
+Would  recreation  require  significant  time  or  resources?  
+Confidentiality  
+Is  this  information  publicly  available?  
+Strategic  Importance  
+Does  this  strengthen  QRU’s  future?  
+ 
+
+Section  5  
+QRU  Version  Control  Standard™  
+Every  major  asset  requires:  
+Asset  Name   
+Version  Number   
+Date  Created   
+Creator   
+Updates   
+Approval  Status  
+Draft  /  Review  /  Approved  /  Archived  
+ 
+Section  6  
+QRU  Future  Protection  Review™  
+Potential  future  actions:  
+
+●  Trademark  evaluation  ●  Copyright  registration  ●  Legal  consultation  ●  Licensing  strategy  ●  Partnership  agreements  ●  Data  protection  policies  
+ 
+Section  7  
+QRU  Intellectual  Property  Governance  
+Rule™
+ 
+No  major  QRU  asset  should  exist  without:  
+✓  Identification  
+ 
+✓
+ 
+Classification
+ 
+ 
+✓
+ 
+Version
+ 
+control
+ 
+ 
+✓
+ 
+Storage
+ 
+location
+ 
+ 
+✓
+ 
+Ownership
+ 
+record
+ 
+ 
+✓
+ 
+Strategic
+ 
+purpose
+ 
+ 
+Founder  Declaration™  
+“The  greatest  asset  QRU  creates  is  not  a  single  product.  It  is  the  protected  system  that  allows  
+understanding
+ 
+to
+ 
+be
+ 
+manufactured,
+ 
+improved,
+ 
+and
+ 
+shared
+ 
+across
+ 
+generations.”
+ 
+ 
+QRU  Factory  Integration  Status  
+✅  QRU  Intelligence  Constitution™  
+ 
+✅
+ 
+QRU
+ 
+Methodology
+ 
+Manual™
+ 
+v1.0
+ 
+ 
+✅
+ 
+QRU
+ 
+Standards
+ 
+Registry™
+ 
+v1.0
+ 
+
+ ✅  QRU  Agent  Training  Protocol™  v1.0  
+ 
+✅
+ 
+QRU
+ 
+Founder
+ 
+Defense
+ 
+Portfolio™
+ 
+v1.0
+ 
+ 
+✅
+ 
+QRU
+ 
+Knowledge
+ 
+Record
+ 
+Master
+ 
+Template™
+ 
+v1.0
+ 
+ 
+✅
+ 
+QRU
+ 
+Intellectual
+ 
+Property
+ 
+Registry™
+ 
+v1.0
+ 
+ 
+Next  Development  Phase  
+QRU  Factory  Operating  Blueprint™  v1.0  
+Purpose:  
+Combine  all  foundational  systems  into  one  master  operating  map  showing:  
+●  How  ideas  enter  the  Factory  ●  How  knowledge  is  transformed  ●  How  verification  happens  ●  How  products  are  manufactured  ●  How  improvement  cycles  operate  
+ 
+Archive  Classification  
+Asset  Type:  Intellectual  Property  Governance  Document  
+ 
+Protection
+ 
+Level:
+ 
+Founder
+ 
+/
+ 
+Leadership
+ 
+Archive
+ 
+ 
+Version
+ 
+Control
+ 
+Required:
+ 
+Yes
+ 
+Maintain  dated  external  copies  and  revision  history.  
+ 

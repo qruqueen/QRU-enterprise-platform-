@@ -169,3 +169,38 @@ async def list_publications(limit=100):
     for r in rows:
         r.pop("_id", None)
     return rows
+
+
+async def verify_video(video_id):
+    """Confirm a video exists/live on YouTube and return its canonical status."""
+    token = await _token_or_error()
+    async with httpx.AsyncClient(timeout=30) as client:
+        r = await client.get(f"{API}/videos", params={"part": "status,snippet", "id": video_id},
+                             headers={"Authorization": f"Bearer {token}"})
+    if r.status_code >= 400:
+        raise YouTubeError(f"Verification call failed: {r.text[:200]}")
+    items = r.json().get("items", [])
+    if not items:
+        return {"exists": False}
+    it = items[0]
+    return {"exists": True, "video_id": video_id,
+            "privacy": it["status"].get("privacyStatus"),
+            "upload_status": it["status"].get("uploadStatus"),
+            "title": it["snippet"].get("title"),
+            "url": f"https://www.youtube.com/watch?v={video_id}"}
+
+
+async def video_stats(video_id):
+    """Real performance metrics for a published video (views, likes, comments)."""
+    token = await _token_or_error()
+    async with httpx.AsyncClient(timeout=30) as client:
+        r = await client.get(f"{API}/videos", params={"part": "statistics", "id": video_id},
+                             headers={"Authorization": f"Bearer {token}"})
+    if r.status_code >= 400:
+        raise YouTubeError(f"Stats call failed: {r.text[:200]}")
+    items = r.json().get("items", [])
+    if not items:
+        return {}
+    s = items[0].get("statistics", {})
+    return {"views": int(s.get("viewCount", 0)), "likes": int(s.get("likeCount", 0)),
+            "comments": int(s.get("commentCount", 0))}
