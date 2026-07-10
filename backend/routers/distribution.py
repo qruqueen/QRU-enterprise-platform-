@@ -11,8 +11,14 @@ import os
 from database import db
 from auth import get_current_user, require_super_admin
 from distribution import engines
+from distribution.connectors import save_connector_credentials
 
 router = APIRouter(prefix="/api/distribution", tags=["distribution"])
+
+# Connectors that accept Founder-supplied credentials + the fields they require.
+CONFIGURABLE = {
+    "wordpress": {"fields": ["site_url", "username", "app_password"], "secret": ["app_password"]},
+}
 
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "rendered_assets", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -20,7 +26,28 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.get("/connectors")
 async def connectors(user=Depends(get_current_user)):
-    return {"connectors": await engines.list_connectors()}
+    items = await engines.list_connectors()
+    for c in items:
+        c["configurable"] = c["id"] in CONFIGURABLE
+        if c["id"] in CONFIGURABLE:
+            c["config_fields"] = CONFIGURABLE[c["id"]]["fields"]
+    return {"connectors": items}
+
+
+class ConfigInput(BaseModel):
+    credentials: dict
+
+
+@router.post("/connectors/{connector_id}/config")
+async def configure(connector_id: str, data: ConfigInput, user=Depends(require_super_admin)):
+    if connector_id not in CONFIGURABLE:
+        raise HTTPException(400, "This connector is not configurable via credentials.")
+    spec = CONFIGURABLE[connector_id]
+    missing = [f for f in spec["fields"] if not (data.credentials or {}).get(f)]
+    if missing:
+        raise HTTPException(400, f"Missing required fields: {', '.join(missing)}")
+    await save_connector_credentials(connector_id, data.credentials, tuple(spec["secret"]))
+    return {"configured": True, "connector_id": connector_id}
 
 
 class Target(BaseModel):
