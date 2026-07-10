@@ -16,6 +16,7 @@ export default function VisualStudio() {
   const [pid, setPid] = useState("");
   const [analysis, setAnalysis] = useState(null);
   const [gold, setGold] = useState(null);
+  const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -27,13 +28,13 @@ export default function VisualStudio() {
 
   const run = async () => {
     if (!pid) return;
-    setBusy(true); setAnalysis(null); setGold(null);
+    setBusy(true); setAnalysis(null); setGold(null); setErr("");
     try {
       const [a, g] = await Promise.all([
         api.get(`/visual-studio/analyze/${pid}`), api.get(`/visual-studio/gold-review/${pid}`),
       ]);
       setAnalysis(a.data); setGold(g.data);
-    } catch { /* noop */ } finally { setBusy(false); }
+    } catch { setErr("Visual review failed — the product could not be analyzed. Please try again."); } finally { setBusy(false); }
   };
 
   if (config === null) return <div className="flex justify-center py-32"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
@@ -66,7 +67,9 @@ export default function VisualStudio() {
           </button>
         </div>
 
-        {analysis && (
+        {err && <div data-testid="vs-error" className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-sm p-2.5 mb-4"><XCircle className="w-3.5 h-3.5 shrink-0" /> {err}</div>}
+
+        {analysis && gold && (
           <div className="grid md:grid-cols-2 gap-4" data-testid="vs-results">
             <div className="border rounded-md p-4">
               <div className="flex items-center justify-between mb-2">

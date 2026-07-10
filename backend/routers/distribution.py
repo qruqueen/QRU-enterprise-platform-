@@ -17,7 +17,12 @@ router = APIRouter(prefix="/api/distribution", tags=["distribution"])
 
 # Connectors that accept Founder-supplied credentials + the fields they require.
 CONFIGURABLE = {
-    "wordpress": {"fields": ["site_url", "username", "app_password"], "secret": ["app_password"]},
+    "wordpress": {"fields": ["site_url", "username", "app_password"], "secret": ["app_password"],
+                  "hint": "In WordPress: Users → Profile → Application Passwords. Paste your site URL, username, and the generated password."},
+    "devto": {"fields": ["api_key"], "secret": ["api_key"],
+              "hint": "In dev.to: Settings → Extensions → API Keys → Generate a new key."},
+    "shopify": {"fields": ["store_domain", "access_token"], "secret": ["access_token"],
+                "hint": "In Shopify: Settings → Apps → Develop apps → create a custom app with write_products scope → Admin API access token."},
 }
 
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "rendered_assets", "uploads")
@@ -31,6 +36,8 @@ async def connectors(user=Depends(get_current_user)):
         c["configurable"] = c["id"] in CONFIGURABLE
         if c["id"] in CONFIGURABLE:
             c["config_fields"] = CONFIGURABLE[c["id"]]["fields"]
+            c["config_secret"] = CONFIGURABLE[c["id"]]["secret"]
+            c["config_hint"] = CONFIGURABLE[c["id"]].get("hint", "")
     return {"connectors": items}
 
 

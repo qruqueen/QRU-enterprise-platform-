@@ -6,7 +6,7 @@ import { Panel, StatusChip, VerifiedBadge } from "@/components/qru";
 import { toast } from "sonner";
 import {
   Loader2, Radio, Store, Youtube, Globe, HardDrive, Mail, ShoppingBag, BookText,
-  CheckCircle2, XCircle, RotateCw, ShieldCheck, BarChart3, ExternalLink, Send, Lock,
+  CheckCircle2, XCircle, RotateCw, ShieldCheck, BarChart3, ExternalLink, Send, Lock, Settings2, KeyRound, X,
 } from "lucide-react";
 
 const CAT_ICON = { Store, Video: Youtube, Blog: Globe, Storage: HardDrive, Email: Mail, Marketplace: ShoppingBag };
@@ -21,12 +21,14 @@ export default function DistributionCenter() {
   const [selected, setSelected] = useState({}); // connector_id -> mode
   const [busy, setBusy] = useState(false);
   const [analytics, setAnalytics] = useState({}); // job_id -> data
+  const [configDlg, setConfigDlg] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const loadConnectors = () => api.get("/distribution/connectors").then((r) => setConnectors(r.data.connectors)).catch(() => {});
   const loadJobs = () => api.get("/distribution/jobs").then((r) => setJobs(r.data.jobs)).catch(() => {});
   useEffect(() => {
     Promise.all([
-      api.get("/distribution/connectors").then((r) => setConnectors(r.data.connectors)),
+      loadConnectors(),
       api.get("/founder-inbox").then((r) => setProducts((r.data.products || []).slice(0, 200))),
       loadJobs(),
     ]).finally(() => setLoading(false));
@@ -85,8 +87,8 @@ export default function DistributionCenter() {
           const Icon = CAT_ICON[c.category] || Send;
           const on = !!selected[c.id];
           return (
-            <button key={c.id} data-testid={`connector-${c.id}`} disabled={!c.can_distribute} onClick={() => toggle(c)}
-              className={`text-left qru-card p-4 transition-all ${on ? "border-navy ring-1 ring-navy" : c.can_distribute ? "qru-interactive" : "opacity-60 cursor-not-allowed"}`}>
+            <div key={c.id} data-testid={`connector-${c.id}`} onClick={() => c.can_distribute && toggle(c)}
+              className={`text-left qru-card p-4 transition-all ${on ? "border-navy ring-1 ring-navy" : c.can_distribute ? "qru-interactive cursor-pointer" : "opacity-70"}`}>
               <div className="flex items-center justify-between mb-2">
                 <Icon className={`w-5 h-5 ${c.native ? "text-gold" : "text-royal"}`} />
                 <StatusChip status={c.can_distribute ? "Connected" : "Developer Setup Required"} tone={c.can_distribute ? "emerald" : "blue"} />
@@ -100,7 +102,21 @@ export default function DistributionCenter() {
                 </select>
               )}
               {c.requires_file && <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1"><Lock className="w-2.5 h-2.5" /> requires a file asset</p>}
-            </button>
+              {c.configurable && !c.can_distribute && (
+                <span role="button" tabIndex={0} data-testid={`config-${c.id}`}
+                  onClick={(e) => { e.stopPropagation(); setConfigDlg(c); }}
+                  className="mt-2 inline-flex items-center gap-1 text-[11px] text-royal font-semibold hover:underline cursor-pointer">
+                  <Settings2 className="w-3 h-3" /> Developer Setup
+                </span>
+              )}
+              {c.configurable && c.can_distribute && (
+                <span role="button" tabIndex={0} data-testid={`reconfig-${c.id}`}
+                  onClick={(e) => { e.stopPropagation(); setConfigDlg(c); }}
+                  className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-navy cursor-pointer">
+                  <Settings2 className="w-3 h-3" /> Edit credentials
+                </span>
+              )}
+            </div>
           );
         })}
       </div>
@@ -161,6 +177,57 @@ export default function DistributionCenter() {
           </div>
         )}
       </Panel>
+      {configDlg && <ConnectorConfigDialog c={configDlg} onClose={() => setConfigDlg(null)} onDone={() => { setConfigDlg(null); loadConnectors(); }} />}
+    </div>
+  );
+}
+
+const FIELD_LABELS = {
+  site_url: "Site URL", username: "Username", app_password: "Application Password",
+  api_key: "API Key", store_domain: "Store Domain", access_token: "Admin API Access Token",
+};
+
+function ConnectorConfigDialog({ c, onClose, onDone }) {
+  const [vals, setVals] = useState({});
+  const [busy, setBusy] = useState(false);
+  const secret = c.config_secret || [];
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      await api.post(`/distribution/connectors/${c.id}/config`, { credentials: vals });
+      toast.success(`${c.name} configured. Testing connection…`);
+      onDone();
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not save credentials"); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose} data-testid="connector-config-dialog">
+      <div className="bg-card rounded-md max-w-md w-full p-5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-3">
+          <p className="font-heading font-bold text-navy flex items-center gap-2"><Settings2 className="w-4 h-4 text-royal" /> {c.name} · Developer Setup</p>
+          <button onClick={onClose} data-testid="connector-config-close"><X className="w-5 h-5 text-muted-foreground" /></button>
+        </div>
+        {c.config_hint && <p className="text-xs text-muted-foreground mb-3">{c.config_hint}</p>}
+        <div className="space-y-3">
+          {(c.config_fields || []).map((f) => (
+            <div key={f}>
+              <label className="text-xs font-medium text-navy flex items-center gap-1">
+                {secret.includes(f) && <KeyRound className="w-3.5 h-3.5" />} {FIELD_LABELS[f] || f}
+              </label>
+              <input data-testid={`config-field-${f}`} type={secret.includes(f) ? "password" : "text"}
+                value={vals[f] || ""} onChange={(e) => setVals((p) => ({ ...p, [f]: e.target.value }))}
+                className="w-full mt-1 border rounded-sm p-2 text-sm" placeholder={`Enter ${FIELD_LABELS[f] || f}`} />
+            </div>
+          ))}
+          <button onClick={save} disabled={busy || (c.config_fields || []).some((f) => !vals[f])} data-testid="connector-config-save"
+            className="w-full bg-navy text-white px-4 py-2 rounded-sm text-sm disabled:opacity-60 inline-flex items-center justify-center gap-2">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Save & Verify
+          </button>
+          <p className="text-[10px] text-muted-foreground flex items-start gap-1"><Lock className="w-3 h-3 mt-0.5 shrink-0" /> Secrets are encrypted at rest. Treasure Standard™: the connector only reports “Connected” after QRU confirms real access.</p>
+        </div>
+      </div>
     </div>
   );
 }

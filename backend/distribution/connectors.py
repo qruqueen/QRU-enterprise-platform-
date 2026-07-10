@@ -5,6 +5,7 @@ registered as honest NEEDS_SETUP stubs so the SDK/registry is fully extensible �
 platform only implements the same Connector interface.
 """
 import os
+import re
 import httpx
 
 from database import db
@@ -227,6 +228,181 @@ class WordPressConnector(Connector):
         return DistributionResult(ok=False, status=DistStatus.FAILED.value, external_id=external_id, detail="Post not found on WordPress.")
 
 
+# ------------------------------------------------------------------ DEV.TO (real)
+class DevToConnector(Connector):
+    capability = ConnectorCapability(
+        id="devto", name="DEV Community (dev.to)", kind=ConnectorKind.PUBLISH.value, category="Blog",
+        native=False, modes=[DistMode.DRAFT.value, DistMode.PUBLIC.value],
+        asset_types=["article"], requires_file=False, analytics_supported=True)
+
+    async def _creds(self):
+        return await get_connector_credentials("devto", secret_fields=("api_key",))
+
+    def _headers(self, c):
+        return {"api-key": c["api_key"], "Content-Type": "application/json"}
+
+    async def connection_status(self):
+        c = await self._creds()
+        if not c or not c.get("api_key"):
+            return {"connected": False, "account": None, "can_distribute": False,
+                    "reason": "Add your dev.to API key (Settings → Extensions → API Keys) in Developer Setup."}
+        try:
+            async with httpx.AsyncClient(headers=self._headers(c), timeout=20) as client:
+                r = await client.get("https://dev.to/api/users/me")
+            if r.status_code < 400:
+                return {"connected": True, "account": f"@{r.json().get('username')} · dev.to", "can_distribute": True, "reason": None}
+            return {"connected": False, "account": None, "can_distribute": False,
+                    "reason": f"dev.to auth failed ({r.status_code}). Check the API key."}
+        except Exception as e:
+            return {"connected": False, "account": None, "can_distribute": False, "reason": f"Could not reach dev.to: {str(e)[:80]}"}
+
+    def map_metadata(self, product, overrides):
+        meta = super().map_metadata(product, overrides)
+        content = product.get("content") or product.get("summary") or ""
+        meta["body_markdown"] = content.strip() or meta.get("description", "")
+        meta["tags"] = [re.sub(r"[^a-z0-9]", "", (t or "").lower())[:20] for t in (meta.get("tags") or [])][:4]
+        meta["tags"] = [t for t in meta["tags"] if t]
+        return meta
+
+    async def distribute(self, product, meta, mode, options):
+        c = await self._creds()
+        if not c:
+            return DistributionResult(ok=False, status=DistStatus.NEEDS_SETUP.value, detail="dev.to is not configured yet.")
+        payload = {"article": {"title": meta["title"], "body_markdown": meta.get("body_markdown") or meta.get("description", ""),
+                               "published": mode == DistMode.PUBLIC.value, "tags": meta.get("tags", [])}}
+        try:
+            async with httpx.AsyncClient(headers=self._headers(c), timeout=45) as client:
+                r = await client.post("https://dev.to/api/articles", json=payload)
+        except Exception as e:
+            return DistributionResult(ok=False, status=DistStatus.FAILED.value, detail=f"dev.to request failed: {str(e)[:120]}")
+        if r.status_code >= 400:
+            return DistributionResult(ok=False, status=DistStatus.FAILED.value, detail=f"dev.to rejected the article ({r.status_code}): {r.text[:150]}")
+        art = r.json()
+        published = bool(art.get("published"))
+        st = DistStatus.PUBLISHED.value if published else DistStatus.DRAFT.value
+        return DistributionResult(ok=True, status=st, external_id=str(art["id"]), url=art.get("url"),
+                                  verified=published, detail=f"dev.to article {art['id']} ({'published' if published else 'draft'}).")
+
+    async def verify(self, external_id, options):
+        c = await self._creds()
+        if not c:
+            return DistributionResult(ok=False, status=DistStatus.FAILED.value, external_id=external_id, detail="dev.to not configured.")
+        try:
+            async with httpx.AsyncClient(headers=self._headers(c), timeout=20) as client:
+                r = await client.get(f"https://dev.to/api/articles/{external_id}")
+            if r.status_code < 400:
+                a = r.json()
+                live = bool(a.get("published"))
+                return DistributionResult(ok=True, status=DistStatus.PUBLISHED.value, external_id=external_id,
+                                          url=a.get("url"), verified=live,
+                                          detail=f"Confirmed on dev.to ({'published' if live else 'draft'}).")
+        except Exception as e:
+            return DistributionResult(ok=False, status=DistStatus.FAILED.value, external_id=external_id, detail=str(e)[:120])
+        return DistributionResult(ok=False, status=DistStatus.FAILED.value, external_id=external_id, detail="Article not found on dev.to.")
+
+    async def fetch_analytics(self, external_id, options):
+        c = await self._creds()
+        if not c:
+            return {"supported": False, "note": "dev.to not configured."}
+        try:
+            async with httpx.AsyncClient(headers=self._headers(c), timeout=20) as client:
+                r = await client.get(f"https://dev.to/api/articles/{external_id}")
+            if r.status_code < 400:
+                a = r.json()
+                return {"supported": True, "provenance": "LIVE",
+                        "metrics": {"reactions": a.get("public_reactions_count", 0), "comments": a.get("comments_count", 0)}}
+        except Exception:
+            pass
+        return {"supported": True, "provenance": "NOT_TRACKED", "note": "Could not fetch dev.to stats."}
+
+
+# ------------------------------------------------------------------ SHOPIFY (real)
+class ShopifyConnector(Connector):
+    capability = ConnectorCapability(
+        id="shopify", name="Shopify", kind=ConnectorKind.PUBLISH.value, category="Marketplace",
+        native=False, modes=[DistMode.DRAFT.value, DistMode.PUBLIC.value],
+        asset_types=["listing"], requires_file=False, analytics_supported=False)
+    API_VERSION = "2024-01"
+
+    async def _creds(self):
+        return await get_connector_credentials("shopify", secret_fields=("access_token",))
+
+    def _base(self, c):
+        dom = c["store_domain"].replace("https://", "").replace("http://", "").rstrip("/")
+        if not dom.endswith(".myshopify.com"):
+            dom = dom.split(".")[0] + ".myshopify.com"
+        return f"https://{dom}/admin/api/{self.API_VERSION}"
+
+    def _headers(self, c):
+        return {"X-Shopify-Access-Token": c["access_token"], "Content-Type": "application/json"}
+
+    async def connection_status(self):
+        c = await self._creds()
+        if not c or not c.get("store_domain") or not c.get("access_token"):
+            return {"connected": False, "account": None, "can_distribute": False,
+                    "reason": "Add your Shopify store domain and Admin API access token in Developer Setup."}
+        try:
+            async with httpx.AsyncClient(headers=self._headers(c), timeout=20) as client:
+                r = await client.get(f"{self._base(c)}/shop.json")
+            if r.status_code < 400:
+                return {"connected": True, "account": f"{r.json().get('shop', {}).get('name')} · Shopify", "can_distribute": True, "reason": None}
+            return {"connected": False, "account": None, "can_distribute": False,
+                    "reason": f"Shopify auth failed ({r.status_code}). Check the store domain and access token."}
+        except Exception as e:
+            return {"connected": False, "account": None, "can_distribute": False, "reason": f"Could not reach Shopify: {str(e)[:80]}"}
+
+    def map_metadata(self, product, overrides):
+        meta = super().map_metadata(product, overrides)
+        content = product.get("content") or product.get("summary") or ""
+        meta["body_html"] = "".join(f"<p>{p.strip()}</p>" for p in content.split("\n\n") if p.strip()) or f"<p>{content}</p>"
+        try:
+            meta["price"] = round(float(product.get("price") or product.get("price_usd") or 0), 2)
+        except (TypeError, ValueError):
+            meta["price"] = 0
+        return meta
+
+    async def distribute(self, product, meta, mode, options):
+        c = await self._creds()
+        if not c:
+            return DistributionResult(ok=False, status=DistStatus.NEEDS_SETUP.value, detail="Shopify is not configured yet.")
+        status = "active" if mode == DistMode.PUBLIC.value else "draft"
+        payload = {"product": {"title": meta["title"], "body_html": meta.get("body_html") or meta.get("description", ""),
+                               "status": status, "tags": ",".join(meta.get("tags", [])),
+                               "variants": [{"price": str(meta.get("price", 0) or 0)}]}}
+        try:
+            async with httpx.AsyncClient(headers=self._headers(c), timeout=45) as client:
+                r = await client.post(f"{self._base(c)}/products.json", json=payload)
+        except Exception as e:
+            return DistributionResult(ok=False, status=DistStatus.FAILED.value, detail=f"Shopify request failed: {str(e)[:120]}")
+        if r.status_code >= 400:
+            return DistributionResult(ok=False, status=DistStatus.FAILED.value, detail=f"Shopify rejected the product ({r.status_code}): {r.text[:150]}")
+        prod = r.json().get("product", {})
+        dom = self._base(c).split("/admin")[0]
+        url = f"{dom}/products/{prod.get('handle')}" if prod.get("handle") else None
+        live = status == "active"
+        return DistributionResult(ok=True, status=DistStatus.PUBLISHED.value if live else DistStatus.DRAFT.value,
+                                  external_id=str(prod.get("id")), url=url, verified=live,
+                                  detail=f"Shopify product {prod.get('id')} ({status}).")
+
+    async def verify(self, external_id, options):
+        c = await self._creds()
+        if not c:
+            return DistributionResult(ok=False, status=DistStatus.FAILED.value, external_id=external_id, detail="Shopify not configured.")
+        try:
+            async with httpx.AsyncClient(headers=self._headers(c), timeout=20) as client:
+                r = await client.get(f"{self._base(c)}/products/{external_id}.json")
+            if r.status_code < 400:
+                p = r.json().get("product", {})
+                live = p.get("status") == "active"
+                dom = self._base(c).split("/admin")[0]
+                return DistributionResult(ok=True, status=DistStatus.PUBLISHED.value, external_id=external_id,
+                                          url=f"{dom}/products/{p.get('handle')}" if p.get("handle") else None,
+                                          verified=live, detail=f"Confirmed on Shopify (status: {p.get('status')}).")
+        except Exception as e:
+            return DistributionResult(ok=False, status=DistStatus.FAILED.value, external_id=external_id, detail=str(e)[:120])
+        return DistributionResult(ok=False, status=DistStatus.FAILED.value, external_id=external_id, detail="Product not found on Shopify.")
+
+
 # ------------------------------------------------------------------ HONEST STUBS
 class _StubConnector(Connector):
     def __init__(self, cap, hint):
@@ -253,6 +429,8 @@ def _build_registry():
         QRUStoreConnector(),
         YouTubeConnector(),
         WordPressConnector(),
+        DevToConnector(),
+        ShopifyConnector(),
         _stub("google_drive", "Google Drive", ConnectorKind.DELIVER, "Storage", False,
               [DistMode.PRIVATE, DistMode.PUBLIC], ["file"],
               "Google Drive delivery (upload file, return Document ID) is a planned connector.", requires_file=True),

@@ -60,6 +60,7 @@ const NAV = [
   { to: "/creative-studio", label: "Creative Studio™", icon: Palette, testid: "nav-creative", q: "Is it beautiful, engaging, and easy to understand?" },
   { to: "/asset-vault", label: "Asset Vault™", icon: Archive, testid: "nav-asset-vault", q: "Which approved assets can we reuse instead of regenerating?" },
   { to: "/media-studio", label: "Media Studio™", icon: Clapperboard, testid: "nav-media", q: "How do we bring it to life in sound and motion?" },
+  { to: "/media-starter-kit", label: "Media Starter Kit™", icon: PackageCheck, testid: "nav-media-starter-kit", q: "Is this product packaged and ready for every media format?" },
   { to: "/visual-studio", label: "Visual & Media Studio™", icon: Eye, testid: "nav-visual-studio", q: "Is it visible, beautiful, and made to be understood, remembered, and shared?" },
   { to: "/design-intelligence", label: "Design Intelligence™", icon: Sparkles, testid: "nav-design-intel", q: "What does great QRU design look like — and how do we repeat it?" },
   { to: "/design-director", label: "Design Director™", icon: Gauge, testid: "nav-design-director", q: "Is every product polished before the Founder sees it?" },
