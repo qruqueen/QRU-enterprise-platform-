@@ -76,6 +76,8 @@ import DistributionCenter from "@/pages/DistributionCenter";
 import FactoryAgents from "@/pages/FactoryAgents";
 import VisualStudio from "@/pages/VisualStudio";
 import MediaStarterKit from "@/pages/MediaStarterKit";
+import TrustRegistry from "@/pages/TrustRegistry";
+import CompanionSystem from "@/pages/CompanionSystem";
 import ConsumerHome from "@/pages/consumer/ConsumerHome";
 import ConsumerLearn from "@/pages/consumer/ConsumerLearn";
 import ConsumerMyLearning from "@/pages/consumer/ConsumerMyLearning";
@@ -165,6 +167,8 @@ function EnterpriseRoutes() {
         <Route path="agents" element={<FactoryAgents />} />
         <Route path="visual-studio" element={<VisualStudio />} />
         <Route path="media-starter-kit" element={<MediaStarterKit />} />
+        <Route path="trust" element={<TrustRegistry />} />
+        <Route path="companion" element={<CompanionSystem />} />
         <Route path="connectors" element={<Connectors />} />
         <Route path="ai-services" element={<AIServices />} />
         <Route path="notifications" element={<Notifications />} />

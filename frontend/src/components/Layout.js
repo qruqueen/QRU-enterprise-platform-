@@ -10,7 +10,7 @@ import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard,
-  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud, Gavel, Youtube,
+  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud, Gavel, Youtube, QrCode,
 } from "lucide-react";
 
 const NAV = [
@@ -57,6 +57,8 @@ const NAV = [
   { to: "/manufacturing-studio", label: "Manufacturing Studio", icon: PackageCheck, testid: "nav-mfg-studio", q: "Is this product ready to ship?" },
   { to: "/products", label: "Product Library", icon: Library, testid: "nav-products", q: "What have we made?" },
   { to: "/product-protection", label: "Product Protection™", icon: ShieldHalf, testid: "nav-protection", q: "Is it protected and properly licensed?" },
+  { to: "/trust", label: "Trust & Authenticity™", icon: ShieldCheck, testid: "nav-trust", q: "Is this product authentic, protected, and permanently registered?" },
+  { to: "/companion", label: "Companion System™", icon: QrCode, testid: "nav-companion", q: "Does every product live beyond the page?" },
   { to: "/creative-studio", label: "Creative Studio™", icon: Palette, testid: "nav-creative", q: "Is it beautiful, engaging, and easy to understand?" },
   { to: "/asset-vault", label: "Asset Vault™", icon: Archive, testid: "nav-asset-vault", q: "Which approved assets can we reuse instead of regenerating?" },
   { to: "/media-studio", label: "Media Studio™", icon: Clapperboard, testid: "nav-media", q: "How do we bring it to life in sound and motion?" },

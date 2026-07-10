@@ -137,6 +137,7 @@ async def governed_by(entity_type):
         "command_center": [PIPELINE_STANDARD, "Factory Operations Blueprint", "Standard Registry"],
         "design": ["QRU Experience Design Architecture"],
         "media": ["QRU Media Intelligence Division", "QRU Experience Design Architecture"],
+        "trust": ["Product Assembly Blueprint", "Standard Registry"],
         "distribution": ["Factory Operations Blueprint"],
     }
     return [_resolve(idx, n) for n in mapping.get(entity_type, [])]

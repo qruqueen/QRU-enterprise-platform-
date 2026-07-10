@@ -69,6 +69,8 @@ from routers.distribution import router as distribution_router
 from routers.governance_binding import router as governance_binding_router
 from routers.visual_studio import router as visual_studio_router
 from routers.media_starter_kit import router as media_starter_kit_router
+from routers.trust import router as trust_router
+from routers.qics import router as qics_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
 from routers.misc import (
@@ -118,6 +120,8 @@ for r in [
     governance_binding_router,
     visual_studio_router,
     media_starter_kit_router,
+    trust_router,
+    qics_router,
 ]:
     app.include_router(r)
 
