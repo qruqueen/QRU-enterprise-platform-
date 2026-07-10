@@ -19,6 +19,9 @@ export default function MediaLibrary() {
   const [results, setResults] = useState(null);
   const [busy, setBusy] = useState(false);
   const [cfgDlg, setCfgDlg] = useState(null);
+  const [proof, setProof] = useState(null);
+  const [producing, setProducing] = useState(false);
+  const API_BASE = (process.env.REACT_APP_BACKEND_URL || "") + "/api/media-library/asset";
 
   const loadProviders = () => api.get("/media-library/providers").then((r) => setProviders(r.data.providers)).catch(() => {});
   const loadAssets = () => api.get("/media-library/assets").then((r) => setAssets(r.data.assets)).catch(() => {});
@@ -40,6 +43,16 @@ export default function MediaLibrary() {
     api.get("/governance-binding/strip/media").then((r) => setGov(r.data.governed_by)).catch(() => {});
     loadProviders(); loadAssets();
   }, []);
+
+  const runProof = async () => {
+    setProducing(true); setProof(null);
+    try {
+      const { data } = await api.post("/media-library/produce-proof", { provider_id: "pixabay_video", query: "peaceful forest sunrise", product_title: "Forex Foundations" });
+      setProof(data); loadAssets();
+      toast.success("Milestone 001 — first live licensed media manufactured.");
+    } catch (e) { toast.error(e.response?.data?.detail || "Production pipeline failed."); }
+    finally { setProducing(false); }
+  };
 
   const runSearch = async () => {
     if (!provider || !query.trim()) return toast.error("Choose a connected provider and enter a search.");
@@ -84,6 +97,39 @@ export default function MediaLibrary() {
           </div>
         ))}
       </div>
+
+      {/* First Live Media Proof — Milestone 001 */}
+      <Panel title="First Live Media Manufacturing Proof · Milestone 001" icon={Film} accent="gold" testid="ml-proof" className="mb-8">
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
+          <p className="text-[12px] text-muted-foreground max-w-2xl">End-to-end governed workflow on a real licensed clip: live search → recommend → approve → license verify → download+checksum → register → narration (OpenAI TTS) → captions → MP4 render → quality review → Master Asset Vault™ → distribution ready.</p>
+          <button onClick={runProof} disabled={producing} data-testid="ml-run-proof"
+            className="inline-flex items-center justify-center gap-2 bg-navy text-white px-5 py-2.5 rounded-sm font-bold disabled:opacity-50 hover:bg-navy/90 transition-colors">
+            {producing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Film className="w-4 h-4" />} {producing ? "Manufacturing… (~40s)" : "Run Live Proof"}
+          </button>
+        </div>
+        {proof && (
+          <div className="grid md:grid-cols-2 gap-4" data-testid="ml-proof-result">
+            <div className="space-y-1">
+              {proof.steps.map((s, i) => (
+                <div key={i} className="flex items-start gap-2 text-[11px]" data-testid={`ml-step-${s.step}`}>
+                  {s.status === "ok" ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> : <ShieldAlert className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />}
+                  <span><b className="text-navy capitalize">{s.step.replace(/_/g, " ")}</b> — <span className="text-muted-foreground">{s.detail}</span></span>
+                </div>
+              ))}
+            </div>
+            <div>
+              {proof.showcase_asset && (
+                <>
+                  <video src={`${API_BASE}/${proof.showcase_asset.qru_asset_id}/file`} controls className="w-full rounded-md border" data-testid="ml-proof-video" />
+                  <p className="text-[11px] text-navy mt-2 font-mono">{proof.showcase_asset.qru_asset_id}</p>
+                  <p className="text-[10px] text-muted-foreground">{proof.showcase_asset.width}×{proof.showcase_asset.height} · {proof.showcase_asset.duration_seconds}s · narration: {String(proof.showcase_asset.has_narration)} · checksum {String(proof.showcase_asset.checksum).slice(0, 16)}…</p>
+                  <p className="text-[10px] text-emerald-600 mt-1">Source: {proof.source_asset.qru_asset_id} · {proof.source_asset.creator_name} · {proof.source_asset.license_type}</p>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </Panel>
 
       {/* Providers */}
       <Panel title="Approved Providers" icon={Plug} accent="royal" testid="ml-providers" className="mb-8">

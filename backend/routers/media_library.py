@@ -1,4 +1,6 @@
 """QRU Media Acquisition Foundation™ — API surface (MO-021 Stock Video + MO-023 Audio)."""
+import os
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
@@ -87,3 +89,43 @@ async def assets(kind: Optional[str] = None, user=Depends(get_current_user)):
 @router.get("/collections")
 async def collections(user=Depends(get_current_user)):
     return {"video_collections": ml.VIDEO_COLLECTIONS, "audio_collections": ml.AUDIO_COLLECTIONS}
+
+
+class ProofInput(BaseModel):
+    provider_id: Optional[str] = "pixabay_video"
+    query: Optional[str] = "peaceful forest sunrise"
+    product_title: Optional[str] = "Forex Foundations"
+
+
+@router.post("/produce-proof")
+async def produce_proof(data: ProofInput, user=Depends(require_super_admin)):
+    import media_production as mp
+    res = await ml.search(data.provider_id, data.query, 5)
+    if not res.get("results"):
+        raise HTTPException(400, res.get("reason") or res.get("error") or "No results to produce from.")
+    item = dict(res["results"][0])
+    item["search_query_used"] = data.query
+    out = await mp.produce_showcase(item, data.product_title, user["name"],
+                                    milestone={"code": "QRU-MILESTONE-001", "title": "First Live Licensed Media Acquisition"})
+    if not out.get("ok"):
+        raise HTTPException(500, f"Pipeline failed at: {[s['step'] for s in out['steps'] if s['status'] in ('failed','blocked')]}")
+    return out
+
+
+@router.get("/milestones")
+async def milestones(user=Depends(get_current_user)):
+    rows = await db.factory_milestones.find({}, {"_id": 0}).sort("achieved_at", -1).to_list(50)
+    return {"milestones": rows}
+
+
+@router.get("/asset/{asset_id}/file")
+async def asset_file(asset_id: str):
+    from fastapi.responses import FileResponse
+    import media_production as mp
+    doc = await db.media_assets.find_one({"$or": [{"id": asset_id}, {"qru_asset_id": asset_id}]})
+    if not doc or not doc.get("internal_storage_url"):
+        raise HTTPException(404, "Asset file not found.")
+    path = os.path.abspath(doc["internal_storage_url"])
+    if not path.startswith(os.path.abspath(mp.MEDIA_ROOT)) or not os.path.exists(path):
+        raise HTTPException(404, "File not available.")
+    return FileResponse(path, media_type="video/mp4")
