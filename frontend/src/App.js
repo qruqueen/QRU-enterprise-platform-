@@ -78,6 +78,7 @@ import VisualStudio from "@/pages/VisualStudio";
 import MediaStarterKit from "@/pages/MediaStarterKit";
 import TrustRegistry from "@/pages/TrustRegistry";
 import CompanionSystem from "@/pages/CompanionSystem";
+import MediaLibrary from "@/pages/MediaLibrary";
 import ConsumerHome from "@/pages/consumer/ConsumerHome";
 import ConsumerLearn from "@/pages/consumer/ConsumerLearn";
 import ConsumerMyLearning from "@/pages/consumer/ConsumerMyLearning";
@@ -169,6 +170,7 @@ function EnterpriseRoutes() {
         <Route path="media-starter-kit" element={<MediaStarterKit />} />
         <Route path="trust" element={<TrustRegistry />} />
         <Route path="companion" element={<CompanionSystem />} />
+        <Route path="media-library" element={<MediaLibrary />} />
         <Route path="connectors" element={<Connectors />} />
         <Route path="ai-services" element={<AIServices />} />
         <Route path="notifications" element={<Notifications />} />

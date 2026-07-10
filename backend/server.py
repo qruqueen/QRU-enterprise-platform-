@@ -71,6 +71,7 @@ from routers.visual_studio import router as visual_studio_router
 from routers.media_starter_kit import router as media_starter_kit_router
 from routers.trust import router as trust_router
 from routers.qics import router as qics_router
+from routers.media_library import router as media_library_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
 from routers.misc import (
@@ -122,6 +123,7 @@ for r in [
     media_starter_kit_router,
     trust_router,
     qics_router,
+    media_library_router,
 ]:
     app.include_router(r)
 

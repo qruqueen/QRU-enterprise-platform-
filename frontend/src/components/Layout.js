@@ -64,6 +64,7 @@ const NAV = [
   { to: "/media-studio", label: "Media Studio™", icon: Clapperboard, testid: "nav-media", q: "How do we bring it to life in sound and motion?" },
   { to: "/media-starter-kit", label: "Media Starter Kit™", icon: PackageCheck, testid: "nav-media-starter-kit", q: "Is this product packaged and ready for every media format?" },
   { to: "/visual-studio", label: "Visual & Media Studio™", icon: Eye, testid: "nav-visual-studio", q: "Is it visible, beautiful, and made to be understood, remembered, and shared?" },
+  { to: "/media-library", label: "Stock Media Library™", icon: Clapperboard, testid: "nav-media-library", q: "Where does our licensed video & audio come from — verified?" },
   { to: "/design-intelligence", label: "Design Intelligence™", icon: Sparkles, testid: "nav-design-intel", q: "What does great QRU design look like — and how do we repeat it?" },
   { to: "/design-director", label: "Design Director™", icon: Gauge, testid: "nav-design-director", q: "Is every product polished before the Founder sees it?" },
   { to: "/factory-health", label: "Factory Health™", icon: Stethoscope, testid: "nav-factory-health", q: "How healthy is the factory — and what is it learning?" },
