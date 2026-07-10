@@ -118,6 +118,23 @@ async def milestones(user=Depends(get_current_user)):
     return {"milestones": rows}
 
 
+class SceneMatchInput(BaseModel):
+    narration: str
+    topic: Optional[str] = ""
+    aspect: Optional[str] = "landscape"
+    extra_exclusions: Optional[list] = None
+    provider: Optional[str] = "pixabay_video"
+
+
+@router.post("/scene-match")
+async def scene_match(data: SceneMatchInput, user=Depends(get_current_user)):
+    import scene_matcher as sm
+    if not data.narration.strip():
+        raise HTTPException(400, "Narration text is required.")
+    return await sm.match(data.narration, data.topic or "", data.aspect or "landscape",
+                          data.extra_exclusions, data.provider or "pixabay_video")
+
+
 @router.get("/asset/{asset_id}/file")
 async def asset_file(asset_id: str):
     from fastapi.responses import FileResponse

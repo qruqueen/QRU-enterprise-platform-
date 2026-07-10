@@ -21,7 +21,22 @@ export default function MediaLibrary() {
   const [cfgDlg, setCfgDlg] = useState(null);
   const [proof, setProof] = useState(null);
   const [producing, setProducing] = useState(false);
+  const [narration, setNarration] = useState("Currencies move through a global network of banks and businesses. Leverage increases your buying power, but it also increases your risk. Take a breath and understand the market before you risk your money.");
+  const [matchTopic, setMatchTopic] = useState("forex");
+  const [matchAspect, setMatchAspect] = useState("landscape");
+  const [matchRes, setMatchRes] = useState(null);
+  const [matching, setMatching] = useState(false);
   const API_BASE = (process.env.REACT_APP_BACKEND_URL || "") + "/api/media-library/asset";
+
+  const runMatch = async () => {
+    if (!narration.trim()) return toast.error("Enter narration to match.");
+    setMatching(true); setMatchRes(null);
+    try {
+      const { data } = await api.post("/media-library/scene-match", { narration, topic: matchTopic, aspect: matchAspect });
+      setMatchRes(data);
+    } catch (e) { toast.error(e.response?.data?.detail || "Scene match failed."); }
+    finally { setMatching(false); }
+  };
 
   const loadProviders = () => api.get("/media-library/providers").then((r) => setProviders(r.data.providers)).catch(() => {});
   const loadAssets = () => api.get("/media-library/assets").then((r) => setAssets(r.data.assets)).catch(() => {});
@@ -97,6 +112,62 @@ export default function MediaLibrary() {
           </div>
         ))}
       </div>
+
+      {/* Scene Asset Matcher™ */}
+      <Panel title="Scene Asset Matcher™ — Intelligent Media Supplier" icon={Search} accent="royal" testid="ml-matcher" className="mb-8">
+        <p className="text-[12px] text-muted-foreground mb-3">Paste a product's narration. QRU splits it into scenes, identifies each learning purpose, generates brand-safe search terms (with topic exclusions), searches approved providers, and recommends the strongest licensed clips per scene — with crop, timing and text-safe guidance. It never auto-publishes and never forces footage into a scene.</p>
+        <div className="grid md:grid-cols-4 gap-3 mb-3">
+          <textarea data-testid="ml-match-narration" value={narration} onChange={(e) => setNarration(e.target.value)} rows={3}
+            className="md:col-span-2 border rounded-sm p-2 text-sm" placeholder="Narration or storyboard text…" />
+          <div className="flex flex-col gap-2">
+            <input data-testid="ml-match-topic" value={matchTopic} onChange={(e) => setMatchTopic(e.target.value)} className="border rounded-sm p-2 text-sm" placeholder="Topic (e.g. forex)" />
+            <select data-testid="ml-match-aspect" value={matchAspect} onChange={(e) => setMatchAspect(e.target.value)} className="border rounded-sm p-2 text-sm">
+              <option value="landscape">Landscape 16:9</option>
+              <option value="portrait">Portrait 9:16</option>
+              <option value="square">Square 1:1</option>
+            </select>
+          </div>
+          <button onClick={runMatch} disabled={matching} data-testid="ml-match-run"
+            className="inline-flex items-center justify-center gap-2 bg-navy text-white px-4 py-2 rounded-sm font-bold disabled:opacity-50 hover:bg-navy/90 transition-colors h-full">
+            {matching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Match Scenes
+          </button>
+        </div>
+        {matchRes && (
+          <div data-testid="ml-match-result">
+            <div className="flex flex-wrap gap-1 mb-3">
+              <span className="text-[10px] text-muted-foreground mr-1">Excluded (brand-safe):</span>
+              {matchRes.exclusions.map((x) => <span key={x} className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-600 border border-red-200">{x}</span>)}
+            </div>
+            <div className="space-y-4">
+              {matchRes.scenes.map((s) => (
+                <div key={s.scene_index} className="border rounded-md p-3" data-testid={`ml-scene-${s.scene_index}`}>
+                  <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                    <p className="text-sm font-semibold text-navy">Scene {s.scene_index + 1} · <span className="text-royal">{s.learning_purpose}</span></p>
+                    <span className="text-[10px] text-muted-foreground">query: “{s.primary_query}” · {s.candidate_count} candidates</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground italic mb-2">“{s.scene_text}”</p>
+                  {s.candidates.length === 0 ? <p className="text-[11px] text-amber-700">{s.note}</p> : (
+                    <div className="grid sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                      {s.candidates.map((c, i) => (
+                        <div key={i} className="border rounded-sm p-1.5" data-testid={`ml-cand-${s.scene_index}-${i}`}>
+                          {c.preview_url && <img src={c.preview_url} alt="" className="w-full h-16 object-cover rounded-sm mb-1" />}
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-navy">{c.match_score}</span>
+                            <StatusChip status={c.tier} tone={c.match_score >= 90 ? "gold" : c.match_score >= 80 ? "emerald" : "blue"} />
+                          </div>
+                          <p className="text-[9px] text-muted-foreground truncate">{c.creator_name}</p>
+                          <p className="text-[9px] text-navy/60">{c.recommendation.suggested_duration}s · {c.recommendation.suggested_speed}</p>
+                          <button onClick={() => registerAsset(c)} data-testid={`ml-cand-approve-${s.scene_index}-${i}`} className="mt-1 w-full text-[9px] bg-gold text-navy rounded-sm py-0.5 font-medium">Approve → Vault</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Panel>
 
       {/* First Live Media Proof — Milestone 001 */}
       <Panel title="First Live Media Manufacturing Proof · Milestone 001" icon={Film} accent="gold" testid="ml-proof" className="mb-8">

@@ -197,8 +197,12 @@ async def retest_provider(provider_id, actor="system"):
     if not key and not p.get("env_provided"):
         return "DEVELOPER_SETUP_REQUIRED"
     code = await test_connection(provider_id, key or "")
-    await db.media_provider_status.update_one({"provider_id": provider_id},
-        {"$set": {"status": code, "last_validated": now_iso()}}, upsert=True)
+    # Only definitive results change the stored status. Transient flakes (RATE_LIMITED /
+    # PROVIDER_UNAVAILABLE) must NOT demote a proven-working provider or block searches.
+    update = {"last_test_code": code, "last_validated": now_iso()}
+    if code in ("CONNECTED", "INVALID_KEY", "PERMISSION_DENIED"):
+        update["status"] = code
+    await db.media_provider_status.update_one({"provider_id": provider_id}, {"$set": update}, upsert=True)
     await _log_credential_event(provider_id, "test", actor, code)
     return code
 
