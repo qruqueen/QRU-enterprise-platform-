@@ -67,6 +67,7 @@ from routers.director import router as director_router
 from routers.youtube import router as youtube_router
 from routers.distribution import router as distribution_router
 from routers.governance_binding import router as governance_binding_router
+from routers.visual_studio import router as visual_studio_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
 from routers.misc import (
@@ -114,6 +115,7 @@ for r in [
     youtube_router,
     distribution_router,
     governance_binding_router,
+    visual_studio_router,
 ]:
     app.include_router(r)
 
