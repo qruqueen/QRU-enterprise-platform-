@@ -22,6 +22,19 @@ export default function MediaLibrary() {
 
   const loadProviders = () => api.get("/media-library/providers").then((r) => setProviders(r.data.providers)).catch(() => {});
   const loadAssets = () => api.get("/media-library/assets").then((r) => setAssets(r.data.assets)).catch(() => {});
+
+  const testConn = async (id) => {
+    try {
+      const { data } = await api.post(`/media-library/providers/${id}/test`);
+      if (data.test_code === "CONNECTED") toast.success("Connected — provider is now Active.");
+      else toast.error(`Connection failed: ${data.test_code}`);
+      loadProviders();
+    } catch { toast.error("Test failed."); }
+  };
+  const revokeKey = async (id) => {
+    try { await api.delete(`/media-library/providers/${id}/config`); toast.success("Credential revoked."); loadProviders(); }
+    catch { toast.error("Revoke failed."); }
+  };
   useEffect(() => {
     api.get("/media-library/config").then((r) => setConfig(r.data)).catch(() => setConfig(false));
     api.get("/governance-binding/strip/media").then((r) => setGov(r.data.governed_by)).catch(() => {});
@@ -77,18 +90,31 @@ export default function MediaLibrary() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {providers.map((p) => {
             const Icon = KIND_ICON[p.kind] || Film;
+            const statusLabel = { ACTIVE: "Active", DEVELOPER_SETUP_REQUIRED: "Developer Setup Required", PREPARED_NOT_ACTIVATED: "Prepared — Not Activated" }[p.status] || p.status;
             return (
               <div key={p.id} className="border rounded-md p-3" data-testid={`ml-provider-${p.id}`}>
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-sm font-semibold text-navy flex items-center gap-1.5"><Icon className="w-3.5 h-3.5 text-royal" /> {p.name}</p>
-                  <StatusChip status={p.status} tone={p.connected ? "emerald" : p.configurable ? "blue" : "slate"} />
+                  <StatusChip status={statusLabel} tone={p.connected ? "emerald" : p.configurable ? "blue" : "slate"} />
                 </div>
                 <p className="text-[10px] text-muted-foreground mb-1">Tier {p.tier} · {p.kind} · {p.license}</p>
+                {p.masked_key && <p className="text-[10px] font-mono text-navy/70 mb-1" data-testid={`ml-masked-${p.id}`}>Key: {p.masked_key}</p>}
+                {p.env_provided && <p className="text-[10px] text-emerald-600 mb-1">Environment-provided access (Emergent egress)</p>}
+                {p.last_validated && <p className="text-[10px] text-muted-foreground mb-1">Validated · {String(p.last_validated).slice(0, 10)}</p>}
                 {p.configurable && (
-                  <span role="button" tabIndex={0} data-testid={`ml-config-${p.id}`} onClick={() => setCfgDlg(p)}
-                    className="text-[11px] text-royal font-semibold hover:underline cursor-pointer inline-flex items-center gap-1">
-                    <KeyRound className="w-3 h-3" /> {p.connected ? "Edit key" : "Developer Setup"}
-                  </span>
+                  <div className="flex items-center gap-3 mt-1">
+                    {p.env_provided ? (
+                      <span role="button" tabIndex={0} data-testid={`ml-test-${p.id}`} onClick={() => testConn(p.id)}
+                        className="text-[11px] text-royal font-semibold hover:underline cursor-pointer inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Test Connection</span>
+                    ) : (
+                      <span role="button" tabIndex={0} data-testid={`ml-config-${p.id}`} onClick={() => setCfgDlg(p)}
+                        className="text-[11px] text-royal font-semibold hover:underline cursor-pointer inline-flex items-center gap-1"><KeyRound className="w-3 h-3" /> {p.connected ? "Edit key" : "Developer Setup"}</span>
+                    )}
+                    {p.connected && !p.env_provided && (
+                      <span role="button" tabIndex={0} data-testid={`ml-revoke-${p.id}`} onClick={() => revokeKey(p.id)}
+                        className="text-[11px] text-red-500 hover:underline cursor-pointer">Revoke</span>
+                    )}
+                  </div>
                 )}
               </div>
             );
@@ -118,6 +144,8 @@ export default function MediaLibrary() {
         </div>
         {connected.length === 0 && <p className="text-[12px] text-blue-700 bg-blue-50 border border-blue-200 rounded-sm p-2.5" data-testid="ml-no-providers">No providers are connected yet. Add a Pexels or Pixabay API key above to enable live search. Nothing is faked — search stays disabled until a real key is configured.</p>}
         {results && !results.configured && <p className="text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded-sm p-2.5" data-testid="ml-search-needssetup">{results.reason}</p>}
+        {results?.configured && results.error && <p className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-sm p-2.5" data-testid="ml-search-error">{results.error}</p>}
+        {results?.configured && !results.error && results.results?.length === 0 && <p className="text-[12px] text-muted-foreground" data-testid="ml-search-empty">No matches for that search. Try a broader keyword.</p>}
         {results?.results?.length > 0 && (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3" data-testid="ml-results">
             {results.results.map((it, i) => (

@@ -10,6 +10,8 @@ Factory rules enforced:
 
 Treasure Standard™: no faked "connected" states, no random internet pulls, no assumed rights.
 """
+import asyncio
+
 import httpx
 
 from database import db
@@ -19,8 +21,9 @@ from distribution.connectors import save_connector_credentials, get_connector_cr
 # --- Providers. tier1 free-API providers are live-capable once a key is added; others are prepared. ---
 PROVIDERS = [
     {"id": "pexels_video", "name": "Pexels Video", "kind": "video", "tier": 1, "configurable": True,
-     "credential": "api_key", "license": "Pexels License (free, commercial OK, no attribution required)",
-     "hint": "Get a free API key at pexels.com/api."},
+     "credential": "api_key", "env_provided": True,
+     "license": "Pexels License (free, commercial OK, no attribution required)",
+     "hint": "Pexels access is provided by the Emergent environment egress — activate with Test Connection (no key needed here). In your own deployment, add a free key from pexels.com/api."},
     {"id": "pixabay_video", "name": "Pixabay Video", "kind": "video", "tier": 1, "configurable": True,
      "credential": "api_key", "license": "Pixabay Content License (free, commercial OK)",
      "hint": "Get a free API key at pixabay.com/api/docs."},
@@ -80,25 +83,129 @@ FACTORY_RULES = [
 
 _CONFIGURABLE = {p["id"]: p for p in PROVIDERS if p.get("configurable")}
 
+# Connection test result codes (directive §1).
+TEST_CODES = ("CONNECTED", "INVALID_KEY", "RATE_LIMITED", "PROVIDER_UNAVAILABLE", "PERMISSION_DENIED")
+
+
+def mask_key(key):
+    """Never reveal a full key. e.g. 'pex_ab...WXYZ' -> 'pex_••••••••WXYZ'."""
+    if not key:
+        return None
+    key = str(key)
+    head = key[:4] if len(key) > 8 else key[:2]
+    tail = key[-4:] if len(key) > 8 else ""
+    return f"{head}{'•' * 8}{tail}"
+
+
+async def _log_credential_event(provider_id, action, actor, result=None):
+    await db.credential_logs.insert_one({
+        "provider_id": provider_id, "action": action, "actor": actor,
+        "result": result, "at": now_iso()})
+
+
+async def _http_status_to_code(status):
+    if status < 400:
+        return "CONNECTED"
+    if status in (401, 403):
+        return "INVALID_KEY" if status == 401 else "PERMISSION_DENIED"
+    if status == 429:
+        return "RATE_LIMITED"
+    if status == 400:
+        return "INVALID_KEY"
+    return "PROVIDER_UNAVAILABLE"
+
+
+async def test_connection(provider_id, key):
+    """Minimal authenticated probe. Returns one of TEST_CODES only — never data or the key."""
+    try:
+        if provider_id == "pexels_video":
+            async with httpx.AsyncClient(headers={"Authorization": key}, timeout=20) as c:
+                r = await c.get("https://api.pexels.com/videos/search", params={"query": "test", "per_page": 1})
+            return await _http_status_to_code(r.status_code)
+        if provider_id in ("pixabay_video", "pixabay_music"):
+            url = "https://pixabay.com/api/videos/" if provider_id == "pixabay_video" else "https://pixabay.com/api/"
+            params = {"key": key, "q": "test", "per_page": 3}
+            if provider_id == "pixabay_music":
+                params["media_type"] = "music"
+            async with httpx.AsyncClient(timeout=20) as c:
+                r = await c.get(url, params=params)
+            return await _http_status_to_code(r.status_code)
+        if provider_id == "freesound":
+            async with httpx.AsyncClient(timeout=20) as c:
+                r = await c.get("https://freesound.org/apiv2/search/text/", params={"query": "test", "token": key, "page_size": 1})
+            return await _http_status_to_code(r.status_code)
+    except Exception:
+        return "PROVIDER_UNAVAILABLE"
+    return "PROVIDER_UNAVAILABLE"
+
+
+async def _provider_meta(provider_id):
+    return await db.media_provider_status.find_one({"provider_id": provider_id}) or {}
+
 
 async def provider_status():
-    """Honest connection status for every provider (connected only when a real key exists)."""
+    """Honest connection status for every provider — only ACTIVE after a validated connection."""
     out = []
     for p in PROVIDERS:
-        connected = False
+        entry = {**p}
         if p.get("configurable"):
             creds = await get_connector_credentials(p["id"], secret_fields=("api_key",))
-            connected = bool(creds and creds.get("api_key"))
-        out.append({**p, "connected": connected,
-                    "status": "Connected" if connected else ("Developer Setup Required" if p.get("configurable") else "Prepared — Not Activated")})
+            has_key = bool(creds and creds.get("api_key"))
+            meta = await _provider_meta(p["id"])
+            active = meta.get("status") == "CONNECTED" and (has_key or p.get("env_provided"))
+            entry.update({
+                "connected": active,
+                "masked_key": mask_key(creds.get("api_key")) if has_key else None,
+                "last_validated": meta.get("last_validated"),
+                "last_successful_request": meta.get("last_successful_request"),
+                "test_code": meta.get("status"),
+                "status": "ACTIVE" if active else "DEVELOPER_SETUP_REQUIRED",
+            })
+        else:
+            entry.update({"connected": False, "status": "PREPARED_NOT_ACTIVATED"})
+        out.append(entry)
     return out
 
 
-async def save_provider_key(provider_id, api_key):
+async def save_provider_key(provider_id, api_key, actor="system"):
+    """Validate BEFORE saving. Only a CONNECTED key is stored + activated (directive §1)."""
     if provider_id not in _CONFIGURABLE:
-        return False, "This provider is not configurable via an API key."
+        return False, "This provider is not configurable via an API key.", None
+    code = await test_connection(provider_id, api_key)
+    await _log_credential_event(provider_id, "validate", actor, code)
+    if code != "CONNECTED":
+        return False, code, code
     await save_connector_credentials(provider_id, {"api_key": api_key}, ("api_key",))
-    return True, None
+    await db.media_provider_status.update_one({"provider_id": provider_id},
+        {"$set": {"provider_id": provider_id, "status": "CONNECTED", "last_validated": now_iso()}}, upsert=True)
+    await _log_credential_event(provider_id, "save", actor, "CONNECTED")
+    return True, None, code
+
+
+async def revoke_provider_key(provider_id, actor="system"):
+    await db.connector_credentials.delete_one({"connector_id": provider_id})
+    await db.media_provider_status.update_one({"provider_id": provider_id},
+        {"$set": {"status": "REVOKED", "last_validated": None}}, upsert=True)
+    await _log_credential_event(provider_id, "revoke", actor, "REVOKED")
+    return True
+
+
+async def retest_provider(provider_id, actor="system"):
+    p = _CONFIGURABLE.get(provider_id, {})
+    creds = await get_connector_credentials(provider_id, secret_fields=("api_key",))
+    key = (creds or {}).get("api_key")
+    if not key and not p.get("env_provided"):
+        return "DEVELOPER_SETUP_REQUIRED"
+    code = await test_connection(provider_id, key or "")
+    await db.media_provider_status.update_one({"provider_id": provider_id},
+        {"$set": {"status": code, "last_validated": now_iso()}}, upsert=True)
+    await _log_credential_event(provider_id, "test", actor, code)
+    return code
+
+
+async def _mark_success(provider_id):
+    await db.media_provider_status.update_one({"provider_id": provider_id},
+        {"$set": {"last_successful_request": now_iso()}}, upsert=True)
 
 
 async def _pixabay_key():
@@ -116,15 +223,24 @@ async def search(provider_id, query, per_page=12):
     p = _CONFIGURABLE.get(provider_id)
     if not p:
         return {"configured": False, "reason": "Unknown or non-configurable provider.", "results": []}
+    meta = await _provider_meta(provider_id)
+    if meta.get("status") != "CONNECTED":
+        return {"configured": False, "reason": f"{p['name']} is not activated. {p['hint']} Add & validate the key in Developer Setup before searching.", "results": []}
     try:
         if provider_id == "pexels_video":
             c = await get_connector_credentials("pexels_video", secret_fields=("api_key",))
-            if not (c and c.get("api_key")):
-                return {"configured": False, "reason": p["hint"], "results": []}
-            async with httpx.AsyncClient(headers={"Authorization": c["api_key"]}, timeout=25) as client:
-                r = await client.get("https://api.pexels.com/videos/search", params={"query": query, "per_page": per_page})
+            headers = {"Authorization": c["api_key"]} if (c and c.get("api_key")) else {}
+            r = None
+            async with httpx.AsyncClient(headers=headers, timeout=25) as client:
+                for attempt in range(3):  # env-provided access is rate-limited; retry transient 401s
+                    r = await client.get("https://api.pexels.com/videos/search", params={"query": query, "per_page": per_page})
+                    if r.status_code < 400:
+                        break
+                    await asyncio.sleep(0.8)
             if r.status_code >= 400:
-                return {"configured": True, "error": f"Pexels error {r.status_code}.", "results": []}
+                return {"configured": True, "results": [],
+                        "error": f"Pexels returned {r.status_code}. The environment's shared Pexels access is rate-limited — retry in a moment, or add your own Pexels key for reliable access."}
+            await _mark_success(provider_id)
             return {"configured": True, "results": [_norm_pexels(v) for v in r.json().get("videos", [])]}
 
         if provider_id in ("pixabay_video", "pixabay_music"):
@@ -139,6 +255,7 @@ async def search(provider_id, query, per_page=12):
                 r = await client.get(url, params=params)
             if r.status_code >= 400:
                 return {"configured": True, "error": f"Pixabay error {r.status_code}.", "results": []}
+            await _mark_success(provider_id)
             return {"configured": True, "results": [_norm_pixabay(v, provider_id) for v in r.json().get("hits", [])]}
 
         if provider_id == "freesound":
@@ -151,6 +268,7 @@ async def search(provider_id, query, per_page=12):
                                              "fields": "id,name,username,previews,license,url,duration"})
             if r.status_code >= 400:
                 return {"configured": True, "error": f"Freesound error {r.status_code}.", "results": []}
+            await _mark_success(provider_id)
             return {"configured": True, "note": "Verify each sound's license before commercial use.",
                     "results": [_norm_freesound(s) for s in r.json().get("results", [])]}
     except Exception as e:

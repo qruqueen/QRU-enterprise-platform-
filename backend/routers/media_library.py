@@ -31,10 +31,28 @@ class KeyInput(BaseModel):
 
 @router.post("/providers/{provider_id}/config")
 async def configure(provider_id: str, data: KeyInput, user=Depends(require_super_admin)):
-    ok, err = await ml.save_provider_key(provider_id, data.api_key)
+    ok, err, code = await ml.save_provider_key(provider_id, data.api_key, user["name"])
     if not ok:
-        raise HTTPException(400, err)
-    return {"configured": True, "provider_id": provider_id}
+        # err is a TEST_CODE (INVALID_KEY/RATE_LIMITED/...) or a message — surface it, never the key.
+        raise HTTPException(400, f"Connection not validated: {err}. The key was NOT saved.")
+    return {"configured": True, "provider_id": provider_id, "status": "ACTIVE", "test_code": code}
+
+
+@router.post("/providers/{provider_id}/test")
+async def test(provider_id: str, user=Depends(require_super_admin)):
+    return {"provider_id": provider_id, "test_code": await ml.retest_provider(provider_id, user["name"])}
+
+
+@router.delete("/providers/{provider_id}/config")
+async def revoke(provider_id: str, user=Depends(require_super_admin)):
+    await ml.revoke_provider_key(provider_id, user["name"])
+    return {"revoked": True, "provider_id": provider_id}
+
+
+@router.get("/providers/{provider_id}/logs")
+async def logs(provider_id: str, user=Depends(require_super_admin)):
+    rows = await db.credential_logs.find({"provider_id": provider_id}, {"_id": 0}).sort("at", -1).to_list(100)
+    return {"logs": rows}
 
 
 class SearchInput(BaseModel):
