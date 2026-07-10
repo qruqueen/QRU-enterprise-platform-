@@ -100,10 +100,10 @@ class YouTubeConnector(Connector):
                         os.remove(p)
                 except Exception:
                     pass
-        st = DistStatus.PUBLISHED.value if mode == "public" else DistStatus.PRIVATE.value
+        st = DistStatus.PUBLISHED.value
         return DistributionResult(ok=True, status=st, external_id=pub["video_id"], url=pub["url"],
                                   verified=True, detail=f"Uploaded to YouTube ({pub['privacy']}).",
-                                  extra={"studio_url": pub["studio_url"]})
+                                  extra={"studio_url": pub["studio_url"], "privacy": pub["privacy"]})
 
     async def verify(self, external_id, options):
         import youtube_publisher as yt

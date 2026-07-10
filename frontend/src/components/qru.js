@@ -1,5 +1,5 @@
 import React from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Landmark } from "lucide-react";
 
 /* ============================================================
    QRU Component Library™ (MO-004)
@@ -195,5 +195,26 @@ export function VerifiedBadge({ label = "Treasure Standard™", testid }) {
     <span data-testid={testid} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-gold/50 bg-gold/12 text-[11px] font-bold text-navy">
       <QRUShield className="w-3.5 h-3.5" /> {label}
     </span>
+  );
+}
+
+/* -------- Governed-by traceability strip (Governance Binding Layer™) -------- */
+
+export function GovernedBy({ standards = [], className = "", testid }) {
+  const list = standards.filter(Boolean);
+  if (!list.length) return null;
+  return (
+    <div data-testid={testid} className={`flex items-center gap-1.5 flex-wrap ${className}`}>
+      <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+        <Landmark className="w-3 h-3" /> Governed by
+      </span>
+      {list.map((s, i) => (
+        <a key={i} href="/qiks"
+          className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-colors ${
+            s.adopted !== false ? "border-navy/25 bg-navy/[0.06] text-navy hover:border-navy" : "border-amber-300 bg-amber-50 text-amber-700"}`}>
+          {s.standard_id ? `${s.standard_id} · ` : ""}{s.name}{s.adopted === false ? " (pending)" : ""}
+        </a>
+      ))}
+    </div>
   );
 }

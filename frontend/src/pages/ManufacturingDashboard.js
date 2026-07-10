@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
-import { MetricCard, Panel, VerifiedBadge } from "@/components/qru";
+import { MetricCard, Panel, VerifiedBadge, GovernedBy } from "@/components/qru";
 import { useNavigate } from "react-router-dom";
 import {
   Loader2, BookOpenCheck, Package, ListChecks, Plug, UploadCloud, DollarSign, KeyRound,
@@ -13,9 +13,13 @@ const ALERT_COLOR = { warn: "text-amber-600", info: "text-royal", ok: "text-emer
 
 export default function ManufacturingDashboard() {
   const [d, setD] = useState(null);
+  const [gov, setGov] = useState([]);
   const nav = useNavigate();
 
-  useEffect(() => { api.get("/manufacturing-dashboard").then((r) => setD(r.data)).catch(() => {}); }, []);
+  useEffect(() => {
+    api.get("/manufacturing-dashboard").then((r) => setD(r.data)).catch(() => {});
+    api.get("/governance-binding/strip/command_center").then((r) => setGov(r.data.governed_by)).catch(() => {});
+  }, []);
   if (!d) return <div className="flex justify-center py-32"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
 
   const HEALTH = {
@@ -32,6 +36,8 @@ export default function ManufacturingDashboard() {
         description="One live view of the entire factory — every number is real and traceable. Click Evidence-backed cards to drill into the underlying records."
         actions={<VerifiedBadge testid="mfg-treasure-badge" />}
       />
+
+      <GovernedBy standards={gov} className="mb-6" testid="mfg-governed-by" />
 
       {/* Alerts */}
       <div className="mb-6 space-y-2" data-testid="mfg-alerts">

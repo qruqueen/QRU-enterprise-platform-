@@ -112,7 +112,7 @@ async def distribute(product_id, targets, actor):
         job = await _record_job(product, connector, t.get("mode", "private"), t.get("options"), actor)
         result = await _run_job(job["id"])
         jobs.append(_clean(result))
-    published = sum(1 for j in jobs if j.get("status") in (DistStatus.PUBLISHED.value, DistStatus.DELIVERED.value, DistStatus.PRIVATE.value, DistStatus.UNLISTED.value))
+    published = sum(1 for j in jobs if j.get("status") in (DistStatus.PUBLISHED.value, DistStatus.DELIVERED.value, DistStatus.SCHEDULED.value))
     return {"product_id": product_id, "jobs": jobs,
             "distributed": published, "failed": sum(1 for j in jobs if j.get("status") == DistStatus.FAILED.value),
             "needs_setup": sum(1 for j in jobs if j.get("status") == DistStatus.NEEDS_SETUP.value)}

@@ -35,6 +35,7 @@ const NAV = [
   { to: "/mfg-command", label: "Manufacturing Command™", icon: Gauge, testid: "nav-mfg-command", q: "What is the whole factory doing right now?" },
   { to: "/inspection", label: "Quality Gates™", icon: ShieldHalf, testid: "nav-inspection", q: "Is this product good enough to manufacture and publish?" },
   { to: "/director", label: "Manufacturing Director™", icon: Gavel, testid: "nav-director", q: "Should we manufacture this order — and what's missing?" },
+  { to: "/agents", label: "Factory Agents™", icon: UsersRound, testid: "nav-agents", q: "Who governs manufacturing — and by which standard?" },
   { to: "/kr2", label: "Knowledge Architecture™", icon: BookOpenCheck, testid: "nav-kr2", q: "What does QRU truly know — and can it manufacture from it?" },
   { to: "/command", label: "Command Console", icon: MessageSquareText, testid: "nav-command", q: "What do you want done — in your own words?" },
   { to: "/enterprise-health", label: "Enterprise Health", icon: Activity, testid: "nav-health-dash", q: "Is the enterprise healthy — and if not, why?" },

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
-import { StatusChip, Panel } from "@/components/qru";
+import { StatusChip, Panel, GovernedBy } from "@/components/qru";
 import { toast } from "sonner";
 import {
   Loader2, Save, FileText, CheckCircle2, Clock, ChevronDown, ChevronRight, Layers, Boxes,
@@ -79,8 +79,9 @@ export default function KnowledgeRecord2() {
   const [krs, setKrs] = useState(null);
   const [selId, setSelId] = useState("");
   const [kr, setKr] = useState(null);
+  const [gov, setGov] = useState([]);
 
-  useEffect(() => { api.get("/knowledge-records").then((r) => { const list = Array.isArray(r.data) ? r.data : (r.data.records || []); setKrs(list); if (list[0]) setSelId(list[0].id); }).catch(() => setKrs([])); }, []);
+  useEffect(() => { api.get("/knowledge-records").then((r) => { const list = Array.isArray(r.data) ? r.data : (r.data.records || []); setKrs(list); if (list[0]) setSelId(list[0].id); }).catch(() => setKrs([])); api.get("/governance-binding/strip/knowledge_record").then((r) => setGov(r.data.governed_by)).catch(() => {}); }, []);
   const load = () => selId && api.get(`/kr2/${selId}`).then((r) => setKr(r.data)).catch(() => {});
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [selId]);
 
@@ -109,6 +110,7 @@ export default function KnowledgeRecord2() {
             </div>
             <div className="h-2.5 rounded-full bg-muted overflow-hidden"><div className="h-full bg-gold transition-[width] duration-500 ease-out" style={{ width: `${kr.completeness.percent}%` }} /></div>
             <p className="text-[11px] text-muted-foreground mt-1.5">{kr.completeness.percent}% complete · schema v{kr.schema_version}</p>
+            <GovernedBy standards={gov} className="mt-3 pt-3 border-t border-border" testid="kr2-governed-by" />
           </Panel>
 
           <p className="overline text-royal mb-3 flex items-center gap-1.5"><Layers className="w-3.5 h-3.5" /> Sections ({kr.sections.length})</p>

@@ -73,6 +73,7 @@ import KnowledgeRecord2 from "@/pages/KnowledgeRecord2";
 import ManufacturingDirector from "@/pages/ManufacturingDirector";
 import YouTubePublisher from "@/pages/YouTubePublisher";
 import DistributionCenter from "@/pages/DistributionCenter";
+import FactoryAgents from "@/pages/FactoryAgents";
 import ConsumerHome from "@/pages/consumer/ConsumerHome";
 import ConsumerLearn from "@/pages/consumer/ConsumerLearn";
 import ConsumerMyLearning from "@/pages/consumer/ConsumerMyLearning";
@@ -159,6 +160,7 @@ function EnterpriseRoutes() {
         <Route path="director" element={<ManufacturingDirector />} />
         <Route path="youtube" element={<YouTubePublisher />} />
         <Route path="distribution" element={<DistributionCenter />} />
+        <Route path="agents" element={<FactoryAgents />} />
         <Route path="connectors" element={<Connectors />} />
         <Route path="ai-services" element={<AIServices />} />
         <Route path="notifications" element={<Notifications />} />
