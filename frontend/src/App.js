@@ -79,6 +79,7 @@ import MediaStarterKit from "@/pages/MediaStarterKit";
 import TrustRegistry from "@/pages/TrustRegistry";
 import CompanionSystem from "@/pages/CompanionSystem";
 import MediaLibrary from "@/pages/MediaLibrary";
+import FlagshipShowcase from "@/pages/FlagshipShowcase";
 import ConsumerHome from "@/pages/consumer/ConsumerHome";
 import ConsumerLearn from "@/pages/consumer/ConsumerLearn";
 import ConsumerMyLearning from "@/pages/consumer/ConsumerMyLearning";
@@ -171,6 +172,7 @@ function EnterpriseRoutes() {
         <Route path="trust" element={<TrustRegistry />} />
         <Route path="companion" element={<CompanionSystem />} />
         <Route path="media-library" element={<MediaLibrary />} />
+        <Route path="flagship-showcase" element={<FlagshipShowcase />} />
         <Route path="connectors" element={<Connectors />} />
         <Route path="ai-services" element={<AIServices />} />
         <Route path="notifications" element={<Notifications />} />

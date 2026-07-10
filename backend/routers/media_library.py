@@ -124,6 +124,7 @@ class SceneMatchInput(BaseModel):
     aspect: Optional[str] = "landscape"
     extra_exclusions: Optional[list] = None
     provider: Optional[str] = "pixabay_video"
+    variety: Optional[dict] = None
 
 
 @router.post("/scene-match")
@@ -132,7 +133,62 @@ async def scene_match(data: SceneMatchInput, user=Depends(get_current_user)):
     if not data.narration.strip():
         raise HTTPException(400, "Narration text is required.")
     return await sm.match(data.narration, data.topic or "", data.aspect or "landscape",
-                          data.extra_exclusions, data.provider or "pixabay_video")
+                          data.extra_exclusions, data.provider or "pixabay_video", data.variety)
+
+
+# --- MO-012 Controlled Flagship Showcase™ Pilot ---
+@router.get("/showcase/modes")
+async def showcase_modes(user=Depends(get_current_user)):
+    import flagship_showcase as fs
+    view = fs.modes_view()
+    allowed, runs = await fs._governed_auto_select_allowed()
+    view["governed_auto_select_unlocked"] = allowed
+    view["approved_run_count"] = runs
+    return view
+
+
+class FlagshipInput(BaseModel):
+    product_title: Optional[str] = "QRU Flagship Showcase"
+    topic: Optional[str] = ""
+    aspect: Optional[str] = "landscape"
+    narration: str
+    approval_mode: Optional[str] = "human_approval_required"
+    provider: Optional[str] = "pixabay_video"
+    scenes: Optional[list] = None
+    extra_exclusions: Optional[list] = None
+    variety: Optional[dict] = None
+    project_id: Optional[str] = None
+    rejected_assets: Optional[list] = None
+
+
+@router.post("/showcase/produce")
+async def showcase_produce(data: FlagshipInput, user=Depends(require_super_admin)):
+    import flagship_showcase as fs
+    return await fs.produce_flagship(data.model_dump(), user["name"])
+
+
+@router.get("/showcase/records")
+async def showcase_records(user=Depends(get_current_user)):
+    rows = await db.production_acceptance_records.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return {"records": rows, "count": len(rows)}
+
+
+@router.get("/showcase/records/{record_id}")
+async def showcase_record(record_id: str, user=Depends(get_current_user)):
+    doc = await db.production_acceptance_records.find_one(
+        {"$or": [{"id": record_id}, {"job_id": record_id}, {"project_id": record_id}]}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Acceptance record not found.")
+    return doc
+
+
+@router.post("/showcase/{asset_id}/certify-gold-master")
+async def certify_gold_master(asset_id: str, user=Depends(require_super_admin)):
+    import flagship_showcase as fs
+    res = await fs.certify_gold_master(asset_id, user["name"])
+    if not res.get("ok"):
+        raise HTTPException(400, res.get("error") or "Certification failed.")
+    return res
 
 
 @router.get("/asset/{asset_id}/file")

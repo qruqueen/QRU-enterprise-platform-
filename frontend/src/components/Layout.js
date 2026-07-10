@@ -9,7 +9,7 @@ import { QRUShield } from "@/components/qru";
 import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
-  Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard,
+  Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard, Film,
   ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud, Gavel, Youtube, QrCode,
 } from "lucide-react";
 
@@ -65,6 +65,7 @@ const NAV = [
   { to: "/media-starter-kit", label: "Media Starter Kit™", icon: PackageCheck, testid: "nav-media-starter-kit", q: "Is this product packaged and ready for every media format?" },
   { to: "/visual-studio", label: "Visual & Media Studio™", icon: Eye, testid: "nav-visual-studio", q: "Is it visible, beautiful, and made to be understood, remembered, and shared?" },
   { to: "/media-library", label: "Stock Media Library™", icon: Clapperboard, testid: "nav-media-library", q: "Where does our licensed video & audio come from — verified?" },
+  { to: "/flagship-showcase", label: "Flagship Showcase™", icon: Film, testid: "nav-flagship-showcase", q: "Can we manufacture one governed multi-scene video, scene by scene?" },
   { to: "/design-intelligence", label: "Design Intelligence™", icon: Sparkles, testid: "nav-design-intel", q: "What does great QRU design look like — and how do we repeat it?" },
   { to: "/design-director", label: "Design Director™", icon: Gauge, testid: "nav-design-director", q: "Is every product polished before the Founder sees it?" },
   { to: "/factory-health", label: "Factory Health™", icon: Stethoscope, testid: "nav-factory-health", q: "How healthy is the factory — and what is it learning?" },
