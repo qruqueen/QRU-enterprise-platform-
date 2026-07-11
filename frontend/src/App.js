@@ -82,6 +82,7 @@ import MediaLibrary from "@/pages/MediaLibrary";
 import FlagshipShowcase from "@/pages/FlagshipShowcase";
 import CreateExperience from "@/pages/CreateExperience";
 import Constitution from "@/pages/Constitution";
+import ProjectsContinuity from "@/pages/ProjectsContinuity";
 import ConsumerHome from "@/pages/consumer/ConsumerHome";
 import ConsumerLearn from "@/pages/consumer/ConsumerLearn";
 import ConsumerMyLearning from "@/pages/consumer/ConsumerMyLearning";
@@ -177,6 +178,7 @@ function EnterpriseRoutes() {
         <Route path="flagship-showcase" element={<FlagshipShowcase />} />
         <Route path="create" element={<CreateExperience />} />
         <Route path="constitution" element={<Constitution />} />
+        <Route path="projects" element={<ProjectsContinuity />} />
         <Route path="connectors" element={<Connectors />} />
         <Route path="ai-services" element={<AIServices />} />
         <Route path="notifications" element={<Notifications />} />

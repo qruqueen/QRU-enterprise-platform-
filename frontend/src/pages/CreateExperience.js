@@ -37,9 +37,12 @@ export default function CreateExperience() {
     finally { setBusy(false); }
   };
 
-  const launch = () => {
+  const launch = async () => {
     const route = plan?.launch?.route || outcome?.route;
-    toast.success(`Launching ${plan?.launch?.workflow || outcome?.workflow}…`);
+    try {
+      await api.post("/factory-os/projects", { outcome_id: outcome.id, topic, audience, goal });
+      toast.success(`Project started — tracked in My Projects. Launching ${plan?.launch?.workflow}…`);
+    } catch { toast.message("Launching workflow…"); }
     nav(route);
   };
 

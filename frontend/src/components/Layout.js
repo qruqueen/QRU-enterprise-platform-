@@ -16,6 +16,7 @@ import {
 const NAV = [
   { section: "Start Here" },
   { to: "/create", label: "Create", icon: Sparkles, testid: "nav-create", q: "What would you like to create today?" },
+  { to: "/projects", label: "My Projects", icon: Workflow, testid: "nav-projects", q: "Where is each project — and what's the next step?" },
   { to: "/constitution", label: "Factory Constitution™", icon: Scale, testid: "nav-constitution", q: "What governs everything the Factory makes?" },
   { section: "The QRU Experience" },
   { to: "/first-dollar", label: "First Dollar Mode™", icon: Coins, testid: "nav-first-dollar", q: "Will a real customer pay for it?" },
