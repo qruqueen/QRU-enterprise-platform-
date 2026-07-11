@@ -42,6 +42,9 @@ export default function YouTubePublisher() {
   const [playlistId, setPlaylistId] = useState("");
   const [videoFile, setVideoFile] = useState(null);
   const [thumbFile, setThumbFile] = useState(null);
+  const [factoryAssets, setFactoryAssets] = useState([]);
+  const [factoryAssetId, setFactoryAssetId] = useState("");
+  const [source, setSource] = useState("factory"); // "factory" | "manual"
 
   const [progress, setProgress] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -56,8 +59,19 @@ export default function YouTubePublisher() {
       }
     }).catch(() => setStatus(false));
     api.get("/founder-inbox").then((r) => setProducts((r.data.products || []).slice(0, 200))).catch(() => {});
+    api.get("/youtube/factory-assets").then((r) => {
+      const list = (r.data.assets || []).filter((a) => a.file_available && !a.is_draft_preview);
+      setFactoryAssets(list);
+      if (list.length === 0) setSource("manual");
+    }).catch(() => setSource("manual"));
     loadPubs();
   }, []);
+
+  const onSelectFactoryAsset = (id) => {
+    setFactoryAssetId(id);
+    const a = factoryAssets.find((x) => x.qru_asset_id === id);
+    if (a) { setTitle(a.title || ""); setVideoFile(null); }
+  };
 
   const onSelectProduct = (id) => {
     setProductId(id);
@@ -66,16 +80,22 @@ export default function YouTubePublisher() {
   };
 
   const publish = async () => {
-    if (!videoFile) return toast.error("Choose an MP4 video file first.");
-    if (!title && !productId) return toast.error("Add a title or link a product.");
+    if (source === "factory") {
+      if (!factoryAssetId) return toast.error("Select a Factory-manufactured video.");
+    } else if (!videoFile) {
+      return toast.error("Choose an MP4 video file first.");
+    }
     setBusy(true); setProgress(0); setResult(null);
     try {
-      const videoUploadId = await chunkedUpload(videoFile, "video", setProgress);
-      let thumbUploadId = null;
-      if (thumbFile) thumbUploadId = await chunkedUpload(thumbFile, "thumbnail");
+      let videoUploadId = null, thumbUploadId = null;
+      if (source === "manual") {
+        videoUploadId = await chunkedUpload(videoFile, "video", setProgress);
+        if (thumbFile) thumbUploadId = await chunkedUpload(thumbFile, "thumbnail");
+      }
       const { data } = await api.post("/youtube/publish", {
         video_upload_id: videoUploadId,
         thumbnail_upload_id: thumbUploadId,
+        factory_asset_id: source === "factory" ? factoryAssetId : null,
         product_id: productId || null,
         title: title || null,
         description: description || null,
@@ -125,6 +145,39 @@ export default function YouTubePublisher() {
           <div className="lg:col-span-2">
             <Panel title="Compose & Upload" icon={Film} accent="royal" testid="yt-composer">
               <div className="space-y-4">
+                {/* Source: Factory asset (no re-upload) vs manual (external) */}
+                <div className="flex gap-2" data-testid="yt-source-toggle">
+                  <button onClick={() => setSource("factory")} data-testid="yt-source-factory"
+                    className={`flex-1 text-left border rounded-md p-3 transition-colors ${source === "factory" ? "border-royal ring-2 ring-royal/30 bg-royal/[0.04]" : "border-navy/15 hover:border-royal/40"}`}>
+                    <p className="text-sm font-bold text-navy flex items-center gap-1.5"><Film className="w-4 h-4 text-royal" /> Factory-manufactured video</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">The Factory already owns the MP4 — no re-upload. Metadata, captions & thumbnail auto-populated.</p>
+                  </button>
+                  <button onClick={() => setSource("manual")} data-testid="yt-source-manual"
+                    className={`flex-1 text-left border rounded-md p-3 transition-colors ${source === "manual" ? "border-royal ring-2 ring-royal/30 bg-royal/[0.04]" : "border-navy/15 hover:border-royal/40"}`}>
+                    <p className="text-sm font-bold text-navy flex items-center gap-1.5"><UploadCloud className="w-4 h-4 text-royal" /> External video (manual upload)</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Browse and upload a video created outside the Factory.</p>
+                  </button>
+                </div>
+
+                {source === "factory" && (
+                  <div data-testid="yt-factory-picker">
+                    <label className="text-xs font-bold text-navy uppercase tracking-wide">Select a Factory-owned video</label>
+                    {factoryAssets.length === 0 ? (
+                      <p className="text-[12px] text-amber-700 mt-1">No Factory-manufactured videos are ready yet. Produce one in the <button onClick={() => nav("/flagship-showcase")} className="text-royal underline">Flagship Showcase™</button>, then it appears here automatically.</p>
+                    ) : (
+                      <select data-testid="yt-factory-asset" value={factoryAssetId} onChange={(e) => onSelectFactoryAsset(e.target.value)} className="w-full mt-1 border rounded-sm p-2 text-sm">
+                        <option value="">— Choose a manufactured video —</option>
+                        {factoryAssets.map((a) => (
+                          <option key={a.qru_asset_id} value={a.qru_asset_id}>
+                            {a.title} · {a.duration_seconds}s · {a.gold_master_certified ? "Gold Master" : a.production_status}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {factoryAssetId && <p className="text-[11px] text-emerald-700 mt-1 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> The Factory owns this video — MP4, thumbnail, captions & metadata will be sent automatically.</p>}
+                  </div>
+                )}
+
                 <div>
                   <label className="text-xs font-bold text-navy uppercase tracking-wide">Link a manufactured product (optional — auto-fills metadata)</label>
                   <select data-testid="yt-product" value={productId} onChange={(e) => onSelectProduct(e.target.value)} className="w-full mt-1 border rounded-sm p-2 text-sm">
@@ -161,7 +214,8 @@ export default function YouTubePublisher() {
                     {playlists.map((pl) => <option key={pl.id} value={pl.id}>{pl.title}</option>)}
                   </select>
                 </div>
-                <div className="grid sm:grid-cols-2 gap-4">
+                {source === "manual" && (
+                <div className="grid sm:grid-cols-2 gap-4" data-testid="yt-manual-files">
                   <div>
                     <label className="text-xs font-bold text-navy uppercase tracking-wide flex items-center gap-1"><Film className="w-3.5 h-3.5" /> Video file (MP4)</label>
                     <input data-testid="yt-video-file" type="file" accept="video/mp4,video/quicktime,video/webm" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} className="w-full mt-1 text-xs" />
@@ -172,6 +226,7 @@ export default function YouTubePublisher() {
                     <input data-testid="yt-thumb-file" type="file" accept="image/jpeg,image/png" onChange={(e) => setThumbFile(e.target.files?.[0] || null)} className="w-full mt-1 text-xs" />
                   </div>
                 </div>
+                )}
 
                 {busy && progress > 0 && (
                   <div>
@@ -180,9 +235,9 @@ export default function YouTubePublisher() {
                   </div>
                 )}
 
-                <button onClick={publish} disabled={busy || !videoFile} data-testid="yt-publish"
+                <button onClick={publish} disabled={busy || (source === "factory" ? !factoryAssetId : !videoFile)} data-testid="yt-publish"
                   className="w-full inline-flex items-center justify-center gap-2 bg-navy text-white py-3 rounded-sm font-bold disabled:opacity-50 hover:bg-navy/90 transition-colors">
-                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />} Publish to YouTube
+                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />} {source === "factory" ? "Publish Factory video to YouTube" : "Publish to YouTube"}
                 </button>
 
                 {result && (
