@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 from database import db
+from models import now_iso
 from auth import get_current_user, require_super_admin
 import youtube_publisher as yt
 import oauth_framework as oauth
@@ -49,6 +50,42 @@ async def playlists(user=Depends(get_current_user)):
 @router.get("/publications")
 async def publications(user=Depends(get_current_user)):
     return {"publications": await yt.list_publications()}
+
+
+@router.get("/distribution-records")
+async def distribution_records(user=Depends(get_current_user)):
+    rows = await db.distribution_acceptance_records.find({}, {"_id": 0}).sort("published_at", -1).to_list(200)
+    return {"records": rows, "count": len(rows)}
+
+
+async def _write_distribution_record(factory_doc, pub, title, description, tags, thumb_set, actor):
+    """Formal Distribution Acceptance Record (Founder directive) — full provenance from Gold Master to platform."""
+    record = await db.production_acceptance_records.find_one({"final_asset_id": factory_doc.get("qru_asset_id")}) or {}
+    doc = {
+        "id": f"QRU-DIST-{os.urandom(4).hex().upper()}",
+        "record_type": "distribution_acceptance_record",
+        "platform": "youtube", "connected_channel": (await db.connectors.find_one({"platform_id": "youtube"}) or {}).get("account"),
+        "distribution_edition_id": None,  # native YouTube edition uses the Vault master directly
+        "vault_asset_id": factory_doc.get("qru_asset_id"),
+        "gold_master_certified": bool(factory_doc.get("gold_master_certified")),
+        "gold_master_version": factory_doc.get("production_status"),
+        "project_id": record.get("project_id"), "job_id": record.get("job_id"),
+        "platform_video_id": pub.get("video_id"), "publication_url": pub.get("url"),
+        "studio_url": pub.get("studio_url"), "published_at": pub.get("published_at"),
+        "title_used": title, "description_used": description, "tags_used": tags or [],
+        "thumbnail_status": "set" if thumb_set else "auto (channel custom-thumbnail not verified)",
+        "publishing_response": {k: pub.get(k) for k in ("video_id", "privacy", "thumbnail_set", "treasure_standard")},
+        "qa_results": {"technical": factory_doc.get("technical_qa_score"), "brand_content": factory_doc.get("brand_content_qa_score")},
+        "checksum": factory_doc.get("checksum"),
+        "source_licensing": [{"provider": s.get("provider"), "creator_name": s.get("creator_name"),
+                              "license_type": s.get("license_type"), "checksum": s.get("checksum")}
+                             for s in record.get("scene_list", [])],
+        "responsible_approver": actor, "status": "Published", "error_history": [], "retry_history": [],
+        "created_at": now_iso(), "updated_at": now_iso(),
+    }
+    await db.distribution_acceptance_records.insert_one(dict(doc))
+    doc.pop("_id", None)
+    return doc
 
 
 class InitInput(BaseModel):
@@ -229,6 +266,13 @@ async def publish(data: PublishInput, user=Depends(require_super_admin)):
             product_id=data.product_id, actor=user["name"],
         )
     except yt.YouTubeError as e:
+        # Failure isolation: preserve the Gold Master + record the failed destination for retry.
+        if is_factory and factory_doc:
+            try:
+                import continuity as cont
+                await cont.on_publish_failed(factory_doc["qru_asset_id"], "youtube", str(e), user["name"])
+            except Exception:
+                pass
         raise HTTPException(400, str(e))
     finally:
         # Never delete a Factory vault master. Clean up ONLY temp upload files + generated thumbnails.
@@ -252,4 +296,17 @@ async def publish(data: PublishInput, user=Depends(require_super_admin)):
             "published_to_youtube_at": pub.get("published_at") or None}})
         pub["source"] = "factory_asset"
         pub["qru_asset_id"] = factory_doc["qru_asset_id"]
+        # Zero-touch continuity: auto-complete the project's Publishing + Distribution stages (Founder Freedom).
+        try:
+            import continuity as cont
+            updated = await cont.on_published(factory_doc["qru_asset_id"], pub.get("url"), pub.get("video_id"), user["name"])
+            pub["continuity_updated"] = bool(updated)
+        except Exception:
+            pub["continuity_updated"] = False
+        # Formal Distribution Acceptance Record (preserve full provenance).
+        try:
+            rec = await _write_distribution_record(factory_doc, pub, title, description, tags, pub.get("thumbnail_set"), user["name"])
+            pub["distribution_record_id"] = rec["id"]
+        except Exception:
+            pass
     return pub

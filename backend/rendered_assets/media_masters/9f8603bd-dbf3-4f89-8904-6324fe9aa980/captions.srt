@@ -1,0 +1,23 @@
+1
+00:00:00,000 --> 00:00:04,000
+Forex is the global market for exchanging currencies worldwide every day.
+
+2
+00:00:04,000 --> 00:00:08,000
+Currencies always trade in pairs, so you buy one and sell another simultaneously.
+
+3
+00:00:08,000 --> 00:00:12,000
+The difference between the buy and sell price is called the spread charged by brokers.
+
+4
+00:00:12,000 --> 00:00:16,000
+Traders analyze economic news and price charts before opening a position on any pair.
+
+5
+00:00:16,000 --> 00:00:20,000
+Understanding leverage and risk management is essential before you commit real capital.
+
+6
+00:00:20,000 --> 00:00:24,000
+Practice on a demo account first and never risk more than you can afford to lose.

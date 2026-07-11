@@ -61,6 +61,11 @@ async def list_projects(user=Depends(get_current_user)):
     return {"projects": await cont.list_projects(user["name"])}
 
 
+@router.get("/effort-summary")
+async def effort_summary(user=Depends(get_current_user)):
+    return await cont.effort_summary()
+
+
 @router.get("/projects/{pid}")
 async def get_project(pid: str, user=Depends(get_current_user)):
     p = await cont.get_project(pid)

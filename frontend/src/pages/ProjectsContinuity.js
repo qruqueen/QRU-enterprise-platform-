@@ -12,10 +12,14 @@ const STAGE_TONE = { complete: "emerald", in_progress: "blue", needs_approval: "
 export default function ProjectsContinuity() {
   const nav = useNavigate();
   const [projects, setProjects] = useState(null);
+  const [effort, setEffort] = useState(null);
   const [busy, setBusy] = useState(null);
 
   const load = () => api.get("/factory-os/projects").then((r) => setProjects(r.data.projects)).catch(() => setProjects(false));
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    api.get("/factory-os/effort-summary").then((r) => setEffort(r.data)).catch(() => {});
+  }, []);
 
   const act = async (pid, path, body) => {
     setBusy(pid + path);
@@ -39,6 +43,18 @@ export default function ProjectsContinuity() {
         description="Every project continues automatically through each approved downstream stage until it reaches its intended human experience — pausing only for your approval, a stage that needs setup, or when you pause it. The Factory thinks in completed experiences, not files."
         actions={<VerifiedBadge label="Continuous governed manufacturing" testid="projects-badge" />}
       />
+
+      {effort && (effort.minutes_saved > 0 || effort.automated_actions > 0) && (
+        <div className="qru-card p-4 mb-6 border-l-4 border-gold bg-gold/[0.04]" data-testid="projects-effort">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <p className="overline text-royal">Founder Freedom Ledger</p>
+              <p className="text-sm text-navy mt-0.5">The Factory has absorbed <b>{effort.hours_saved}h</b> of operational effort across <b>{effort.automated_actions}</b> automated actions — {effort.auto_published} auto-published. You decide, approve, and lead; the civilization executes.</p>
+            </div>
+            <div className="flex flex-wrap gap-1">{effort.eliminated_tasks.map((t) => <span key={t} className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 line-through">{t}</span>)}</div>
+          </div>
+        </div>
+      )}
 
       {projects.length === 0 ? (
         <Panel title="No projects yet" icon={Workflow} accent="royal" testid="projects-empty">
@@ -92,7 +108,7 @@ export default function ProjectsContinuity() {
                     )}
                     {cur?.status === "in_progress" && cur?.route && (
                       <>
-                        <button onClick={() => nav(cur.route)} data-testid={`project-open-${p.id}`} className="text-[11px] inline-flex items-center gap-1 bg-navy text-white px-3 py-1.5 rounded-sm font-medium">Open workflow <ArrowRight className="w-3 h-3" /></button>
+                        <button onClick={() => nav(cur.route + (cur.route === "/flagship-showcase" ? `?project=${p.id}` : ""))} data-testid={`project-open-${p.id}`} className="text-[11px] inline-flex items-center gap-1 bg-navy text-white px-3 py-1.5 rounded-sm font-medium">Open workflow <ArrowRight className="w-3 h-3" /></button>
                         <button onClick={() => act(p.id, "complete-stage")} disabled={busy} data-testid={`project-complete-${p.id}`} className="text-[11px] inline-flex items-center gap-1 border border-navy/20 text-navy px-3 py-1.5 rounded-sm font-medium">Mark stage done</button>
                       </>
                     )}
@@ -101,6 +117,34 @@ export default function ProjectsContinuity() {
                     )}
                   </div>
                 </div>
+
+                {/* Auto-linked published destinations (zero-touch) */}
+                {(p.published_to || []).length > 0 && (
+                  <div className="mt-3 border-t pt-3" data-testid={`project-published-${p.id}`}>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-700 mb-1">Published destinations</p>
+                    {p.published_to.map((d, i) => (
+                      <div key={i} className="flex items-center gap-2 text-[11px] text-navy">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="capitalize font-semibold">{d.platform}</span>
+                        <a href={d.url} target="_blank" rel="noreferrer" className="text-royal underline font-mono">{d.video_id}</a>
+                        <span className="text-muted-foreground">· {new Date(d.at).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Failure isolation — Gold Master preserved, retry per destination */}
+                {(p.failed_destinations || []).length > 0 && (
+                  <div className="mt-2 border border-rose-200 bg-rose-50 rounded-sm p-2" data-testid={`project-failed-${p.id}`}>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-rose-700 mb-1">Publishing needs attention (Gold Master preserved)</p>
+                    {p.failed_destinations.map((f, i) => (
+                      <div key={i} className="flex items-center justify-between text-[11px] text-rose-700">
+                        <span><b className="capitalize">{f.platform}</b> — {f.reason}</span>
+                        <button onClick={() => nav("/youtube")} data-testid={`project-retry-${p.id}`} className="inline-flex items-center gap-1 border border-rose-300 px-2 py-0.5 rounded-sm">Retry</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </Panel>
             );
           })}

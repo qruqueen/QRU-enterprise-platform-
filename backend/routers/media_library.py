@@ -158,13 +158,24 @@ class FlagshipInput(BaseModel):
     extra_exclusions: Optional[list] = None
     variety: Optional[dict] = None
     project_id: Optional[str] = None
+    continuity_project_id: Optional[str] = None
     rejected_assets: Optional[list] = None
 
 
 @router.post("/showcase/produce")
 async def showcase_produce(data: FlagshipInput, user=Depends(require_super_admin)):
     import flagship_showcase as fs
-    return await fs.produce_flagship(data.model_dump(), user["name"])
+    res = await fs.produce_flagship(data.model_dump(), user["name"])
+    # Zero-touch continuity: auto-advance the linked project as real production completes (Founder Freedom).
+    if res.get("ok") and data.continuity_project_id and (res.get("showcase_asset") or {}).get("qru_asset_id"):
+        import continuity as cont
+        try:
+            await cont.on_production_complete(data.continuity_project_id,
+                                              res["showcase_asset"]["qru_asset_id"], user["name"])
+            res["continuity_updated"] = True
+        except Exception:
+            res["continuity_updated"] = False
+    return res
 
 
 @router.get("/showcase/records")
@@ -188,6 +199,11 @@ async def certify_gold_master(asset_id: str, user=Depends(require_super_admin)):
     res = await fs.certify_gold_master(asset_id, user["name"])
     if not res.get("ok"):
         raise HTTPException(400, res.get("error") or "Certification failed.")
+    import continuity as cont
+    try:
+        await cont.on_gold_master(res.get("asset_id") or asset_id, user["name"])
+    except Exception:
+        pass
     return res
 
 

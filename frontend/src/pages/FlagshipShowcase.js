@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge, GovernedBy } from "@/components/qru";
@@ -14,6 +15,8 @@ const DEFAULT_NARRATION =
   "Forex means trading the world's currencies across global markets. Every trade carries real risk of loss that you must respect. Understanding how currency pairs move takes patient study and practice. Learning to trade responsibly builds lasting confidence over time. A calm and focused mind makes clearer decisions. Take a slow breath and reflect on your progress with gratitude.";
 
 export default function FlagshipShowcase() {
+  const [searchParams] = useSearchParams();
+  const continuityProjectId = searchParams.get("project");
   const [gov, setGov] = useState([]);
   const [modes, setModes] = useState(null);
   const [mode, setMode] = useState("human_approval_required");
@@ -84,6 +87,7 @@ export default function FlagshipShowcase() {
       const rejected = matchRes.scenes.filter((s) => sceneState[s.scene_index]?.rejected)
         .map((s) => s.candidates.find((c) => c.provider_asset_id === sceneState[s.scene_index]?.selectedId)?.provider_asset_id).filter(Boolean);
       const payload = { product_title: productTitle, topic, aspect, narration, approval_mode: mode, rejected_assets: rejected };
+      if (continuityProjectId) payload.continuity_project_id = continuityProjectId;
       if (mode === "human_approval_required") payload.scenes = scenesForProduction();
       const { data } = await api.post("/media-library/showcase/produce", payload);
       setResult(data);

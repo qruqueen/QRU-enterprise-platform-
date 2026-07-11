@@ -273,3 +273,104 @@ async def set_mode(pid, mode, actor):
         _advance_auto(p)
     await _save(p)
     return {**p, "summary": _summary(p)}
+
+
+# ---- Zero-touch effort reduction (Founder Effort Reduction Directive) ----
+# These hooks let the Factory advance a project's stages automatically as real work completes,
+# eliminating manual status tracking and manual re-linking between modules.
+
+async def on_production_complete(pid, qru_asset_id, actor, minutes_saved=6):
+    """A real production run finished: auto-complete every pre-approval stage (workflow + auto) and
+    stop at the first human-approval gate. Eliminates manually ticking off each stage."""
+    p = _clean(await db.continuity_projects.find_one({"id": pid}))
+    if not p:
+        return None
+    p["showcase_asset_id"] = qru_asset_id
+    for s in p["chain"]:
+        if s["status"] == "complete":
+            continue
+        if s["kind"] == "gate":
+            break
+        s["status"] = "complete"
+    _advance_auto(p)
+    p["effort_minutes_saved"] = p.get("effort_minutes_saved", 0) + minutes_saved
+    p.setdefault("history", []).append({"at": now_iso(), "actor": actor, "action": "production_complete",
+                                         "asset": qru_asset_id, "auto": True})
+    await db.continuity_projects.update_one({"id": pid}, {"$set": {
+        "chain": p["chain"], "showcase_asset_id": qru_asset_id,
+        "effort_minutes_saved": p["effort_minutes_saved"], "updated_at": now_iso(),
+        "history": p["history"]}})
+    return {**p, "summary": _summary(p)}
+
+
+async def on_gold_master(qru_asset_id, actor, minutes_saved=3):
+    """Gold Master certification auto-passes the Founder Approval + Gold Master gates."""
+    p = _clean(await db.continuity_projects.find_one({"showcase_asset_id": qru_asset_id}))
+    if not p:
+        return None
+    for s in p["chain"]:
+        if s["id"] in ("founder_approval", "gold_master") and s["status"] in ("needs_approval", "pending"):
+            s["status"] = "complete"
+    _advance_auto(p)
+    p["effort_minutes_saved"] = p.get("effort_minutes_saved", 0) + minutes_saved
+    p.setdefault("history", []).append({"at": now_iso(), "actor": actor, "action": "gold_master_certified", "auto": True})
+    await db.continuity_projects.update_one({"id": p["id"]}, {"$set": {
+        "chain": p["chain"], "effort_minutes_saved": p["effort_minutes_saved"],
+        "updated_at": now_iso(), "history": p["history"]}})
+    return {**p, "summary": _summary(p)}
+
+
+async def on_published(qru_asset_id, url, video_id, actor, minutes_saved=8):
+    """A Factory asset was published to a platform: auto-complete Publishing + Platform Distribution and
+    record the destination. Eliminates manual status tracking after publishing."""
+    p = _clean(await db.continuity_projects.find_one({"showcase_asset_id": qru_asset_id}))
+    if not p:
+        return None
+    for s in p["chain"]:
+        if s["id"] == "gold_master":
+            continue  # never auto-certify Gold Master — that is a separate authorized action (§10, honesty)
+        if s["id"] in ("publishing", "distribution") and s["status"] != "complete":
+            s["status"] = "complete"
+        elif s["kind"] == "auto" and s["status"] != "complete":
+            s["status"] = "complete"  # vault etc. — a successful publish means these are done
+        elif s["id"] == "founder_approval" and s["status"] in ("needs_approval", "pending"):
+            s["status"] = "complete"  # publishing is an explicit Founder action = approval
+    p.setdefault("published_to", [])
+    if not any(d.get("video_id") == video_id for d in p["published_to"]):
+        p["published_to"].append({"platform": "youtube", "url": url, "video_id": video_id, "at": now_iso()})
+    p["effort_minutes_saved"] = p.get("effort_minutes_saved", 0) + minutes_saved
+    p.setdefault("history", []).append({"at": now_iso(), "actor": actor, "action": "published",
+                                        "platform": "youtube", "video_id": video_id, "auto": True})
+    await db.continuity_projects.update_one({"id": p["id"]}, {"$set": {
+        "chain": p["chain"], "published_to": p["published_to"],
+        "effort_minutes_saved": p["effort_minutes_saved"], "updated_at": now_iso(), "history": p["history"]}})
+    return {**p, "summary": _summary(p)}
+
+
+async def on_publish_failed(qru_asset_id, destination, reason, actor):
+    """Publishing failed on one destination. Preserve everything; record the failure for retry.
+    The Gold Master is never touched."""
+    p = _clean(await db.continuity_projects.find_one({"showcase_asset_id": qru_asset_id}))
+    if not p:
+        return None
+    p.setdefault("failed_destinations", []).append(
+        {"platform": destination, "reason": reason, "at": now_iso(), "human_action_required": True})
+    p.setdefault("history", []).append({"at": now_iso(), "actor": actor, "action": "publish_failed",
+                                        "platform": destination, "reason": reason})
+    await db.continuity_projects.update_one({"id": p["id"]}, {"$set": {
+        "failed_destinations": p["failed_destinations"], "updated_at": now_iso(), "history": p["history"]}})
+    return {**p, "summary": _summary(p)}
+
+
+async def effort_summary():
+    """Founder Effort Reduction ledger — how much operator time the Factory has absorbed."""
+    rows = await db.continuity_projects.find({}, {"_id": 0, "effort_minutes_saved": 1, "published_to": 1, "history": 1}).to_list(1000)
+    total_min = sum(r.get("effort_minutes_saved", 0) for r in rows)
+    auto_actions = sum(1 for r in rows for h in r.get("history", []) if h.get("auto"))
+    published = sum(len(r.get("published_to", []) or []) for r in rows)
+    return {
+        "minutes_saved": total_min, "hours_saved": round(total_min / 60, 1),
+        "automated_actions": auto_actions, "auto_published": published,
+        "eliminated_tasks": ["Manual status tracking", "Manual asset linking", "Manual publishing preparation",
+                             "Manual file re-upload", "Manual asset discovery"],
+    }

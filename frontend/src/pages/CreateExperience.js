@@ -40,10 +40,14 @@ export default function CreateExperience() {
   const launch = async () => {
     const route = plan?.launch?.route || outcome?.route;
     try {
-      await api.post("/factory-os/projects", { outcome_id: outcome.id, topic, audience, goal });
+      const { data: proj } = await api.post("/factory-os/projects", { outcome_id: outcome.id, topic, audience, goal });
       toast.success(`Project started — tracked in My Projects. Launching ${plan?.launch?.workflow}…`);
-    } catch { toast.message("Launching workflow…"); }
-    nav(route);
+      // Pass the project so production auto-advances the continuity board with zero manual tracking.
+      nav(proj?.id ? `${route}?project=${proj.id}` : route);
+    } catch {
+      toast.message("Launching workflow…");
+      nav(route);
+    }
   };
 
   if (data === null) return <div className="flex justify-center py-32"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
