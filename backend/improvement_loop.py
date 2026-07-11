@@ -77,6 +77,7 @@ async def run_loop(scenes, narration="", topic="", threshold=90, max_cycles=4):
 
     report = cd.build_report(scene_inputs, narration, topic)
     dims = dict(report["scores"])  # scene_quality, brand_score, learning_score, thumbnail_score, composite
+    base_dims = dict(dims)  # honest baseline per dimension for progress reporting
     kr_ok = await _has_verified_kr(topic)
 
     # Build work orders from recommendations (+ a governance order if a sensitive topic lacks a verified KR).
@@ -122,8 +123,6 @@ async def run_loop(scenes, narration="", topic="", threshold=90, max_cycles=4):
                 continue
             step = min(wo["gain"], wo["ceiling"] - cur)
             dims[wo["dimension"]] = min(wo["ceiling"], cur + step)
-            wo["progress"] = min(100, round((dims[wo["dimension"]] - (wo["ceiling"] - wo["gain"] * max_cycles)) / (wo["gain"] * max_cycles) * 100)) if wo["gain"] else 100
-            wo["progress"] = max(wo["progress"], round(cycle / max_cycles * 100))
             wo["status"] = "Complete" if dims[wo["dimension"]] >= wo["ceiling"] else "In Progress"
             improved = True
         dims["composite"] = composite()
@@ -135,6 +134,22 @@ async def run_loop(scenes, narration="", topic="", threshold=90, max_cycles=4):
     final = composite()
     blocking_orders = [w for w in work_orders if w["blocking"]]
     gold_candidate = final >= threshold and not blocking_orders
+
+    # Honest progress per department for the Founder dashboard:
+    # blocked = awaiting human input; when the Treasure Standard is met (or a dimension hit its
+    # honest ceiling) the contributing department is Complete; otherwise it shows how far it climbed.
+    for wo in work_orders:
+        dim = wo["dimension"]
+        if wo["blocking"]:
+            wo["progress"] = 100
+            wo["status"] = "Blocked — human input required"
+        elif gold_candidate or dims[dim] >= wo["ceiling"]:
+            wo["progress"] = 100
+            wo["status"] = "Complete"
+        else:
+            span = max(1, wo["ceiling"] - base_dims[dim])
+            wo["progress"] = max(0, min(99, round((dims[dim] - base_dims[dim]) / span * 100)))
+            wo["status"] = "In Progress"
 
     # Civilization Status (Founder dashboard) — one line per active department.
     status_by_dept = {}

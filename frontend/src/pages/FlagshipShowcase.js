@@ -6,8 +6,19 @@ import { Panel, StatusChip, VerifiedBadge, GovernedBy } from "@/components/qru";
 import { toast } from "sonner";
 import {
   Loader2, Film, Search, CheckCircle2, X, ShieldAlert, Lock, Unlock, RefreshCw, ThumbsUp, Ban,
-  Award, ShieldCheck, Clapperboard, Sparkles,
+  Award, ShieldCheck, Clapperboard, Sparkles, Landmark, Palette, Brain, GraduationCap,
+  BadgeCheck, ClipboardCheck, TrendingUp,
 } from "lucide-react";
+
+// MO-028 · Autonomous Improvement Loop™ — the specialized intelligences ("departments") of the civilization.
+const DEPT_META = {
+  creative_director: { icon: Clapperboard, color: "text-royal", bar: "bg-royal" },
+  design_intelligence: { icon: Palette, color: "text-fuchsia-600", bar: "bg-fuchsia-500" },
+  director_intelligence: { icon: Film, color: "text-indigo-600", bar: "bg-indigo-500" },
+  learning_experience: { icon: GraduationCap, color: "text-emerald-600", bar: "bg-emerald-500" },
+  knowledge_verification: { icon: BadgeCheck, color: "text-sky-600", bar: "bg-sky-500" },
+  qa: { icon: ClipboardCheck, color: "text-gold", bar: "bg-gold" },
+};
 
 const API_BASE = (process.env.REACT_APP_BACKEND_URL || "") + "/api/media-library/asset";
 
@@ -33,6 +44,12 @@ export default function FlagshipShowcase() {
   const [producing, setProducing] = useState(false);
   const [result, setResult] = useState(null);
   const [certifying, setCertifying] = useState(false);
+  // MO-028 Autonomous Improvement Loop™ — the civilization improves before the Founder reviews.
+  const [threshold, setThreshold] = useState(90);
+  const [loop, setLoop] = useState(null);
+  const [loopRunning, setLoopRunning] = useState(false);
+  const [deptAnim, setDeptAnim] = useState({}); // dept -> animated progress %
+  const [candidateDecision, setCandidateDecision] = useState(null);
 
   useEffect(() => {
     api.get("/media-library/showcase/modes").then((r) => setModes(r.data)).catch(() => {});
@@ -73,7 +90,42 @@ export default function FlagshipShowcase() {
         const sel = s.candidates.find((c) => c.provider_asset_id === s.selected_provider_asset_id) || s.candidates[0];
         return { scene_text: s.scene_text, learning_purpose: s.learning_purpose, match_score: sel?.match_score };
       }),
-    }).then((r) => { setCreative(r.data); setStyleChoice(r.data.visual_mood); }).catch(() => setCreative(null));
+    }).then((r) => { setCreative(r.data); setStyleChoice(r.data.visual_mood); runLoop(src); }).catch(() => setCreative(null));
+  };
+
+  // MO-028 · Autonomous Improvement Loop™ — evaluate → auto-assign to departments → improve → re-evaluate → Gold Master Candidate.
+  const runLoop = async (mr) => {
+    const src = mr || matchRes;
+    if (!src) return;
+    setLoopRunning(true); setLoop(null); setDeptAnim({}); setCandidateDecision(null);
+    try {
+      const scenes = src.scenes.map((s) => {
+        const sel = s.candidates.find((c) => c.provider_asset_id === s.selected_provider_asset_id) || s.candidates[0];
+        return { scene_text: s.scene_text, learning_purpose: s.learning_purpose, match_score: sel?.match_score };
+      });
+      const { data } = await api.post("/media-library/improvement-loop", { scenes, narration, topic, threshold });
+      setLoop(data);
+      // Animate each department's progress bar from 0 → its honest final progress (live "civilization at work" feel).
+      setTimeout(() => {
+        const target = {};
+        (data.civilization_status || []).forEach((d) => { target[d.department] = d.progress; });
+        setDeptAnim(target);
+      }, 120);
+    } catch (e) { toast.error(e.response?.data?.detail || "Autonomous Improvement Loop failed."); }
+    finally { setLoopRunning(false); }
+  };
+
+  const approveCandidate = () => {
+    setCandidateDecision("approved");
+    setCreativeApproved(true);
+    toast.success("Gold Master Candidate approved. Ready to manufacture.");
+    setTimeout(() => { const el = document.querySelector('[data-testid="fs-manufacture"]'); el && el.scrollIntoView({ behavior: "smooth" }); }, 100);
+  };
+  const requestCandidateChanges = () => {
+    setCandidateDecision("changes");
+    setCreativeApproved(false);
+    toast.message("Sent back to the civilization. Adjust scenes, then the departments re-run.");
+    const el = document.querySelector('[data-testid="fs-scenes"]'); el && el.scrollIntoView({ behavior: "smooth" });
   };
 
   const setScene = (idx, patch) => setSceneState((s) => ({ ...s, [idx]: { ...s[idx], ...patch } }));
@@ -356,6 +408,122 @@ export default function FlagshipShowcase() {
               <button onClick={() => { const opts = creative.visual_mood_options; const i = opts.indexOf(styleChoice || creative.visual_mood); const next = opts[(i + 1) % opts.length]; setStyleChoice(next); fetchCreative(matchRes, next); setCreativeApproved(false); }} data-testid="fs-creative-change-style" className="text-[11px] border border-royal/30 text-royal px-3 py-1.5 rounded-sm font-medium">Change Style</button>
             </div>
           </div>
+        </Panel>
+      )}
+
+      {/* MO-028 · Civilization Status — Autonomous Improvement Loop™ */}
+      {matchRes && (loopRunning || loop) && (
+        <Panel title="Civilization Status — Autonomous Improvement Loop™ · MO-028" icon={Landmark} accent="royal" testid="fs-loop" className="mb-6">
+          <p className="text-[11px] text-muted-foreground mb-3">
+            The Founder approves. The civilization perfects. Specialized intelligences are auto-assigned every recommendation and improve the product until the Treasure Standard™ threshold is reached — you review one finished Gold Master Candidate, not a list of fixes. Governed by QRU-CON-0001 §5/§6/§9/§10.
+          </p>
+
+          {/* Threshold + re-run */}
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Treasure Standard threshold</span>
+              <input type="range" min={70} max={98} value={threshold} data-testid="fs-loop-threshold"
+                onChange={(e) => setThreshold(Number(e.target.value))} onMouseUp={() => runLoop()} onTouchEnd={() => runLoop()}
+                className="w-40 accent-royal" />
+              <span className="text-[12px] font-black text-navy">{threshold}</span>
+            </div>
+            <button onClick={() => runLoop()} disabled={loopRunning} data-testid="fs-loop-rerun"
+              className="text-[11px] inline-flex items-center gap-1 bg-white border border-royal/30 text-royal px-3 py-1.5 rounded-sm font-medium disabled:opacity-50">
+              {loopRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />} Re-run civilization
+            </button>
+          </div>
+
+          {loopRunning && !loop && (
+            <div className="flex items-center gap-2 text-[12px] text-royal py-6" data-testid="fs-loop-working">
+              <Loader2 className="w-4 h-4 animate-spin" /> The civilization is improving your product…
+            </div>
+          )}
+
+          {loop && (
+            <>
+              {/* Department progress bars */}
+              <div className="grid sm:grid-cols-2 gap-3 mb-5" data-testid="fs-loop-departments">
+                {loop.civilization_status.map((d) => {
+                  const meta = DEPT_META[d.department] || { icon: Brain, color: "text-navy", bar: "bg-navy" };
+                  const Icon = meta.icon;
+                  const pct = deptAnim[d.department] ?? 0;
+                  const complete = d.progress >= 100 && !d.blocked;
+                  return (
+                    <div key={d.department} className={`border rounded-md p-3 ${d.blocked ? "border-amber-300 bg-amber-50/40" : complete ? "border-emerald-200 bg-emerald-50/20" : "border-navy/15"}`} data-testid={`fs-loop-dept-${d.department}`}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <Icon className={`w-4 h-4 ${meta.color}`} />
+                          <span className="text-[12px] font-bold text-navy">{d.department_name}</span>
+                        </div>
+                        <span className="text-[12px] font-black text-navy tabular-nums" data-testid={`fs-loop-pct-${d.department}`}>{d.blocked ? "Blocked" : `${d.progress}%`}</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-navy/10 overflow-hidden">
+                        <div className={`h-full rounded-full ${d.blocked ? "bg-amber-500" : meta.bar}`} style={{ width: `${d.blocked ? 100 : pct}%`, transition: "width 900ms ease-out" }} />
+                      </div>
+                      <p className={`text-[10px] mt-1.5 ${d.blocked ? "text-amber-700" : "text-muted-foreground"}`}>
+                        {d.blocked ? "Needs your input — Knowledge-First governance (never fabricated)." : complete ? "Complete." : `${d.activity}…`}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Treasure Standard climb (baseline → final) */}
+              <div className="flex items-center gap-3 mb-5 text-[11px]" data-testid="fs-loop-climb">
+                <TrendingUp className="w-4 h-4 text-royal" />
+                <span className="text-muted-foreground">Baseline <b className="text-navy">{loop.baseline_composite}</b></span>
+                <span className="text-navy/30">→</span>
+                <span className="text-muted-foreground">After {loop.cycles.length - 1} cycle(s) <b className="text-navy">{loop.final_composite}</b></span>
+                <span className="text-navy/30">·</span>
+                <span className="text-muted-foreground">Threshold <b className="text-navy">{loop.threshold}</b></span>
+              </div>
+
+              {/* Gold Master Candidate Ready OR honest blocking / ceiling state */}
+              {loop.gold_master_candidate_ready ? (
+                <div className="border-2 border-gold/50 bg-gold/[0.07] rounded-md p-5 text-center" data-testid="fs-loop-candidate-ready">
+                  <div className="inline-flex items-center gap-2 text-navy font-black text-lg mb-3"><Award className="w-5 h-5 text-gold" /> Gold Master Candidate Ready</div>
+                  <div className="grid grid-cols-3 gap-3 max-w-md mx-auto mb-4">
+                    <div className="border rounded-md p-2 bg-white/60 border-gold/30">
+                      <p className="text-2xl font-black text-navy tabular-nums">{loop.final_composite}<span className="text-sm text-muted-foreground">/100</span></p>
+                      <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Treasure Standard</p>
+                    </div>
+                    <div className="border rounded-md p-2 bg-white/60 border-gold/30">
+                      <p className="text-2xl font-black text-navy tabular-nums">{loop.civilization_status.filter((d) => d.progress >= 100 && !d.blocked).length}/{loop.civilization_status.length}</p>
+                      <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Departments Complete</p>
+                    </div>
+                    <div className="border rounded-md p-2 bg-white/60 border-gold/30 flex flex-col justify-center">
+                      <p className="text-[11px] font-bold text-navy leading-tight">Awaiting Founder Approval</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center gap-2 flex-wrap">
+                    <button onClick={approveCandidate} data-testid="fs-loop-approve"
+                      className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-sm font-bold text-[12px] ${candidateDecision === "approved" ? "bg-emerald-600 text-white" : "bg-navy text-white hover:bg-navy/90"}`}>
+                      {candidateDecision === "approved" ? <><CheckCircle2 className="w-4 h-4" /> Approved</> : <><ThumbsUp className="w-4 h-4" /> Approve</>}
+                    </button>
+                    <button onClick={requestCandidateChanges} data-testid="fs-loop-request-changes"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm font-medium text-[12px] border border-navy/20 text-navy bg-white"><RefreshCw className="w-4 h-4" /> Request Changes</button>
+                    <button onClick={approveCandidate} data-testid="fs-loop-publish"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm font-bold text-[12px] bg-gold text-navy hover:bg-gold/90"><Film className="w-4 h-4" /> Publish</button>
+                  </div>
+                </div>
+              ) : (
+                <div className={`border rounded-md p-4 ${loop.blocking_count > 0 ? "border-amber-300 bg-amber-50/50" : "border-navy/15 bg-navy/[0.03]"}`} data-testid="fs-loop-blocked">
+                  <p className="text-[12px] font-bold text-navy flex items-center gap-1.5">
+                    <ShieldAlert className="w-4 h-4 text-amber-500" /> {loop.blocking_count > 0 ? `${loop.blocking_count} item(s) need your input` : "Automated ceiling reached"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-1">{loop.notification}</p>
+                  {loop.work_orders.filter((w) => w.blocking).map((w) => (
+                    <div key={w.id} className="mt-2 text-[11px] border-l-2 border-amber-400 pl-2" data-testid={`fs-loop-wo-${w.id}`}>
+                      <b className="text-navy">{w.department_name}</b> — {w.recommendation}
+                      <p className="text-[10px] text-amber-700">{w.resolution}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <p className="text-[10px] text-muted-foreground mt-3 border-t pt-2" data-testid="fs-loop-honest-note">{loop.honest_note}</p>
+            </>
+          )}
         </Panel>
       )}
 
