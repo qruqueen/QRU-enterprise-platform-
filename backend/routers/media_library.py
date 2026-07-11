@@ -162,6 +162,23 @@ async def director_plan(data: DirectorInput, user=Depends(get_current_user)):
     return di.build_plan(scenes, data.topic or "", data.aspect or "landscape")
 
 
+class CreativeInput(BaseModel):
+    scenes: list
+    narration: Optional[str] = ""
+    topic: Optional[str] = ""
+    style: Optional[str] = None
+
+
+@router.post("/creative-direction")
+async def creative_direction(data: CreativeInput, user=Depends(get_current_user)):
+    """QRU Creative Director™ (MO-027) — the governed Creative Direction Report prepared BEFORE rendering."""
+    import creative_director as cd
+    scenes = [{"scene_index": i, "scene_text": s.get("scene_text", ""),
+               "learning_purpose": s.get("learning_purpose", ""), "match_score": s.get("match_score")}
+              for i, s in enumerate(data.scenes)]
+    return cd.build_report(scenes, data.narration or "", data.topic or "", data.style)
+
+
 class FlagshipInput(BaseModel):
     product_title: Optional[str] = "QRU Flagship Showcase"
     topic: Optional[str] = ""

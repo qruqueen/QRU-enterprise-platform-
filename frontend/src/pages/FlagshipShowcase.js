@@ -26,7 +26,9 @@ export default function FlagshipShowcase() {
   const [productTitle, setProductTitle] = useState("Forex Foundations");
   const [matchRes, setMatchRes] = useState(null);
   const [matching, setMatching] = useState(false);
-  const [directorPlan, setDirectorPlan] = useState(null);
+  const [creative, setCreative] = useState(null);
+  const [creativeApproved, setCreativeApproved] = useState(false);
+  const [styleChoice, setStyleChoice] = useState(null);
   const [sceneState, setSceneState] = useState({}); // idx -> {selectedId, approved, rejected, locked}
   const [producing, setProducing] = useState(false);
   const [result, setResult] = useState(null);
@@ -43,10 +45,8 @@ export default function FlagshipShowcase() {
     try {
       const { data } = await api.post("/media-library/scene-match", { narration, topic, aspect });
       setMatchRes(data);
-      // Director Intelligence™ (MO-027): plan the cinematic direction for these scenes.
-      api.post("/media-library/director-plan", {
-        topic, aspect, scenes: data.scenes.map((s) => ({ scene_text: s.scene_text, learning_purpose: s.learning_purpose })),
-      }).then((r) => setDirectorPlan(r.data)).catch(() => setDirectorPlan(null));
+      setCreativeApproved(false);
+      fetchCreative(data, null);
       // Initialise per-scene state, preserving any locked selections from a prior run.
       setSceneState((prev) => {
         const next = {};
@@ -62,6 +62,18 @@ export default function FlagshipShowcase() {
       });
     } catch (e) { toast.error(e.response?.data?.detail || "Scene match failed."); }
     finally { setMatching(false); }
+  };
+
+  const fetchCreative = (mr, style) => {
+    const src = mr || matchRes;
+    if (!src) return;
+    api.post("/media-library/creative-direction", {
+      topic, narration, style,
+      scenes: src.scenes.map((s) => {
+        const sel = s.candidates.find((c) => c.provider_asset_id === s.selected_provider_asset_id) || s.candidates[0];
+        return { scene_text: s.scene_text, learning_purpose: s.learning_purpose, match_score: sel?.match_score };
+      }),
+    }).then((r) => { setCreative(r.data); setStyleChoice(r.data.visual_mood); }).catch(() => setCreative(null));
   };
 
   const setScene = (idx, patch) => setSceneState((s) => ({ ...s, [idx]: { ...s[idx], ...patch } }));
@@ -116,7 +128,7 @@ export default function FlagshipShowcase() {
   if (!modes) return <div className="flex justify-center py-32"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
 
   const sceneList = scenesForProduction();
-  const canProduce = mode === "auto_select_draft" ? true : allApproved();
+  const canProduce = mode === "auto_select_draft" ? true : (allApproved() && creativeApproved);
 
   return (
     <div>
@@ -271,37 +283,78 @@ export default function FlagshipShowcase() {
         </Panel>
       )}
 
-      {/* Director's Plan (MO-027) */}
-      {matchRes && directorPlan && (
-        <Panel title="Director's Plan — Director Intelligence™" icon={Clapperboard} accent="royal" testid="fs-director" className="mb-6">
-          <div className="flex flex-wrap items-center gap-3 mb-3 text-[11px]">
-            <span className="px-2 py-0.5 rounded bg-navy/[0.06] text-navy">Target runtime ~{directorPlan.target_runtime_seconds}s</span>
-            <span className="px-2 py-0.5 rounded bg-royal/10 text-royal border border-royal/20">Governed by §6 Art-Direction Standard™</span>
-          </div>
-          {/* Emotional arc timeline */}
-          <div className="flex items-end gap-1.5 mb-3" data-testid="fs-director-arc">
-            {directorPlan.scenes.map((s) => (
-              <div key={s.scene_index} className="flex-1 text-center">
-                <div className="w-full bg-gold/70 rounded-t" style={{ height: `${Math.max(12, s.energy * 0.5)}px` }} title={`energy ${s.energy}`} />
-                <p className="text-[9px] text-navy font-semibold mt-1">{s.arc_role}</p>
-                <p className="text-[8px] text-muted-foreground">{s.duration_seconds}s · {s.transition_label}</p>
+      {/* Creative Direction Report (MO-027 · QRU Creative Director™) */}
+      {matchRes && creative && (
+        <Panel title="Creative Direction Report — QRU Creative Director™" icon={Clapperboard} accent="royal" testid="fs-creative" className="mb-6">
+          <p className="text-[11px] text-muted-foreground mb-3">Prepared <b>before rendering</b>. The Factory makes intentional creative decisions, then you approve. Governed by the Treasure Standard™ + Art-Direction Standard™ (§5/§6).</p>
+
+          {/* Scores */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-4" data-testid="fs-creative-scores">
+            {[["Scene Quality", creative.scores.scene_quality], ["Brand", creative.scores.brand_score], ["Learning", creative.scores.learning_score], ["Thumbnail", creative.scores.thumbnail_score], ["Composite", creative.scores.composite]].map(([k, v]) => (
+              <div key={k} className="border rounded-md p-2 text-center border-navy/10">
+                <p className="text-lg font-black text-navy">{v}</p>
+                <p className="text-[9px] uppercase tracking-wide text-muted-foreground">{k}</p>
               </div>
             ))}
-          </div>
-          <div className="grid sm:grid-cols-2 gap-3 text-[11px]">
-            <div className="border rounded-md p-2.5 border-emerald-200 bg-emerald-50/40" data-testid="fs-director-applied">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-700 mb-1">Applied by the render engine</p>
-              {directorPlan.applied_by_engine.map((a) => <p key={a} className="text-navy flex items-start gap-1"><span className="text-emerald-500">✓</span> {a}</p>)}
-            </div>
-            <div className="border rounded-md p-2.5 border-amber-200 bg-amber-50/40" data-testid="fs-director-suggested">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700 mb-1">Directed & planned (honest — not yet rendered)</p>
-              {directorPlan.suggested_for_review.map((a) => <p key={a} className="text-navy flex items-start gap-1"><span className="text-amber-500">○</span> {a}</p>)}
+            <div className="border rounded-md p-2 text-center border-gold/40 bg-gold/10">
+              <p className="text-[11px] font-bold text-navy leading-tight mt-1">{creative.treasure_standard_prediction}</p>
+              <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Treasure Std</p>
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-navy">
-            <p><b className="text-royal">Closing CTA:</b> {directorPlan.closing_cta}</p>
-            <p><b className="text-royal">Reinforcement:</b> {directorPlan.learning_reinforcement}</p>
-            <p><b className="text-royal">Thumbnail hero:</b> Scene {directorPlan.thumbnail_concept.hero_scene_index + 1}</p>
+
+          {/* Mood + pacing */}
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Visual Mood</span>
+              <select data-testid="fs-creative-mood" value={styleChoice || creative.visual_mood} onChange={(e) => { setStyleChoice(e.target.value); fetchCreative(matchRes, e.target.value); setCreativeApproved(false); }} className="border rounded-sm px-2 py-1 text-xs">
+                {creative.visual_mood_options.map((m) => <option key={m}>{m}</option>)}
+              </select>
+            </div>
+            <span className="text-[11px] px-2 py-1 rounded bg-navy/[0.06] text-navy">Recommended pacing: <b>{creative.recommended_pacing}</b></span>
+          </div>
+
+          {/* Scene reviews */}
+          <div className="mb-4" data-testid="fs-creative-reviews">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-royal mb-1">Scene Review</p>
+            <div className="space-y-1.5">
+              {creative.scene_reviews.map((r) => (
+                <div key={r.scene_index} className={`flex items-start gap-2 text-[11px] border rounded-sm p-2 ${r.cd_approved ? "border-emerald-200 bg-emerald-50/30" : "border-amber-300 bg-amber-50/40"}`} data-testid={`fs-creative-scene-${r.scene_index}`}>
+                  {r.cd_approved ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0" /> : <ShieldAlert className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />}
+                  <div>
+                    <p className="text-navy"><b>Scene {r.scene_index + 1} · {r.arc_role}</b> — <StatusChip status={r.quality_rating} tone={r.quality_rating === "Excellent" ? "emerald" : r.quality_rating === "Good" ? "blue" : "amber"} /></p>
+                    {r.improvements.length > 0 && <p className="text-[10px] text-amber-700 mt-0.5">{r.improvements.join(" ")}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Thumbnail concepts */}
+          <div className="mb-4" data-testid="fs-creative-thumbnails">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-royal mb-1">Thumbnail Concepts</p>
+            <div className="grid sm:grid-cols-3 gap-2">
+              {creative.thumbnail_concepts.map((t) => (
+                <div key={t.name} className={`border rounded-md p-2.5 ${t.recommended ? "border-gold ring-2 ring-gold/30 bg-gold/[0.05]" : "border-navy/10"}`}>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-bold text-navy">{t.name}</p>
+                    <span className="text-[11px] font-black text-navy">{t.total}</span>
+                  </div>
+                  <p className="text-[9px] text-muted-foreground">{t.composition}</p>
+                  <p className="text-[9px] text-royal mt-0.5">“{t.overlay_text}” · Scene {t.hero_scene_index + 1}</p>
+                  {t.recommended && <p className="text-[9px] text-gold font-bold mt-1">★ Recommended</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Approval gate */}
+          <div className="border-t pt-3 flex items-center justify-between flex-wrap gap-2">
+            <p className="text-[11px] text-muted-foreground">Approve Creative Direction?</p>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setCreativeApproved(true)} data-testid="fs-creative-approve" className={`text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded-sm font-bold ${creativeApproved ? "bg-emerald-600 text-white" : "bg-navy text-white hover:bg-navy/90"}`}>{creativeApproved ? <><CheckCircle2 className="w-3 h-3" /> Approved</> : "Approve"}</button>
+              <button onClick={() => { const el = document.querySelector('[data-testid="fs-scenes"]'); el && el.scrollIntoView({ behavior: "smooth" }); }} data-testid="fs-creative-modify" className="text-[11px] border border-navy/20 text-navy px-3 py-1.5 rounded-sm font-medium">Modify</button>
+              <button onClick={() => { const opts = creative.visual_mood_options; const i = opts.indexOf(styleChoice || creative.visual_mood); const next = opts[(i + 1) % opts.length]; setStyleChoice(next); fetchCreative(matchRes, next); setCreativeApproved(false); }} data-testid="fs-creative-change-style" className="text-[11px] border border-royal/30 text-royal px-3 py-1.5 rounded-sm font-medium">Change Style</button>
+            </div>
           </div>
         </Panel>
       )}
@@ -320,8 +373,8 @@ export default function FlagshipShowcase() {
               {producing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clapperboard className="w-4 h-4" />} {producing ? "Manufacturing… (~60s)" : mode === "auto_select_draft" ? "Render Draft Preview" : "Manufacture Showcase"}
             </button>
           </div>
-          {mode === "human_approval_required" && !allApproved() && sceneList.length > 0 && (
-            <p className="text-[11px] text-amber-700 mt-2" data-testid="fs-approve-hint">Every included scene must be approved before manufacturing.</p>
+          {mode === "human_approval_required" && !canProduce && (
+            <p className="text-[11px] text-amber-700 mt-2" data-testid="fs-approve-hint">{!creativeApproved ? "Approve the Creative Direction Report, then approve every scene before manufacturing." : "Every included scene must be approved before manufacturing."}</p>
           )}
         </Panel>
       )}
