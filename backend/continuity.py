@@ -87,7 +87,7 @@ _DEFAULT_CHAIN = [
 ]
 
 _ROUTE_LABEL = {"/flagship-showcase": "Flagship Showcase™", "/manufacture": "Product Manufacturing",
-                "/distribution": "Distribution Center™"}
+                "/distribution": "Distribution Center™", "/promotion-pipeline": "Promotion Pipeline™"}
 
 
 def _chain_for(outcome_id):
@@ -121,6 +121,8 @@ def _recommended(project):
     if cur["status"] == "needs_approval":
         return f"Your approval is required at “{cur['name']}”. Approve to continue automatically."
     if cur["status"] == "blocked":
+        if cur.get("id") == "knowledge_record" or cur.get("kind") == "auto":
+            return "Knowledge always comes before products — manufacture the Knowledge Record first in the Promotion Pipeline™."
         return f"“{cur['name']}” needs a connector. Set up a destination in the {_ROUTE_LABEL.get(cur.get('route'),'Distribution Center™')}."
     if cur["status"] == "in_progress":
         return f"Open the {_ROUTE_LABEL.get(cur.get('route'),'workflow')} to complete “{cur['name']}”."

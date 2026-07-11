@@ -97,7 +97,7 @@ export default function ProjectsContinuity() {
                       </>
                     )}
                     {cur?.status === "blocked" && cur?.route && (
-                      <button onClick={() => nav(cur.route)} data-testid={`project-setup-${p.id}`} className="text-[11px] inline-flex items-center gap-1 bg-gold text-navy px-3 py-1.5 rounded-sm font-medium">Set up destination <ArrowRight className="w-3 h-3" /></button>
+                      <button onClick={() => nav(cur.route)} data-testid={`project-setup-${p.id}`} className="text-[11px] inline-flex items-center gap-1 bg-gold text-navy px-3 py-1.5 rounded-sm font-medium">{cur.id === "knowledge_record" || cur.kind === "auto" ? "Manufacture the Knowledge Record" : "Set up destination"} <ArrowRight className="w-3 h-3" /></button>
                     )}
                   </div>
                 </div>
