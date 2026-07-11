@@ -179,6 +179,20 @@ async def creative_direction(data: CreativeInput, user=Depends(get_current_user)
     return cd.build_report(scenes, data.narration or "", data.topic or "", data.style)
 
 
+class ImprovementInput(BaseModel):
+    scenes: list
+    narration: Optional[str] = ""
+    topic: Optional[str] = ""
+    threshold: Optional[int] = 90
+
+
+@router.post("/improvement-loop")
+async def improvement_loop(data: ImprovementInput, user=Depends(get_current_user)):
+    """QRU Autonomous Improvement Loop™ (MO-028) — evaluate → auto-assign → improve → re-evaluate → Gold Master Candidate."""
+    import improvement_loop as il
+    return await il.run_loop(data.scenes, data.narration or "", data.topic or "", data.threshold or 90)
+
+
 class FlagshipInput(BaseModel):
     product_title: Optional[str] = "QRU Flagship Showcase"
     topic: Optional[str] = ""
