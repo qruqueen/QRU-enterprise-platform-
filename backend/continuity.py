@@ -235,13 +235,19 @@ async def advance(pid, actor):
 
 
 async def approve_gate(pid, actor):
-    """Pass the current human-approval gate (§9), then auto-continue."""
+    """Pass the current human-approval gate (§9), then auto-continue.
+    Gold Master is NOT a simple approval — it must be certified via the real certification path
+    (Technical+Brand QA gates, §10). We refuse to complete it here (honesty invariant)."""
     p = _clean(await db.continuity_projects.find_one({"id": pid}))
     if not p:
         return None
     cur = next((s for s in p["chain"] if s["status"] == "needs_approval"), None)
     if not cur:
         return {**p, "summary": _summary(p), "note": "No approval is currently required."}
+    if cur["id"] == "gold_master":
+        return {**p, "summary": _summary(p), "requires_certification": True,
+                "note": "Gold Master Certified™ cannot be granted by simple approval. Certify it "
+                        "(Technical + Brand QA must be 100) from the Gold Master certification action."}
     cur["status"] = "complete"
     p.setdefault("history", []).append({"at": now_iso(), "actor": actor, "action": "approved", "stage": cur["id"]})
     _advance_auto(p)

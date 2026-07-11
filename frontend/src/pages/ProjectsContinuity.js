@@ -4,7 +4,7 @@ import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge } from "@/components/qru";
 import { toast } from "sonner";
-import { Loader2, Workflow, CheckCircle2, Circle, Clock, ShieldAlert, Lock, Play, Pause, Square, ArrowRight, ThumbsUp } from "lucide-react";
+import { Loader2, Workflow, CheckCircle2, Circle, Clock, ShieldAlert, Lock, Play, Pause, Square, ArrowRight, ThumbsUp, Award } from "lucide-react";
 
 const STAGE_ICON = { complete: CheckCircle2, in_progress: Clock, needs_approval: ShieldAlert, blocked: Lock, pending: Circle, pending_connector: Lock };
 const STAGE_TONE = { complete: "emerald", in_progress: "blue", needs_approval: "amber", blocked: "rose", pending: "slate" };
@@ -26,9 +26,22 @@ export default function ProjectsContinuity() {
     try {
       const { data } = await api.post(`/factory-os/projects/${pid}/${path}`, body || {});
       setProjects((ps) => ps.map((p) => (p.id === pid ? data : p)));
-      if (path === "approve") toast.success("Approved — continuing automatically.");
+      if (data?.requires_certification) toast.message("Gold Master needs certification (QA 100), not simple approval.");
+      else if (path === "approve") toast.success("Approved — continuing automatically.");
       if (path === "complete-stage") toast.success("Stage complete — continuing.");
     } catch (e) { toast.error(e.response?.data?.detail || "Action failed."); }
+    finally { setBusy(null); }
+  };
+
+  const certifyGoldMaster = async (p) => {
+    if (!p.showcase_asset_id) { nav("/flagship-showcase"); return; }
+    setBusy(p.id + "certify");
+    try {
+      await api.post(`/media-library/showcase/${p.showcase_asset_id}/certify-gold-master`);
+      toast.success("Gold Master Certified™.");
+      const { data } = await api.get(`/factory-os/projects/${p.id}`);
+      setProjects((ps) => ps.map((x) => (x.id === p.id ? data : x)));
+    } catch (e) { toast.error(e.response?.data?.detail || "Certification blocked — QA gates must pass."); }
     finally { setBusy(null); }
   };
 
@@ -103,7 +116,10 @@ export default function ProjectsContinuity() {
                 <div className="border-t pt-3 flex items-center justify-between flex-wrap gap-2">
                   <p className="text-[12px] text-navy" data-testid={`project-next-${p.id}`}><b className="text-royal">Next:</b> {s.recommended_next_action}</p>
                   <div className="flex items-center gap-2">
-                    {cur?.status === "needs_approval" && (
+                    {cur?.status === "needs_approval" && cur?.id === "gold_master" && (
+                      <button onClick={() => certifyGoldMaster(p)} disabled={busy} data-testid={`project-certify-gm-${p.id}`} className="text-[11px] inline-flex items-center gap-1 bg-gold text-navy px-3 py-1.5 rounded-sm font-bold"><Award className="w-3 h-3" /> Certify Gold Master™</button>
+                    )}
+                    {cur?.status === "needs_approval" && cur?.id !== "gold_master" && (
                       <button onClick={() => act(p.id, "approve")} disabled={busy} data-testid={`project-approve-${p.id}`} className="text-[11px] inline-flex items-center gap-1 bg-emerald-600 text-white px-3 py-1.5 rounded-sm font-medium"><ThumbsUp className="w-3 h-3" /> Approve & continue</button>
                     )}
                     {cur?.status === "in_progress" && cur?.route && (
