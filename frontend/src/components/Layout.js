@@ -10,10 +10,13 @@ import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard, Film,
-  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud, Gavel, Youtube, QrCode,
+  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud, Gavel, Youtube, QrCode, Scale,
 } from "lucide-react";
 
 const NAV = [
+  { section: "Start Here" },
+  { to: "/create", label: "Create", icon: Sparkles, testid: "nav-create", q: "What would you like to create today?" },
+  { to: "/constitution", label: "Factory Constitution™", icon: Scale, testid: "nav-constitution", q: "What governs everything the Factory makes?" },
   { section: "The QRU Experience" },
   { to: "/first-dollar", label: "First Dollar Mode™", icon: Coins, testid: "nav-first-dollar", q: "Will a real customer pay for it?" },
   { to: "/factory-readiness", label: "Factory Readiness™", icon: Gauge, testid: "nav-factory-readiness", q: "Which product should we manufacture first?" },

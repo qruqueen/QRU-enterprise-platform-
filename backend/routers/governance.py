@@ -8,6 +8,19 @@ import constitution as const
 router = APIRouter(prefix="/api/governance", tags=["governance"])
 
 
+@router.get("/factory-constitution")
+async def factory_constitution(user=Depends(get_current_user)):
+    import constitution_v1 as cv1
+    doc = await cv1.get_constitution_v1()
+    return doc or {"adopted": False, "doc_id": cv1.DOC_ID}
+
+
+@router.get("/factory-constitution/bindings")
+async def factory_constitution_bindings(user=Depends(get_current_user)):
+    import governance_binding as gb
+    return await gb.constitution_bindings()
+
+
 @router.get("/overview")
 async def overview(user=Depends(get_current_user)):
     return await const.governance_overview()

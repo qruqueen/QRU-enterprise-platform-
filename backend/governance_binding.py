@@ -148,6 +148,7 @@ async def overview():
     adopted = [s for s in idx.values() if s.get("status") == "Active"]
     priority = [_resolve(idx, n) for n in ENFORCEMENT_PRIORITY]
     bound = sum(1 for p in priority if p["adopted"])
+    const = await _resolve_constitution()
     return {
         "total_standards": len(idx),
         "agents": len(AGENTS),
@@ -155,5 +156,52 @@ async def overview():
         "enforcement_priority": priority,
         "priority_bound": bound,
         "priority_total": len(priority),
+        "constitution": const,
         "loop": ["Standards", "Processes", "Agents", "Outputs", "Verification", "Published Products"],
     }
+
+
+# ------------------------------------------------------------------ CONSTITUTION BINDINGS (QRU-CON-0001)
+# Every applicable factory system is bound to the governing constitutional section(s).
+CONSTITUTION_BINDINGS = [
+    {"system": "Knowledge Foundry / Knowledge Records", "sections": ["3", "4"],
+     "why": "Knowledge Civilization™ manufactures governed Knowledge Records; Knowledge-Gap routing is mandatory."},
+    {"system": "Product Manufacturing / Recipes", "sections": ["2", "3", "4"],
+     "why": "Creation Civilization™ expresses verified understanding as products without altering the truth."},
+    {"system": "Design Intelligence™ / Design Director™", "sections": ["6"],
+     "why": "Art-Direction Standard™ is an active decision framework — not templates or brand colors alone."},
+    {"system": "Factory OS / Operating Experience", "sections": ["7", "8", "12"],
+     "why": "Organize around the user's outcome; the Concierge translates intent into governed workflows."},
+    {"system": "Approval Modes / Automation", "sections": ["9"],
+     "why": "Human Approval Required by default; Governed Auto-Select disabled until authorized."},
+    {"system": "Quality Gates (Knowledge/Technical/Design/Licensing)", "sections": ["5", "10"],
+     "why": "Four separate gates + Treasure Standard™ tests before certification."},
+    {"system": "Gold Master Certification™", "sections": ["10"],
+     "why": "A controlled approval state assigned only by an authorized authority."},
+    {"system": "Master Asset Vault™", "sections": ["11"],
+     "why": "Single source of truth; distinguish KR, products, supporting assets, and final files."},
+    {"system": "Distribution / Legacy", "sections": ["3", "4"],
+     "why": "Legacy Civilization™ helps understanding travel, remain accessible, and be preserved."},
+]
+
+
+async def _resolve_constitution():
+    import constitution_v1 as cv1
+    doc = await cv1.get_constitution_v1()
+    if not doc:
+        return {"doc_id": cv1.DOC_ID, "adopted": False, "status": "Not Adopted"}
+    return {"doc_id": doc["doc_id"], "name": doc["name"], "version": doc["version"],
+            "status": doc["status"], "authority_level": doc["authority_level"], "adopted": True}
+
+
+async def constitution_bindings():
+    """Every factory system → its governing constitutional section(s), with adoption status."""
+    import constitution_v1 as cv1
+    doc = await cv1.get_constitution_v1()
+    sec_titles = {s["n"]: s["title"] for s in (doc or {}).get("sections", [])}
+    out = []
+    for b in CONSTITUTION_BINDINGS:
+        out.append({**b, "section_titles": [f"§{n} {sec_titles.get(n, '')}".strip() for n in b["sections"]]})
+    return {"constitution": await _resolve_constitution(), "bindings": out,
+            "acceptance_note": "Bindings actively govern behavior (approval modes, Gold Master gates, "
+                               "Knowledge-Gap routing, Vault single-source-of-truth) — not labels only (§14H)."}
