@@ -58,13 +58,34 @@ async def _governed_auto_select_allowed():
     return bool(auth and auth.get("value")) and approved_runs >= 5, approved_runs
 
 
-def _seg_filter(idx, rec, brand):
-    """Per-scene ffmpeg segment: trim → normalize timebase → scale/crop 1280x720 → QRU brand bar."""
+def _seg_filter(idx, rec, brand, duration=None):
+    """Per-scene ffmpeg segment: trim → normalize timebase → scale/crop 1280x720 → QRU brand bar.
+    Duration is set by Director Intelligence™ (arc-based pacing) when provided."""
     start = float(rec.get("suggested_start") or 0)
-    dur = float(rec.get("suggested_duration") or 6)
+    dur = float(duration if duration is not None else (rec.get("suggested_duration") or 6))
     dur = max(3.0, min(8.0, dur))
     return (f"[{idx}:v]trim={start}:{start + dur},setpts=PTS-STARTPTS,fps=30,"
             f"scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1,{brand}[v{idx}]"), dur
+
+
+def _video_graph(seg_filters, durations, transitions, xfade_dur=0.5):
+    """Chain scenes with cinematic crossfades (Director Intelligence™). Falls back to a single scene.
+    Returns (filter_complex_video_string, final_label, total_runtime)."""
+    n = len(seg_filters)
+    parts = list(seg_filters)
+    if n == 1:
+        return ";".join(parts), "[v0]", durations[0]
+    prev = "[v0]"
+    acc = durations[0]
+    for i in range(1, n):
+        t = (transitions[i - 1] or "fade")
+        d = min(xfade_dur, max(0.2, durations[i - 1] / 2, 0.2), durations[i] / 2)
+        offset = max(0.1, acc - d)
+        out = f"[vx{i}]" if i < n - 1 else "[vout]"
+        parts.append(f"{prev}[v{i}]xfade=transition={t}:duration={d:.2f}:offset={offset:.2f}{out}")
+        acc = acc + durations[i] - d
+        prev = out
+    return ";".join(parts), "[vout]", round(acc, 2)
 
 
 async def produce_flagship(payload, actor):
@@ -125,8 +146,16 @@ async def produce_flagship(payload, actor):
             return {"ok": False, "steps": steps, "job_id": job_id, "warnings": warnings}
         step("scene_selection", "ok", f"Auto-selected {len(scenes)} scene(s) for DRAFT PREVIEW ONLY.", scene_count=len(scenes))
 
-    # 2. Per-scene license verify → download → checksum → register (full provenance).
-    source_records, seg_files, seg_filters, concat_labels = [], [], [], []
+    # 2. Director Intelligence™ (MO-027): govern pacing, transitions and cinematic direction before assembly.
+    import director_intelligence as di
+    direction = di.build_plan(scenes, topic, aspect)
+    step("director_intelligence", "ok",
+         f"Directed {len(scenes)} scene(s): arc-based pacing + cinematic transitions. "
+         f"Target runtime ~{direction['target_runtime_seconds']}s. Governed by Art-Direction Standard™ (§6).",
+         applied=direction["applied_by_engine"], suggested=direction["suggested_for_review"])
+
+    # 3. Per-scene license verify → download → checksum → register (full provenance).
+    source_records, seg_files, seg_filters, concat_labels, seg_durations, seg_transitions = [], [], [], [], [], []
     total_target = 0.0
     for i, s in enumerate(scenes):
         sel = s["selected"]
@@ -144,9 +173,13 @@ async def produce_flagship(payload, actor):
             f.write(data)
         checksum = mp._sha256(data)
         rec = sel.get("recommendation") or {}
-        flt, dur = _seg_filter(i, rec, "drawbox=x=0:y=ih-64:w=iw:h=64:color=0x35106A@0.85:t=fill")
+        dplan = direction["scenes"][i]
+        flt, dur = _seg_filter(i, rec, "drawbox=x=0:y=ih-64:w=iw:h=64:color=0x35106A@0.85:t=fill",
+                               duration=dplan["duration_seconds"])
         seg_filters.append(flt)
         concat_labels.append(f"[v{i}]")
+        seg_durations.append(dur)
+        seg_transitions.append(dplan.get("transition_out"))
         total_target += dur
         src_doc = {
             "id": gen_id(), "qru_asset_id": f"QRU-MEDIA-{gen_id()[:8].upper()}", "kind": "video",
@@ -198,8 +231,9 @@ async def produce_flagship(payload, actor):
         inputs += ["-i", "narration.mp3"]
     sub_idx = len(scenes) + (1 if has_narration else 0)
     inputs += ["-i", "captions.srt"]
-    fc = ";".join(seg_filters) + ";" + "".join(concat_labels) + f"concat=n={n}:v=1:a=0[vout]"
-    cmd = [mp.FFMPEG, "-y", *inputs, "-filter_complex", fc, "-map", "[vout]"]
+    video_graph, vlabel, graph_runtime = _video_graph(seg_filters, seg_durations, seg_transitions)
+    fc = video_graph
+    cmd = [mp.FFMPEG, "-y", *inputs, "-filter_complex", fc, "-map", vlabel]
     if has_narration:
         cmd += ["-map", f"{audio_idx}:a"]
     cmd += ["-map", f"{sub_idx}:s", "-c:s", "mov_text",
@@ -213,7 +247,7 @@ async def produce_flagship(payload, actor):
         step("mp4_assembly", "failed", f"ffmpeg error: {proc.stderr[-300:]}")
         return {"ok": False, "steps": steps, "job_id": job_id,
                 "failure": {"stage": "mp4_assembly", "reason": proc.stderr[-300:]}}
-    step("mp4_assembly", "ok", f"Assembled {n}-scene 720p MP4 (~{round(total_target,1)}s) with QRU brand bar + soft captions.")
+    step("mp4_assembly", "ok", f"Directed {n}-scene 720p MP4 (~{round(total_target,1)}s) with cinematic crossfades, QRU brand bar + soft captions.")
 
     # 6. Technical QA.
     probe = mp._ffprobe(out_path)
@@ -320,6 +354,7 @@ async def produce_flagship(payload, actor):
 
     return {"ok": True, "job_id": job_id, "project_id": project_id, "pipeline_version": "MO-012 v1.0",
             "approval_mode": approval_mode, "is_draft_preview": is_draft, "steps": steps, "warnings": warnings,
+            "direction_plan": direction,
             "scene_count": n, "scenes": [{k: r[k] for k in ("scene_index", "scene_text", "learning_purpose",
                                                              "qru_asset_id", "provider", "provider_asset_id",
                                                              "creator_name", "license_type", "checksum")} for r in source_records],

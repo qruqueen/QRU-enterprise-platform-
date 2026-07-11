@@ -26,6 +26,7 @@ export default function FlagshipShowcase() {
   const [productTitle, setProductTitle] = useState("Forex Foundations");
   const [matchRes, setMatchRes] = useState(null);
   const [matching, setMatching] = useState(false);
+  const [directorPlan, setDirectorPlan] = useState(null);
   const [sceneState, setSceneState] = useState({}); // idx -> {selectedId, approved, rejected, locked}
   const [producing, setProducing] = useState(false);
   const [result, setResult] = useState(null);
@@ -42,6 +43,10 @@ export default function FlagshipShowcase() {
     try {
       const { data } = await api.post("/media-library/scene-match", { narration, topic, aspect });
       setMatchRes(data);
+      // Director Intelligence™ (MO-027): plan the cinematic direction for these scenes.
+      api.post("/media-library/director-plan", {
+        topic, aspect, scenes: data.scenes.map((s) => ({ scene_text: s.scene_text, learning_purpose: s.learning_purpose })),
+      }).then((r) => setDirectorPlan(r.data)).catch(() => setDirectorPlan(null));
       // Initialise per-scene state, preserving any locked selections from a prior run.
       setSceneState((prev) => {
         const next = {};
@@ -262,6 +267,41 @@ export default function FlagshipShowcase() {
                 </div>
               );
             })}
+          </div>
+        </Panel>
+      )}
+
+      {/* Director's Plan (MO-027) */}
+      {matchRes && directorPlan && (
+        <Panel title="Director's Plan — Director Intelligence™" icon={Clapperboard} accent="royal" testid="fs-director" className="mb-6">
+          <div className="flex flex-wrap items-center gap-3 mb-3 text-[11px]">
+            <span className="px-2 py-0.5 rounded bg-navy/[0.06] text-navy">Target runtime ~{directorPlan.target_runtime_seconds}s</span>
+            <span className="px-2 py-0.5 rounded bg-royal/10 text-royal border border-royal/20">Governed by §6 Art-Direction Standard™</span>
+          </div>
+          {/* Emotional arc timeline */}
+          <div className="flex items-end gap-1.5 mb-3" data-testid="fs-director-arc">
+            {directorPlan.scenes.map((s) => (
+              <div key={s.scene_index} className="flex-1 text-center">
+                <div className="w-full bg-gold/70 rounded-t" style={{ height: `${Math.max(12, s.energy * 0.5)}px` }} title={`energy ${s.energy}`} />
+                <p className="text-[9px] text-navy font-semibold mt-1">{s.arc_role}</p>
+                <p className="text-[8px] text-muted-foreground">{s.duration_seconds}s · {s.transition_label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3 text-[11px]">
+            <div className="border rounded-md p-2.5 border-emerald-200 bg-emerald-50/40" data-testid="fs-director-applied">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-700 mb-1">Applied by the render engine</p>
+              {directorPlan.applied_by_engine.map((a) => <p key={a} className="text-navy flex items-start gap-1"><span className="text-emerald-500">✓</span> {a}</p>)}
+            </div>
+            <div className="border rounded-md p-2.5 border-amber-200 bg-amber-50/40" data-testid="fs-director-suggested">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700 mb-1">Directed & planned (honest — not yet rendered)</p>
+              {directorPlan.suggested_for_review.map((a) => <p key={a} className="text-navy flex items-start gap-1"><span className="text-amber-500">○</span> {a}</p>)}
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-navy">
+            <p><b className="text-royal">Closing CTA:</b> {directorPlan.closing_cta}</p>
+            <p><b className="text-royal">Reinforcement:</b> {directorPlan.learning_reinforcement}</p>
+            <p><b className="text-royal">Thumbnail hero:</b> Scene {directorPlan.thumbnail_concept.hero_scene_index + 1}</p>
           </div>
         </Panel>
       )}

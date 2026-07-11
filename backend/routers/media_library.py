@@ -147,6 +147,21 @@ async def showcase_modes(user=Depends(get_current_user)):
     return view
 
 
+class DirectorInput(BaseModel):
+    scenes: list
+    topic: Optional[str] = ""
+    aspect: Optional[str] = "landscape"
+
+
+@router.post("/director-plan")
+async def director_plan(data: DirectorInput, user=Depends(get_current_user)):
+    """Director Intelligence™ (MO-027) — preview the governed cinematic Direction Plan before manufacturing."""
+    import director_intelligence as di
+    scenes = [{"scene_index": i, "scene_text": s.get("scene_text", ""), "learning_purpose": s.get("learning_purpose", "")}
+              for i, s in enumerate(data.scenes)]
+    return di.build_plan(scenes, data.topic or "", data.aspect or "landscape")
+
+
 class FlagshipInput(BaseModel):
     product_title: Optional[str] = "QRU Flagship Showcase"
     topic: Optional[str] = ""
