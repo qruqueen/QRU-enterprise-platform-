@@ -45,7 +45,7 @@ export default function FactoryConcierge() {
 
   const onSubmit = (e) => { e.preventDefault(); const t = input.trim(); if (!t) return; setInput(""); send(t); };
 
-  const reset = () => { setMessages([]); setSessionId(null); setState({ stage: "need_outcome", slots: {}, outcome: null, plan: null, canLaunch: false, suggestions: [] }); send("start over", null); };
+  const reset = () => { setMessages([]); setSessionId(null); setState({ stage: "need_outcome", slots: {}, outcome: null, plan: null, canLaunch: false, suggestions: [] }); send("", null); };
 
   const launch = async () => {
     const { slots, plan } = state;

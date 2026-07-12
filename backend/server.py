@@ -73,6 +73,7 @@ from routers.trust import router as trust_router
 from routers.qics import router as qics_router
 from routers.media_library import router as media_library_router
 from routers.factory_os import router as factory_os_router
+from routers.publishing import router as publishing_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
 from routers.misc import (
@@ -126,6 +127,7 @@ for r in [
     qics_router,
     media_library_router,
     factory_os_router,
+    publishing_router,
 ]:
     app.include_router(r)
 
@@ -158,6 +160,8 @@ async def startup():
     await qiks.seed_qiks()
     import constitution_v1
     await constitution_v1.seed_constitution_v1()
+    import publishing_standard
+    await publishing_standard.seed_publishing_standard()
     import seed_forex_seeds
     await seed_forex_seeds.seed()
     import asyncio

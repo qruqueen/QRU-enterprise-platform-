@@ -19,6 +19,8 @@ const NAV = [
   { to: "/concierge", label: "Factory Concierge™", icon: MessageSquareText, testid: "nav-concierge", q: "Tell me what you want — I'll set up the right workflow." },
   { to: "/projects", label: "My Projects", icon: Workflow, testid: "nav-projects", q: "Where is each project — and what's the next step?" },
   { to: "/constitution", label: "Factory Constitution™", icon: Scale, testid: "nav-constitution", q: "What governs everything the Factory makes?" },
+  { to: "/publishing", label: "Publishing Standard™", icon: BookOpenCheck, testid: "nav-publishing", q: "How should every QRU product look and read?" },
+  { to: "/cover-studio", label: "Cover Studio™", icon: Palette, testid: "nav-cover-studio", q: "How do we produce premium, on-brand covers?" },
   { section: "The QRU Experience" },
   { to: "/first-dollar", label: "First Dollar Mode™", icon: Coins, testid: "nav-first-dollar", q: "Will a real customer pay for it?" },
   { to: "/factory-readiness", label: "Factory Readiness™", icon: Gauge, testid: "nav-factory-readiness", q: "Which product should we manufacture first?" },

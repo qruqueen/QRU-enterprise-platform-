@@ -143,8 +143,13 @@ async def handle_message(session_id, message, use_ai=False, name="Founder"):
     slots = session["slots"]
     message = (message or "").strip()
 
+    # Reset short-circuit: clear slots and render the greeting WITHOUT parsing "start over" as a topic.
     if re.search(r"\b(start over|restart|reset|new request|clear)\b", message.lower()):
         slots = {"outcome_id": "", "topic": "", "audience": "", "goal": ""}
+        await db.concierge_sessions.update_one(
+            {"session_id": session["session_id"]},
+            {"$set": {"slots": slots, "updated_at": now_iso()}})
+        message = ""
 
     # Parse this turn — AI (optional) first, deterministic always as the reliable fallback.
     parsed = (await _ai_parse(message)) if (use_ai and message) else None
