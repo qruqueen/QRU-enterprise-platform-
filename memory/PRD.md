@@ -218,7 +218,26 @@ Founder Beta Dashboard, Automatic Knowledge Extraction, PreviewViewer. (all VERI
 - Foundational Principle: a Factory-manufactured product NEVER requires manual re-upload into another module. `routers/youtube.py`: `GET /factory-assets` lists vault videos (provider qru_production, file on disk); `POST /publish` now accepts `factory_asset_id` → resolves the vault MP4 (path validated inside media root), auto-fills title/description/tags from the asset + Production Acceptance Record, extracts a real first-frame thumbnail via ffmpeg, publishes via the YouTube Data API, and NEVER deletes the vault master. Draft previews are blocked from publishing. On success, `media_assets` is stamped with `youtube_video_id`/`youtube_url`. Verified with a REAL publish to the connected channel "Quest Understand" (real Video ID). Frontend `YouTubePublisher.js`: source toggle (Factory-manufactured default / External manual upload); Factory mode = dropdown picker, no file browse, auto-filled metadata; manual mode retained for external videos only.
 
 ## Roadmap (Founder-approved, remaining)
-### QRU Verify & Promote™ Workflow — DONE (2026-07-12, iteration_54, backend curl-verified + frontend 100%)
+### QRU Storyboard Master™ (Media Manufacturing) — DONE (2026-07-12, iteration_56, curl + frontend 100%)
+- Inside Product Manufacturing Engine™ (NO new top-level engine). `storyboard_master.py`: one approved KR → one versioned Storyboard Master™ (scene-by-scene: objective, KR section, narration, visual direction, on-screen text, motion, audio, duration, accessibility, citation, CTA, assessment) → render selected formats. Routes in `routers/media_studio.py` (`/api/media-studio/order|pilot|file`). Frontend `StoryboardStudio.js` (/storyboard-studio, nav).
+- Format recipes: youtube_video, promo_short (9:16), audio_lesson, teacher_presentation, student_presentation. Real renders: PPTX (teacher/student, 8 slides), governed title cards (SVG→PNG 1920x1080), narration transcript + shot list/caption script. Final MP4 assembly reuses EXISTING Flagship Showcase pipeline (not duplicated) — honestly labelled STORYBOARD_READY.
+- Governance: Media Quality Gate (7 checks), status model (DRAFT…QRU_GOLD_STANDARD), voice profiles, motion language, Enterprise Memory provenance. **Knowledge-First verified**: media from unverified KR held at VERIFICATION_REQUIRED (treasure RETURN, 1 blocking); a successful render is NOT Gold Standard. Pilot: 1 KR → 1 storyboard → 5 outputs, all 7/7 at DRAFT.
+- Factory Concierge™ wired: "create a youtube video/audiobook/presentation" → finds verified KR, returns media_route=/storyboard-studio + media_kr_id.
+
+### STD-DESIGN-0001 QRU Visual Manufacturing Standard™ — ADHERED via inheritance (no new module, per directive)
+- One governed visual family reused across products: `poster_studio` reuses `publishing_standard` brand tokens/DOC_ID; `storyboard_master` title cards reuse `poster_studio` SVG primitives (shield/seal/palette). Covers, posters, media all inherit the same standard + Pre-Ship/Treasure gates.
+
+### Poster Studio™ (Process/Formula, first proven template) — DONE (2026-07-12, iteration_55, 100%)
+- `poster_studio.py` + `PosterStudio.js` (/poster-studio). Governed SVG→PNG+vector PDF; templates control all text/numbers/citations/layout; AI art composited only. Knowledge-First gating, Pre-Ship Gate, status model, inline preview + gallery. Extend to remaining 4 archetypes next.
+
+### Cover → Product attachment + rendering fixes — DONE (2026-07-12)
+- Deliverable renderer resolves attached governed cover first (full-bleed PDF, no text overlay collision); EPUB embeds real cover. Cover Studio 'Attach to Product' auto re-renders deliverable.
+
+### My Projects 'View items' expander — DONE (2026-07-12, iteration_56)
+- `continuity.project_items()` + GET `/api/factory-os/projects/{id}/items`; `ProjectsContinuity.js` expander shows governed Video Script & Narration (from verified KR, deterministic) + deliverable downloads.
+
+### QRU Verify & Promote™ Workflow — DONE (2026-07-11)
+2, iteration_54, backend curl-verified + frontend 100%)
 - Integrated into the existing Refinement engine (no new module — architectural freeze respected). `refinement_engine.py`: `kr_claims`, `verify_and_promote`, `_reverify_with_sources`, `_cascade_products`, `kr_lineage`. Routes in `routers/refinement.py`: GET `/api/refinement/kr/{id}/claims`, POST `/api/refinement/verify-promote`, GET `/api/refinement/kr/{id}/lineage`.
 - Human attaches verified sources to each customer-facing claim (definition, explanation) → independent Verification Lion re-run → Treasure re-check → promote KR `APPROVED_INTERNAL` → `VERIFIED_EXTERNAL` (Gold Standard Knowledge Record™) with version bump + immutable Enterprise Memory lineage (`db.kr_lineage`).
 - **Cascade**: promotion revalidates every derived product; pre-ship-clean products become `Gold Standard Product™` (6 per KR proven). **HONESTY INVARIANT verified**: no promotion unless every claim has ≥1 approved source AND explicit human confirmation — negative path stays internal, no faked states.
