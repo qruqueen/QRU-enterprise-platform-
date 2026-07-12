@@ -5,7 +5,9 @@ import { PageHeader } from "@/components/shared";
 import { ManufacturingGPS } from "@/components/ManufacturingGPS";
 import { Panel, StatusChip, VerifiedBadge } from "@/components/qru";
 import { toast } from "sonner";
-import { Loader2, Workflow, CheckCircle2, Circle, Clock, ShieldAlert, Lock, Play, Pause, Square, ArrowRight, ThumbsUp, Award } from "lucide-react";
+import { Loader2, Workflow, CheckCircle2, Circle, Clock, ShieldAlert, Lock, Play, Pause, Square, ArrowRight, ThumbsUp, Award, FileText, ChevronDown, ChevronRight, Download } from "lucide-react";
+
+const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
 
 const STAGE_ICON = { complete: CheckCircle2, in_progress: Clock, needs_approval: ShieldAlert, blocked: Lock, pending: Circle, pending_connector: Lock };
 const STAGE_TONE = { complete: "emerald", in_progress: "blue", needs_approval: "amber", blocked: "rose", pending: "slate" };
@@ -15,6 +17,22 @@ export default function ProjectsContinuity() {
   const [projects, setProjects] = useState(null);
   const [effort, setEffort] = useState(null);
   const [busy, setBusy] = useState(null);
+  const [itemsOpen, setItemsOpen] = useState({});
+  const [items, setItems] = useState({});
+  const [itemsLoading, setItemsLoading] = useState(null);
+
+  const toggleItems = async (pid) => {
+    const willOpen = !itemsOpen[pid];
+    setItemsOpen((o) => ({ ...o, [pid]: willOpen }));
+    if (willOpen && !items[pid]) {
+      setItemsLoading(pid);
+      try {
+        const { data } = await api.get(`/factory-os/projects/${pid}/items`);
+        setItems((m) => ({ ...m, [pid]: data }));
+      } catch { toast.error("Could not load items."); }
+      finally { setItemsLoading(null); }
+    }
+  };
 
   const load = () => api.get("/factory-os/projects").then((r) => setProjects(r.data.projects)).catch(() => setProjects(false));
   useEffect(() => {
@@ -136,6 +154,57 @@ export default function ProjectsContinuity() {
                       <button onClick={() => nav(cur.route)} data-testid={`project-setup-${p.id}`} className="text-[11px] inline-flex items-center gap-1 bg-gold text-navy px-3 py-1.5 rounded-sm font-medium">{cur.id === "knowledge_record" || cur.kind === "auto" ? "Manufacture the Knowledge Record" : "Set up destination"} <ArrowRight className="w-3 h-3" /></button>
                     )}
                   </div>
+                </div>
+
+                {/* View items — governed script/narration + produced deliverables */}
+                <div className="mt-3 border-t pt-3" data-testid={`project-items-wrap-${p.id}`}>
+                  <button onClick={() => toggleItems(p.id)} data-testid={`project-view-items-${p.id}`}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-bold text-royal hover:text-navy transition-colors">
+                    <FileText className="w-3.5 h-3.5" /> View items {itemsOpen[p.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                  </button>
+                  {itemsOpen[p.id] && (
+                    <div className="mt-2" data-testid={`project-items-${p.id}`}>
+                      {itemsLoading === p.id ? (
+                        <p className="text-[11px] text-muted-foreground flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Loading items…</p>
+                      ) : items[p.id] ? (
+                        <div className="space-y-3">
+                          {/* Script & narration */}
+                          {items[p.id].script?.available ? (
+                            <div className="border border-navy/10 rounded-md p-3 bg-navy/[0.02]" data-testid={`project-script-${p.id}`}>
+                              <p className="text-[10px] font-bold uppercase tracking-wide text-navy mb-1.5">Video Script & Narration <span className="text-muted-foreground font-normal">· from {items[p.id].kr?.code || "verified KR"}</span></p>
+                              <ol className="space-y-1.5 list-decimal ml-4">
+                                {items[p.id].script.scenes.map((sc) => (
+                                  <li key={sc.n} className="text-[11px] text-navy">
+                                    <span>{sc.beat}</span>
+                                    <span className="block text-[10px] text-muted-foreground italic">Visual: {sc.visual}</span>
+                                  </li>
+                                ))}
+                              </ol>
+                            </div>
+                          ) : items[p.id].script?.reason ? (
+                            <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2" data-testid={`project-script-pending-${p.id}`}>{items[p.id].script.reason}</p>
+                          ) : null}
+
+                          {/* Deliverables */}
+                          {items[p.id].deliverables?.length > 0 ? (
+                            <div data-testid={`project-deliverables-${p.id}`}>
+                              <p className="text-[10px] font-bold uppercase tracking-wide text-navy mb-1">Produced deliverables</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {items[p.id].deliverables.map((d, i) => (
+                                  <a key={i} href={`${BACKEND}${d.url}`} target="_blank" rel="noreferrer" data-testid={`project-deliverable-${p.id}-${i}`}
+                                    className="inline-flex items-center gap-1 text-[10px] border border-navy/15 rounded-sm px-2 py-1 text-navy hover:border-royal">
+                                    <Download className="w-3 h-3" /> {d.label}
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-[11px] text-muted-foreground">No downloadable deliverables produced yet for this project.</p>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
 
                 {/* Auto-linked published destinations (zero-touch) */}

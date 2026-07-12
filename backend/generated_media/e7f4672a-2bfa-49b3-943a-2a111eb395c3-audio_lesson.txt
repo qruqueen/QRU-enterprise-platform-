@@ -1,0 +1,13 @@
+[Scene 1] What if you finally understood What Is Architecture?? Let's make it simple.
+
+[Scene 2] What Is Architecture is how the parts of a system are organized so they work together, decisions are authorized, quality is protected, and parts can evolve without breaking the whole.
+
+[Scene 3] This record explains What Is Architecture? in plain language and connects it to how the QRU Factory works.
+
+[Scene 4] A concrete QRU Factory example of what is architecture.
+
+[Scene 5] Connects to related benchmark concepts Feeds Product Manufacturing
+
+[Scene 6] Prompts are not architecture Adding modules is not the same as adding capability
+
+[Scene 7] That's the QRU way — we don't just teach information, we create understanding.

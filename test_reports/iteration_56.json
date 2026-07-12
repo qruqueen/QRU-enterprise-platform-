@@ -1,0 +1,61 @@
+{
+  "summary": "Frontend-only verification of (1) My Projects 'View items' expander and (2) Storyboard Studio media manufacturing (verified KR + 5-output pilot + unverified KR Knowledge-First gating). All 6 acceptance criteria pass.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Storyboard Studio", "issues": ["React hydration console warning: <span> cannot be a child of <option> on data-testid='storyboard-kr'. Root cause: emergent editor's data-ve-dynamic wrapper injects a <span style=display:contents> around the option's text expression at build/runtime. Browsers strip the <span> inside <option>, so functionality is unaffected, but a console error is logged on every page mount. Not authored in StoryboardStudio.js source (line 70 renders plain text). Cosmetic/console-only."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "ProjectsContinuity.js line 32 uses a bare `catch {}` — losing the error; consider `catch (e) { console.error(e); toast.error(...) }` for observability.",
+    "StoryboardStudio.js option text is plain, but emergent editor injects a <span> wrapper that violates HTML nesting — if this warning must be silenced, dropdowns could be replaced with a custom listbox / shadcn Select to avoid <option> children rules."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only per request)", "frontend": "100%"},
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None. Used existing verified KR 'What Is Governance?' (KMR-1A93CE) and unverified KR 'What Is Architecture?' (KMR-1569B2).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Founder has 17 projects. Verified KRs: 2 (marked with ✓ in storyboard-kr dropdown). Unverified: 32 (• prefix). Storyboard Studio pilot produces 5 products (youtube_video, promo_short, audio_lesson, teacher_presentation, student_presentation) each with title card/script/PPTX files. Backend /api/factory-os/projects/{id}/items returns {script:{available,scenes,reason}, deliverables:[], kr:{code}}. Downloads open in new tab via BACKEND-prefixed URLs. Hydration warning on storyboard-kr is a benign emergent-editor injection.",
+  "flow_results": {
+    "my_projects_view_items": {
+      "buttons_found": 17,
+      "sampled": 5,
+      "results": [
+        {"pid_prefix": "0a5373ad", "kind": "script", "scenes": 10, "collapse_ok": true},
+        {"pid_prefix": "6f85ae94", "kind": "empty-fallback (no crash)", "scenes": 0, "collapse_ok": true},
+        {"pid_prefix": "ffa6276d", "kind": "empty-fallback (no crash)", "scenes": 0, "collapse_ok": true},
+        {"pid_prefix": "c1da927c", "kind": "deliverables", "scenes": 0, "collapse_ok": true},
+        {"pid_prefix": "ac9fe569", "kind": "pending", "scenes": 0, "collapse_ok": true}
+      ]
+    },
+    "storyboard_studio_verified": {
+      "kr": "What Is Governance? (KMR-1A93CE)",
+      "storyboard_code": "SBM-EE4F62",
+      "scenes": 7,
+      "products": {"youtube_video": {"files": 2, "status": "DRAFT", "treasure": "TREASURE ✓"}, "audio_lesson": {"files": 1, "status": "DRAFT", "treasure": "TREASURE ✓"}, "teacher_presentation": {"files": 1, "status": "DRAFT", "treasure": "TREASURE ✓"}},
+      "gold_standard": false
+    },
+    "storyboard_pilot": {
+      "kr": "What Is Governance? (KMR-1A93CE)",
+      "storyboard_code": "SBM-B1DF10",
+      "scenes": 7,
+      "all_five_products_present": true,
+      "products": ["youtube_video", "promo_short", "audio_lesson", "teacher_presentation", "student_presentation"]
+    },
+    "storyboard_unverified": {
+      "kr": "What Is Architecture? (KMR-1569B2)",
+      "storyboard_code": "SBM-E7F467",
+      "master_chip": "Internal Draft",
+      "note": "Source KR is not externally verified — media is held at INTERNAL DRAFT (Verify & Promote the KR first).",
+      "product_status": "VERIFICATION REQUIRED",
+      "treasure_status": "Return (NOT Treasure ✓)",
+      "quality_gate": "6/7 with 1 blocking",
+      "toast": "Held at INTERNAL DRAFT — source KR is not externally verified."
+    }
+  }
+}

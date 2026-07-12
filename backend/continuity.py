@@ -281,8 +281,113 @@ async def set_mode(pid, mode, actor):
     return {**p, "summary": _summary(p)}
 
 
+def _sentences(text):
+    import re
+    parts = re.split(r"(?<=[.!?])\s+", (text or "").strip())
+    return [s.strip() for s in parts if len(s.strip()) > 3]
+
+
+async def _load_kr_full(kr_ref):
+    """Resolve the full Knowledge Record for a project across engine + legacy stores."""
+    if not kr_ref:
+        return None
+    kid = kr_ref.get("id")
+    code = kr_ref.get("kr_code") or kr_ref.get("code")
+    for coll, idf in ((db.knowledge_engine_records, "id"), (db.knowledge_records, "id")):
+        if kid:
+            doc = await coll.find_one({idf: kid}, {"_id": 0})
+            if doc:
+                return doc
+    if code:
+        doc = await db.knowledge_records.find_one({"kr_code": code}, {"_id": 0}) \
+            or await db.knowledge_engine_records.find_one({"kr_code": code}, {"_id": 0})
+        if doc:
+            return doc
+    return None
+
+
+def _kr_text_blocks(kr):
+    """Pull human-readable explanatory text from whatever KR schema is present (deterministic, no AI)."""
+    if not kr:
+        return []
+    blocks = []
+    sec = kr.get("sections")
+    if isinstance(sec, dict):
+        for k in ("definition", "explanation", "examples", "common_misunderstandings"):
+            v = sec.get(k)
+            if isinstance(v, list):
+                v = " ".join(str(x) for x in v)
+            if v:
+                blocks.append(str(v))
+    for k in ("simple_answer", "verified_truth", "qru_translation", "deep_roots", "summary", "overview", "content"):
+        v = kr.get(k)
+        if isinstance(v, list):
+            v = " ".join(str(x) for x in v)
+        if v:
+            blocks.append(str(v))
+    return blocks
+
+
+async def project_items(pid):
+    """Viewable produced items for a project: the governed Video Script & Narration (from the verified
+    KR — never AI-authored) and any manufactured deliverables. Knowledge-First & honest: if no KR text
+    exists yet, the script is marked not-yet-available with a clear reason."""
+    p = _clean(await db.continuity_projects.find_one({"id": pid}))
+    if not p:
+        return None
+    kr = await _load_kr_full(p.get("knowledge_record"))
+    topic = p.get("topic") or (p.get("knowledge_record") or {}).get("topic") or "this topic"
+    blocks = _kr_text_blocks(kr)
+    text = " ".join(blocks)
+    sentences = _sentences(text)
+
+    is_audio_video = p.get("outcome_id") in ("video", "podcast", "audiobook")
+    script = {"available": False, "reason": "", "narration": [], "scenes": []}
+    if is_audio_video:
+        if sentences:
+            hook = f"What if you finally understood {topic}? Let's make it simple."
+            close = "That's the QRU way — we don't just teach information, we create understanding."
+            narration = [hook] + sentences[:8] + [close]
+            script = {
+                "available": True,
+                "source": (kr or {}).get("kr_code") or (p.get("knowledge_record") or {}).get("kr_code"),
+                "narration": narration,
+                "scenes": [{"n": i + 1, "beat": ln,
+                            "visual": "Open on a familiar, relatable scene." if i == 0 else
+                                      ("Close on an empowered, transformed viewer." if i == len(narration) - 1 else
+                                       "Reveal the idea with a clean supporting visual.")}
+                           for i, ln in enumerate(narration)],
+            }
+        else:
+            script = {"available": False,
+                      "reason": "The Video Script & Narration will be generated from a verified Knowledge Record. This project's Knowledge Record has no explanatory content yet — manufacture/verify it first.",
+                      "narration": [], "scenes": []}
+
+    # Deliverables produced for this project's KR (products + posters), honest links.
+    deliverables = []
+    kr_id = (kr or {}).get("id") or (p.get("knowledge_record") or {}).get("id")
+    if kr_id:
+        async for prod in db.products.find({"knowledge_record_id": kr_id}, {"_id": 0}).limit(20):
+            cd = prod.get("customer_deliverable") or {}
+            for f in cd.get("files", []):
+                deliverables.append({"label": f"{prod.get('title', prod.get('product_type',''))} · {f.get('label', f.get('format','').upper())}",
+                                     "format": f.get("format"), "url": f.get("url"), "source": "product"})
+        async for pa in db.poster_assets.find({"kr_id": kr_id}, {"_id": 0}).limit(20):
+            deliverables.append({"label": f"{pa.get('title','Poster')} · Poster (PNG)", "format": "png",
+                                 "url": f"/api/publishing/poster/{pa['id']}/file?format=png", "source": "poster"})
+            deliverables.append({"label": f"{pa.get('title','Poster')} · Poster (PDF)", "format": "pdf",
+                                 "url": f"/api/publishing/poster/{pa['id']}/file?format=pdf", "source": "poster"})
+
+    return {
+        "project_id": pid, "outcome": p.get("outcome_name"), "topic": topic,
+        "kr": {"found": bool(kr), "code": (kr or {}).get("kr_code") or (p.get("knowledge_record") or {}).get("kr_code"),
+               "topic": (kr or {}).get("topic") or (kr or {}).get("title")},
+        "script": script, "deliverables": deliverables,
+    }
+
+
+
 # ---- Zero-touch effort reduction (Founder Effort Reduction Directive) ----
-# These hooks let the Factory advance a project's stages automatically as real work completes,
 # eliminating manual status tracking and manual re-linking between modules.
 
 async def on_production_complete(pid, qru_asset_id, actor, minutes_saved=6):

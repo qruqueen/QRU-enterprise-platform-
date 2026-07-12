@@ -138,6 +138,9 @@ def _outcome_suggestions():
             for o in fos.OUTCOMES]
 
 
+_MEDIA_OUTCOMES = {"video", "presentation", "podcast", "audiobook", "course"}
+
+
 async def handle_message(session_id, message, use_ai=False, name="Founder"):
     session = await _get_session(session_id)
     slots = session["slots"]
@@ -168,6 +171,8 @@ async def handle_message(session_id, message, use_ai=False, name="Founder"):
     reply = ""
     suggestions = []
     can_launch = False
+    media_route = None
+    media_kr_id = None
 
     if not slots["outcome_id"]:
         stage = "need_outcome"
@@ -187,6 +192,9 @@ async def handle_message(session_id, message, use_ai=False, name="Founder"):
             stage = "ready"
             can_launch = True
             kr = gap["knowledge_record"]
+            media_kr_id = kr.get("id")
+            if slots["outcome_id"] in _MEDIA_OUTCOMES:
+                media_route = "/storyboard-studio"
             reply = (f"I found a verified Knowledge Record for this: {kr['kr_code']} \u2014 {kr['title']}. "
                      f"Your {outcome['name']} on \u201c{slots['topic']}\u201d"
                      + (f" for {slots['audience']}" if slots['audience'] else "")
@@ -194,6 +202,10 @@ async def handle_message(session_id, message, use_ai=False, name="Founder"):
                      f"I'll run it through {plan['launch']['workflow']} with design, QA and human approval "
                      "where required. Shall I start? You can also just say \u201cchange it to a workbook\u201d "
                      "or give me a different topic.")
+            if media_route:
+                reply += (" Because this is a media product, I'll build one governed Storyboard Master\u2122 from "
+                          "this Knowledge Record and render every format you select from it \u2014 no content is "
+                          "rewritten. Open Storyboard Studio\u2122 to choose formats and manufacture.")
         else:
             stage = "knowledge_gap"
             reply = (f"Honest answer: \u201c{slots['topic']}\u201d has not yet been manufactured as a governed "
@@ -216,6 +228,8 @@ async def handle_message(session_id, message, use_ai=False, name="Founder"):
         "outcome": outcome_view,
         "plan": plan,
         "can_launch": can_launch,
+        "media_route": media_route,
+        "media_kr_id": media_kr_id,
         "suggestions": suggestions,
         "ai_used": ai_used,
         "governed_by": ["QRU-CON-0001 §7", "§8", "§3.1"],

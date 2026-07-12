@@ -25,6 +25,7 @@ const NAV = [
   { to: "/publishing", label: "Publishing Standard™", icon: BookOpenCheck, testid: "nav-publishing", q: "How should every QRU product look and read?" },
   { to: "/cover-studio", label: "Cover Studio™", icon: Palette, testid: "nav-cover-studio", q: "How do we produce premium, on-brand covers?" },
   { to: "/poster-studio", label: "Poster Studio™", icon: LayoutTemplate, testid: "nav-poster-studio", q: "How do we manufacture governed infographic posters?" },
+  { to: "/storyboard-studio", label: "Storyboard Studio™", icon: Clapperboard, testid: "nav-storyboard-studio", q: "How do we turn one Knowledge Record into many media formats?" },
   { section: "The QRU Experience" },
   { to: "/first-dollar", label: "First Dollar Mode™", icon: Coins, testid: "nav-first-dollar", q: "Will a real customer pay for it?" },
   { to: "/factory-readiness", label: "Factory Readiness™", icon: Gauge, testid: "nav-factory-readiness", q: "Which product should we manufacture first?" },

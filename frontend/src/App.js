@@ -85,6 +85,7 @@ import FactoryConcierge from "@/pages/FactoryConcierge";
 import PublishingStandard from "@/pages/PublishingStandard";
 import CoverStudio from "@/pages/CoverStudio";
 import PosterStudio from "@/pages/PosterStudio";
+import StoryboardStudio from "@/pages/StoryboardStudio";
 import ManufacturingFlow from "@/pages/ManufacturingFlow";
 import EnterpriseArchitecture from "@/pages/EnterpriseArchitecture";
 import Refinement from "@/pages/Refinement";
@@ -188,6 +189,7 @@ function EnterpriseRoutes() {
         <Route path="publishing" element={<PublishingStandard />} />
         <Route path="cover-studio" element={<CoverStudio />} />
         <Route path="poster-studio" element={<PosterStudio />} />
+        <Route path="storyboard-studio" element={<StoryboardStudio />} />
         <Route path="flow" element={<ManufacturingFlow />} />
         <Route path="architecture" element={<EnterpriseArchitecture />} />
         <Route path="refinement" element={<Refinement />} />

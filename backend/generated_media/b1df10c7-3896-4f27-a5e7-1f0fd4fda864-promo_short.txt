@@ -1,0 +1,55 @@
+SCENE 1 (6s) — Opening
+  NARRATION: What if you finally understood What Is Governance?? Let's make it simple.
+  ON-SCREEN: What Is Governance?
+  VISUAL: Open on a familiar, relatable scene; slow zoom in.
+  MOTION: Elegant fade in
+  AUDIO: Warm intro tone, low bed
+  ACCESSIBILITY: Caption + high contrast title
+
+SCENE 2 (12s) — Definition
+  NARRATION: What Is Governance is the rules, policies and authority that keep a system trustworthy — what is allowed, required, prohibited, and who authorizes change.
+  ON-SCREEN: Definition
+  VISUAL: Reveal the idea with one clean supporting visual; purposeful highlight.
+  MOTION: Diagram reveal
+  AUDIO: Narration forward, bed low
+  ACCESSIBILITY: Accurate captions; readable placement
+
+SCENE 3 (12s) — Explanation
+  NARRATION: This record explains What Is Governance? in plain language and connects it to how the QRU Factory works.
+  ON-SCREEN: Explanation
+  VISUAL: Reveal the idea with one clean supporting visual; purposeful highlight.
+  MOTION: Diagram reveal
+  AUDIO: Narration forward, bed low
+  ACCESSIBILITY: Accurate captions; readable placement
+
+SCENE 4 (12s) — Examples
+  NARRATION: A concrete QRU Factory example of what is governance.
+  ON-SCREEN: Examples
+  VISUAL: Reveal the idea with one clean supporting visual; purposeful highlight.
+  MOTION: Diagram reveal
+  AUDIO: Narration forward, bed low
+  ACCESSIBILITY: Accurate captions; readable placement
+
+SCENE 5 (12s) — Relationships
+  NARRATION: Connects to related benchmark concepts Feeds Product Manufacturing
+  ON-SCREEN: Relationships
+  VISUAL: Reveal the idea with one clean supporting visual; purposeful highlight.
+  MOTION: Diagram reveal
+  AUDIO: Narration forward, bed low
+  ACCESSIBILITY: Accurate captions; readable placement
+
+SCENE 6 (12s) — Common Misunderstandings
+  NARRATION: Automation must remove effort, not judgment
+  ON-SCREEN: Common Misunderstandings
+  VISUAL: Reveal the idea with one clean supporting visual; purposeful highlight.
+  MOTION: Diagram reveal
+  AUDIO: Narration forward, bed low
+  ACCESSIBILITY: Accurate captions; readable placement
+
+SCENE 7 (6s) — Close
+  NARRATION: That's the QRU way — we don't just teach information, we create understanding.
+  ON-SCREEN: Quest for Real Understanding™
+  VISUAL: Close on an empowered, transformed viewer; QRU brand outro.
+  MOTION: Slow zoom out + fade
+  AUDIO: Uplifting resolve
+  ACCESSIBILITY: Caption + brand seal alt-text

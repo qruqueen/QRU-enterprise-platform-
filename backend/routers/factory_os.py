@@ -74,6 +74,16 @@ async def get_project(pid: str, user=Depends(get_current_user)):
     return p
 
 
+@router.get("/projects/{pid}/items")
+async def project_items(pid: str, user=Depends(get_current_user)):
+    res = await cont.project_items(pid)
+    if res is None:
+        raise HTTPException(404, "Project not found.")
+    return res
+
+
+
+
 @router.post("/projects/{pid}/advance")
 async def advance_project(pid: str, user=Depends(get_current_user)):
     p = await cont.advance(pid, user["name"])
