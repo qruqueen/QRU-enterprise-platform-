@@ -188,6 +188,51 @@ async def list_covers(user=Depends(get_current_user)):
     return {"covers": docs, "states": COVER_STATES}
 
 
+@router.get("/attachable-products")
+async def attachable_products(user=Depends(get_current_user)):
+    """Products (db.products) eligible to receive a governed cover for deliverable rendering."""
+    rows = [p async for p in db.products.find(
+        {}, {"_id": 0, "id": 1, "title": 1, "product_type": 1, "status": 1, "product_code": 1, "cover_asset_id": 1}
+    ).sort("created_at", -1).limit(120)]
+    return {"products": rows}
+
+
+class CoverAttachInput(BaseModel):
+    product_id: str
+
+
+@router.post("/cover/{cid}/attach")
+async def cover_attach(cid: str, data: CoverAttachInput, user=Depends(get_current_user)):
+    """Bind an APPROVED/GOLD cover to a product and auto re-render the deliverable with the real cover.
+    Treasure Standard™: a DRAFT_CONCEPT or spec-only cover can never ship on a real deliverable; the
+    binding is recorded in the product's cover lineage — no silent swaps."""
+    cover = await db.cover_assets.find_one({"id": cid}, {"_id": 0})
+    if not cover:
+        raise HTTPException(404, "Cover not found.")
+    if cover.get("state") not in ("APPROVED_DESIGN", "GOLD_MASTER"):
+        raise HTTPException(400, "Only an APPROVED_DESIGN or GOLD_MASTER cover can be attached to a product (Treasure Standard™).")
+    if not cover.get("file") or not os.path.exists(cover["file"]):
+        raise HTTPException(400, "This cover has no rendered image file to attach (spec-only concept).")
+    product = await db.products.find_one({"id": data.product_id})
+    if not product:
+        raise HTTPException(404, "Product not found.")
+    binding = {"cover_asset_id": cid, "cover_state": cover["state"],
+               "attached_by": user.get("name", "Founder"), "at": now_iso()}
+    await db.products.update_one({"id": data.product_id}, {
+        "$set": {"cover_asset_id": cid, "cover_binding": binding, "updated_at": now_iso()},
+        "$push": {"cover_lineage": binding}})
+    import deliverable_renderer as dr
+    rendered = await dr.ensure_deliverable(data.product_id, actor=user.get("name", "Founder"))
+    files = (rendered or {}).get("files", []) if isinstance(rendered, dict) else []
+    return {"ok": True, "cover_id": cid, "cover_state": cover["state"],
+            "product_id": data.product_id, "product_title": product.get("title"),
+            "rendered": bool(rendered),
+            "download_url": (rendered or {}).get("download_url"),
+            "preview_url": (rendered or {}).get("preview_url"),
+            "files": files,
+            "note": f"Cover attached and deliverable re-rendered with the real cover ({cover['state']})."}
+
+
 @router.get("/cover/{cid}/file")
 async def cover_file(cid: str):
     doc = await db.cover_assets.find_one({"id": cid}, {"_id": 0})

@@ -265,14 +265,24 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
         return None
     kr = await db.knowledge_records.find_one({"id": p.get("knowledge_record_id")}) if p.get("knowledge_record_id") else {}
 
-    # branded cover (reuse existing if rendered, else compose deterministically)
+    # branded cover — governed priority:
+    #   1) an ATTACHED Cover Studio cover (APPROVED_DESIGN/GOLD_MASTER, bound via /cover/{id}/attach)
+    #   2) a legacy rendering-engine cover_url
+    #   3) deterministic premium composition (fallback so publishing is never blocked)
     cover_bytes = None
-    cu = p.get("cover_url")
-    if cu:
-        path = os.path.join(re_engine.ASSET_DIR, cu.split("/")[-1])
-        if os.path.exists(path):
-            with open(path, "rb") as f:
+    cover_asset_id = p.get("cover_asset_id")
+    if cover_asset_id:
+        ca = await db.cover_assets.find_one({"id": cover_asset_id}, {"_id": 0})
+        if ca and ca.get("file") and os.path.exists(ca["file"]):
+            with open(ca["file"], "rb") as f:
                 cover_bytes = f.read()
+    if cover_bytes is None:
+        cu = p.get("cover_url")
+        if cu:
+            path = os.path.join(re_engine.ASSET_DIR, cu.split("/")[-1])
+            if os.path.exists(path):
+                with open(path, "rb") as f:
+                    cover_bytes = f.read()
     if cover_bytes is None:
         cover_bytes = dl.premium_cover(p, kr or {})
 

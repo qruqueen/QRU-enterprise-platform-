@@ -3,7 +3,7 @@ import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge } from "@/components/qru";
 import { toast } from "sonner";
-import { Loader2, Image as ImageIcon, Sparkles, ShieldCheck, CheckCircle2, RotateCcw, Ban, Award, Wand2 } from "lucide-react";
+import { Loader2, Image as ImageIcon, Sparkles, ShieldCheck, CheckCircle2, RotateCcw, Ban, Award, Wand2, Link as LinkIcon } from "lucide-react";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
 
@@ -30,11 +30,29 @@ export default function CoverStudio() {
   const [busy, setBusy] = useState(false);
   const [covers, setCovers] = useState([]);
   const [states, setStates] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [attachFor, setAttachFor] = useState(null);
+  const [selProduct, setSelProduct] = useState("");
+  const [attaching, setAttaching] = useState(false);
+  const [attachResult, setAttachResult] = useState({});
 
   const load = () => api.get("/publishing/covers").then((r) => { setCovers(r.data.covers); setStates(r.data.states); }).catch(() => {});
-  useEffect(() => { load(); }, []);
+  const loadProducts = () => api.get("/publishing/attachable-products").then((r) => setProducts(r.data.products || [])).catch(() => {});
+  useEffect(() => { load(); loadProducts(); }, []);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const attachCover = async (cid) => {
+    if (!selProduct) return toast.error("Choose a product to attach the cover to.");
+    setAttaching(true);
+    try {
+      const { data } = await api.post(`/publishing/cover/${cid}/attach`, { product_id: selProduct });
+      setAttachResult((r) => ({ ...r, [cid]: data }));
+      toast.success(data.note || "Cover attached and deliverable re-rendered.");
+      setAttachFor(null); setSelProduct(""); loadProducts();
+    } catch (e) { toast.error(e.response?.data?.detail || "Attach failed."); }
+    finally { setAttaching(false); }
+  };
 
   const generate = async () => {
     if (!form.title.trim()) return toast.error("Enter a title.");
@@ -137,6 +155,41 @@ export default function CoverStudio() {
                           );
                         })}
                       </div>
+
+                      {/* Attach to Product — only governed (APPROVED/GOLD) covers can bind to a deliverable */}
+                      {(c.state === "APPROVED_DESIGN" || c.state === "GOLD_MASTER") && c.file_url && (
+                        <div className="mt-2 pt-2 border-t border-navy/10" data-testid={`cover-attach-block-${c.id}`}>
+                          {attachFor === c.id ? (
+                            <div className="space-y-1.5">
+                              <select data-testid={`cover-attach-select-${c.id}`} value={selProduct} onChange={(e) => setSelProduct(e.target.value)}
+                                className="w-full border rounded-sm p-1.5 text-[11px]">
+                                <option value="">Select a product…</option>
+                                {products.map((p) => <option key={p.id} value={p.id}>{p.title || p.product_code || p.id} · {p.product_type}</option>)}
+                              </select>
+                              <div className="flex gap-1.5">
+                                <button onClick={() => attachCover(c.id)} disabled={attaching} data-testid={`cover-attach-confirm-${c.id}`}
+                                  className="flex-1 inline-flex items-center justify-center gap-1 bg-navy text-white text-[10px] px-2 py-1.5 rounded-sm font-bold disabled:opacity-50">
+                                  {attaching ? <Loader2 className="w-3 h-3 animate-spin" /> : <LinkIcon className="w-3 h-3" />} Attach & Render
+                                </button>
+                                <button onClick={() => { setAttachFor(null); setSelProduct(""); }} className="text-[10px] px-2 py-1.5 rounded-sm border border-navy/15 text-navy">Cancel</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button onClick={() => { setAttachFor(c.id); setSelProduct(""); }} data-testid={`cover-attach-${c.id}`}
+                              className="w-full inline-flex items-center justify-center gap-1 text-[10px] px-2 py-1.5 rounded-sm border border-emerald-300 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 font-bold transition-colors">
+                              <LinkIcon className="w-3 h-3" /> Attach to Product
+                            </button>
+                          )}
+                          {attachResult[c.id] && (
+                            <div className="mt-1.5 text-[9px] text-emerald-800" data-testid={`cover-attach-result-${c.id}`}>
+                              ✓ Attached to <b>{attachResult[c.id].product_title}</b>.
+                              {attachResult[c.id].download_url && (
+                                <a href={`${BACKEND}${attachResult[c.id].download_url}`} target="_blank" rel="noreferrer" className="text-royal underline ml-1" data-testid={`cover-attach-download-${c.id}`}>Download deliverable →</a>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
