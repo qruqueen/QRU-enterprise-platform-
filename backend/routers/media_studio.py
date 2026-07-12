@@ -54,6 +54,43 @@ async def media_pilot(kr_id: str, user=Depends(get_current_user)):
     return res
 
 
+@router.post("/media-kit")
+async def media_kit(kr_id: str, user=Depends(get_current_user)):
+    """One approved KR → the complete governed media kit (all formats + thumbnails), one approval."""
+    res = await sm.run_full_media_kit(kr_id, user.get("name", "Founder"))
+    if res is None:
+        raise HTTPException(404, "Knowledge Record not found.")
+    return res
+
+
+@router.post("/product/{product_id}/render-audio")
+async def render_audio(product_id: str, model: str = "tts-1", user=Depends(get_current_user)):
+    res = await sm.render_audio_mp3(product_id, model, user.get("name", "Founder"))
+    if res is None:
+        raise HTTPException(404, "Media product not found.")
+    if isinstance(res, dict) and res.get("error"):
+        raise HTTPException(400, res["error"])
+    return res
+
+
+@router.post("/product/{product_id}/render-video")
+async def render_video(product_id: str, user=Depends(get_current_user)):
+    res = await sm.trigger_video_render(product_id, user.get("name", "Founder"))
+    if res is None:
+        raise HTTPException(404, "Media product not found.")
+    if isinstance(res, dict) and res.get("error"):
+        raise HTTPException(400, res["error"])
+    return res
+
+
+@router.get("/product/{product_id}")
+async def get_product(product_id: str, user=Depends(get_current_user)):
+    doc = await db.media_products.find_one({"id": product_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Media product not found.")
+    return doc
+
+
 @router.get("/file/{sid}/{fmt}/{ext}")
 async def media_file(sid: str, fmt: str, ext: str):
     path = sm.media_file_path(sid, fmt, ext)

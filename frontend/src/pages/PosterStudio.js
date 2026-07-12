@@ -55,6 +55,8 @@ export default function PosterStudio() {
     } catch (e) { toast.error(e.response?.data?.detail || "Status change blocked."); }
   };
 
+  const selTmpl = templates.find((t) => t.id === form.template_id);
+
   return (
     <div data-testid="poster-studio-page">
       <PageHeader
@@ -84,10 +86,13 @@ export default function PosterStudio() {
               <input type="checkbox" data-testid="poster-trademark" checked={form.trademark} onChange={(e) => set("trademark", e.target.checked)} /> Show ™ on title
             </label>
             <div className="border-t border-navy/10 pt-2">
+              {selTmpl?.factual && (
+                <p className="text-[10px] text-amber-700 font-bold mb-1">This template is data/factual — a verified Knowledge Record is required for Gold Standard.</p>
+              )}
               <label className="flex items-center gap-2 text-[11px] text-navy font-bold">
-                <input type="checkbox" data-testid="poster-factual" checked={form.is_factual} onChange={(e) => set("is_factual", e.target.checked)} /> Contains factual data / statistics
+                <input type="checkbox" data-testid="poster-factual" checked={form.is_factual || !!selTmpl?.factual} disabled={!!selTmpl?.factual} onChange={(e) => set("is_factual", e.target.checked)} /> Contains factual data / statistics
               </label>
-              {form.is_factual && (
+              {(form.is_factual || selTmpl?.factual) && (
                 <div className="mt-2">
                   <label className="text-[10px] font-bold uppercase tracking-wide text-navy">Verified Knowledge Record ID (required for Gold)</label>
                   <input data-testid="poster-kr-id" value={form.kr_id} onChange={(e) => set("kr_id", e.target.value)} placeholder="KR id from Refinement / Verify & Promote" className="w-full mt-0.5 border rounded-sm p-2 text-xs" />

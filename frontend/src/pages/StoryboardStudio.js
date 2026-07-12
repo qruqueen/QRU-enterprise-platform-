@@ -34,18 +34,46 @@ export default function StoryboardStudio() {
 
   const toggleFmt = (f) => setFormats((s) => s.includes(f) ? s.filter((x) => x !== f) : [...s, f]);
 
-  const run = async (pilot) => {
+  const run = async (mode) => {
     if (!krId) return toast.error("Select a Knowledge Record.");
     setBusy(true); setResult(null);
     try {
-      const { data } = pilot
+      const { data } = mode === "pilot"
         ? await api.post(`/media-studio/pilot?kr_id=${krId}`)
+        : mode === "kit"
+        ? await api.post(`/media-studio/media-kit?kr_id=${krId}`)
         : await api.post("/media-studio/order", { kr_id: krId, formats });
       setResult(data);
       if (!data.source_verified_external) toast.warning("Held at INTERNAL DRAFT — source KR is not externally verified.");
       else toast.success(`Storyboard ${data.storyboard.sb_code} → ${data.products.length} media output(s).`);
     } catch (e) { toast.error(e.response?.data?.detail || "Media order failed."); }
     finally { setBusy(false); }
+  };
+
+  const patchProduct = (updated) => setResult((r) => ({ ...r, products: r.products.map((p) => p.id === updated.id ? updated : p) }));
+
+  const renderAudio = async (product) => {
+    patchProduct({ ...product, render_status: "RENDERING" });
+    try {
+      const { data } = await api.post(`/media-studio/product/${product.id}/render-audio`);
+      patchProduct(data); toast.success("Narration MP3 rendered.");
+    } catch (e) { patchProduct({ ...product, render_status: "RENDER_FAILED" }); toast.error(e.response?.data?.detail || "TTS failed."); }
+  };
+
+  const renderVideo = async (product) => {
+    try {
+      await api.post(`/media-studio/product/${product.id}/render-video`);
+      patchProduct({ ...product, render_status: "RENDERING" });
+      toast.info("Assembling draft MP4 via Flagship Showcase™ — this runs in the background.");
+      const poll = setInterval(async () => {
+        try {
+          const { data } = await api.get(`/media-studio/product/${product.id}`);
+          if (data.render_status !== "RENDERING") { clearInterval(poll); patchProduct(data);
+            toast[data.render_status === "RENDERED" ? "success" : "warning"](data.render_status === "RENDERED" ? "Draft MP4 ready." : "Video render needs review."); }
+        } catch { clearInterval(poll); }
+      }, 6000);
+      setTimeout(() => clearInterval(poll), 180000);
+    } catch (e) { toast.error(e.response?.data?.detail || "Video render failed to start."); }
   };
 
   const selKr = krs.find((k) => k.id === krId);
@@ -90,14 +118,17 @@ export default function StoryboardStudio() {
                 })}
               </div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => run(false)} disabled={busy || formats.length === 0} data-testid="storyboard-manufacture" className="flex-1 inline-flex items-center justify-center gap-2 bg-navy text-white px-4 py-2.5 rounded-sm font-bold disabled:opacity-50 hover:bg-navy/90">
+            <div className="flex gap-2 flex-wrap">
+              <button onClick={() => run("order")} disabled={busy || formats.length === 0} data-testid="storyboard-manufacture" className="flex-1 inline-flex items-center justify-center gap-2 bg-navy text-white px-4 py-2.5 rounded-sm font-bold disabled:opacity-50 hover:bg-navy/90">
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />} Manufacture
               </button>
-              <button onClick={() => run(true)} disabled={busy} data-testid="storyboard-pilot" className="inline-flex items-center justify-center gap-1.5 border border-gold text-navy bg-gold/10 px-3 py-2.5 rounded-sm font-bold text-[12px] disabled:opacity-50">
+              <button onClick={() => run("pilot")} disabled={busy} data-testid="storyboard-pilot" className="inline-flex items-center justify-center gap-1.5 border border-navy/20 text-navy px-3 py-2.5 rounded-sm font-bold text-[12px] disabled:opacity-50">
                 5-output Pilot
               </button>
             </div>
+            <button onClick={() => run("kit")} disabled={busy} data-testid="storyboard-media-kit" className="w-full inline-flex items-center justify-center gap-2 border-2 border-gold text-navy bg-gold/10 px-4 py-2.5 rounded-sm font-bold text-[13px] disabled:opacity-50 hover:bg-gold/20 transition-colors">
+              <Wand2 className="w-4 h-4" /> Manufacture Full Media Kit
+            </button>
           </div>
         </Panel>
 
@@ -150,6 +181,20 @@ export default function StoryboardStudio() {
                           ))}
                         </div>
                         {p.notes?.map((n, i) => <p key={i} className="text-[9px] text-muted-foreground">{n}</p>)}
+                        {(p.format === "audio_lesson" || p.recipe?.render === "video") && (
+                          <div className="mt-1.5 flex gap-1.5">
+                            {p.format === "audio_lesson" && (
+                              <button onClick={() => renderAudio(p)} disabled={p.render_status === "RENDERING"} data-testid={`storyboard-render-audio-${p.format}`} className="inline-flex items-center gap-1 text-[10px] border border-royal/40 text-royal rounded-sm px-2 py-1 font-bold disabled:opacity-50 hover:bg-royal/5">
+                                {p.render_status === "RENDERING" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Volume2 className="w-3 h-3" />} Render MP3
+                              </button>
+                            )}
+                            {p.recipe?.render === "video" && (
+                              <button onClick={() => renderVideo(p)} disabled={p.render_status === "RENDERING" || p.verification_status !== "VERIFIED_EXTERNAL"} data-testid={`storyboard-render-video-${p.format}`} className="inline-flex items-center gap-1 text-[10px] border border-royal/40 text-royal rounded-sm px-2 py-1 font-bold disabled:opacity-50 hover:bg-royal/5" title={p.verification_status !== "VERIFIED_EXTERNAL" ? "Requires an externally-verified KR" : ""}>
+                                {p.render_status === "RENDERING" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Film className="w-3 h-3" />} Render MP4
+                              </button>
+                            )}
+                          </div>
+                        )}
                         <p className="text-[9px] text-muted-foreground mt-1">Quality Gate: {p.quality_gate.counts.passed}/{p.quality_gate.counts.total} passed · {p.quality_gate.counts.blocking} blocking</p>
                       </div>
                     );

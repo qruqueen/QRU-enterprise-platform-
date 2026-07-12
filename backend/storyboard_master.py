@@ -345,8 +345,118 @@ async def run_media_order(kr_id, formats, actor="Founder"):
                      "Source KR is not externally verified — media is held at INTERNAL DRAFT (Verify & Promote the KR first).")}
 
 
+VOICE_MAP = {"QRU Narrator™": "onyx", "QRU Teacher™": "sage", "QRU Coach™": "nova",
+             "QRU Documentary™": "echo", "QRU Youth Educator™": "fable",
+             "QRU Executive™": "ash", "QRU Inspirational™": "shimmer"}
+
+
+def _chunk_text(text, limit=3900):
+    words, chunks, cur = text.split(), [], ""
+    for w in words:
+        if len(cur) + len(w) + 1 > limit:
+            chunks.append(cur); cur = w
+        else:
+            cur = f"{cur} {w}".strip()
+    if cur:
+        chunks.append(cur)
+    return chunks or [text[:limit]]
+
+
+async def render_audio_mp3(product_id, model="tts-1", actor="Founder"):
+    """On-demand: render the governed narration transcript to an MP3 via OpenAI TTS (Emergent LLM key)."""
+    prod = await db.media_products.find_one({"id": product_id}, {"_id": 0})
+    if not prod:
+        return None
+    sb = await db.storyboard_masters.find_one({"id": prod["storyboard_id"]}, {"_id": 0})
+    if not sb:
+        return {"error": "Storyboard not found."}
+    text = " ".join(s["narration"] for s in sb["scenes"]).strip()
+    voice = VOICE_MAP.get(prod.get("voice_profile"), "onyx")
+    try:
+        from emergentintegrations.llm.openai import OpenAITextToSpeech
+        tts = OpenAITextToSpeech(api_key=os.getenv("EMERGENT_LLM_KEY"))
+        audio = b""
+        for chunk in _chunk_text(text):
+            audio += await tts.generate_speech(text=chunk, model=model, voice=voice)
+    except Exception as e:
+        return {"error": f"TTS render failed: {str(e)[:160]}"}
+    _save_media(sb["id"], prod["format"], "mp3", audio)
+    mp3 = {"format": "mp3", "bytes": len(audio), "url": f"/api/media-studio/file/{sb['id']}/{prod['format']}/mp3",
+           "label": f"Narration audio ({voice})"}
+    files = [f for f in prod["files"] if f["format"] != "mp3"] + [mp3]
+    await db.media_products.update_one({"id": product_id}, {"$set": {"files": files, "render_status": "RENDERED", "updated_at": now_iso()}})
+    return await _get_media_product(product_id)
+
+
+async def _get_media_product(pid):
+    return await db.media_products.find_one({"id": pid}, {"_id": 0})
+
+
+async def _video_job(product_id, sb, recipe, actor):
+    """Background: assemble a real DRAFT MP4 via the EXISTING Flagship Showcase™ pipeline (not duplicated)."""
+    import flagship_showcase as fs
+    narration = " ".join(s["narration"] for s in sb["scenes"]).strip()
+    aspect = "portrait" if recipe.get("aspect") == "9:16" else "landscape"
+    payload = {"product_title": f"{sb['topic']} — {recipe['label']}", "topic": sb["topic"],
+               "narration": narration, "aspect": aspect, "approval_mode": "auto_select_draft",
+               "provider": "pexels_video", "project_id": sb["sb_code"]}
+    try:
+        res = await fs.produce_flagship(payload, actor)
+    except Exception as e:
+        res = {"ok": False, "error": str(e)[:200]}
+    if res.get("ok") and res.get("showcase_asset"):
+        asset_id = res["showcase_asset"]["qru_asset_id"]
+        mp4 = {"format": "mp4", "bytes": 0, "url": f"/api/media-library/asset/{asset_id}/file",
+               "label": f"Draft MP4 · {res['showcase_asset'].get('duration_seconds','?')}s (Flagship Showcase™)"}
+        prod = await db.media_products.find_one({"id": product_id}, {"_id": 0})
+        files = [f for f in prod["files"] if f["format"] != "mp4"] + [mp4]
+        await db.media_products.update_one({"id": product_id}, {"$set": {
+            "files": files, "render_status": "RENDERED",
+            "video_job": {"status": "done", "asset_id": asset_id, "job_id": res.get("job_id"), "at": now_iso()},
+            "updated_at": now_iso()}})
+    else:
+        await db.media_products.update_one({"id": product_id}, {"$set": {
+            "render_status": "RENDER_FAILED",
+            "video_job": {"status": "failed", "reason": res.get("error") or "No brand-safe stock scenes available; human review required.",
+                          "warnings": res.get("warnings", []), "at": now_iso()},
+            "updated_at": now_iso()}})
+
+
+async def trigger_video_render(product_id, actor="Founder"):
+    prod = await db.media_products.find_one({"id": product_id}, {"_id": 0})
+    if not prod:
+        return None
+    if prod.get("recipe", {}).get("render") != "video":
+        return {"error": "This media product is not a video format."}
+    if not prod.get("verification_status") == "VERIFIED_EXTERNAL":
+        return {"error": "Video render requires an externally-verified source Knowledge Record (Knowledge-First)."}
+    sb = await db.storyboard_masters.find_one({"id": prod["storyboard_id"]}, {"_id": 0})
+    await db.media_products.update_one({"id": product_id}, {"$set": {
+        "render_status": "RENDERING", "video_job": {"status": "rendering", "at": now_iso()}, "updated_at": now_iso()}})
+    import asyncio
+    asyncio.create_task(_video_job(product_id, sb, prod["recipe"], actor))
+    return {"ok": True, "product_id": product_id, "render_status": "RENDERING",
+            "note": "Assembling a real DRAFT MP4 via the existing Flagship Showcase™ pipeline (stock scenes + narration + ffmpeg). Poll the product for completion."}
+
+
+FULL_KIT_FORMATS = ["youtube_video", "promo_short", "audio_lesson", "teacher_presentation", "student_presentation"]
+
+
+async def run_full_media_kit(kr_id, actor="Founder"):
+    """One approved KR → one Storyboard Master → the complete governed media kit (all formats + thumbnails)."""
+    res = await run_media_order(kr_id, FULL_KIT_FORMATS, actor)
+    if res is None:
+        return None
+    # thumbnails already embedded as the title-card PNG in each video format.
+    res["media_kit"] = True
+    res["thumbnails"] = [{"format": p["format"], "url": next((f["url"] for f in p["files"] if f["format"] == "png"), None)}
+                         for p in res["products"] if any(f["format"] == "png" for f in p["files"])]
+    return res
+
+
 def overview():
     return {"status_model": STATUS_MODEL, "voice_profiles": VOICE_PROFILES, "motion_language": MOTION_LANGUAGE,
             "format_recipes": {k: {kk: vv for kk, vv in v.items() if kk != "render"} for k, v in FORMAT_RECIPES.items()},
+            "full_kit_formats": FULL_KIT_FORMATS,
             "model": "Approved Knowledge Record™ → Storyboard Master™ → Format Rendering → Gold Standard Media Products™",
             "note": "Extends the Product Manufacturing Engine™ — no new top-level engine."}

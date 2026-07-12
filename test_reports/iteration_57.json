@@ -1,0 +1,43 @@
+{
+  "summary": "Frontend-only verification of Poster Studio (6 governed templates incl. QRU Knowledge Card™ with factual gating) and Storyboard Studio (3 order actions incl. Full Media Kit, on-demand Render MP3, Render MP4 background pipeline). All 6 review acceptance criteria PASS.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Poster Studio & Storyboard Studio", "issues": ["Persistent React hydration console warning: '<span> cannot be a child of <option>' on data-testid='poster-template' (PosterStudio.js:76) and data-testid='storyboard-kr' (StoryboardStudio.js:98). Root cause is unchanged from iteration_56 — emergent editor injects a <span style=display:contents data-ve-dynamic='true'> around the dynamic option text at render time. Browsers strip the span inside <option>, so functionality is unaffected but a console error logs on every mount. Cosmetic/console-only."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "StoryboardStudio.js:68-75 renderVideo polling: setInterval id `poll` is not cleared if component unmounts before completion; wrap in useRef/useEffect cleanup to prevent stale setState on unmounted component.",
+    "StoryboardStudio.js:74 catch block swallows the polling error without logging — hard to debug transient GET /product/{id} failures.",
+    "PosterStudio.js:30-32 uses .catch(() => {}) that silently drops errors; add at minimum console.error(e) for observability."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only per request)", "frontend": "100% (6/6 criteria)"},
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None. Used existing verified KR 'What Is Governance?' (KMR-1A93CE v3).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Poster Studio dropdown has 6 templates in this exact order: process-formula-v1, data-comparison-v1, scorecard-grid-v1, illustrated-learning-v1, decoder-v1, knowledge-card-v1. knowledge-card-v1 auto-forces `factual` on and requires a KR id; leaving it blank generates the poster but status shows VERIFICATION_REQUIRED and Treasure=Return. Storyboard Studio /media-kit produces 5 products (youtube_video, promo_short, audio_lesson, teacher_presentation, student_presentation). Render MP3 (audio_lesson) took ~12s and returned a real 200 OK MP3 URL at /api/media-studio/file/{sb}/audio_lesson/mp3. Render MP4 (youtube_video) triggers a background Flagship Showcase job; in this run it ended RENDER_FAILED ('Video render needs review.') within 30s, which is honest/acceptable per the review request.",
+  "flow_results": {
+    "poster_studio": {
+      "template_count": 6,
+      "templates": ["Process / Formula Poster · 4:5", "Data Comparison Poster · 4:5", "Scorecard Grid Poster · 4:5", "Illustrated Learning Poster · 4:5", "Multi-Section Decoder Poster · 4:5", "QRU Knowledge Card™ · 7:10"],
+      "knowledge_card_factual_note_shown": true,
+      "knowledge_card_kr_id_field_shown": true,
+      "knowledge_card_empty_kr_status": "VERIFICATION REQUIRED (Treasure: Return, Verify: PENDING_HUMAN_VERIFICATION)",
+      "data_comparison_render": {"rendered": true, "checks_in_pre_ship_gate": 9, "png_url_sample": "/api/publishing/poster/3480cf18-.../png"},
+      "all_six_templates_render_ok": true
+    },
+    "storyboard_studio": {
+      "action_buttons_present": {"storyboard-manufacture": 1, "storyboard-pilot": 1, "storyboard-media-kit": 1},
+      "verified_kr_used": "What Is Governance? (KMR-1A93CE v3)",
+      "media_kit": {"storyboard_code": "SBM-AACC6E", "scenes": 7, "duration_s": 72, "product_count": 5, "products": ["youtube_video", "promo_short", "audio_lesson", "teacher_presentation", "student_presentation"]},
+      "render_mp3_audio_lesson": {"clicked": true, "mp3_link_appeared_within_s": 12, "href_sample": "/api/media-studio/file/aacc6ecb-.../audio_lesson/mp3"},
+      "render_mp4_youtube_video": {"button_present": true, "disabled": false, "immediate_status_after_click": "RENDERING", "no_ui_error_toast_on_click": true, "final_status_within_30s": "RENDER_FAILED (acceptable per acceptance criteria — background Flagship Showcase job may end RENDERED or RENDER_FAILED)"}
+    }
+  }
+}
