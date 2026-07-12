@@ -58,3 +58,41 @@ async def list_products(user=Depends(get_current_user)):
 @router.post("/benchmark")
 async def benchmark(user=Depends(get_current_user)):
     return await rf.run_benchmark(user.get("name", "Founder"))
+
+
+# ── QRU Verify & Promote™ Workflow ──────────────────────────────────────────
+@router.get("/kr/{kr_id}/claims")
+async def kr_claims(kr_id: str, user=Depends(get_current_user)):
+    res = await rf.kr_claims(kr_id)
+    if res is None:
+        raise HTTPException(404, "Knowledge Record not found.")
+    return res
+
+
+@router.get("/kr/{kr_id}/lineage")
+async def kr_lineage(kr_id: str, user=Depends(get_current_user)):
+    return await rf.kr_lineage(kr_id)
+
+
+class ClaimSource(BaseModel):
+    source_id: Optional[str] = None
+    claim_id: Optional[str] = None
+    title: Optional[str] = ""
+    url: Optional[str] = ""
+    publisher: Optional[str] = ""
+    approved: bool = False
+
+
+class VerifyPromoteOrder(BaseModel):
+    kr_id: str
+    sources: list[ClaimSource] = []
+    human_approved: bool = False
+
+
+@router.post("/verify-promote")
+async def verify_promote(data: VerifyPromoteOrder, user=Depends(get_current_user)):
+    res = await rf.verify_and_promote(
+        data.kr_id, [s.dict() for s in data.sources], data.human_approved, user.get("name", "Founder"))
+    if res is None:
+        raise HTTPException(404, "Knowledge Record not found.")
+    return res
