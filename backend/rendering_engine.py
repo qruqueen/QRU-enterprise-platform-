@@ -143,20 +143,13 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
     pdf.set_margins(22, 22, 22)
     pdf.set_auto_page_break(True, margin=20)
 
-    # --- Cover page: branded full-bleed cover image ---
+    # --- Cover page: finished full-bleed cover (AI or deterministic) — no text overlay ---
+    # The cover image is already a complete, branded cover (title, series, seal baked in),
+    # so we embed it edge-to-edge and never paint additional text over it.
     pdf.add_page()
-    pdf.set_fill_color(*ROYAL); pdf.rect(0, 0, 210, 297, "F")
     cover_path = os.path.join(ASSET_DIR, _save("tmp-cover", "png", cover_bytes))
-    pdf.image(cover_path, x=25, y=26, w=160)
+    pdf.image(cover_path, x=0, y=0, w=210, h=297)
     os.remove(cover_path)
-    pdf.set_text_color(*GOLD); pdf.set_font("Times", "B", 24)
-    pdf.set_xy(15, 210); pdf.multi_cell(180, 11, title_txt, align="C")
-    pdf.set_draw_color(*GOLD); pdf.set_line_width(0.6)
-    pdf.line(70, 246, 140, 246)
-    pdf.set_text_color(255, 255, 255); pdf.set_font("Helvetica", "", 11)
-    pdf.set_xy(15, 250); pdf.multi_cell(180, 7, _strip_md("TREASURE STANDARD(TM) CERTIFIED"), align="C")
-    pdf.set_font("Helvetica", "", 9)
-    pdf.set_xy(15, 260); pdf.multi_cell(180, 6, _strip_md(f"QRU {ptype_txt}  -  {family_txt}"), align="C")
 
     # --- Title / colophon page ---
     pdf.add_page()
