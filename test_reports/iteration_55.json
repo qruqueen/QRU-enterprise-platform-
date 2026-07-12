@@ -1,0 +1,26 @@
+{
+  "summary": "Frontend-only verification of QRU Poster Studio™. Login as Founder → /poster-studio via sidebar. All 5 requested scenarios PASSED: (1) route + page load, (2) conceptual poster generates inline preview with status=DRAFT, Treasure=Passed, 9 green Pre-Ship checks, PNG+PDF download links present and img.naturalWidth=1600 (image actually renders), (3) status lifecycle DRAFT→DESIGN_APPROVED→QRU_GOLD_STANDARD via Approve Design and Certify Gold Standard buttons, (4) factual poster without KR correctly downgraded to VERIFICATION_REQUIRED with Treasure=Return, Verify=PENDING_HUMAN_VERIFICATION and failed 'Knowledge-First: verified source KR' check (rose-colored) — Approve/Gold buttons correctly hidden, (5) gallery shows 5 thumbnails and clicking a poster-item-<id> loads it into the inline preview.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Poster Studio (dev-only)", "issues": ["React hydration warning in console: <span> cannot be a child of <option>. Caused by Emergent visual-editor injecting <span x-excluded='true' style='display:contents'> inside <option> in the template <select>. Not user-visible; only noisy warning in preview."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "PosterStudio.js is 160 lines and cleanly structured — no code-quality issues found.",
+    "Frontend correctly uses process.env.REACT_APP_BACKEND_URL for the poster image src (BACKEND + sel.png_url).",
+    "All interactive elements have data-testid attributes as required (poster-generate, poster-preview, poster-preview-img, poster-check-<i>, poster-dl-png/pdf, poster-approve, poster-gold, poster-factual, poster-kr-id, poster-item-<id>).",
+    "Knowledge-First gating is honestly surfaced in UI: factual poster without KR shows amber VERIFICATION_REQUIRED chip, rose failed Pre-Ship check, and hides Approve/Gold buttons so certification is impossible from the UI. Backend-side 400 gating is not testable from UI because buttons don't exist in that state (defense in depth is good)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (per request)", "frontend": "100%"},
+  "test_credentials": "Founder 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! — used as instructed.",
+  "seed_data_creation": "Manufactured 2 posters via UI during testing: 'CONCEPTUAL TEST POSTER' (now QRU_GOLD_STANDARD) and 'FACTUAL NO KR TEST' (VERIFICATION_REQUIRED). Gallery now has 5 total.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Poster Studio UI is fully wired to backend. Auto-display-on-generate works (setSel(data)). Gallery click swaps preview via setSel(p). Status-change action buttons are conditional on sel.status so DRAFT shows Approve, DESIGN_APPROVED shows Gold, other statuses show neither — this correctly prevents illegal transitions from UI. Only cosmetic issue is the React hydration console warning from the visual editor's span-injection into <option>, which is env-level not code-level."
+}

@@ -241,6 +241,80 @@ async def cover_file(cid: str):
     return FileResponse(doc["file"], media_type="image/png")
 
 
+# ── QRU Poster Studio™ (governed template-driven posters) ───────────────────
+import poster_studio as pstudio
+
+
+@router.get("/poster/templates")
+async def poster_templates(user=Depends(get_current_user)):
+    return pstudio.overview()
+
+
+@router.get("/posters")
+async def list_posters(user=Depends(get_current_user)):
+    return {"posters": await pstudio.list_posters(), "status_model": pstudio.STATUS_MODEL}
+
+
+class PosterStep(BaseModel):
+    heading: str
+    body: str
+    outcome: str
+
+
+class PosterGenInput(BaseModel):
+    template_id: str = "process-formula-v1"
+    kr_id: Optional[str] = None
+    is_factual: bool = False
+    eyebrow: Optional[str] = None
+    title: Optional[str] = None
+    trademark: Optional[bool] = None
+    tagline: Optional[str] = None
+    subtitle: Optional[str] = None
+    steps: Optional[List[PosterStep]] = None
+    mid_line: Optional[str] = None
+    footer: Optional[str] = None
+
+
+@router.post("/poster/generate")
+async def poster_generate(data: PosterGenInput, user=Depends(get_current_user)):
+    content = {k: v for k, v in data.dict().items()
+               if k not in ("template_id", "kr_id", "is_factual") and v is not None}
+    if data.steps:
+        content["steps"] = [s.dict() for s in data.steps]
+    res = await pstudio.generate_poster(data.template_id, content or None, data.kr_id,
+                                        bool(data.is_factual), user.get("name", "Founder"))
+    if res.get("error"):
+        raise HTTPException(400, res["error"])
+    return res
+
+
+@router.get("/poster/{pid}/file")
+async def poster_file(pid: str, format: str = "png"):
+    rec = await db.poster_assets.find_one({"id": pid}, {"_id": 0})
+    if not rec:
+        raise HTTPException(404, "Poster not found.")
+    path = pstudio.poster_file_path(rec, format)
+    if not os.path.exists(path):
+        raise HTTPException(404, "Poster file not found.")
+    media = "application/pdf" if format == "pdf" else "image/png"
+    return FileResponse(str(path), media_type=media)
+
+
+class PosterStatusInput(BaseModel):
+    status: str
+    note: Optional[str] = ""
+
+
+@router.post("/poster/{pid}/status")
+async def poster_status(pid: str, data: PosterStatusInput, user=Depends(get_current_user)):
+    res = await pstudio.set_poster_status(pid, data.status, user.get("name", "Founder"), data.note or "")
+    if res is None:
+        raise HTTPException(404, "Poster not found.")
+    if isinstance(res, dict) and res.get("error"):
+        raise HTTPException(400, res["error"])
+    return res
+
+
 class CoverStateInput(BaseModel):
     state: str
     note: Optional[str] = ""
