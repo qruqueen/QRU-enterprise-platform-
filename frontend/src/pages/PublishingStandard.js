@@ -115,7 +115,12 @@ export default function PublishingStandard() {
 
       {/* TOC before/after */}
       {pilot && match("table of contents toc dot leaders") && (
-        <Panel title="Professional Table of Contents Standard" icon={ListTree} accent="royal" testid="publishing-toc" className="mb-6">
+        <Panel title="Professional Table of Contents Standard" icon={ListTree} accent="royal" testid="publishing-toc" className="mb-6"
+          right={<button data-testid="publishing-pilot-pdf" onClick={async () => {
+            try { const r = await api.get("/publishing/pilot.pdf", { responseType: "blob" }); window.open(URL.createObjectURL(r.data), "_blank"); }
+            catch { /* ignore */ }
+          }} className="text-[11px] inline-flex items-center gap-1 bg-navy text-white px-3 py-1.5 rounded-sm font-medium hover:bg-navy/90">View governed PDF</button>}>
+          <p className="text-[11px] text-muted-foreground mb-3">Same design tokens render across in-app preview, HTML/CSS and the governed PDF (fonts substitute per platform; semantic role preserved).</p>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wide text-red-600 mb-1">Before — raw source</p>

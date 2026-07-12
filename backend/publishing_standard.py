@@ -483,3 +483,114 @@ async def seed_publishing_standard():
 async def bindings_view():
     docs = [d async for d in db.publishing_bindings.find({}, {"_id": 0})]
     return {"standard": DOC_ID, "version": VERSION, "bindings": docs}
+
+
+# ---------------------------------------------------------------- GOVERNED PDF EXPORT (same tokens)
+# Renders the pilot using the SAME token VALUES (navy/gold colors, size hierarchy, dot-leader TOC).
+# Font families substitute to PDF core fonts (no Playfair/Manrope files bundled) but the semantic
+# role + approved visual intent is preserved — the standard permits per-platform font rendering.
+_NAVY = (11, 27, 63)
+_GOLD = (245, 178, 26)
+_INK = (26, 34, 51)
+_MUTED = (91, 100, 114)
+
+
+def build_pilot_pdf():
+    from fpdf import FPDF
+
+    def _s(t):
+        return (str(t).replace("\u2014", "-").replace("\u2013", "-").replace("\u201c", '"')
+                .replace("\u201d", '"').replace("\u2019", "'").replace("\u2018", "'")
+                .replace("\u2022", "-").replace("\u2026", "...").encode("latin-1", "replace").decode("latin-1"))
+
+    reg = regenerate_pilot()
+    pdf = FPDF(format="letter", unit="pt")
+    pdf.set_auto_page_break(True, margin=54)
+    pw = pdf.w
+
+    # --- Cover / title page (navy ground, gold title) ---
+    pdf.add_page()
+    pdf.set_fill_color(*_NAVY)
+    pdf.rect(0, 0, pdf.w, pdf.h, "F")
+    pdf.set_xy(54, 150)
+    pdf.set_text_color(*_GOLD)
+    pdf.set_font("Times", "B", 40)
+    pdf.multi_cell(pw - 108, 44, _s(reg["title"]), align="C")
+    pdf.ln(6)
+    pdf.set_x(54)
+    pdf.set_text_color(240, 240, 245)
+    pdf.set_font("Helvetica", "", 15)
+    pdf.multi_cell(pw - 108, 20, _s(reg["subtitle"]), align="C")
+    pdf.set_xy(54, pdf.h - 150)
+    pdf.set_text_color(*_GOLD)
+    pdf.set_font("Times", "B", 16)
+    pdf.multi_cell(pw - 108, 20, _s(reg["series"]), align="C")
+    pdf.set_x(54)
+    pdf.set_text_color(200, 205, 215)
+    pdf.set_font("Helvetica", "", 11)
+    pdf.multi_cell(pw - 108, 16, _s(f"{reg['edition']}  -  {reg['author']}  -  ISBN {reg['isbn']}"), align="C")
+
+    # --- Table of Contents (dot leaders, aligned page numbers) ---
+    pdf.add_page()
+    pdf.set_text_color(*_NAVY)
+    pdf.set_font("Times", "B", 26)
+    pdf.cell(0, 40, "Contents", ln=1)
+    pdf.set_draw_color(*_GOLD)
+    pdf.set_line_width(1)
+    pdf.line(54, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(14)
+    left = 54
+    right = pw - 54
+    for e in reg["toc_after_entries"]:
+        indent = 18 if e["level"] == 2 else 0
+        pdf.set_font("Helvetica", "B" if e["level"] == 1 else "", 12 if e["level"] == 1 else 11)
+        pdf.set_text_color(*(_NAVY if e["level"] == 1 else _INK))
+        title = _s(e["title"])
+        page = str(e["page"]) if e.get("page") is not None else ""
+        x0 = left + indent
+        pdf.set_xy(x0, pdf.get_y())
+        tw = pdf.get_string_width(title)
+        pw_num = pdf.get_string_width(page)
+        pdf.cell(tw + 4, 20, title)
+        # dot leaders
+        dot_w = pdf.get_string_width(".")
+        avail = right - (x0 + tw + 4) - pw_num - 4
+        ndots = max(0, int(avail / dot_w))
+        pdf.set_text_color(*_MUTED)
+        pdf.cell(ndots * dot_w, 20, "." * ndots)
+        pdf.set_text_color(*_NAVY)
+        pdf.cell(pw_num + 4, 20, page, align="R", ln=1)
+
+    # --- Chapter opening (number, title, quote, objectives) ---
+    co = reg["chapter_opening"]
+    pdf.add_page()
+    pdf.ln(40)
+    pdf.set_text_color(*_GOLD)
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.cell(0, 20, f"CHAPTER {co['number']}", ln=1)
+    pdf.set_text_color(*_NAVY)
+    pdf.set_font("Times", "B", 30)
+    pdf.multi_cell(pw - 108, 34, _s(co["title"]))
+    pdf.set_draw_color(*_GOLD)
+    pdf.ln(4)
+    pdf.line(54, pdf.get_y(), 130, pdf.get_y())
+    pdf.ln(18)
+    pdf.set_text_color(*_MUTED)
+    pdf.set_font("Times", "I", 16)
+    pdf.multi_cell(pw - 108, 22, _s(f'"{co["quote"]}"'))
+    pdf.ln(16)
+    pdf.set_text_color(*_NAVY)
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 18, "Learning Objectives", ln=1)
+    pdf.set_text_color(*_INK)
+    pdf.set_font("Helvetica", "", 11)
+    for o in co["objectives"]:
+        pdf.set_x(60)
+        pdf.multi_cell(pw - 120, 16, _s(f"-  {o}"))
+    pdf.ln(10)
+    pdf.set_text_color(*_MUTED)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.multi_cell(pw - 108, 14, _s(co["summary"]))
+
+    out = pdf.output()
+    return bytes(out)

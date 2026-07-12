@@ -89,7 +89,14 @@ async def pilot(user=Depends(get_current_user)):
     before = ps.preflight_validate(ps.get_pilot_artifact(clean=False))
     after = ps.preflight_validate(ps.get_pilot_artifact(clean=True))
     return {"pilot": reg, "preflight_before": before, "preflight_after": after,
-            "css_url": "/api/publishing/tokens.css"}
+            "css_url": "/api/publishing/tokens.css", "pdf_url": "/api/publishing/pilot.pdf"}
+
+
+@router.get("/pilot.pdf")
+async def pilot_pdf(user=Depends(get_current_user)):
+    pdf = ps.build_pilot_pdf()
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": "inline; filename=science-of-understanding-governed.pdf"})
 
 
 # ------------------------------------------------------------------ COVER STUDIO
