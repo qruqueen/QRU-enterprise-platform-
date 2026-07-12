@@ -447,21 +447,21 @@ export default function FlagshipShowcase() {
                   const meta = DEPT_META[d.department] || { icon: Brain, color: "text-navy", bar: "bg-navy" };
                   const Icon = meta.icon;
                   const pct = deptAnim[d.department] ?? 0;
-                  const complete = d.progress >= 100 && !d.blocked;
+                  const complete = d.progress >= 100 && !d.blocked && !d.standby;
                   return (
-                    <div key={d.department} className={`border rounded-md p-3 ${d.blocked ? "border-amber-300 bg-amber-50/40" : complete ? "border-emerald-200 bg-emerald-50/20" : "border-navy/15"}`} data-testid={`fs-loop-dept-${d.department}`}>
+                    <div key={d.department} className={`border rounded-md p-3 ${d.blocked ? "border-amber-300 bg-amber-50/40" : d.standby ? "border-navy/10 bg-navy/[0.02]" : complete ? "border-emerald-200 bg-emerald-50/20" : "border-navy/15"}`} data-testid={`fs-loop-dept-${d.department}`}>
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-1.5">
-                          <Icon className={`w-4 h-4 ${meta.color}`} />
-                          <span className="text-[12px] font-bold text-navy">{d.department_name}</span>
+                          <Icon className={`w-4 h-4 ${d.standby ? "text-navy/30" : meta.color}`} />
+                          <span className={`text-[12px] font-bold ${d.standby ? "text-navy/50" : "text-navy"}`}>{d.department_name}</span>
                         </div>
-                        <span className="text-[12px] font-black text-navy tabular-nums" data-testid={`fs-loop-pct-${d.department}`}>{d.blocked ? "Blocked" : `${d.progress}%`}</span>
+                        <span className={`text-[11px] font-black tabular-nums ${d.standby ? "text-navy/40" : "text-navy"}`} data-testid={`fs-loop-pct-${d.department}`}>{d.blocked ? "Blocked" : d.standby ? "Standby" : `${d.progress}%`}</span>
                       </div>
                       <div className="h-2 w-full rounded-full bg-navy/10 overflow-hidden">
-                        <div className={`h-full rounded-full ${d.blocked ? "bg-amber-500" : meta.bar}`} style={{ width: `${d.blocked ? 100 : pct}%`, transition: "width 900ms ease-out" }} />
+                        <div className={`h-full rounded-full ${d.blocked ? "bg-amber-500" : d.standby ? "bg-navy/15" : meta.bar}`} style={{ width: `${d.blocked || d.standby ? 100 : pct}%`, transition: "width 900ms ease-out" }} />
                       </div>
-                      <p className={`text-[10px] mt-1.5 ${d.blocked ? "text-amber-700" : "text-muted-foreground"}`}>
-                        {d.blocked ? "Needs your input — Knowledge-First governance (never fabricated)." : complete ? "Complete." : `${d.activity}…`}
+                      <p className={`text-[10px] mt-1.5 ${d.blocked ? "text-amber-700" : d.standby ? "text-navy/40" : "text-muted-foreground"}`}>
+                        {d.blocked ? "Needs your input — Knowledge-First governance (never fabricated)." : d.standby ? "Standing by — no work required this run." : complete ? "Complete." : `${d.activity}…`}
                       </p>
                     </div>
                   );
@@ -477,6 +477,21 @@ export default function FlagshipShowcase() {
                 <span className="text-navy/30">·</span>
                 <span className="text-muted-foreground">Threshold <b className="text-navy">{loop.threshold}</b></span>
               </div>
+
+              {/* Cycle log — exactly which department raised which score each pass (auditable) */}
+              {loop.cycle_log && loop.cycle_log.length > 0 && (
+                <div className="mb-5 border border-navy/10 rounded-md p-3 bg-navy/[0.02]" data-testid="fs-loop-cyclelog">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-royal mb-1.5">Improvement Log</p>
+                  <ul className="space-y-1">
+                    {loop.cycle_log.map((c, i) => (
+                      <li key={i} className="text-[11px] text-navy/80 flex items-start gap-1.5" data-testid={`fs-loop-cyclelog-${i}`}>
+                        <TrendingUp className="w-3 h-3 text-emerald-500 mt-0.5 shrink-0" />
+                        <span><b className="text-navy">{c.department}</b> raised <b>{c.dimension}</b> {c.from}→{c.to} <span className="text-emerald-600">(+{c.delta})</span> <span className="text-navy/40">· cycle {c.cycle}</span></span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {/* Gold Master Candidate Ready OR honest blocking / ceiling state */}
               {loop.gold_master_candidate_ready ? (

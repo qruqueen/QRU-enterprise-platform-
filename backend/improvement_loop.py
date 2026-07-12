@@ -103,6 +103,9 @@ async def run_loop(scenes, narration="", topic="", threshold=90, max_cycles=4):
         return round((dims["scene_quality"] + dims["brand_score"] + dims["learning_score"] + dims["thumbnail_score"]) / 4)
 
     cycles = [{"cycle": 0, "composite": composite(), "scores": dict(dims), "note": "Baseline evaluation."}]
+    cycle_log = []  # one line per department action per cycle (auditable)
+    DIM_LABEL = {"scene_quality": "Scene Quality", "learning_score": "Learning",
+                 "brand_score": "Brand", "thumbnail_score": "Thumbnail"}
 
     # Improvement cycles — each automatable work order nudges its dimension toward its honest ceiling.
     cycle = 0
@@ -124,6 +127,12 @@ async def run_loop(scenes, narration="", topic="", threshold=90, max_cycles=4):
             step = min(wo["gain"], wo["ceiling"] - cur)
             dims[wo["dimension"]] = min(wo["ceiling"], cur + step)
             wo["status"] = "Complete" if dims[wo["dimension"]] >= wo["ceiling"] else "In Progress"
+            cycle_log.append({
+                "cycle": cycle, "department": wo["department_name"],
+                "dimension": DIM_LABEL.get(wo["dimension"], wo["dimension"]),
+                "from": cur, "to": dims[wo["dimension"]], "delta": dims[wo["dimension"]] - cur,
+                "line": f"Cycle {cycle}: {wo['department_name']} raised {DIM_LABEL.get(wo['dimension'], wo['dimension'])} {cur}→{dims[wo['dimension']]}.",
+            })
             improved = True
         dims["composite"] = composite()
         cycles.append({"cycle": cycle, "composite": composite(), "scores": dict(dims),
@@ -151,24 +160,38 @@ async def run_loop(scenes, narration="", topic="", threshold=90, max_cycles=4):
             wo["progress"] = max(0, min(99, round((dims[dim] - base_dims[dim]) / span * 100)))
             wo["status"] = "In Progress"
 
-    # Civilization Status (Founder dashboard) — one line per active department.
-    status_by_dept = {}
+    # Civilization Status (Founder dashboard) — ALWAYS render all six departments so the Founder
+    # sees the full workforce at a glance. Departments with no work this run stand by honestly.
+    active = {}
     for wo in work_orders:
         d = wo["department"]
-        st = status_by_dept.setdefault(d, {"department": d, "department_name": wo["department_name"],
-                                           "activity": "", "progress": 0, "blocked": False})
+        st = active.setdefault(d, {"activity": "", "progress": 0, "blocked": False})
         st["progress"] = max(st["progress"], wo["progress"])
         st["blocked"] = st["blocked"] or wo["blocking"]
         st["activity"] = wo["recommendation"]
-    civilization_status = list(status_by_dept.values())
-    civilization_status.append({"department": "qa", "department_name": "QA™",
-                                "activity": "Running Treasure Standard™", "progress": 100 if not blocking_orders else 60,
-                                "blocked": bool(blocking_orders)})
+
+    civilization_status = []
+    for dept, name in DEPARTMENTS.items():
+        if dept == "qa":
+            civilization_status.append({"department": "qa", "department_name": "QA™",
+                                        "activity": "Running Treasure Standard™",
+                                        "progress": 100 if not blocking_orders else 60,
+                                        "blocked": bool(blocking_orders), "standby": False})
+        elif dept in active:
+            a = active[dept]
+            civilization_status.append({"department": dept, "department_name": name,
+                                        "activity": a["activity"], "progress": a["progress"],
+                                        "blocked": a["blocked"], "standby": False})
+        else:
+            civilization_status.append({"department": dept, "department_name": name,
+                                        "activity": "Standing by — no work required this run",
+                                        "progress": 100, "blocked": False, "standby": True})
 
     run = {
         "id": gen_id(), "topic": topic, "threshold": threshold,
         "baseline_composite": cycles[0]["composite"], "final_composite": final,
         "cycles": cycles, "work_orders": work_orders, "civilization_status": civilization_status,
+        "cycle_log": cycle_log,
         "gold_master_candidate_ready": gold_candidate, "blocking_count": len(blocking_orders),
         "notification": (
             f"Your civilization has completed improvements. Gold Master Candidate ready. "

@@ -110,3 +110,26 @@ async def set_mode(pid: str, data: ModeInput, user=Depends(get_current_user)):
     if not p:
         raise HTTPException(404, "Project not found.")
     return p
+
+
+# --- Factory Concierge™ (Phase B, Constitution §7/§8) — conversational guide over Factory OS ---
+import factory_concierge as concierge
+
+
+class ConciergeInput(BaseModel):
+    message: str
+    session_id: Optional[str] = None
+    use_ai: Optional[bool] = False
+
+
+@router.post("/concierge/message")
+async def concierge_message(data: ConciergeInput, user=Depends(get_current_user)):
+    return await concierge.handle_message(data.session_id, data.message, bool(data.use_ai), user.get("name", "Founder"))
+
+
+@router.get("/concierge/session/{sid}")
+async def concierge_session(sid: str, user=Depends(get_current_user)):
+    s = await concierge.get_history(sid)
+    if not s:
+        raise HTTPException(404, "Session not found.")
+    return s

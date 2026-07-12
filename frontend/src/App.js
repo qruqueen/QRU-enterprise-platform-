@@ -81,6 +81,7 @@ import CompanionSystem from "@/pages/CompanionSystem";
 import MediaLibrary from "@/pages/MediaLibrary";
 import FlagshipShowcase from "@/pages/FlagshipShowcase";
 import CreateExperience from "@/pages/CreateExperience";
+import FactoryConcierge from "@/pages/FactoryConcierge";
 import Constitution from "@/pages/Constitution";
 import ProjectsContinuity from "@/pages/ProjectsContinuity";
 import ConsumerHome from "@/pages/consumer/ConsumerHome";
@@ -177,6 +178,7 @@ function EnterpriseRoutes() {
         <Route path="media-library" element={<MediaLibrary />} />
         <Route path="flagship-showcase" element={<FlagshipShowcase />} />
         <Route path="create" element={<CreateExperience />} />
+        <Route path="concierge" element={<FactoryConcierge />} />
         <Route path="constitution" element={<Constitution />} />
         <Route path="projects" element={<ProjectsContinuity />} />
         <Route path="connectors" element={<Connectors />} />
