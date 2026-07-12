@@ -10,7 +10,7 @@ import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard, Film,
-  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud, Gavel, Youtube, QrCode, Scale, Compass,
+  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud, Gavel, Youtube, QrCode, Scale, Compass, Cog,
 } from "lucide-react";
 
 const NAV = [
@@ -19,6 +19,7 @@ const NAV = [
   { to: "/concierge", label: "Factory Concierge™", icon: MessageSquareText, testid: "nav-concierge", q: "Tell me what you want — I'll set up the right workflow." },
   { to: "/flow", label: "Manufacturing Flow™", icon: Workflow, testid: "nav-flow", q: "Where is every project and what happens next?" },
   { to: "/architecture", label: "Architecture Explorer™", icon: Compass, testid: "nav-architecture", q: "How is the whole Factory organized?" },
+  { to: "/refinement", label: "Refinement Engines™", icon: Cog, testid: "nav-refinement", q: "Prove the Factory: manufacture knowledge and products." },
   { to: "/projects", label: "My Projects", icon: Workflow, testid: "nav-projects", q: "Where is each project — and what's the next step?" },
   { to: "/constitution", label: "Factory Constitution™", icon: Scale, testid: "nav-constitution", q: "What governs everything the Factory makes?" },
   { to: "/publishing", label: "Publishing Standard™", icon: BookOpenCheck, testid: "nav-publishing", q: "How should every QRU product look and read?" },
