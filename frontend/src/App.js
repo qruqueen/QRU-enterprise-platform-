@@ -84,6 +84,7 @@ import CreateExperience from "@/pages/CreateExperience";
 import FactoryConcierge from "@/pages/FactoryConcierge";
 import PublishingStandard from "@/pages/PublishingStandard";
 import CoverStudio from "@/pages/CoverStudio";
+import ManufacturingFlow from "@/pages/ManufacturingFlow";
 import Constitution from "@/pages/Constitution";
 import ProjectsContinuity from "@/pages/ProjectsContinuity";
 import ConsumerHome from "@/pages/consumer/ConsumerHome";
@@ -183,6 +184,7 @@ function EnterpriseRoutes() {
         <Route path="concierge" element={<FactoryConcierge />} />
         <Route path="publishing" element={<PublishingStandard />} />
         <Route path="cover-studio" element={<CoverStudio />} />
+        <Route path="flow" element={<ManufacturingFlow />} />
         <Route path="constitution" element={<Constitution />} />
         <Route path="projects" element={<ProjectsContinuity />} />
         <Route path="connectors" element={<Connectors />} />

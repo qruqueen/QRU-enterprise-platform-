@@ -17,6 +17,7 @@ const NAV = [
   { section: "Start Here" },
   { to: "/create", label: "Create", icon: Sparkles, testid: "nav-create", q: "What would you like to create today?" },
   { to: "/concierge", label: "Factory Concierge™", icon: MessageSquareText, testid: "nav-concierge", q: "Tell me what you want — I'll set up the right workflow." },
+  { to: "/flow", label: "Manufacturing Flow™", icon: Workflow, testid: "nav-flow", q: "Where is every project and what happens next?" },
   { to: "/projects", label: "My Projects", icon: Workflow, testid: "nav-projects", q: "Where is each project — and what's the next step?" },
   { to: "/constitution", label: "Factory Constitution™", icon: Scale, testid: "nav-constitution", q: "What governs everything the Factory makes?" },
   { to: "/publishing", label: "Publishing Standard™", icon: BookOpenCheck, testid: "nav-publishing", q: "How should every QRU product look and read?" },
