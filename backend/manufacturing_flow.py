@@ -246,20 +246,19 @@ def modules_view():
 
 # ---------------------------------------------------------------- CONSTITUTIONAL REGISTRY
 async def constitutional_registry():
-    """Small permanent registry of constitutional artifacts (never overwrite)."""
-    seed = [
+    """Permanent registry of constitutional artifacts (never overwrite). Returns ALL stored rows."""
+    stored = [d async for d in db.constitutional_registry.find({}, {"_id": 0}).sort("created_at", 1)]
+    if stored:
+        return {"registry": stored}
+    # Fallback baseline if the collection has not been seeded yet.
+    return {"registry": [
         {"id": "QRU-CON-0001", "name": "QRU Factory™ Constitution", "version": "1.0", "owner": "QRU",
          "category": "Foundational Governance", "implementation_status": "Production", "verification_status": "Verified"},
         {"id": "QRU-CON-0002", "name": "Enterprise Publishing & Presentation Standard™", "version": "1.0", "owner": "QRU Press™",
          "category": "Publishing / Design Governance", "implementation_status": "Production", "verification_status": "Verified"},
         {"id": DOC_ID, "name": "Universal Manufacturing Flow Engine™", "version": VERSION, "owner": "QRU",
          "category": "Production Orchestration", "implementation_status": "Production", "verification_status": "Verified"},
-    ]
-    stored = {d["id"]: d async for d in db.constitutional_registry.find({}, {"_id": 0})}
-    out = []
-    for s in seed:
-        out.append(stored.get(s["id"], s))
-    return {"registry": out}
+    ]}
 
 
 async def seed_flow():
