@@ -85,6 +85,7 @@ import FactoryConcierge from "@/pages/FactoryConcierge";
 import PublishingStandard from "@/pages/PublishingStandard";
 import CoverStudio from "@/pages/CoverStudio";
 import ManufacturingFlow from "@/pages/ManufacturingFlow";
+import EnterpriseArchitecture from "@/pages/EnterpriseArchitecture";
 import Constitution from "@/pages/Constitution";
 import ProjectsContinuity from "@/pages/ProjectsContinuity";
 import ConsumerHome from "@/pages/consumer/ConsumerHome";
@@ -185,6 +186,7 @@ function EnterpriseRoutes() {
         <Route path="publishing" element={<PublishingStandard />} />
         <Route path="cover-studio" element={<CoverStudio />} />
         <Route path="flow" element={<ManufacturingFlow />} />
+        <Route path="architecture" element={<EnterpriseArchitecture />} />
         <Route path="constitution" element={<Constitution />} />
         <Route path="projects" element={<ProjectsContinuity />} />
         <Route path="connectors" element={<Connectors />} />

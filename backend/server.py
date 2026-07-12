@@ -75,6 +75,7 @@ from routers.media_library import router as media_library_router
 from routers.factory_os import router as factory_os_router
 from routers.publishing import router as publishing_router
 from routers.manufacturing_flow import router as manufacturing_flow_router
+from routers.enterprise_architecture import router as enterprise_architecture_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
 from routers.misc import (
@@ -130,6 +131,7 @@ for r in [
     factory_os_router,
     publishing_router,
     manufacturing_flow_router,
+    enterprise_architecture_router,
 ]:
     app.include_router(r)
 
@@ -166,6 +168,8 @@ async def startup():
     await publishing_standard.seed_publishing_standard()
     import manufacturing_flow
     await manufacturing_flow.seed_flow()
+    import enterprise_architecture
+    await enterprise_architecture.seed_eip()
     import seed_forex_seeds
     await seed_forex_seeds.seed()
     import asyncio

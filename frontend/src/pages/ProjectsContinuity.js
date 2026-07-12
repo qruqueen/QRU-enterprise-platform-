@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
+import { ManufacturingGPS } from "@/components/ManufacturingGPS";
 import { Panel, StatusChip, VerifiedBadge } from "@/components/qru";
 import { toast } from "sonner";
 import { Loader2, Workflow, CheckCircle2, Circle, Clock, ShieldAlert, Lock, Play, Pause, Square, ArrowRight, ThumbsUp, Award } from "lucide-react";
@@ -96,6 +97,9 @@ export default function ProjectsContinuity() {
                     <button onClick={() => act(p.id, "mode", { mode: "stopped" })} data-testid={`project-stop-${p.id}`} className="text-[11px] inline-flex items-center gap-1 border border-red-300 text-red-600 px-2 py-1 rounded-sm"><Square className="w-3 h-3" /> Stop</button>
                   </div>
                 </div>
+
+                {/* Manufacturing GPS™ — persistent production awareness (STD-EIP-0002) */}
+                <ManufacturingGPS projectId={p.id} route="/projects" />
 
                 {/* Progress bar */}
                 <div className="w-full h-2 rounded-full bg-navy/[0.08] mb-3 overflow-hidden"><div className="h-full bg-gold transition-all" style={{ width: `${s.percent}%` }} /></div>
