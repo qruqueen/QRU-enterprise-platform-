@@ -19,6 +19,8 @@ async def overview(user=Depends(get_current_user)):
 
 # ── Enterprise Manufacturing Dashboard™ (Knowledge-first) ───────────────────
 import manufacturing_dashboard as mdash
+import inherited_recipes as ir
+import project_zero as pz
 
 
 @router.get("/knowledge-manufacturing")
@@ -29,6 +31,55 @@ async def knowledge_manufacturing_list(user=Depends(get_current_user)):
 @router.get("/knowledge-manufacturing/{kr_id}")
 async def knowledge_manufacturing(kr_id: str, user=Depends(get_current_user)):
     res = await mdash.kr_manufacturing(kr_id)
+    if res is None:
+        raise HTTPException(404, "Knowledge Record not found.")
+    return res
+
+
+@router.post("/knowledge-manufacturing/{kr_id}/recipe/{recipe_type}")
+async def manufacture_recipe(kr_id: str, recipe_type: str, user=Depends(get_current_user)):
+    """Manufacture one KR-inheriting PDF recipe (Workbook / Student Workbook / Instructor Guide / Assessment Pack)."""
+    res = await ir.manufacture(kr_id, recipe_type, user.get("name", "Founder"))
+    if res is None:
+        raise HTTPException(404, "Knowledge Record not found.")
+    if isinstance(res, dict) and res.get("error"):
+        raise HTTPException(400, res["error"])
+    return res
+
+
+@router.post("/knowledge-manufacturing/{kr_id}/manufacture-all")
+async def manufacture_everything(kr_id: str, user=Depends(get_current_user)):
+    """One click → manufacture every AVAILABLE inheriting recipe from this KR. Declared-but-unbuilt
+    archetypes are returned honestly as coming_soon (never faked, never blocking)."""
+    res = await ir.manufacture_all(kr_id, user.get("name", "Founder"))
+    if res is None:
+        raise HTTPException(404, "Knowledge Record not found.")
+    return res
+
+
+@router.get("/inherited/{pid}/file")
+async def inherited_file(pid: str):
+    path = ir.file_path(pid)
+    if not os.path.exists(path):
+        raise HTTPException(404, "Inherited product file not found.")
+    return FileResponse(str(path), media_type="application/pdf", filename=f"{pid}.pdf")
+
+
+class FeedbackIn(BaseModel):
+    product_id: str | None = None
+    product_type: str | None = None
+    source: str = "learner"
+    rating: float | None = None
+    understanding_before: float | None = None
+    understanding_after: float | None = None
+    comment: str | None = None
+    suggested_improvement: str | None = None
+
+
+@router.post("/knowledge-manufacturing/{kr_id}/feedback")
+async def project_zero_feedback(kr_id: str, data: FeedbackIn, user=Depends(get_current_user)):
+    """Project Zero™ — ingest real learner/product feedback back into the originating KR (enterprise learning)."""
+    res = await pz.ingest_feedback(kr_id, data.dict(), user.get("name", "Learner"))
     if res is None:
         raise HTTPException(404, "Knowledge Record not found.")
     return res

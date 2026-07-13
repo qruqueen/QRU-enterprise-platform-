@@ -2,8 +2,12 @@
 of everything manufactured from it (Knowledge-first, not product-first). Honest status only.
 """
 from database import db
+import project_zero as pz
 
-# Canonical product lifecycle for a Knowledge Record (built ones are detected; the rest are "available").
+# Canonical product lifecycle for a Knowledge Record.
+#  - route     → opens the studio that manufactures it (multi-step / approval driven)
+#  - recipe    → a KR-inheriting PDF recipe manufacturable in-place (one click, no data entry)
+#  - coming_soon → declared archetype with no builder yet (honestly surfaced, never faked)
 PRODUCT_SPEC = [
     {"type": "Storyboard Master™", "key": "storyboard", "route": "/storyboard-studio"},
     {"type": "Knowledge Card™", "key": "knowledge_card", "route": "/poster-studio"},
@@ -12,15 +16,18 @@ PRODUCT_SPEC = [
     {"type": "Video", "key": "video", "route": "/storyboard-studio"},
     {"type": "Audio Lesson", "key": "audio", "route": "/storyboard-studio"},
     {"type": "Presentation", "key": "presentation", "route": "/storyboard-studio"},
-    {"type": "Book / Workbook / PDF", "key": "publication", "route": "/manufacture"},
+    {"type": "Book / Publication", "key": "publication", "route": "/manufacture"},
+    {"type": "Workbook", "key": "workbook", "recipe": "workbook"},
+    {"type": "Student Workbook", "key": "student_workbook", "recipe": "student_workbook"},
+    {"type": "Instructor Guide", "key": "instructor_guide", "recipe": "instructor_guide"},
+    {"type": "Assessment Pack", "key": "assessment_pack", "recipe": "assessment_pack"},
     {"type": "Podcast", "key": "podcast", "route": "/storyboard-studio"},
-    {"type": "Course", "key": "course", "route": None},
-    {"type": "Audiobook", "key": "audiobook", "route": None},
-    {"type": "Instructor Guide", "key": "instructor_guide", "route": None},
-    {"type": "Assessment Pack", "key": "assessment", "route": None},
-    {"type": "Marketing Assets", "key": "marketing", "route": None},
-    {"type": "Product Bundle", "key": "bundle", "route": None},
+    {"type": "Course", "key": "course", "coming_soon": True},
+    {"type": "Audiobook", "key": "audiobook", "coming_soon": True},
+    {"type": "Marketing Assets", "key": "marketing", "coming_soon": True},
+    {"type": "Product Bundle", "key": "bundle", "coming_soon": True},
 ]
+INHERITED_KEYS = ("workbook", "student_workbook", "instructor_guide", "assessment_pack")
 DATA_TEMPLATES = {"data-comparison-v1", "scorecard-grid-v1", "decoder-v1"}
 
 
@@ -37,7 +44,8 @@ async def _collect(kr_id):
     media = [m async for m in db.media_products.find({"kr_id": kr_id}, {"_id": 0})]
     storyboards = [s async for s in db.storyboard_masters.find({"kr_id": kr_id}, {"_id": 0})]
     products = [p async for p in db.products.find({"knowledge_record_id": kr_id}, {"_id": 0})]
-    return posters, media, storyboards, products
+    inherited = [i async for i in db.inherited_products.find({"kr_id": kr_id}, {"_id": 0})]
+    return posters, media, storyboards, products, inherited
 
 
 def _poster_item(p):
@@ -50,11 +58,17 @@ def _media_item(m):
             "render_status": m.get("render_status")}
 
 
+def _inherited_item(i):
+    f = (i.get("files") or [{}])[0]
+    return {"id": i["id"], "label": i.get("label"), "status": i.get("status"),
+            "download": f.get("url"), "treasure_status": i.get("treasure_status")}
+
+
 async def kr_manufacturing(kr_id):
     kr = await _kr(kr_id)
     if not kr:
         return None
-    posters, media, storyboards, products = await _collect(kr_id)
+    posters, media, storyboards, products, inherited = await _collect(kr_id)
     verif = kr.get("verification") or {}
     verified = bool(verif.get("evidence_sufficient_for_external_publication") or kr.get("verified_external"))
 
@@ -68,17 +82,24 @@ async def kr_manufacturing(kr_id):
         "presentation": [_media_item(m) for m in media if m.get("format") in ("teacher_presentation", "student_presentation")],
         "publication": [{"id": p["id"], "label": p.get("title"), "status": p.get("status")} for p in products],
     }
+    for key in INHERITED_KEYS:
+        built[key] = [_inherited_item(i) for i in inherited if i.get("type") == key]
 
     matrix = []
     for spec in PRODUCT_SPEC:
         items = built.get(spec["key"], [])
         published = any((i.get("status") or "").upper().startswith(("PUBLISH", "GOLD")) for i in items)
-        matrix.append({**spec, "count": len(items), "items": items,
-                       "state": ("published" if published else "manufactured") if items else "available"})
+        if spec.get("coming_soon"):
+            state = "coming_soon"
+        elif items:
+            state = "published" if published else "manufactured"
+        else:
+            state = "available"
+        matrix.append({**spec, "count": len(items), "items": items, "state": state})
 
     manufactured_types = sum(1 for m in matrix if m["count"] > 0)
-    # Project Zero™ feedback loop — honest: only shows real feedback if it exists.
-    feedback = [f async for f in db.project_zero_feedback.find({"kr_id": kr_id}, {"_id": 0}).limit(20)]
+    available_recipes = [m["recipe"] for m in matrix if m.get("recipe") and m["count"] == 0]
+    pz_loop = await pz.loop(kr_id)
 
     return {
         "kr": {"id": kr["id"], "kr_code": kr.get("kr_code"), "topic": kr.get("topic"),
@@ -86,11 +107,14 @@ async def kr_manufacturing(kr_id):
                "verified_external": verified, "single_source_of_truth": True},
         "matrix": matrix,
         "summary": {"product_types_manufactured": manufactured_types, "product_types_total": len(PRODUCT_SPEC),
-                    "total_assets": sum(m["count"] for m in matrix)},
-        "project_zero": {"feedback_count": len(feedback), "feedback": feedback,
+                    "total_assets": sum(m["count"] for m in matrix),
+                    "available_recipes": available_recipes},
+        "project_zero": {"feedback_count": pz_loop["aggregate"].get("feedback_count", 0),
+                         "feedback": pz_loop["feedback"], "aggregate": pz_loop["aggregate"],
                          "note": ("Customer feedback and learning metrics will flow back here after publication, "
                                   "improving this Knowledge Record and every future product it manufactures."
-                                  if not feedback else "Feedback is improving this Knowledge Record.")},
+                                  if pz_loop["aggregate"].get("feedback_count", 0) == 0
+                                  else "Feedback is improving this Knowledge Record.")},
         "philosophy": "Understand Once. Manufacture Forever.",
     }
 
@@ -103,6 +127,7 @@ async def kr_manufacturing_list():
         counts = (await db.poster_assets.count_documents({"kr_id": kr_id})
                   + await db.media_products.count_documents({"kr_id": kr_id})
                   + await db.storyboard_masters.count_documents({"kr_id": kr_id})
+                  + await db.inherited_products.count_documents({"kr_id": kr_id})
                   + await db.products.count_documents({"knowledge_record_id": kr_id}))
         verif = k.get("verification") or {}
         out.append({"id": kr_id, "kr_code": k.get("kr_code"), "topic": k.get("topic"),

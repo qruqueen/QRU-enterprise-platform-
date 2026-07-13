@@ -1,0 +1,37 @@
+{
+  "summary": "Frontend-only verification of the QRU Founder Experience Principle™ — Knowledge picker (topic-first) across Poster Studio, Storyboard Studio, and Enterprise Manufacturing Dashboard. All 6 acceptance criteria PASS. Founder never sees KMR codes, UUIDs, or version tokens anywhere in these manufacturing surfaces.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Poster Studio (unchanged from iteration_58)", "issues": ["Persistent React hydration console warning: '<span> cannot be a child of <option>' — emergent editor injects a <span data-ve-dynamic> inside the product-type <select>. Cosmetic/console-only; functionality unaffected."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "KnowledgePicker.js: reloads /media-studio/knowledge-manufacturing every time the dialog opens for a fresh mount (`useEffect` guarded by `krs.length` — OK for one component instance). However Poster and Storyboard studios each mount their own KnowledgePicker independently → two identical KR fetches per page. Consider a shared/cached fetcher (SWR/react-query) to avoid duplicate network round-trips when the founder toggles between studios.",
+    "KnowledgePicker.js: `filtered` filters only on `k.topic`. If two KRs share the same topic (e.g. verified vs draft of same topic — currently visible in the picker as 'What Is Governance? · Verified' and 'What Is Governance? · Draft'), the founder cannot distinguish them beyond the Verified/Draft chip. Consider showing a subtle status prefix or grouping (e.g. section header 'Verified' / 'Drafts') to reduce ambiguity — the Founder Principle is 'never make them remember internal IDs', but they still need enough signal to pick the correct record.",
+    "PosterStudio.js: `generate()` reads `selTmpl?.factual` after using it — declared with `const selTmpl = templates.find(...)` further below (line 62). Works only because JS hoists `const` in the closure at call-time, but visually the reference precedes the declaration. Move the derivation above `generate` for readability.",
+    "PosterStudio.js: `payload.kr_id = form.kr_id || null` — the backend `/publishing/poster/generate` accepts nullable kr_id (unverified template default flow), but Storyboard's `run()` `if (!krId) return toast.error(...)` correctly guards. Consistent behaviour; documented for next agent.",
+    "KnowledgeManufacturing.js:24-33: initial `.catch()` now logs to console (fixed since iter_58) but still shows only a toast — an unauthenticated founder gets 'Could not load Knowledge Records' with no path forward. Consider redirecting to /login on 401.",
+    "KnowledgePicker.js: sort places verified above drafts (good) but relies on booleans → all drafts appear after all verified. Within-group ordering is stable/insertion-order from the API — no client-side alphabetical secondary sort. Founder now sees 'What Is Governance?' twice (verified then draft) with the second entry visually a duplicate; consider prefixing draft rows or hiding drafts by default (verifiedOnly=true default) on founder-facing manufacture surfaces."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only per request)", "frontend": "100% (6/6 acceptance criteria)"},
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None. Used the existing verified KRs 'What Is Governance?' (1a93ceb2-…) and 'What Is Memory?' (8eeda74f-…). One additional inherited-content Governance poster was manufactured through the UI (idempotent — backend already returned existing product on repeat clicks earlier per curl notes).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Poster Studio: trigger data-testid=poster-knowledge-trigger opens dialog data-testid=poster-knowledge-dialog with 39 knowledge items (search box data-testid=poster-knowledge-search). Each item shows the topic + 'N products manufactured' + Verified/Draft chip only — verified via regex there is ZERO occurrence of KMR-XXXXXX / UUID / vN tokens in the dialog, in the trigger label, on the KM page left list, or in the selected-KR header. Overrides are collapsed by default, expand via data-testid=poster-overrides-toggle, and every override field has placeholder 'Inherited from Knowledge' with empty value. Selecting Governance → clicking Manufacture Poster returns DRAFT / Treasure: Passed / template v1.0 with title 'GOVERNANCE' inherited from the KR (no manual content). Storyboard Studio picker (data-testid=storyboard-knowledge-*) behaves identically — no legacy <select> element remains on the page. Enterprise Manufacturing Dashboard header now reads 'What Is Governance? — Living Manufacturing Dashboard' (no KMR-1A93CE or v3 tokens). Regression: km-manufacture-all-btn present, 4 Coming Soon cards, 4 PDF download links, Project Zero panel visible.",
+  "acceptance_criteria_results": {
+    "poster_picker_replaces_kr_id_input": "PASS",
+    "poster_pick_topic_then_manufacture_inherits_content": "PASS (title=GOVERNANCE, DRAFT, Treasure Passed, no manual fields typed)",
+    "poster_overrides_collapsed_default_placeholder_inherited": "PASS (5 fields, all placeholder='Inherited from Knowledge', all empty)",
+    "storyboard_picker_replaces_select_dropdown": "PASS (0 <select> KR elements)",
+    "manufacturing_dashboard_hides_kmr_codes_and_versions": "PASS (0 KMR / 0 UUID / 0 vN tokens in left list & header)",
+    "regression_manufacture_all_pdf_coming_soon_project_zero": "PASS (all present)"
+  },
+  "console_notes": "Hydration warning <span> as child of <option> still emits on Poster Studio (cosmetic, iterations 57-59 already flagged, no functional impact)."
+}

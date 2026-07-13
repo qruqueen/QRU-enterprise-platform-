@@ -7,6 +7,7 @@ are declared but not yet built — surfaced honestly as COMING_SOON (never faked
 import os
 from pathlib import Path
 from fpdf import FPDF
+from fpdf.enums import XPos, YPos
 
 from database import db
 from models import gen_id, now_iso
@@ -38,6 +39,12 @@ def _s(t):
 class _Doc(FPDF):
     title_line = ""
 
+    def mc(self, *a, **k):
+        self.set_x(self.l_margin)
+        k.setdefault("new_x", XPos.LMARGIN)
+        k.setdefault("new_y", YPos.NEXT)
+        return self.multi_cell(*a, **k)
+
     def footer(self):
         self.set_y(-14)
         self.set_font("Helvetica", "", 8)
@@ -49,7 +56,7 @@ def _heading(pdf, text, color=NAVY):
     pdf.ln(2)
     pdf.set_font("Helvetica", "B", 14)
     pdf.set_text_color(*color)
-    pdf.multi_cell(0, 8, _s(text))
+    pdf.mc(0, 8, _s(text))
     pdf.set_draw_color(*GOLD); pdf.set_line_width(0.5)
     y = pdf.get_y() + 1
     pdf.line(pdf.l_margin, y, pdf.l_margin + 40, y)
@@ -59,7 +66,7 @@ def _heading(pdf, text, color=NAVY):
 def _body(pdf, text, size=11):
     pdf.set_font("Helvetica", "", size)
     pdf.set_text_color(*INK)
-    pdf.multi_cell(0, 6, _s(text))
+    pdf.mc(0, 6, _s(text))
     pdf.ln(1)
 
 
@@ -68,7 +75,7 @@ def _bullets(pdf, items, numbered=False):
     pdf.set_text_color(*INK)
     for i, it in enumerate(items, 1):
         prefix = f"{i}.  " if numbered else "-  "
-        pdf.multi_cell(0, 6, _s(prefix + str(it)))
+        pdf.mc(0, 6, _s(prefix + str(it)))
     pdf.ln(1)
 
 
@@ -82,13 +89,13 @@ def _build_pdf(inh, recipe):
     pdf.add_page()
     pdf.set_fill_color(*NAVY); pdf.rect(0, 0, 210, 297, "F")
     pdf.set_y(90); pdf.set_font("Helvetica", "B", 34); pdf.set_text_color(255, 255, 255)
-    pdf.multi_cell(0, 14, _s(inh["term"].title()), align="C")
+    pdf.mc(0, 14, _s(inh["term"].title()), align="C")
     pdf.set_font("Helvetica", "B", 18); pdf.set_text_color(*GOLD)
-    pdf.multi_cell(0, 12, _s(recipe["label"].upper()), align="C")
+    pdf.mc(0, 12, _s(recipe["label"].upper()), align="C")
     pdf.set_font("Helvetica", "", 12); pdf.set_text_color(230, 230, 230)
-    pdf.multi_cell(0, 8, _s(f"{recipe['edition']}  -  QRU PRESS(TM)"), align="C")
+    pdf.mc(0, 8, _s(f"{recipe['edition']}  -  QRU PRESS(TM)"), align="C")
     pdf.set_y(250); pdf.set_font("Helvetica", "", 10); pdf.set_text_color(200, 200, 200)
-    pdf.multi_cell(0, 6, _s(f"Manufactured from verified Knowledge Record {inh['kr_code']} v{inh['version']}. Treasure Standard(TM). Quest for Real Understanding(TM)."), align="C")
+    pdf.mc(0, 6, _s(f"Manufactured from verified Knowledge Record {inh['kr_code']} v{inh['version']}. Treasure Standard(TM). Quest for Real Understanding(TM)."), align="C")
 
     pdf.add_page()
     assessment_only = recipe.get("assessment_only")
@@ -138,7 +145,7 @@ def _build_pdf(inh, recipe):
     if not assessment_only:
         _heading(pdf, "Memory Sentence")
         pdf.set_font("Helvetica", "BI", 13); pdf.set_text_color(*NAVY)
-        pdf.multi_cell(0, 8, _s(inh["memory_sentence"]), align="C")
+        pdf.mc(0, 8, _s(inh["memory_sentence"]), align="C")
 
     _heading(pdf, "Sources")
     _bullets(pdf, inh["citations"] or [inh["kr_code"]])
@@ -162,13 +169,17 @@ def _quality_gate(inh, recipe):
                                          "blocking": sum(1 for c in checks if not c["passed"])}}
 
 
-async def manufacture(kr_id, recipe_type, actor="Founder"):
+async def manufacture(kr_id, recipe_type, actor="Founder", force=False):
     recipe = RECIPES.get(recipe_type)
     if not recipe:
         return {"error": f"Recipe '{recipe_type}' has no completed builder (Coming Soon)." if recipe_type in COMING_SOON else f"Unknown recipe '{recipe_type}'."}
     kr = await kri.load_kr(db, kr_id)
     if not kr:
         return None
+    if not force:
+        existing = await db.inherited_products.find_one({"kr_id": kr_id, "type": recipe_type}, {"_id": 0})
+        if existing:
+            return existing
     inh = kri.build_inheritance(kr)
     pdf_bytes = _build_pdf(inh, recipe)
     pid = gen_id()
@@ -190,3 +201,32 @@ async def manufacture(kr_id, recipe_type, actor="Founder"):
 
 def file_path(pid):
     return INHERITED_DIR / f"{pid}.pdf"
+
+
+async def manufacture_all(kr_id, actor="Founder"):
+    """Manufacture every AVAILABLE recipe for a KR in one pass. Recipes already built for this KR are
+    skipped (idempotent). Declared-but-unbuilt archetypes are surfaced honestly as coming_soon."""
+    kr = await kri.load_kr(db, kr_id)
+    if not kr:
+        return None
+    existing = set()
+    async for i in db.inherited_products.find({"kr_id": kr_id}, {"_id": 0, "type": 1}):
+        existing.add(i.get("type"))
+
+    manufactured, skipped = [], []
+    for recipe_type in RECIPES:
+        if recipe_type in existing:
+            skipped.append({"type": recipe_type, "reason": "Already manufactured for this Knowledge Record."})
+            continue
+        rec = await manufacture(kr_id, recipe_type, actor)
+        if isinstance(rec, dict) and rec.get("error"):
+            skipped.append({"type": recipe_type, "reason": rec["error"]})
+        else:
+            manufactured.append({"type": recipe_type, "id": rec["id"], "label": rec["label"],
+                                 "status": rec["status"], "treasure_status": rec["treasure_status"]})
+
+    coming_soon = [{"type": t, "reason": "Declared archetype — inheriting recipe not built yet (Coming Soon)."}
+                   for t in COMING_SOON]
+    return {"kr_id": kr_id, "manufactured": manufactured, "skipped": skipped, "coming_soon": coming_soon,
+            "manufactured_count": len(manufactured),
+            "philosophy": "Understand Once. Manufacture Forever."}

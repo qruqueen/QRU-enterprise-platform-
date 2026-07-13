@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge } from "@/components/qru";
+import { KnowledgePicker } from "@/components/KnowledgePicker";
 import { toast } from "sonner";
 import { Loader2, Clapperboard, Film, Wand2, Download, FileText, Presentation, Volume2 } from "lucide-react";
 
@@ -17,20 +18,11 @@ const FORMAT_META = {
 const STATUS_TONE = { DRAFT: "slate", VERIFICATION_REQUIRED: "amber", REVISION_REQUIRED: "rose", MEDIA_APPROVED: "emerald", QRU_GOLD_STANDARD: "gold" };
 
 export default function StoryboardStudio() {
-  const [krs, setKrs] = useState([]);
   const [krId, setKrId] = useState("");
+  const [selKr, setSelKr] = useState(null);
   const [formats, setFormats] = useState(["youtube_video", "audio_lesson", "teacher_presentation"]);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
-
-  useEffect(() => {
-    api.get("/refinement/knowledge").then((r) => {
-      const list = r.data.records || [];
-      setKrs(list);
-      const v = list.find((k) => k.verification?.evidence_sufficient_for_external_publication);
-      setKrId((v || list[0])?.id || "");
-    }).catch(() => {});
-  }, []);
 
   const toggleFmt = (f) => setFormats((s) => s.includes(f) ? s.filter((x) => x !== f) : [...s, f]);
 
@@ -76,8 +68,6 @@ export default function StoryboardStudio() {
     } catch (e) { toast.error(e.response?.data?.detail || "Video render failed to start."); }
   };
 
-  const selKr = krs.find((k) => k.id === krId);
-
   return (
     <div data-testid="storyboard-studio-page">
       <PageHeader
@@ -91,16 +81,16 @@ export default function StoryboardStudio() {
         <Panel title="Media Manufacturing Order™" icon={Clapperboard} accent="royal" testid="storyboard-order">
           <div className="space-y-3">
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-wide text-navy">Approved Knowledge Record</label>
-              <select data-testid="storyboard-kr" value={krId} onChange={(e) => setKrId(e.target.value)} className="w-full mt-0.5 border rounded-sm p-2 text-sm">
-                {krs.map((k) => {
-                  const v = k.verification?.evidence_sufficient_for_external_publication;
-                  return <option key={k.id} value={k.id}>{v ? "\u2713 " : "\u2022 "}{k.topic} ({k.kr_code})</option>;
-                })}
-              </select>
+              <label className="text-[10px] font-bold uppercase tracking-wide text-navy">1 · Choose your Knowledge</label>
+              <div className="mt-1">
+                <KnowledgePicker value={krId} testid="storyboard-knowledge"
+                  onSelect={(k) => { setKrId(k.id); setSelKr(k); }} />
+              </div>
               {selKr && (
-                <p className={`text-[10px] mt-1 ${selKr.verification?.evidence_sufficient_for_external_publication ? "text-emerald-700" : "text-amber-700"}`}>
-                  {selKr.verification?.evidence_sufficient_for_external_publication ? "Externally verified — eligible for Gold Standard media." : "Not externally verified — media stays INTERNAL DRAFT (Verify & Promote first)."}
+                <p className={`text-[10px] mt-1 ${selKr.verified_external ? "text-emerald-700" : "text-amber-700"}`}>
+                  {selKr.verified_external
+                    ? "Verified Knowledge — media inherits its verified content and is eligible for Gold Standard."
+                    : "Not externally verified — media stays INTERNAL DRAFT (Verify & Promote first)."}
                 </p>
               )}
             </div>

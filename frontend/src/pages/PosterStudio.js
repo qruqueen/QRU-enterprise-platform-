@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge } from "@/components/qru";
+import { KnowledgePicker } from "@/components/KnowledgePicker";
 import { toast } from "sonner";
-import { Loader2, LayoutTemplate, Wand2, ShieldCheck, Download, CheckCircle2, AlertTriangle, FileText } from "lucide-react";
+import { Loader2, LayoutTemplate, Wand2, ShieldCheck, Download, CheckCircle2, AlertTriangle, FileText, ChevronDown, Sliders } from "lucide-react";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
+
+const OVERRIDE_FIELDS = [["eyebrow", "Eyebrow"], ["title", "Title"], ["tagline", "Tagline"], ["subtitle", "Subtitle"], ["footer", "Footer"]];
 
 const STATUS_TONE = {
   DRAFT: "slate", INTERNAL_REVIEW: "blue", VERIFICATION_REQUIRED: "amber", REVISION_REQUIRED: "rose",
@@ -18,12 +21,11 @@ export default function PosterStudio() {
   const [posters, setPosters] = useState([]);
   const [busy, setBusy] = useState(false);
   const [sel, setSel] = useState(null);
+  const [selKr, setSelKr] = useState(null);
+  const [showOverrides, setShowOverrides] = useState(false);
   const [form, setForm] = useState({
-    template_id: "process-formula-v1", is_factual: false, kr_id: "",
-    eyebrow: "THE QRU", title: "LEARNING FORMULA", trademark: true,
-    tagline: "SIMPLE.  POWERFUL.  TRANSFORMATIVE.",
-    subtitle: "WE DON'T JUST TEACH INFORMATION. WE CREATE UNDERSTANDING.",
-    footer: "CURIOSITY STARTS THE JOURNEY.  UNDERSTANDING CHANGES EVERYTHING.",
+    template_id: "process-formula-v1", is_factual: false, kr_id: "", trademark: true,
+    eyebrow: "", title: "", tagline: "", subtitle: "", footer: "",
   });
 
   const load = () => {
@@ -37,7 +39,9 @@ export default function PosterStudio() {
   const generate = async () => {
     setBusy(true);
     try {
-      const payload = { ...form, kr_id: form.kr_id || null };
+      const payload = { template_id: form.template_id, is_factual: form.is_factual || !!selTmpl?.factual, trademark: form.trademark,
+        kr_id: form.kr_id || null };
+      OVERRIDE_FIELDS.forEach(([k]) => { if (form[k]?.trim()) payload[k] = form[k].trim(); });
       const { data } = await api.post("/publishing/poster/generate", payload);
       setSel(data);
       setPosters((p) => [data, ...p.filter((x) => x.id !== data.id)]);
@@ -69,37 +73,59 @@ export default function PosterStudio() {
       <div className="grid lg:grid-cols-[360px_1fr] gap-5">
         {/* Brief */}
         <Panel title="Poster Brief" icon={LayoutTemplate} accent="royal" testid="poster-brief">
-          <div className="space-y-2.5">
+          <div className="space-y-3.5">
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-wide text-navy">Template family</label>
+              <label className="text-[10px] font-bold uppercase tracking-wide text-navy">1 · Choose your Knowledge</label>
+              <div className="mt-1">
+                <KnowledgePicker value={form.kr_id} testid="poster-knowledge"
+                  onSelect={(k) => { set("kr_id", k.id); setSelKr(k); }} />
+              </div>
+              {selKr ? (
+                <p className={`text-[9px] mt-1 ${selKr.verified_external ? "text-emerald-700" : "text-amber-700"}`}>
+                  {selKr.verified_external
+                    ? "Verified Knowledge — the poster inherits its definitions, examples and citations automatically. You only set manufacturing choices below."
+                    : "This Knowledge is not externally verified — factual posters stay INTERNAL DRAFT until it is verified (Verify & Promote)."}
+                </p>
+              ) : (
+                <p className="text-[9px] text-muted-foreground mt-1">Pick a topic and the Factory populates every field it already knows. Leave empty to manufacture a brand poster from template defaults.</p>
+              )}
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-wide text-navy">2 · Product type</label>
               <select data-testid="poster-template" value={form.template_id} onChange={(e) => set("template_id", e.target.value)} className="w-full mt-0.5 border rounded-sm p-2 text-sm">
                 {templates.map((t) => <option key={t.id} value={t.id}>{t.family} · {t.dimensions.aspect}</option>)}
               </select>
+              {selTmpl?.factual && !selKr?.verified_external && (
+                <p className="text-[9px] text-amber-700 font-bold mt-1">This is a data/factual product — choose a verified Knowledge above for Gold Standard.</p>
+              )}
             </div>
-            {[["eyebrow", "Eyebrow"], ["title", "Title"], ["tagline", "Tagline"], ["subtitle", "Subtitle"], ["footer", "Footer"]].map(([k, label]) => (
-              <div key={k}>
-                <label className="text-[10px] font-bold uppercase tracking-wide text-navy">{label}</label>
-                <input data-testid={`poster-${k}`} value={form[k]} onChange={(e) => set(k, e.target.value)} className="w-full mt-0.5 border rounded-sm p-2 text-sm" />
-              </div>
-            ))}
+
             <label className="flex items-center gap-2 text-[11px] text-navy">
               <input type="checkbox" data-testid="poster-trademark" checked={form.trademark} onChange={(e) => set("trademark", e.target.checked)} /> Show ™ on title
             </label>
+
             <div className="border-t border-navy/10 pt-2">
-              {selTmpl?.factual && (
-                <p className="text-[10px] text-amber-700 font-bold mb-1">This template is data/factual — a verified Knowledge Record is required for Gold Standard.</p>
-              )}
-              <label className="flex items-center gap-2 text-[11px] text-navy font-bold">
-                <input type="checkbox" data-testid="poster-factual" checked={form.is_factual || !!selTmpl?.factual} disabled={!!selTmpl?.factual} onChange={(e) => set("is_factual", e.target.checked)} /> Contains factual data / statistics
-              </label>
-              {(form.is_factual || selTmpl?.factual) && (
-                <div className="mt-2">
-                  <label className="text-[10px] font-bold uppercase tracking-wide text-navy">Verified Knowledge Record ID (required for Gold)</label>
-                  <input data-testid="poster-kr-id" value={form.kr_id} onChange={(e) => set("kr_id", e.target.value)} placeholder="KR id from Refinement / Verify & Promote" className="w-full mt-0.5 border rounded-sm p-2 text-xs" />
-                  <p className="text-[9px] text-amber-700 mt-1">Knowledge-First: factual posters stay INTERNAL DRAFT until the source KR is externally verified.</p>
+              <button type="button" onClick={() => setShowOverrides((s) => !s)} data-testid="poster-overrides-toggle"
+                className="w-full flex items-center justify-between text-[10px] font-bold uppercase tracking-wide text-navy/70 hover:text-royal">
+                <span className="flex items-center gap-1.5"><Sliders className="w-3.5 h-3.5" /> Optional customizations</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showOverrides ? "rotate-180" : ""}`} />
+              </button>
+              {showOverrides && (
+                <div className="space-y-2 mt-2" data-testid="poster-overrides">
+                  <p className="text-[9px] text-muted-foreground">Only fill a field to override what the Knowledge already provides. Leave blank to inherit.</p>
+                  {OVERRIDE_FIELDS.map(([k, label]) => (
+                    <div key={k}>
+                      <label className="text-[10px] font-bold uppercase tracking-wide text-navy">{label}</label>
+                      <input data-testid={`poster-${k}`} value={form[k]} onChange={(e) => set(k, e.target.value)}
+                        placeholder={selKr ? "Inherited from Knowledge" : "Template default"}
+                        className="w-full mt-0.5 border rounded-sm p-2 text-sm" />
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
+
             <button onClick={generate} disabled={busy} data-testid="poster-generate"
               className="w-full inline-flex items-center justify-center gap-2 bg-navy text-white px-4 py-2.5 rounded-sm font-bold disabled:opacity-50 hover:bg-navy/90 transition-colors">
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />} {busy ? "Manufacturing…" : "Manufacture Poster"}
