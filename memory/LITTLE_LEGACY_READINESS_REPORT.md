@@ -87,3 +87,52 @@ hit, a deterministic branded card is used honestly (no fake frames, no silent fa
 
 ## Deferred (Founder direction)
 - Shopify Draft publishing of governed products (creds stored; build when products are ready).
+
+---
+
+# Phase 4 — Production Readiness (DELIVERED & VERIFIED 2026-07-13, iter 66 UI 100%)
+
+## ✔ 1. Character Mastering complete
+All 6 Character Bibles™ mastered and Founder-approved as **Canon Version 1.0** (locked): Nova Sparkle™,
+Sunny Bee™, Tilly Turtle™, Bella Butterfly™, Eli Elephant™, Rio Rainbow™. Each includes an approved model
+sheet + expression sheet (Gemini Nano Banana), voice profile, color palette, canon notes, version history,
+and Founder-approval status. Quality matches the Nova Sparkle standard.
+
+## ✔ 2. Flagship pilot manufactured
+One flagship pilot rendered to the quality standard (720p, 37s, 6 scenes), **reference-locked** to the
+approved Character Bible v1.0 master art. Verified on-model (Nova with star crown, constellation cape,
+“Big Dreams” book at the Learning Tree™). Honestly labeled **QRU Animated Storybook Pilot™** (image-based
+motion animation, NOT frame-by-frame cel animation).
+
+## ✔ 3. Publishing Package™ (auto-manufactured per pilot)
+Deterministic, built from the verified KR: child-safe YouTube title, SEO description, Made-for-Kids flag,
+keywords, playlist, episode number, thumbnail recommendation, learning objective, parent + teacher
+discussion questions, call-to-action, end screen, next episode, QRU copyright/footer, and a 7-point QRU
+Brand Verification Checklist. Founder reviews & approves before publishing.
+
+## ✔ 4. One approval → one-click publish
+On Founder approval the pilot flows into the existing YouTube Publisher™ as a distribution-ready Factory
+asset with title/description/keywords/Made-for-Kids **pre-filled** from the Publishing Package™
+(`_metadata_from_factory_asset` prefers it). No duplicate upload. Governance gates preserved.
+
+## ✔ 5. Reference consistency
+Scene art inherits appearance/proportions/colors/props from the approved Character Bible v1.0 master
+(passed as a reference image to Gemini via `generate_image_with_reference`). Verified visually.
+
+## ◑ 6. Product inheritance (surfaced via existing engines — NOT duplicated)
+The Studio links a verified topic to the existing Manufacturing Dashboard™ (Knowledge Manufacturing) so
+one KR manufactures workbooks, guides, posters, audiobook, knowledge cards, etc. via existing recipes.
+NOT-yet-built kid-specific formats (coloring pages, activity pack, songs, course) remain future recipes —
+to be added as inheriting recipes, never duplicated.
+
+## ◑ 7. Project Zero™ (existing loop retained)
+The existing Project Zero™ feedback→KR ingestion is reused; a Little-Legacy-specific parent/teacher/child
+feedback surface is a future enhancement (not rebuilt).
+
+## Files (Phase 4)
+- `ai_service.py` — `generate_image_with_reference()` (reference-image consistency).
+- `little_legacy.py` — `CANON_NOTES`, `_ensure_bible_fields()` migration (palette/canon notes/version history).
+- `little_legacy_production.py` — `_build_publishing_package()`, reference-locked pilot scenes, package + one-click publish metadata on approval.
+- `routers/youtube.py` — `_metadata_from_factory_asset()` prefers the Publishing Package™.
+- `pages/LittleLegacyStudio.js` — palette+canon notes on Mastering cards, `PublishingPackage` panel, Open-in-YouTube link, inheritance link.
+
