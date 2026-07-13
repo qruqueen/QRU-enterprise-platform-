@@ -3,7 +3,7 @@ import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge } from "@/components/qru";
 import { toast } from "sonner";
-import { Loader2, Image as ImageIcon, Sparkles, ShieldCheck, CheckCircle2, RotateCcw, Ban, Award, Wand2, Link as LinkIcon } from "lucide-react";
+import { Loader2, Image as ImageIcon, Sparkles, ShieldCheck, CheckCircle2, RotateCcw, Ban, Award, Wand2, Link as LinkIcon, Store, BookUp, Headphones } from "lucide-react";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
 
@@ -35,6 +35,10 @@ export default function CoverStudio() {
   const [selProduct, setSelProduct] = useState("");
   const [attaching, setAttaching] = useState(false);
   const [attachResult, setAttachResult] = useState({});
+  const [pubBusy, setPubBusy] = useState(null);
+  const [kdpResult, setKdpResult] = useState({});
+  const [audioResult, setAudioResult] = useState({});
+  const [voice, setVoice] = useState("onyx");
 
   const load = () => api.get("/publishing/covers").then((r) => { setCovers(r.data.covers); setStates(r.data.states); }).catch(() => {});
   const loadProducts = () => api.get("/publishing/attachable-products").then((r) => setProducts(r.data.products || [])).catch(() => {});
@@ -52,6 +56,50 @@ export default function CoverStudio() {
       setAttachFor(null); setSelProduct(""); loadProducts();
     } catch (e) { toast.error(e.response?.data?.detail || "Attach failed."); }
     finally { setAttaching(false); }
+  };
+
+  const publishStore = async (pid) => {
+    setPubBusy(`store-${pid}`);
+    try {
+      const { data } = await api.post(`/publishing/product/${pid}/publish-store`);
+      if (data.ok) toast.success(data.message);
+      else toast.warning(data.message);
+    } catch (e) { toast.error(e.response?.data?.detail || "Publish failed."); }
+    finally { setPubBusy(null); }
+  };
+
+  const exportKdp = async (cid, pid) => {
+    setPubBusy(`kdp-${pid}`);
+    try {
+      const { data } = await api.post(`/publishing/product/${pid}/kdp-package`);
+      if (data.ok) { setKdpResult((r) => ({ ...r, [cid]: data })); toast.success(data.message); }
+      else toast.warning(data.message);
+    } catch (e) { toast.error(e.response?.data?.detail || "KDP export failed."); }
+    finally { setPubBusy(null); }
+  };
+
+  const makeAudiobook = async (cid, pid) => {
+    setPubBusy(`audio-${pid}`);
+    setAudioResult((r) => ({ ...r, [cid]: { status: "RENDERING" } }));
+    try {
+      const { data } = await api.post(`/publishing/product/${pid}/audiobook`, { voice });
+      if (!data.ok) { toast.warning(data.message); setAudioResult((r) => ({ ...r, [cid]: null })); setPubBusy(null); return; }
+      toast.info(data.message);
+      const poll = setInterval(async () => {
+        try {
+          const { data: st } = await api.get(`/publishing/product/${pid}/audiobook-status`);
+          if (st.status === "READY") {
+            clearInterval(poll); setPubBusy(null);
+            setAudioResult((r) => ({ ...r, [cid]: { status: "READY", download_url: st.url, audiobook: st } }));
+            toast.success("Audiobook edition is ready.");
+          } else if (st.status === "FAILED") {
+            clearInterval(poll); setPubBusy(null);
+            setAudioResult((r) => ({ ...r, [cid]: null }));
+            toast.error(st.error || "Audiobook narration failed.");
+          }
+        } catch (_) { /* keep polling */ }
+      }, 4000);
+    } catch (e) { toast.error(e.response?.data?.detail || "Audiobook failed."); setAudioResult((r) => ({ ...r, [cid]: null })); setPubBusy(null); }
   };
 
   const generate = async () => {
@@ -181,10 +229,52 @@ export default function CoverStudio() {
                             </button>
                           )}
                           {attachResult[c.id] && (
-                            <div className="mt-1.5 text-[9px] text-emerald-800" data-testid={`cover-attach-result-${c.id}`}>
-                              ✓ Attached to <b>{attachResult[c.id].product_title}</b>.
-                              {attachResult[c.id].download_url && (
-                                <a href={`${BACKEND}${attachResult[c.id].download_url}`} target="_blank" rel="noreferrer" className="text-royal underline ml-1" data-testid={`cover-attach-download-${c.id}`}>Download deliverable →</a>
+                            <div className="mt-1.5 space-y-1.5" data-testid={`cover-attach-result-${c.id}`}>
+                              <div className="text-[9px] text-emerald-800">
+                                ✓ Attached to <b>{attachResult[c.id].product_title}</b>.
+                                {attachResult[c.id].download_url && (
+                                  <a href={`${BACKEND}${attachResult[c.id].download_url}`} target="_blank" rel="noreferrer" className="text-royal underline ml-1" data-testid={`cover-attach-download-${c.id}`}>Download deliverable →</a>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap gap-1.5">
+                                <button onClick={() => publishStore(attachResult[c.id].product_id)} disabled={pubBusy === `store-${attachResult[c.id].product_id}`}
+                                  data-testid={`cover-publish-store-${c.id}`}
+                                  className="text-[10px] px-2 py-1 rounded-sm border border-emerald-300 bg-emerald-50 text-emerald-800 font-bold inline-flex items-center gap-1 disabled:opacity-50 hover:bg-emerald-100">
+                                  {pubBusy === `store-${attachResult[c.id].product_id}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Store className="w-3 h-3" />} Add to QRU Store
+                                </button>
+                                <button onClick={() => exportKdp(c.id, attachResult[c.id].product_id)} disabled={pubBusy === `kdp-${attachResult[c.id].product_id}`}
+                                  data-testid={`cover-export-kdp-${c.id}`}
+                                  className="text-[10px] px-2 py-1 rounded-sm border border-navy/20 bg-white text-navy font-bold inline-flex items-center gap-1 disabled:opacity-50 hover:border-royal">
+                                  {pubBusy === `kdp-${attachResult[c.id].product_id}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <BookUp className="w-3 h-3" />} KDP-Ready Export
+                                </button>
+                                <span className="inline-flex items-center gap-1">
+                                  <select value={voice} onChange={(e) => setVoice(e.target.value)} data-testid={`cover-audio-voice-${c.id}`}
+                                    className="text-[10px] border border-navy/20 rounded-sm px-1 py-1 text-navy bg-white">
+                                    {["onyx", "sage", "nova", "shimmer", "fable"].map((v) => <option key={v} value={v}>{v}</option>)}
+                                  </select>
+                                  <button onClick={() => makeAudiobook(c.id, attachResult[c.id].product_id)} disabled={pubBusy === `audio-${attachResult[c.id].product_id}`}
+                                    data-testid={`cover-audiobook-${c.id}`}
+                                    className="text-[10px] px-2 py-1 rounded-sm border border-royal/40 bg-royal/[0.06] text-royal font-bold inline-flex items-center gap-1 disabled:opacity-50 hover:bg-royal/10">
+                                    {pubBusy === `audio-${attachResult[c.id].product_id}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Headphones className="w-3 h-3" />} Create Audiobook
+                                  </button>
+                                </span>
+                              </div>
+                              {kdpResult[c.id] && (
+                                <div className="text-[9px] text-navy/80 border border-navy/10 rounded-sm p-1.5" data-testid={`cover-kdp-result-${c.id}`}>
+                                  <a href={`${BACKEND}${kdpResult[c.id].download_url}`} target="_blank" rel="noreferrer" className="text-royal underline font-bold" data-testid={`cover-kdp-download-${c.id}`}>Download KDP package (.zip) →</a>
+                                  <span className="block mt-0.5">Includes: {kdpResult[c.id].contents.join(", ")}. Upload once at kdp.amazon.com — QRU never fakes an "on Amazon" state.</span>
+                                </div>
+                              )}
+                              {audioResult[c.id] && audioResult[c.id].status === "RENDERING" && (
+                                <div className="text-[9px] text-royal border border-royal/20 rounded-sm p-1.5 inline-flex items-center gap-1.5" data-testid={`cover-audiobook-rendering-${c.id}`}>
+                                  <Loader2 className="w-3 h-3 animate-spin" /> Narrating audiobook in the background…
+                                </div>
+                              )}
+                              {audioResult[c.id] && audioResult[c.id].status === "READY" && (
+                                <div className="text-[9px] text-navy/80 border border-royal/20 rounded-sm p-1.5" data-testid={`cover-audiobook-result-${c.id}`}>
+                                  <a href={`${BACKEND}${audioResult[c.id].download_url}`} target="_blank" rel="noreferrer" className="text-royal underline font-bold" data-testid={`cover-audiobook-download-${c.id}`}>▶ Listen / download audiobook (.mp3) →</a>
+                                  <span className="block mt-0.5">Voice: {audioResult[c.id].audiobook.voice} · ~{Math.max(1, Math.round((audioResult[c.id].audiobook.est_seconds || 0) / 60))} min · narrated from the {audioResult[c.id].audiobook.narrated_from === "book" ? "book content" : "verified Knowledge Record"}.</span>
+                                </div>
                               )}
                             </div>
                           )}

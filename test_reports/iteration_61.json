@@ -1,0 +1,54 @@
+{
+  "summary": "Iteration 61 — Book Publishing (Store + KDP), Audiobook (background), Cover Studio publish/kdp/audiobook UI, and honest Storyboard video-status. Backend 12/12 pass. Full end-to-end UI flow verified: attach APPROVED cover to a Book product → deliverable re-rendered → three new actions appear (Add to QRU Store, KDP-Ready Export, Create Audiobook with voice select). Store publish returns 'purchasable' toast, KDP builds real zip w/ interior.pdf + KDP-Publishing-Kit.pdf + cover.png (when cover attached), audiobook creates real 9MB / 35MB MP3 (audio/mpeg) from book content. Storyboard Studio now shows an honest per-video-format render-status note (data-testid=storyboard-video-status-youtube_video) with 'not yet a video' language — the misleading 'ready to publish to YouTube' implication is gone. No fake Amazon 'published' state anywhere.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Cover Studio → Create Audiobook polling (long books)", "issue": "For large books (~35MB MP3, ~30 min narration) the background job takes ~6-10 minutes and the UI-side setInterval poll receives multiple ingress 502s while the backend is still working. The frontend's silent catch(_) means it keeps polling and eventually surfaces the READY link — but a founder watching the UI has no visual reassurance beyond 'Narrating audiobook in the background…' and no elapsed timer or cancel affordance. Recommend adding an elapsed-time counter or ETA to the rendering pill.", "affected_selectors": ["cover-audiobook-rendering-<coverId>"]}
+    ],
+    "design_issues": [
+      {"screen": "Cover Studio product picker inside 'Attach to Product'", "issues": ["Duplicate product titles are indistinguishable ('The Science of — Book' appears twice, 'Forex KR — Book' appears three times). Add product_code or created_at (a short suffix) so the founder can pick the right one deterministically."]},
+      {"screen": "Cover Studio product-type <select> (native)", "issues": ["Emergent editor injects <span data-ve-dynamic> inside <option> — triggers a React hydration console warning ('<span> cannot be a child of <option>'). Pre-existing (iteration_58-60). Cosmetic/console-only; functionality unaffected. Playwright's native select_option cannot match; had to use the DOM value setter + change dispatch."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration61_product_publishing.py",
+    "/app/test_reports/pytest/iteration61.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "CoverStudio.js:88-101 (makeAudiobook): setInterval poll has NO client-side deadline; if the ingress or job hangs indefinitely the UI stays in 'Narrating…' forever with no timeout. Add a max-wait (e.g., 8 minutes) then surface an honest error toast + clear the pubBusy lock.",
+    "product_publishing.py:213 (_audiobook_job): a hard crash of _audiobook_job (e.g., DB unavailable at the very start) never sets FAILED status — the try/except only wraps the TTS call, not the initial db.products.find_one. Wrap the entire function in try/except to guarantee READY|FAILED terminal state.",
+    "product_publishing.py:157-162 (kdp_package): the ZIP is regenerated on every POST /kdp-package call — for large books this is wasteful. Consider caching by (product_id, deliverable_hash) or returning the existing zip if source unchanged.",
+    "product_publishing.py:26 VOICES excludes 'echo' from the UI dropdown (['onyx','sage','nova','shimmer','fable']) while the backend also accepts 'alloy' and 'echo'. Either narrow the backend or expose the missing voices in CoverStudio.js line 253.",
+    "publishing.py:277 (make_audiobook): AudiobookInput has a mutable default `AudiobookInput()` in function signature — FastAPI handles this OK but it's a Python anti-pattern; prefer `data: AudiobookInput | None = None` and default inside the function.",
+    "CoverStudio.js is 293 lines with dense inline JSX — consider extracting the per-cover 'Publish actions' subtree into a <CoverPublishActions cover={c} attachResult={ar} …/> component for readability and testability."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration61_product_publishing.py"
+  ],
+  "success_rate": {"backend": "100% (12/12)", "frontend": "100% (Cover Studio publish + KDP + audiobook UI flow AND Storyboard honest video status verified end-to-end)"},
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (temporary; login field name is 'access_token' NOT 'password'). Test products used: 8c8c6084-c49a-4a37-a374-2973cd515551 (Love — Book, rendered), 01615dca-1d2e-446c-874f-f7b46a2c1a4c (shorter book, ~9MB MP3), 23008552-1cfa-4c51-89a7-302c77da548b (The Science of — Book, ~35MB MP3, ~30 min) — cover attached during test.",
+  "seed_data_creation": "During the UI test the APPROVED cover af55a637-5ee6-43ac-ae90-510993e8c980 was attached to product 23008552-1cfa-4c51-89a7-302c77da548b and its deliverable was re-rendered. A real audio/mpeg audiobook MP3 (35,326,560 bytes, sage voice, narrated from book content) was produced at /app/backend/generated_audiobooks/23008552-1cfa-4c51-89a7-302c77da548b.mp3. The Love book was set to Published (Store).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend endpoints under /api/publishing: /product/{pid}/publish-store, /kdp-package, /kdp-file, /audiobook (accepts {voice}), /audiobook-status, /audiobook-file. Audiobook is BACKGROUND — first POST returns {status: RENDERING} and the client MUST poll audiobook-status; the ingress hard-caps requests at 60s so synchronous TTS is impossible. Frontend: Cover Studio publish/kdp/audiobook buttons only appear AFTER a successful 'Attach & Render' (attachResult[cid] is set); the buttons are keyed by cover-id, not product-id. Playwright's page.select_option() FAILS on any native <select> in this app because the emergent editor injects <span data-ve-dynamic> inside every <option>; use the native HTMLSelectElement setter + dispatchEvent('change') pattern instead (see test script comments). Storyboard Studio: the honest render-status note (data-testid=storyboard-video-status-<format>) is only rendered for products whose recipe.render === 'video' — for audio_lesson products no note is shown (correct — they use Render MP3 button flow).",
+  "acceptance_criteria_results": {
+    "backend_publish_store_success": "PASS (returns ok=true, status=Published for Love book)",
+    "backend_publish_store_honest_refusal": "PASS (404 for missing product; product_publishing.publish_to_store returns ok=false w/ 'blockers' if deliverable_ready=false)",
+    "backend_kdp_package_zip_contents": "PASS (interior.pdf + KDP-Publishing-Kit.pdf; cover.png included when cover attached; verified via zipfile.namelist() and %PDF signatures)",
+    "backend_kdp_file_content_type_zip": "PASS (application/zip, real zip integrity)",
+    "backend_audiobook_immediate_rendering": "PASS (POST returns status=RENDERING immediately)",
+    "backend_audiobook_ready_within_30s_short_book": "PASS (01615dca short book reached READY in ~28s, 9,121,440 byte MP3)",
+    "backend_audiobook_file_is_real_mpeg": "PASS (audio/mpeg, ID3 header, 9MB/35MB, > 20 KB threshold)",
+    "backend_audiobook_narrated_from_book": "PASS (narrated_from='book' when p.content is present, else 'knowledge_record')",
+    "ui_cover_studio_three_new_actions": "PASS (cover-publish-store-<cid>, cover-audiobook-<cid>, cover-export-kdp-<cid> all present in DOM after Attach & Render)",
+    "ui_cover_studio_publish_store_toast": "PASS ('Published to the QRU Store™ — now purchasable.')",
+    "ui_cover_studio_kdp_download_link": "PASS (cover-kdp-download-<cid> href points to /api/publishing/product/<pid>/kdp-file)",
+    "ui_cover_studio_audiobook_rendering_then_download": "PASS ('Narrating…' state visible; download link cover-audiobook-download-<cid> appears once READY; 35MB MP3 confirmed via UI fetch — audio/mpeg, content-length=35,326,560)",
+    "ui_storyboard_honest_video_status": "PASS (data-testid=storyboard-video-status-youtube_video is present; text: 'This is a governed storyboard & script — not yet a video. Click Render MP4 to produce the file; only then can it be published to YouTube.'; no 'ready to publish to YouTube' misleading text)",
+    "regression_knowledge_manufacturing_dashboard": "PASS (km-manufacture-all-btn present; Project Zero panel present; product-type cards + Coming Soon states + PDF links visible in screenshot)",
+    "regression_storyboard_knowledge_picker": "PASS (39 knowledge items in picker; verified inheritance produces SBM-1F3392 with 7 scenes ~72s from What Is Governance? KR)"
+  },
+  "rca_of_the_issue": "Original founder complaints resolved: (1) After 'Attach & Render' the CoverStudio result panel (data-testid=cover-attach-result-<cid>) now renders three additional publish surfaces alongside the pre-existing 'Download deliverable' link — no more download-only dead-end; (2) 'Create Audiobook' with voice selector actually produces a real MP3 via emergentintegrations OpenAITextToSpeech in a background asyncio task; (3) Storyboard Studio no longer implies a script-only 'STORYBOARD_READY' product is publishable to YouTube — the honest per-format note explicitly says 'not yet a video' and instructs the founder to click Render MP4 first."
+}

@@ -241,6 +241,62 @@ async def cover_file(cid: str):
     return FileResponse(doc["file"], media_type="image/png")
 
 
+# ── Product Publishing™ — the honest last mile from a rendered book ──────────
+import product_publishing as ppub
+
+
+@router.post("/product/{pid}/publish-store")
+async def publish_to_store(pid: str, user=Depends(get_current_user)):
+    res = await ppub.publish_to_store(pid, user.get("name", "Founder"))
+    if res is None:
+        raise HTTPException(404, "Product not found.")
+    return res
+
+
+@router.post("/product/{pid}/kdp-package")
+async def kdp_package(pid: str, user=Depends(get_current_user)):
+    res = await ppub.kdp_package(pid, user.get("name", "Founder"))
+    if res is None:
+        raise HTTPException(404, "Product not found.")
+    return res
+
+
+@router.get("/product/{pid}/kdp-file")
+async def kdp_file(pid: str):
+    path = ppub.kdp_file_path(pid)
+    if not os.path.exists(path):
+        raise HTTPException(404, "KDP package not found — build it first.")
+    return FileResponse(str(path), media_type="application/zip", filename=f"{pid}-KDP-Ready.zip")
+
+
+class AudiobookInput(BaseModel):
+    voice: str = "onyx"
+
+
+@router.post("/product/{pid}/audiobook")
+async def make_audiobook(pid: str, data: AudiobookInput = AudiobookInput(), user=Depends(get_current_user)):
+    res = await ppub.make_audiobook(pid, data.voice, actor=user.get("name", "Founder"))
+    if res is None:
+        raise HTTPException(404, "Product not found.")
+    return res
+
+
+@router.get("/product/{pid}/audiobook-status")
+async def audiobook_status(pid: str, user=Depends(get_current_user)):
+    res = await ppub.audiobook_status(pid)
+    if res is None:
+        raise HTTPException(404, "Product not found.")
+    return res
+
+
+@router.get("/product/{pid}/audiobook-file")
+async def audiobook_file(pid: str):
+    path = ppub.audiobook_file_path(pid)
+    if not os.path.exists(path):
+        raise HTTPException(404, "Audiobook not found — create it first.")
+    return FileResponse(str(path), media_type="audio/mpeg", filename=f"{pid}-audiobook.mp3")
+
+
 # ── QRU Poster Studio™ (governed template-driven posters) ───────────────────
 import poster_studio as pstudio
 

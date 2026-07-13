@@ -185,6 +185,20 @@ export default function StoryboardStudio() {
                             )}
                           </div>
                         )}
+                        {p.recipe?.render === "video" && (
+                          <div className="mt-1.5 text-[9px] rounded-sm p-1.5 border" data-testid={`storyboard-video-status-${p.format}`}
+                            style={{ borderColor: p.render_status === "RENDERED" ? "rgba(16,185,129,0.4)" : p.render_status === "RENDER_FAILED" ? "rgba(244,63,94,0.4)" : "rgba(11,16,48,0.12)" }}>
+                            {p.render_status === "RENDERED" ? (
+                              <span className="text-emerald-700">✓ MP4 rendered. It is now in <a href="/youtube" className="underline font-bold text-royal">YouTube Publisher</a> — no re-upload needed. (Storyboard "ready" ≠ published.)</span>
+                            ) : p.render_status === "RENDERING" ? (
+                              <span className="text-royal">Assembling the MP4 in the background… it will appear in YouTube Publisher once done.</span>
+                            ) : p.render_status === "RENDER_FAILED" ? (
+                              <span className="text-rose-700">MP4 not produced: {p.video_job?.reason || "no brand-safe stock scenes available"}. Add a Pexels/Pixabay key for reliable renders. Nothing was published (Treasure Standard™).</span>
+                            ) : (
+                              <span className="text-navy/70">This is a governed storyboard & script — <b>not yet a video</b>. Click <b>Render MP4</b> to produce the file; only then can it be published to YouTube.</span>
+                            )}
+                          </div>
+                        )}
                         <p className="text-[9px] text-muted-foreground mt-1">Quality Gate: {p.quality_gate.counts.passed}/{p.quality_gate.counts.total} passed · {p.quality_gate.counts.blocking} blocking</p>
                       </div>
                     );
