@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge } from "@/components/qru";
 import { Loader2, Boxes, CheckCircle2, Clock, Rocket, MessageSquareHeart, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const STATE = {
   published: { tone: "gold", icon: Rocket, label: "Published" },
@@ -23,13 +24,14 @@ export default function KnowledgeManufacturing() {
       setKrs(r.data.knowledge_records || []);
       const v = r.data.knowledge_records?.find((k) => k.verified_external) || r.data.knowledge_records?.[0];
       if (v) selectKr(v.id);
-    }).catch(() => {});
+    }).catch((e) => { console.error(e); toast.error("Could not load Knowledge Records."); });
   }, []);
 
   const selectKr = async (id) => {
     setSel(id); setLoading(true);
     try { const { data } = await api.get(`/media-studio/knowledge-manufacturing/${id}`); setDash(data); }
-    catch { /* ignore */ } finally { setLoading(false); }
+    catch (e) { console.error(e); toast.error("Could not load the manufacturing dashboard."); }
+    finally { setLoading(false); }
   };
 
   return (
