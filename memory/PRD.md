@@ -219,6 +219,34 @@ Founder Beta Dashboard, Automatic Knowledge Extraction, PreviewViewer. (all VERI
 
 ## Roadmap (Founder-approved, remaining)
 
+### Session 2026-07-13 — Little Legacy Learners™ Animation Studio (Phases 1–3) — DONE & VERIFIED
+Governed capability INSIDE the QRU Factory™ (no separate app, inheritance-first). Organized around the
+Five Responsibilities (Universe · Characters · Stories · Production · Governance).
+- **Phase 1 Foundation** (`little_legacy.py`, `routers/little_legacy.py`, `pages/LittleLegacyStudio.js`,
+  nav `nav-little-legacy`, route `/little-legacy`) — VERIFIED iteration_64 (frontend 100% + backend curl).
+  Universe Bible™, 6 canonical Character Bibles™ (Draft Pending Founder Approval), 16 locations, Five
+  Responsibilities, Knowledge Flow, production catalog, 6 governance checklists + 17-state lifecycle.
+  Canon protection (locked fields blocked without Founder approval) + Knowledge-First episode blueprints
+  (verified KR required) — both acceptance tests PASS. Enterprise Memory ledger (`db.ll_memory`).
+  Founder-provided character poster stored as Character Bible v1.0 visual baseline.
+- **Phase 2 Character Mastering** (`little_legacy_production.py`) — VERIFIED iteration_65 + curl. Per
+  character: real model-sheet/turnaround + 6-expression sheet (Gemini Nano Banana) + TTS voice profile;
+  Founder approval locks Bible v1.0. (Nova Sparkle mastered — on-brand turnaround verified.)
+- **Phase 3 Pilot Episode Manufacturing** — VERIFIED iteration_65 + curl. From a Verified blueprint →
+  **QRU Animated Storybook Pilot™**: scene key-art (Nano Banana) + warm narration (OpenAI TTS) + burned
+  captions (Pillow) + Ken Burns motion, assembled to a real 720p H.264/AAC MP4 via imageio-ffmpeg.
+  Deterministic governance gates (Knowledge-First/Child Safety/Accessibility/Treasure). Reviewable DRAFT
+  preview; Founder approval releases it to YouTube Publisher™ as a Factory asset (no re-upload). HONEST:
+  image-based motion animation, NOT cel animation — stated in UI/product. Real pilot rendered: 36.9s, 6
+  scenes, all gates PASS, .srt captions, appears in youtube factory-assets as draft preview.
+- **Env fix**: bare `ffmpeg`/`ffprobe` are NOT on PATH in this pod (only via `imageio_ffmpeg.get_ffmpeg_exe()`);
+  static build has NO `drawtext`/libfreetype and NO ffprobe. Fixed `media_render.py` + `product_publishing.py`
+  (audiobook stitch) to use the imageio_ffmpeg binary + ffmpeg-`-i` duration parsing; captions burned via Pillow.
+- **Readiness Report**: `/app/memory/LITTLE_LEGACY_READINESS_REPORT.md`.
+- **New collections**: ll_franchise, ll_universe_bible, ll_characters, ll_locations, ll_seasons, ll_meta,
+  ll_episodes, ll_memory, ll_character_masters, ll_pilots. media_assets gains qru_production pilot rows.
+
+
 ### Session 2026-07-14 (cont.) — 5 poster template families, QR 403 fix, Cover KR auto-fill
 - **QR 403 fixed** (iteration_63, verified): QICS portal/QR URLs used FastAPI `request.base_url` → internal cluster host over http → 403 on phone scan. Added `PUBLIC_APP_URL` env + `_base_url` prefers it (https-forced fallback); migrated all 5 existing portals to the public https URL. Public scan now returns 200.
 - **5 new poster template families** (all inherit from the verified KR, render clean vector SVG→PNG/PDF, DRAFT + Treasure Standard passed): identity-anatomy-v1, give-credit-v1 (10-panel), why-forex-v1 (data/infographic, factual), utility-principle-v1 (operating cycle), brain-translation-v1 (misconceptions→corrections table). Validator extended for the new content keys + string list items.
