@@ -100,6 +100,33 @@ def map_to_template(template_id, inh):
     if template_id in ("data-comparison-v1", "scorecard-grid-v1", "decoder-v1"):
         # Structured figures require KR data tables; inherit identity + note when absent.
         return {**base, "source_note": f"Source: {inh['kr_code']} v{inh['version']} (verified). Figures illustrative until structured data is attached to the Knowledge Record."}
+    if template_id == "identity-anatomy-v1":
+        pts = inh["key_points"] or inh["examples"]
+        pairs = [{"label": (p.split(" ")[0][:16] or "Part").title(), "desc": p} for p in pts][:8]
+        mid = (len(pairs) + 1) // 2
+        return {**base, "center_label": inh["term"].upper(), "center_caption": inh["subtitle"],
+                "parts_left": pairs[:mid] or None, "parts_right": pairs[mid:] or None}
+    if template_id == "give-credit-v1":
+        pts = (inh["key_points"] + inh["examples"] + inh["challenge_questions"])[:10]
+        return {**base, "panels": [{"title": (p[:34] + ("\u2026" if len(p) > 34 else "")), "body": p} for p in pts] or None}
+    if template_id == "why-forex-v1":
+        cos = [{"title": (p.split(" ")[0][:14] or "Fact").title(), "desc": p} for p in inh["key_points"]][:4]
+        return {**base, "stat_caption": inh["subtitle"],
+                "callouts": cos or None, "chips": [t for t in inh["tags"][:5]] or None,
+                "source_note": f"Source: {inh['kr_code']} v{inh['version']} ({'verified' if inh['verified_external'] else 'draft'}). Attach structured figures to the KR for a headline statistic."}
+    if template_id == "utility-principle-v1":
+        steps = [p.split(" ")[0][:12].title() for p in inh["key_points"]][:8] or ["Observe", "Question", "Apply"]
+        return {**base, "cycle_steps": steps,
+                "info_boxes": [{"title": "The Principle", "body": inh["definition_professional"]},
+                               {"title": "Why It Holds", "body": inh["definition_plain"]}],
+                "values": [w.upper()[:14] for w in inh["tags"][:3]] or None}
+    if template_id == "brain-translation-v1":
+        mis = inh["misconceptions"]
+        rows = [{"left": m, "right": inh["definition_plain"] or "See the verified explanation."} for m in mis][:7]
+        if not rows:
+            rows = [{"left": f"'{inh['term']}' is just about memorizing facts.", "right": inh["definition_plain"] or inh["definition_professional"]}]
+        return {**base, "left_header": "WHAT IT SAYS", "right_header": "WHAT IS TRUE",
+                "rows": rows, "remember": inh["memory_sentence"]}
     if template_id == "process-formula-v1":
         return {**base}
     return base

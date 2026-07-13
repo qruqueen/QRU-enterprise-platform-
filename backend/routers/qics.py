@@ -17,7 +17,17 @@ def _clean(doc):
 
 
 def _base_url(request: Request):
-    return str(request.base_url).rstrip("/")
+    """Public, externally-reachable base URL for QR/portal links. Prefer the configured public app URL;
+    fall back to the request host but force https (the internal cluster host over http returns 403 when
+    a QR is scanned on a phone)."""
+    import os
+    pub = os.environ.get("PUBLIC_APP_URL")
+    if pub:
+        return pub.rstrip("/")
+    base = str(request.base_url).rstrip("/")
+    if base.startswith("http://"):
+        base = "https://" + base[len("http://"):]
+    return base
 
 
 @router.get("/config")

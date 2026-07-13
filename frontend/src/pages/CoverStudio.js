@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge } from "@/components/qru";
+import { KnowledgePicker } from "@/components/KnowledgePicker";
 import { toast } from "sonner";
 import { Loader2, Image as ImageIcon, Sparkles, ShieldCheck, CheckCircle2, RotateCcw, Ban, Award, Wand2, Link as LinkIcon, Store, BookUp, Headphones } from "lucide-react";
 
@@ -40,6 +41,17 @@ export default function CoverStudio() {
   const [audioResult, setAudioResult] = useState({});
   const [storeDone, setStoreDone] = useState({});
   const [voice, setVoice] = useState("onyx");
+  const [selKr, setSelKr] = useState(null);
+
+  const pickKr = async (k) => {
+    setSelKr(k);
+    try {
+      const { data } = await api.get(`/publishing/cover/kr-brief/${k.id}`);
+      setForm((f) => ({ ...f, title: data.title || f.title, subtitle: data.subtitle || f.subtitle,
+        series: data.series || f.series, concept_notes: data.concept_notes || f.concept_notes }));
+      toast.success(`Cover brief auto-filled from "${data.topic}".`);
+    } catch (e) { toast.error("Could not load the Knowledge Record brief."); }
+  };
 
   const load = () => api.get("/publishing/covers").then((r) => { setCovers(r.data.covers); setStates(r.data.states); }).catch(() => {});
   const loadProducts = () => api.get("/publishing/attachable-products").then((r) => setProducts(r.data.products || [])).catch(() => {});
@@ -140,6 +152,14 @@ export default function CoverStudio() {
         {/* Brief */}
         <Panel title="Cover Brief" icon={Sparkles} accent="royal" testid="cover-brief">
           <div className="space-y-2.5">
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-wide text-navy">Start from Knowledge</label>
+              <div className="mt-1">
+                <KnowledgePicker value={selKr?.id} testid="cover-knowledge" onSelect={pickKr}
+                  label="Browse Verified Knowledge" />
+              </div>
+              <p className="text-[9px] text-muted-foreground mt-1">{selKr ? `Brief auto-filled from "${selKr.topic}". Edit below only if you want to override.` : "Pick a topic and the cover title, subtitle and visual concept fill in automatically — no need to write a description."}</p>
+            </div>
             {[["title", "Title"], ["subtitle", "Subtitle"], ["series", "Series"], ["edition", "Edition"]].map(([k, label]) => (
               <div key={k}>
                 <label className="text-[10px] font-bold uppercase tracking-wide text-navy">{label}</label>

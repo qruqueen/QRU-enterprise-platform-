@@ -1,0 +1,50 @@
+{
+  "summary": "Iteration 63 — QICS QR 403→200 fix, 5 new poster templates, Cover Studio KR auto-fill. Backend: 11/11 pytest tests PASS. QR bug FIXED end-to-end (curl HTTP 200 at public URL; all existing 5 portal_urls start with https://understanding-os.preview.emergentagent.com; freshly-activated portal for storefront product also emits the public https URL). Poster templates endpoint returns 11 templates including all 5 new IDs (identity-anatomy-v1, give-credit-v1, why-forex-v1, utility-principle-v1, brain-translation-v1); each renders a real PNG (>500 bytes, valid \\x89PNG header) with status=DRAFT and treasure_status=TREASURE_STANDARD_PASSED against KR 1a93ceb2-… . Cover kr-brief endpoint returns title/subtitle/series/concept_notes and 404s on missing IDs. Frontend: Poster Studio /poster-studio dropdown (data-testid poster-template) contains all 5 new families and 'Identity Anatomy Poster · 4:5' generation produced a real 'ANATOMY OF UNDERSTANDING' poster preview with DRAFT + Treasure: Passed chips. Cover Studio /cover-studio 'Start from Knowledge' picker (data-testid cover-knowledge-trigger → cover-knowledge-dialog) selects the verified Governance topic and auto-populates title ('Governance'), subtitle (governance description), and visual concept notes (all fields remained editable — title was subsequently edited to 'Governance — Edited By Founder'). Regression: cover generation in spec_only mode still works (1 concept generated with success toast), existing draft covers (Forex Basics, Brain Renaissance, The Science of Understanding) still render with Send to Review / Approve / Attach to Product / Certify Gold Master actions.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Poster Studio & Cover Studio native <select> (poster-template, cover-mode, cover-trim)", "issues": ["Persistent (iterations 57-62) hydration warning '<span> cannot be a child of <option>' — emergent editor injects <span data-ve-dynamic> inside <option>. Cosmetic only; native page.select_option() cannot match — must use HTMLSelectElement value setter + dispatchEvent('change')."]},
+      {"screen": "Cover Studio KR picker dialog", "issues": ["Radix DialogContent missing aria-describedby — a11y console warning (non-blocking): 'Missing Description or aria-describedby={undefined} for {DialogContent}'."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration63_qr_posters_cover.py",
+    "/app/test_reports/pytest/iteration63.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "qics.py:_base_url — good fix (PUBLIC_APP_URL preferred; https-forced fallback). Consider validating that PUBLIC_APP_URL is set at startup and logging a warning if only the http-fallback path can be used — silently emitting an internal cluster URL is exactly what caused the 403 bug in production.",
+    "publishing.py:cover_kr_brief — 'series' is hardcoded to 'QRU Foundations'. This means selecting a KR never overrides an existing custom series on the form; the frontend's `data.series || f.series` already handles that gracefully, but consider deriving series from KR pillar/family so cross-series products get correct branding auto-filled.",
+    "publishing.py:cover_kr_brief:143 — the concept_notes string embeds the subtitle followed by '.. Symbolic…' (double period from subtitle already ending with period). Cosmetic: strip trailing period on subtitle before interpolation.",
+    "poster_studio.py — five new templates + validator extension (panels/callouts/cycle_steps/parts_left/info_boxes accepting string list items) are well-factored. Because BUILDERS/DEFAULTS are keyed by template_id, consider a startup assertion `assert set(TEMPLATES) == set(BUILDERS) == set(DEFAULTS)` to catch mismatches in future additions.",
+    "CoverStudio.js:pickKr — successful autofill is a no-op if the KR-brief request fails (only a toast). Consider surfacing which fields were overridden so the founder knows what changed."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration63_qr_posters_cover.py"
+  ],
+  "success_rate": {"backend": "100% (11/11)", "frontend": "100% (Poster Studio 5 new templates in dropdown + render verified; Cover Studio KR auto-fill verified with edit and regression generation)"},
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (login endpoint accepts both 'password' and 'access_token' fields; test sends both for compatibility). Verified KR used: 1a93ceb2-0334-46ff-a3a4-54bda17d7b8f (Governance). QICS identity tested: QRU-BK-000004.",
+  "seed_data_creation": "One additional QICS portal upserted during test (POST /api/qics/activate/<storefront product id>) — this is idempotent-upsert by product_id and produces a public https portal_url.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "QR fix verified: GET /api/qics/portal/QRU-BK-000004 returns HTTP 200 at the public URL (previously 403 at cluster host). All 5 existing portals in DB now have portal_url starting with https://understanding-os.preview.emergentagent.com. GET /api/publishing/poster/templates returns 11 templates; POST /api/publishing/poster/generate with {template_id, kr_id} renders PNG bytes as png_base64 in response with status='DRAFT' and treasure_status='TREASURE_STANDARD_PASSED'. GET /api/publishing/cover/kr-brief/{kr_id} returns {title, subtitle, series, concept_notes, topic, verified_external}. Frontend testids: poster-template (native select), knowledge-picker-trigger + knowledge-picker-dialog for the poster picker (default testid base), cover-knowledge-trigger + cover-knowledge-dialog for the Cover Studio picker (KnowledgePicker testid='cover-knowledge'). Both native selects in these studios cannot use page.select_option() because emergent editor injects <span> inside <option>; use HTMLSelectElement value setter + dispatchEvent('change') pattern.",
+  "acceptance_criteria_results": {
+    "bug_qr_portals_use_public_https": "PASS (all 5 portals portal_url starts with https://understanding-os.preview.emergentagent.com)",
+    "bug_qr_public_scan_is_200_no_auth": "PASS (GET /api/qics/portal/QRU-BK-000004 → 200 with portal JSON, no auth)",
+    "bug_qr_activate_new_portal_public_url": "PASS (POST /api/qics/activate/<pid> → portal_url public https; re-GET scan returns 200)",
+    "poster_templates_endpoint_returns_11": "PASS (11 templates including all 5 new IDs)",
+    "poster_generate_new_5_render_png_draft_treasure_passed": "PASS (5/5 templates render PNG bytes>500, status=DRAFT, treasure_status=TREASURE_STANDARD_PASSED)",
+    "poster_studio_ui_shows_5_new_families_in_dropdown": "PASS (data-testid=poster-template contains identity-anatomy-v1, give-credit-v1, why-forex-v1, utility-principle-v1, brain-translation-v1)",
+    "poster_studio_ui_can_manufacture_a_poster": "PASS (identity-anatomy-v1 selected → 'ANATOMY OF UNDERSTANDING' PNG rendered with DRAFT + Treasure Passed)",
+    "cover_studio_kr_picker_present": "PASS (cover-knowledge-trigger and cover-knowledge-dialog testids present)",
+    "cover_studio_kr_picker_autofills_fields": "PASS (title/subtitle/concept_notes updated on KR pick; series already matched default)",
+    "cover_studio_fields_remain_editable_after_autofill": "PASS (title edited to 'Governance — Edited By Founder' after autofill)",
+    "cover_studio_generation_still_works_after_kr_pick": "PASS (spec_only Generate → toast '1 draft concept(s) generated', new cover-item card appears)",
+    "regression_previously_verified_book_publishing_actions_visible": "PASS (Attach to Product visible on APPROVED_DESIGN covers; Send to Review / Approve Design / Certify Gold Master / Retire buttons all present per state)",
+    "regression_my_products_shelf_still_reachable": "NOT_RE_TESTED (already verified in iteration 62; not requested for retest this iteration)",
+    "backend_kr_brief_404_missing": "PASS (GET /cover/kr-brief/does-not-exist-xyz → 404)"
+  },
+  "rca_of_the_issue": "Founder-reported '403 Forbidden when scanning QR' RCA: the QICS companion portal URL was previously derived from FastAPI's request.base_url which — behind the Kubernetes ingress — resolves to the INTERNAL cluster host (understanding-os.cluster-5.preview.emergentcf.cloud) over http. Scanning that URL on a phone hit ingress auth/host filters and returned 403. Fix (verified): backend/routers/qics.py:_base_url now prefers PUBLIC_APP_URL env var (set to https://understanding-os.preview.emergentagent.com in /app/backend/.env), and the http→https fallback rewrite still guarantees https on any subsequent host. All 5 legacy portal docs were also migrated to the public URL. Verification path: (a) GET /api/qics/portals lists 5 portals whose portal_url starts with the public host; (b) GET /api/qics/portal/QRU-BK-000004 returns HTTP 200 with a portal JSON body (no auth required, matches phone-scan behavior); (c) POST /api/qics/activate/<new-product-id> produces a portal_url on the public URL and its /portal/{identity} also returns 200. Reproduction of the original bug is no longer possible against the current backend."
+}

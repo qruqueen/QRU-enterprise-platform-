@@ -132,6 +132,24 @@ def _size_for(trim):
             "square_1x1": "1024x1024", "video_16x9": "1536x1024"}.get(trim, "1024x1536")
 
 
+@router.get("/cover/kr-brief/{kr_id}")
+async def cover_kr_brief(kr_id: str, user=Depends(get_current_user)):
+    """Founder Experience Principle™ — a book cover brief auto-derived from a Knowledge Record so the
+    founder never re-describes what the Factory already knows."""
+    import kr_inheritance as kri
+    kr = await kri.load_kr(db, kr_id)
+    if not kr:
+        raise HTTPException(404, "Knowledge Record not found.")
+    inh = kri.build_inheritance(kr)
+    concept = (f"A refined, premium QRU editorial book cover expressing the idea: {inh['subtitle']}. "
+               f"Symbolic and conceptual (not literal), navy/gold/cream QRU palette, generous negative space, "
+               f"no text or lettering baked into the artwork.")
+    return {"title": (inh["term"] or inh["topic"] or "").title(), "subtitle": inh["subtitle"],
+            "series": "QRU Foundations", "concept_notes": concept, "topic": inh["topic"],
+            "verified_external": inh["verified_external"]}
+
+
+
 @router.post("/cover/generate")
 async def cover_generate(data: CoverGenInput, user=Depends(get_current_user)):
     prompt = _governed_prompt(data)

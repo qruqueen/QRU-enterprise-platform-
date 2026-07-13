@@ -53,6 +53,21 @@ TEMPLATES = [
     {"id": "knowledge-card-v1", "family": "QRU Knowledge Card™", "version": "1.0",
      "dimensions": {"w": 1500, "h": 2143, "aspect": "7:10"}, "steps": 0, "factual": True,
      "purpose": "A governed single-term educational card: plain + professional definition, analogy, chart clue, real-life clues, challenge, memory sentence, category flow and tags."},
+    {"id": "identity-anatomy-v1", "family": "Identity Anatomy Poster", "version": "1.0",
+     "dimensions": {"w": 1600, "h": 2000, "aspect": "4:5"}, "steps": 0,
+     "purpose": "A central concept 'anatomy' with two columns of labeled parts inherited from the Knowledge Record."},
+    {"id": "give-credit-v1", "family": "10-Panel Overview Poster", "version": "1.0",
+     "dimensions": {"w": 1600, "h": 2000, "aspect": "4:5"}, "steps": 0,
+     "purpose": "A 2x5 grid of ten numbered overview panels, each a governed title + explanation from the KR."},
+    {"id": "why-forex-v1", "family": "Infographic Data Poster", "version": "1.0",
+     "dimensions": {"w": 1600, "h": 2000, "aspect": "4:5"}, "steps": 0, "factual": True,
+     "purpose": "A headline statistic with radial callouts and a fact chip bar; factual figures require a verified KR."},
+    {"id": "utility-principle-v1", "family": "Operating Cycle Poster", "version": "1.0",
+     "dimensions": {"w": 1600, "h": 2000, "aspect": "4:5"}, "steps": 0,
+     "purpose": "A closed operating cycle of governed steps with two principle boxes and a values band."},
+    {"id": "brain-translation-v1", "family": "Translation Table Poster", "version": "1.0",
+     "dimensions": {"w": 1600, "h": 2000, "aspect": "4:5"}, "steps": 0,
+     "purpose": "A two-column 'what it says vs. what is true' table inheriting misconceptions and corrections from the KR."},
 ]
 
 
@@ -574,6 +589,213 @@ DEFAULTS.update({
 })
 
 
+# ── Identity Anatomy Poster ─────────────────────────────────────────────────
+def _default_identity_anatomy(topic="Anatomy of Understanding"):
+    return {"title": "ANATOMY OF UNDERSTANDING", "trademark": True, "subtitle": "THE PARTS THAT MAKE THE WHOLE",
+            "center_label": "THE WHOLE", "center_caption": "Every part below works together.",
+            "parts_left": [{"label": "Curiosity", "desc": "The spark that starts every inquiry."},
+                           {"label": "Questions", "desc": "Better questions reveal deeper structure."},
+                           {"label": "Connections", "desc": "New ideas linked to what you know."},
+                           {"label": "Patterns", "desc": "Seeing the system, not the isolated fact."}],
+            "parts_right": [{"label": "Evidence", "desc": "Claims grounded in what is verifiable."},
+                            {"label": "Application", "desc": "Understanding used in the real world."},
+                            {"label": "Transfer", "desc": "Carrying insight to new situations."},
+                            {"label": "Retention", "desc": "What stays after the lesson ends."}],
+            "footer": "UNDERSTAND THE PARTS. MASTER THE WHOLE."}
+
+
+def _build_identity_anatomy_svg(c):
+    parts = _svg_open(); _header(parts, c)
+    left = c.get("parts_left", [])[:5]; right = c.get("parts_right", [])[:5]
+    cx, cy = 800, 900
+    parts.append(f'<circle cx="{cx}" cy="{cy}" r="210" fill="#0E0C20" stroke="{GOLD}" stroke-width="3"/>')
+    parts.append(f'<circle cx="{cx}" cy="{cy}" r="210" fill="none" stroke="{GOLD}" stroke-width="1" opacity="0.4" stroke-dasharray="6 10"/>')
+    for k, ln in enumerate(_wrap(c.get("center_label", ""), 12)):
+        parts.append(f'<text x="{cx}" y="{cy-10 + k*54}" font-family="{SERIF}" font-size="48" font-weight="bold" fill="{GOLD}" text-anchor="middle">{_esc(ln)}</text>')
+    for k, ln in enumerate(_wrap(c.get("center_caption", ""), 26)):
+        parts.append(f'<text x="{cx}" y="{cy+80 + k*28}" font-family="{SANS}" font-size="20" fill="{CREAM}" text-anchor="middle">{_esc(ln)}</text>')
+
+    def column(items, x_label, anchor, x_line, spine_x):
+        y0 = 340; step = min(300, (1560 - y0) / max(1, len(items)))
+        for i, it in enumerate(items):
+            y = y0 + i * step + step / 2
+            col = STEP_COLORS[i % len(STEP_COLORS)]
+            parts.append(f'<line x1="{x_line}" y1="{y}" x2="{spine_x}" y2="{cy}" stroke="{col}" stroke-width="1.5" opacity="0.5"/>')
+            parts.append(f'<circle cx="{x_line}" cy="{y}" r="9" fill="{col}"/>')
+            parts.append(f'<text x="{x_label}" y="{y-8}" font-family="{SANS}" font-size="30" font-weight="bold" fill="{WHITE}" text-anchor="{anchor}">{_esc(it["label"])}</text>')
+            for k, ln in enumerate(_wrap(it.get("desc", ""), 30)):
+                parts.append(f'<text x="{x_label}" y="{y+26 + k*26}" font-family="{SANS}" font-size="20" fill="{CREAM}" text-anchor="{anchor}">{_esc(ln)}</text>')
+    column(left, 70, "start", 520, cx - 205)
+    column(right, 1530, "end", 1080, cx + 205)
+    _footer(parts, c.get("footer", "")); parts.append('</svg>'); return "\n".join(parts)
+
+
+# ── 10-Panel Overview Poster ────────────────────────────────────────────────
+def _default_give_credit(topic="Ten Things to Understand"):
+    return {"title": "TEN THINGS TO UNDERSTAND", "trademark": True, "subtitle": "A COMPLETE OVERVIEW AT A GLANCE",
+            "panels": [{"title": f"Point {i}", "body": "A governed overview point from the Knowledge Record."} for i in range(1, 11)],
+            "footer": "TEN PARTS. ONE UNDERSTANDING."}
+
+
+def _build_give_credit_svg(c):
+    parts = _svg_open(); _header(parts, c)
+    panels = (c.get("panels") or [])[:10]
+    cols, x0, y0, gap = 2, 60, 290, 24
+    cw = (1480 - gap) / cols; ch = min(258, (1560 - y0 - 4 * gap) / 5)
+    for i, p in enumerate(panels):
+        r, cc = divmod(i, cols)
+        x = x0 + cc * (cw + gap); y = y0 + r * (ch + gap)
+        col = STEP_COLORS[i % len(STEP_COLORS)]
+        parts.append(f'<rect x="{x}" y="{y}" width="{cw}" height="{ch}" rx="16" fill="#0E0C20" stroke="{col}" stroke-width="2"/>')
+        parts.append(f'<rect x="{x}" y="{y}" width="74" height="{ch}" rx="16" fill="{col}" opacity="0.16"/>')
+        parts.append(f'<text x="{x+37}" y="{y+ch/2+16}" font-family="{SERIF}" font-size="46" font-weight="bold" fill="{col}" text-anchor="middle">{i+1}</text>')
+        for k, ln in enumerate(_wrap(p.get("title", ""), 30)):
+            parts.append(f'<text x="{x+100}" y="{y+56 + k*32}" font-family="{SANS}" font-size="26" font-weight="bold" fill="{WHITE}">{_esc(ln)}</text>')
+        for k, ln in enumerate(_wrap(p.get("body", ""), 40)[:4]):
+            parts.append(f'<text x="{x+100}" y="{y+118 + k*28}" font-family="{SANS}" font-size="19" fill="{CREAM}">{_esc(ln)}</text>')
+    _footer(parts, c.get("footer", "")); parts.append('</svg>'); return "\n".join(parts)
+
+
+# ── Infographic Data Poster ─────────────────────────────────────────────────
+def _default_why_forex(topic="Why It Matters"):
+    return {"title": "WHY IT MATTERS", "trademark": True, "subtitle": "THE NUMBERS BEHIND THE STORY",
+            "headline_stat": "\u2014", "stat_caption": "Attach a verified figure from the Knowledge Record.",
+            "callouts": [{"title": "Scale", "desc": "How large is the impact."},
+                         {"title": "Speed", "desc": "How fast it moves."},
+                         {"title": "Reach", "desc": "Who it touches."},
+                         {"title": "Risk", "desc": "What is at stake."}],
+            "chips": ["Fact A", "Fact B", "Fact C", "Fact D", "Fact E"],
+            "source_note": "Figures illustrative until structured data is attached to the Knowledge Record.",
+            "footer": "SEE THE NUMBER. UNDERSTAND THE FORCE."}
+
+
+def _build_why_forex_svg(c):
+    parts = _svg_open(); _header(parts, c)
+    cx, cy = 800, 720
+    parts.append(f'<circle cx="{cx}" cy="{cy}" r="250" fill="#0E0C20" stroke="{GOLD}" stroke-width="4"/>')
+    parts.append(f'<text x="{cx}" y="{cy+10}" font-family="{SERIF}" font-size="120" font-weight="bold" fill="{GOLD}" text-anchor="middle">{_esc(c.get("headline_stat",""))}</text>')
+    for k, ln in enumerate(_wrap(c.get("stat_caption", ""), 30)):
+        parts.append(f'<text x="{cx}" y="{cy+110 + k*28}" font-family="{SANS}" font-size="22" fill="{CREAM}" text-anchor="middle">{_esc(ln)}</text>')
+    calls = (c.get("callouts") or [])[:4]
+    cols, x0, y0, gap = 2, 60, 1080, 24
+    cw = (1480 - gap) / cols; ch = 190
+    for i, co in enumerate(calls):
+        r, cc = divmod(i, cols)
+        x = x0 + cc * (cw + gap); y = y0 + r * (ch + gap)
+        col = STEP_COLORS[i % len(STEP_COLORS)]
+        parts.append(f'<rect x="{x}" y="{y}" width="{cw}" height="{ch}" rx="14" fill="#0E0C20" stroke="{col}" stroke-width="2"/>')
+        parts.append(f'<circle cx="{x+50}" cy="{y+50}" r="26" fill="{col}" opacity="0.2"/><circle cx="{x+50}" cy="{y+50}" r="26" fill="none" stroke="{col}" stroke-width="2"/>')
+        parts.append(f'<text x="{x+100}" y="{y+60}" font-family="{SANS}" font-size="28" font-weight="bold" fill="{WHITE}">{_esc(co.get("title",""))}</text>')
+        for k, ln in enumerate(_wrap(co.get("desc", ""), 42)[:3]):
+            parts.append(f'<text x="{x+30}" y="{y+110 + k*28}" font-family="{SANS}" font-size="20" fill="{CREAM}">{_esc(ln)}</text>')
+    chips = (c.get("chips") or [])[:5]
+    if chips:
+        cwid = 1480 / len(chips)
+        for j, ch_txt in enumerate(chips):
+            x = 60 + j * cwid
+            parts.append(f'<rect x="{x+6}" y="1500" width="{cwid-12}" height="70" rx="35" fill="{NAVY}" stroke="{GOLD}" stroke-width="1.5"/>')
+            parts.append(f'<text x="{x+cwid/2}" y="1544" font-family="{SANS}" font-size="20" font-weight="bold" fill="{GOLD}" text-anchor="middle">{_esc(str(ch_txt)[:16])}</text>')
+    parts.append(f'<text x="60" y="1610" font-family="{SANS}" font-size="18" fill="{CREAM}" opacity="0.8">{_esc(c.get("source_note",""))}</text>')
+    _footer(parts, c.get("footer", "")); parts.append('</svg>'); return "\n".join(parts)
+
+
+# ── Operating Cycle Poster ──────────────────────────────────────────────────
+def _default_utility_principle(topic="The Operating Cycle"):
+    return {"title": "THE OPERATING CYCLE", "trademark": True, "subtitle": "HOW THE PRINCIPLE WORKS IN PRACTICE",
+            "cycle_steps": ["Observe", "Question", "Connect", "Test", "Refine", "Apply"],
+            "info_boxes": [{"title": "The Principle", "body": "A governed statement of the core idea from the KR."},
+                           {"title": "Why It Holds", "body": "The verified reasoning behind the principle."}],
+            "values": ["HONEST", "GOVERNED", "USEFUL"],
+            "footer": "UNDERSTAND ONCE. APPLY EVERYWHERE."}
+
+
+def _build_utility_principle_svg(c):
+    import math
+    parts = _svg_open(); _header(parts, c)
+    steps = (c.get("cycle_steps") or [])[:8]
+    cx, cy, R = 800, 720, 300
+    n = max(1, len(steps))
+    for i, s in enumerate(steps):
+        ang = -math.pi / 2 + i * 2 * math.pi / n
+        x = cx + R * math.cos(ang); y = cy + R * math.sin(ang)
+        nang = -math.pi / 2 + (i + 1) * 2 * math.pi / n
+        nx = cx + R * math.cos(nang); ny = cy + R * math.sin(nang)
+        parts.append(f'<line x1="{x}" y1="{y}" x2="{nx}" y2="{ny}" stroke="{GOLD}" stroke-width="1.5" opacity="0.35"/>')
+    for i, s in enumerate(steps):
+        ang = -math.pi / 2 + i * 2 * math.pi / n
+        x = cx + R * math.cos(ang); y = cy + R * math.sin(ang)
+        col = STEP_COLORS[i % len(STEP_COLORS)]
+        parts.append(f'<circle cx="{x}" cy="{y}" r="76" fill="#0E0C20" stroke="{col}" stroke-width="3"/>')
+        parts.append(f'<text x="{x}" y="{y-6}" font-family="{SERIF}" font-size="34" font-weight="bold" fill="{col}" text-anchor="middle">{i+1}</text>')
+        parts.append(f'<text x="{x}" y="{y+30}" font-family="{SANS}" font-size="19" font-weight="bold" fill="{WHITE}" text-anchor="middle">{_esc(str(s)[:12])}</text>')
+    parts.append(f'<text x="{cx}" y="{cy+10}" font-family="{SERIF}" font-size="40" font-weight="bold" fill="{GOLD}" text-anchor="middle">CYCLE</text>')
+    boxes = (c.get("info_boxes") or [])[:2]
+    for i, b in enumerate(boxes):
+        x = 60 + i * (740 + 20); y = 1180
+        parts.append(f'<rect x="{x}" y="{y}" width="740" height="300" rx="16" fill="#0E0C20" stroke="{GOLD}" stroke-width="2"/>')
+        parts.append(f'<text x="{x+30}" y="{y+56}" font-family="{SANS}" font-size="28" font-weight="bold" fill="{GOLD}">{_esc(b.get("title",""))}</text>')
+        for k, ln in enumerate(_wrap(b.get("body", ""), 46)[:6]):
+            parts.append(f'<text x="{x+30}" y="{y+110 + k*32}" font-family="{SANS}" font-size="21" fill="{CREAM}">{_esc(ln)}</text>')
+    vals = (c.get("values") or [])[:4]
+    if vals:
+        vw = 1480 / len(vals)
+        parts.append(f'<rect x="60" y="1520" width="1480" height="70" rx="10" fill="{NAVY}"/>')
+        for j, v in enumerate(vals):
+            parts.append(f'<text x="{60 + j*vw + vw/2}" y="1565" font-family="{SANS}" font-size="24" font-weight="bold" fill="{GOLD}" text-anchor="middle" letter-spacing="2">{_esc(str(v)[:16])}</text>')
+    _footer(parts, c.get("footer", "")); parts.append('</svg>'); return "\n".join(parts)
+
+
+# ── Translation Table Poster ────────────────────────────────────────────────
+def _default_brain_translation(topic="What It Says vs. What Is True"):
+    return {"title": "SAYS vs. TRUE", "trademark": True, "subtitle": "TRANSLATING MYTH INTO UNDERSTANDING",
+            "left_header": "WHAT IT SAYS", "right_header": "WHAT IS TRUE",
+            "rows": [{"left": "A common misconception.", "right": "The verified correction from the KR."}],
+            "remember": "When in doubt, return to the verified Knowledge Record.",
+            "footer": "TRANSLATE THE MYTH. KEEP THE TRUTH."}
+
+
+def _build_brain_translation_svg(c):
+    parts = _svg_open(); _header(parts, c)
+    rows = (c.get("rows") or [])[:7]
+    x0, y0 = 60, 300
+    lw = 720; rw = 720; gap = 20
+    hh = 70
+    parts.append(f'<rect x="{x0}" y="{y0}" width="{lw}" height="{hh}" rx="10" fill="#3a1520" stroke="#D06070" stroke-width="2"/>')
+    parts.append(f'<rect x="{x0+lw+gap}" y="{y0}" width="{rw}" height="{hh}" rx="10" fill="#123020" stroke="#4FAE5A" stroke-width="2"/>')
+    parts.append(f'<text x="{x0+lw/2}" y="{y0+46}" font-family="{SANS}" font-size="26" font-weight="bold" fill="#F0A0B0" text-anchor="middle">{_esc(c.get("left_header",""))}</text>')
+    parts.append(f'<text x="{x0+lw+gap+rw/2}" y="{y0+46}" font-family="{SANS}" font-size="26" font-weight="bold" fill="#8FE0A0" text-anchor="middle">{_esc(c.get("right_header",""))}</text>')
+    ry = y0 + hh + 14
+    rh = min(160, (1470 - ry) / max(1, len(rows)))
+    for i, row in enumerate(rows):
+        y = ry + i * (rh + 8)
+        parts.append(f'<rect x="{x0}" y="{y}" width="{lw}" height="{rh}" rx="10" fill="#1a0e14" stroke="#D06070" stroke-width="1.2"/>')
+        parts.append(f'<rect x="{x0+lw+gap}" y="{y}" width="{rw}" height="{rh}" rx="10" fill="#0d1a12" stroke="#4FAE5A" stroke-width="1.2"/>')
+        for k, ln in enumerate(_wrap(row.get("left", ""), 40)[:4]):
+            parts.append(f'<text x="{x0+24}" y="{y+42 + k*30}" font-family="{SANS}" font-size="21" fill="{CREAM}">{_esc(ln)}</text>')
+        for k, ln in enumerate(_wrap(row.get("right", ""), 40)[:4]):
+            parts.append(f'<text x="{x0+lw+gap+24}" y="{y+42 + k*30}" font-family="{SANS}" font-size="21" fill="{WHITE}">{_esc(ln)}</text>')
+        parts.append(f'<text x="{x0+lw+gap/2}" y="{y+rh/2+8}" font-family="{SANS}" font-size="26" fill="{GOLD}" text-anchor="middle">\u2192</text>')
+    parts.append(f'<rect x="{x0}" y="1500" width="1480" height="70" rx="10" fill="{NAVY}" stroke="{GOLD}" stroke-width="1.5"/>')
+    parts.append(f'<text x="800" y="1544" font-family="{SANS}" font-size="22" font-weight="bold" fill="{GOLD}" text-anchor="middle">{_esc(("REMEMBER: " + c.get("remember",""))[:78])}</text>')
+    _footer(parts, c.get("footer", "")); parts.append('</svg>'); return "\n".join(parts)
+
+
+BUILDERS.update({
+    "identity-anatomy-v1": _build_identity_anatomy_svg,
+    "give-credit-v1": _build_give_credit_svg,
+    "why-forex-v1": _build_why_forex_svg,
+    "utility-principle-v1": _build_utility_principle_svg,
+    "brain-translation-v1": _build_brain_translation_svg,
+})
+DEFAULTS.update({
+    "identity-anatomy-v1": _default_identity_anatomy,
+    "give-credit-v1": _default_give_credit,
+    "why-forex-v1": _default_why_forex,
+    "utility-principle-v1": _default_utility_principle,
+    "brain-translation-v1": _default_brain_translation,
+})
+
+
 def _template(tid):
     return next((t for t in TEMPLATES if t["id"] == tid), None)
 
@@ -604,7 +826,8 @@ def validate_poster(content, tmpl, png_w, png_h, kr_info, is_factual):
     steps = content.get("steps", [])
     placeholder_tokens = ("lorem", "todo", "tbd", "xxx", "{{", "}}", "placeholder")
     # Template-aware content items (steps / rows / cards / lesson_points / sections).
-    item_key = next((k for k in ("steps", "rows", "cards", "lesson_points", "sections") if content.get(k)), None)
+    item_key = next((k for k in ("steps", "rows", "cards", "lesson_points", "sections",
+                                  "panels", "callouts", "cycle_steps", "parts_left", "info_boxes") if content.get(k)), None)
     items = content.get(item_key, []) if item_key else []
     item_text = " ".join(str(v) for it in items for v in (it.values() if isinstance(it, dict) else [it]))
     all_text = " ".join([str(content.get("title", "")), str(content.get("subtitle", "")), item_text]).lower()
@@ -616,7 +839,7 @@ def validate_poster(content, tmpl, png_w, png_h, kr_info, is_factual):
         chk("All steps complete", len(steps) == tmpl["steps"] and all(s.get("heading") and s.get("body") and s.get("outcome") for s in steps),
             f"{len(steps)}/{tmpl['steps']} steps")
     elif item_key:
-        chk("Content items present & complete", len(items) > 0 and all(isinstance(it, dict) and any(it.values()) for it in items),
+        chk("Content items present & complete", len(items) > 0 and all((isinstance(it, dict) and any(it.values())) or (isinstance(it, str) and it.strip()) for it in items),
             f"{len(items)} {item_key}")
     else:
         core = content.get("plain_definition") or content.get("professional_definition") or content.get("body") or content.get("memory_sentence")
