@@ -219,7 +219,17 @@ Founder Beta Dashboard, Automatic Knowledge Extraction, PreviewViewer. (all VERI
 
 ## Roadmap (Founder-approved, remaining)
 
-### Session 2026-07-14 — Real distribution keys, audiobook fix, unified shelf, GPS navigation
+### Session 2026-07-14 (cont.) — 5 poster template families, QR 403 fix, Cover KR auto-fill
+- **QR 403 fixed** (iteration_63, verified): QICS portal/QR URLs used FastAPI `request.base_url` → internal cluster host over http → 403 on phone scan. Added `PUBLIC_APP_URL` env + `_base_url` prefers it (https-forced fallback); migrated all 5 existing portals to the public https URL. Public scan now returns 200.
+- **5 new poster template families** (all inherit from the verified KR, render clean vector SVG→PNG/PDF, DRAFT + Treasure Standard passed): identity-anatomy-v1, give-credit-v1 (10-panel), why-forex-v1 (data/infographic, factual), utility-principle-v1 (operating cycle), brain-translation-v1 (misconceptions→corrections table). Validator extended for the new content keys + string list items.
+- **Cover Studio KR-first**: new `/cover/kr-brief/{kr_id}` endpoint + "Start from Knowledge" picker auto-fills title/subtitle/series/visual-concept — founder no longer writes a description. Fields stay editable.
+- Shopify credentials stored (SHOPIFY_STORE_DOMAIN, SHOPIFY_ADMIN_TOKEN) — integration NOT yet built.
+
+### Backlog (next)
+- **Shopify publishing integration** (creds stored): push Published books/products to qru-5019.myshopify.com as a real store channel. P1 — needs integration playbook.
+- Course / Marketing / Bundle inheriting recipes still Coming Soon — P2.
+- Cosmetic: strip double-period in cover concept_notes; derive series from KR pillar; startup assert TEMPLATES==BUILDERS==DEFAULTS.
+
 - **Pexels + Pixabay keys wired** (founder-supplied, saved encrypted, CONNECTED): MP4 video renders now succeed and appear in YouTube Publisher factory-assets automatically.
 - **Audiobook silence fixed**: chunk MP3s are now re-encoded/stitched via ffmpeg into ONE clean 44.1kHz stream (byte-concatenated MP3s wouldn't play in browsers). Background job + status polling + 8-min client deadline; `_audiobook_job` fully wrapped so failures always reach a terminal FAILED state.
 - **Unified "My Products" shelf** (`/products`, new nav): one list of EVERY manufactured product across engines (publication/media/poster/recipe) with honest status, badges (In QRU Store / Audiobook / Ready for YouTube), search, engine filters, download/open/audio actions. Answers "where do products go". (Testing agent fixed a duplicate `/products` route that had hidden it; legacy library moved to `/product-library`.)
