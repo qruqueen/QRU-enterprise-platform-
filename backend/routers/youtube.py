@@ -125,6 +125,7 @@ class PublishInput(BaseModel):
     tags: Optional[List[str]] = None
     privacy: str = "private"
     playlist_id: Optional[str] = None
+    made_for_kids: Optional[bool] = None
 
 
 async def _metadata_from_product(pid):
@@ -268,10 +269,13 @@ async def publish(data: PublishInput, user=Depends(require_super_admin)):
         thumb_generated = bool(thumb_path)
 
     try:
+        mfk = data.made_for_kids
+        if mfk is None and is_factory:
+            mfk = bool(factory_doc.get("made_for_kids"))
         pub = await yt.publish_video(
             file_path=video_path, title=title, description=description or "", tags=tags or [],
             privacy=data.privacy, thumbnail_path=thumb_path, playlist_id=data.playlist_id,
-            product_id=data.product_id, actor=user["name"],
+            product_id=data.product_id, actor=user["name"], made_for_kids=bool(mfk),
         )
     except yt.YouTubeError as e:
         # Failure isolation: preserve the Gold Master + record the failed destination for retry.

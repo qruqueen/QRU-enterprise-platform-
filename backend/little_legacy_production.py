@@ -552,8 +552,33 @@ def _kit_text_products(ep, inh, char):
         "lesson_flow": ["Watch the episode", "Discuss the Treasure Takeaway", "Complete the workbook page", "Share one thing learned"],
         "assessment": f"Ask each child to explain {topic} in their own words.",
     }
+    first = cname.split()[0]
+    song = {
+        "title": f"The {topic.title()} Song",
+        "style": "Simple, warm, repetitive sing-along for young children (call-and-response).",
+        "chorus": [f"{first}, {first}, show us the way,", f"we're learning about {topic} today!",
+                   "Little lessons, big and bright,", "learning together feels just right!"],
+        "verse_1": [f"When we wonder what to do,", f"{topic} helps us see it through.",
+                    "Ask a question, look and see,", "that's how curious friends can be!"],
+        "verse_2": [f"{first} says with a great big smile,", "\"Let's be kind and think a while.\"",
+                    "Little lessons today, hooray,", "big impact tomorrow — hip hip hooray!"],
+        "note": "Melody is a suggested simple nursery-rhyme cadence; a sing-along guide track is provided.",
+    }
+    course = {
+        "title": f"Little Legacy Mini-Course: {topic.title()}",
+        "audience": ep.get("age_band", "Early Learners"),
+        "objective": objective,
+        "modules": [
+            {"module": 1, "title": f"Meet {cname} & the Big Question", "activity": "Watch the pilot episode + discuss the question."},
+            {"module": 2, "title": f"Understanding {topic}", "activity": "Read the storybook; complete Knowledge Cards."},
+            {"module": 3, "title": f"{topic.title()} in Real Life", "activity": "Find real examples; complete the workbook."},
+            {"module": 4, "title": "Sing, Play & Create", "activity": "Sing the song; color the coloring page."},
+            {"module": 5, "title": "Show What You Know", "activity": f"Explain {topic} in your own words (assessment)."},
+        ],
+        "completion": f"A child can joyfully explain {topic} and connect it to kindness and curiosity.",
+    }
     return {"knowledge_cards": cards, "workbook": workbook, "parent_guide": parent_guide,
-            "teacher_guide": teacher_guide,
+            "teacher_guide": teacher_guide, "song": song, "course": course,
             "social_caption": f"New from Little Legacy Learners: {cname} learns about {topic}! Little lessons today, big impact tomorrow. #LittleLegacyLearners"}
 
 

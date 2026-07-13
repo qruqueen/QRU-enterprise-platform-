@@ -116,7 +116,7 @@ async def _add_to_playlist(token, video_id, playlist_id):
 
 async def publish_video(*, file_path, title, description, tags, privacy="private",
                         category_id=EDUCATION_CATEGORY, thumbnail_path=None, playlist_id=None,
-                        product_id=None, actor="Founder"):
+                        product_id=None, actor="Founder", made_for_kids=False):
     """Upload a real MP4 to the connected YouTube channel. Returns the publication record.
     This is the single interface Phase 2 (AI-rendered video) will reuse."""
     if not file_path or not os.path.exists(file_path):
@@ -128,7 +128,7 @@ async def publish_video(*, file_path, title, description, tags, privacy="private
                "tags": [t for t in (tags or []) if t][:15],
                "categoryId": category_id}
     status = {"privacyStatus": privacy if privacy in ("private", "unlisted", "public") else "private",
-              "selfDeclaredMadeForKids": False}
+              "selfDeclaredMadeForKids": bool(made_for_kids)}
 
     video = await _resumable_upload(token, file_path, snippet, status)
     video_id = video.get("id")
