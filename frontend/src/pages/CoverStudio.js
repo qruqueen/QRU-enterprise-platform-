@@ -85,7 +85,14 @@ export default function CoverStudio() {
       const { data } = await api.post(`/publishing/product/${pid}/audiobook`, { voice });
       if (!data.ok) { toast.warning(data.message); setAudioResult((r) => ({ ...r, [cid]: null })); setPubBusy(null); return; }
       toast.info(data.message);
+      const started = Date.now();
       const poll = setInterval(async () => {
+        if (Date.now() - started > 8 * 60 * 1000) {
+          clearInterval(poll); setPubBusy(null);
+          setAudioResult((r) => ({ ...r, [cid]: null }));
+          toast.error("Audiobook is taking longer than expected — please try again.");
+          return;
+        }
         try {
           const { data: st } = await api.get(`/publishing/product/${pid}/audiobook-status`);
           if (st.status === "READY") {
@@ -97,8 +104,8 @@ export default function CoverStudio() {
             setAudioResult((r) => ({ ...r, [cid]: null }));
             toast.error(st.error || "Audiobook narration failed.");
           }
-        } catch (_) { /* keep polling */ }
-      }, 4000);
+        } catch (_) { /* keep polling through transient 502s */ }
+      }, 5000);
     } catch (e) { toast.error(e.response?.data?.detail || "Audiobook failed."); setAudioResult((r) => ({ ...r, [cid]: null })); setPubBusy(null); }
   };
 

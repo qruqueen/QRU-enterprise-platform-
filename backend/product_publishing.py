@@ -210,31 +210,30 @@ async def _narration_source(p):
 
 
 async def _audiobook_job(product_id, voice, model, actor):
-    p = await db.products.find_one({"id": product_id})
-    if not p:
-        return
-    title = p.get("title") or "This edition"
-    body = await _narration_source(p)
-    script = f"{title}. Presented by QRU Press. {body}"
     try:
+        p = await db.products.find_one({"id": product_id})
+        if not p:
+            return
+        title = p.get("title") or "This edition"
+        body = await _narration_source(p)
+        script = f"{title}. Presented by QRU Press. {body}"
         from emergentintegrations.llm.openai import OpenAITextToSpeech
         tts = OpenAITextToSpeech(api_key=os.getenv("EMERGENT_LLM_KEY"))
         audio = b""
         for chunk in _chunk_text(script):
             audio += await tts.generate_speech(text=chunk, model=model, voice=voice)
+        (AUDIOBOOK_DIR / f"{product_id}.mp3").write_bytes(audio)
+        est_seconds = int(len(body.split()) / 2.5)
+        await db.products.update_one({"id": product_id}, {"$set": {"audiobook": {
+            "status": "READY", "format": "mp3", "voice": voice, "bytes": len(audio),
+            "url": f"/api/publishing/product/{product_id}/audiobook-file",
+            "est_seconds": est_seconds, "narrated_from": "book" if (p.get("content") or "").strip() else "knowledge_record",
+            "created_by": actor, "created_at": now_iso()}, "updated_at": now_iso()}})
+        await db.activities.insert_one({"actor": actor, "action": "make:audiobook", "entity": "Product",
+                                        "entity_id": product_id, "detail": p.get("product_code", ""), "created_at": now_iso()})
     except Exception as e:
         await db.products.update_one({"id": product_id}, {"$set": {
             "audiobook.status": "FAILED", "audiobook.error": str(e)[:180], "updated_at": now_iso()}})
-        return
-    (AUDIOBOOK_DIR / f"{product_id}.mp3").write_bytes(audio)
-    est_seconds = int(len(body.split()) / 2.5)
-    await db.products.update_one({"id": product_id}, {"$set": {"audiobook": {
-        "status": "READY", "format": "mp3", "voice": voice, "bytes": len(audio),
-        "url": f"/api/publishing/product/{product_id}/audiobook-file",
-        "est_seconds": est_seconds, "narrated_from": "book" if (p.get("content") or "").strip() else "knowledge_record",
-        "created_by": actor, "created_at": now_iso()}, "updated_at": now_iso()}})
-    await db.activities.insert_one({"actor": actor, "action": "make:audiobook", "entity": "Product",
-                                    "entity_id": product_id, "detail": p.get("product_code", ""), "created_at": now_iso()})
 
 
 async def make_audiobook(product_id, voice="onyx", model="tts-1", actor="Founder"):

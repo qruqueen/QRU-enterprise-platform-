@@ -219,6 +219,15 @@ Founder Beta Dashboard, Automatic Knowledge Extraction, PreviewViewer. (all VERI
 
 ## Roadmap (Founder-approved, remaining)
 
+### Book → Publish last mile + Audiobook editions + honest video status — DONE (2026-07-13, iteration_61, backend 12/12 + frontend 15/15)
+- **Book → Publish** (`product_publishing.py` + `routers/publishing.py`): after a book's deliverable is rendered (with cover), Cover Studio now offers **Add to QRU Store™** (real — sets Published/purchasable, honest refusal if not rendered) and **KDP-Ready Export™** (honest — a ZIP with interior.pdf + cover.png + a fpdf2 metadata/keywords sheet + step-by-step KDP upload instructions; Amazon has NO publish API so we never fake an "on Amazon" state). Endpoints: /product/{pid}/publish-store, /kdp-package, /kdp-file.
+- **Audiobook edition from any product** (Founder request): **Create Audiobook** with voice select in Cover Studio → OpenAI TTS (Emergent key) narrates the book content (or the verified KR if the book has little text). Runs as a BACKGROUND asyncio job (the ingress hard-caps requests at 60s → synchronous TTS 502s); the UI polls audiobook-status (8-min client deadline) → READY. Endpoints: /product/{pid}/audiobook, /audiobook-status, /audiobook-file. Verified real 9MB–35MB MP3s.
+- **Honest video status** (`StoryboardStudio.js`): each video product card now states the truth — a STORYBOARD_READY product is a governed script, **not yet a video**; it must be rendered (Render MP4) before it can be published, RENDERED links to YouTube Publisher, RENDER_FAILED shows the reason. Removed the misleading "ready to publish" implication. (Rendered qru_production MP4s already appear in YouTube Publisher — reliable MP4 rendering still needs a Pexels/Pixabay key.)
+
+### P2 — Inheriting recipes still to build (Course / Marketing / Bundle)
+- Audiobook is delivered as a product-level action (above) rather than a KR recipe — narrates the actual book, which is better. Course (multi-module PDF), Marketing Assets (caption/one-pager pack), and Product Bundle (grouped manifest) recipes remain Coming Soon on the dashboard — NEXT.
+
+
 ### QRU Founder Experience Principle™ — "Never ask the founder to remember what the Factory already knows" — DONE (2026-07-13, iteration_60, 6/6 frontend)
 - New reusable `components/KnowledgePicker.js`: founder browses/searches Verified Knowledge by TOPIC only — internal KR IDs / KMR record codes / version tokens are NEVER shown on manufacturing surfaces. Verified sorted first, Verified/Draft chip + "N products manufactured".
 - `PosterStudio.js`: raw "Verified Knowledge Record ID" text input REMOVED → topic-first picker. Picking a topic auto-inherits KR content (title/definitions/examples/citations); the 5 content fields are now collapsed "Optional customizations" (empty, placeholder "Inherited from Knowledge") and only non-empty overrides are sent. is_factual auto-set for factual templates.
