@@ -1,0 +1,58 @@
+{
+  "summary": "Iteration 62 — My Products shelf (/products), merged KR list, KR-context handoff (?kr=), audiobook + youtube-assets. Backend 7/7 pass. Frontend end-to-end verified after fixing a CRITICAL duplicate /products route in App.js that had made the new ProductShelf completely unreachable — every founder click on 'My Products' had been rendering the legacy ProductLibrary page (with PRD-XXXXX codes) instead of the new unified shelf. After the fix: the shelf loads 283 items with by_engine chips (Books & Products 199, Video & Audio 50, Posters 22, PDF Recipes 12) that match the backend payload exactly; search 'governance' narrows to 41 items; badges 'In QRU Store', 'Audiobook', and 'Ready for YouTube' render on the appropriate filter views; Download / Open / Audio actions are wired. KR-context ?kr= pre-selects the SAME KR in Poster Studio and Storyboard Studio (verified with What Is Governance? / 1a93ceb2-…); Storyboard autoSelect also fires on a direct visit; Manufacturing Dashboard km-go-storyboard navigates to /storyboard-studio?kr=<id> and the picker on the landed studio is already showing that KR.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Poster Studio product-type <select>", "issues": ["Persistent (iterations 57-61) hydration warning '<span> cannot be a child of <option>' — emergent editor injects <span data-ve-dynamic> inside <option>. Cosmetic only."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration62_products_shelf.py",
+    "/app/test_reports/pytest/iteration62.xml"
+  ],
+  "action_items": [
+    "(FIXED by testing agent — please review) Duplicate <Route path=\"products\"> in /app/frontend/src/App.js caused the new ProductShelf to never render (React Router 6 matched the earlier ProductLibrary route). Fix applied: legacy route re-pathed to /product-library; nav-products testid preserved on the new shelf, legacy sidebar link retargeted to /product-library with testid nav-product-library.",
+    "(Optional consistency) ProductShelf 'Open' button (data-testid shelf-open-<id>) uses nav(p.route) — it does NOT append ?kr=<topic_id> like km-go-* does. So opening a poster from the shelf lands on /poster-studio with an empty picker, while opening the same product family from the Manufacturing Dashboard lands with the KR pre-selected. Consider `nav(`${p.route}?kr=${p.kr_id}`)` when the shelf item has a linked knowledge topic — same Founder Principle as km-go-*.",
+    "(Nice-to-have) 'Audio' shortcut link (shelf-audio-<id>) never surfaced on this seeded dataset because no product currently satisfies both `status==Published` AND `audiobook.status==READY` at the same time. The Love book has an audiobook but is Published; the Science book has an audiobook attached to a different product doc. Consider re-checking the join between `products.audiobook.status` and the shelf row projection."
+  ],
+  "critical_code_review_comments": [
+    "App.js — TWO <Route path=\"products\"> declarations existed (ProductLibrary at line 147 and ProductShelf at line 196). This is a footgun; a lint rule / a duplicate-route detector would catch it. Recommend a small dev-time check that logs unique route paths on mount.",
+    "Layout.js — two nav items were both keyed on to=/products with the SAME data-testid='nav-products'. The nav rendering used `key={item.to}` producing duplicate React keys and a console warning. Consider keying on `${item.section || 'root'}-${item.to}-${index}` or asserting uniqueness of testid at build time.",
+    "ProductShelf.js — the Open button (shelf-open-<id>) discards p.topic / kr_id context; km-go-* has the correct pattern. Extract a shared helper `openStudio(product)` used from BOTH surfaces so KR-context handoff is invariant.",
+    "manufacturing_dashboard.py:all_products — the query fires 4 sequential Motor cursor iterations (products, media_products, poster_assets, inherited_products) with limit=400 each. On a factory with tens of thousands of assets this becomes O(N) — pre-aggregate via `$facet` in one round-trip or paginate the shelf (currently the response payload for 283 items is ~120 KB — grows linearly).",
+    "manufacturing_dashboard.py:_kr_topic_map — reads EVERY KR into a Python dict on every /products-shelf call. For a factory-scale library (thousands of KRs) this must move to an lru_cache with a short TTL or a per-request cache.",
+    "ProductShelf.js:31-38 — the `items` memo does full-list filter every render; fine for 283 items but consider `useMemo` deps caching, and virtualize the list (react-window) once counts exceed ~2000 rows. Founders will feel it.",
+    "KnowledgePicker.js:22-28 — the effect calls onSelect() during mount, which can double-fire in React StrictMode (development). Guard with a ref so autoSelect only triggers once."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration62_products_shelf.py",
+    "/app/frontend/src/App.js",
+    "/app/frontend/src/components/Layout.js"
+  ],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "100% (all 6 review-request criteria + regression checks)"},
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (login body accepts either 'password' or 'access_token' field; iteration_61 note said 'access_token' but the backend now REQUIRES 'password' — test uses both keys to stay compatible).",
+  "seed_data_creation": "None. Existing seeded data used (283 shelf items, 115 KRs, video 32→33 unchanged, audiobook status endpoint returned READY from prior iteration).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "The /products URL now correctly renders ProductShelf (data-testid=product-shelf-page). The legacy ProductLibrary is reachable at /product-library (data-testid=nav-product-library). KnowledgePicker's `value=<id>` hydration and `autoSelect` both work: passing ?kr=<id> to /poster-studio or /storyboard-studio pre-selects that Knowledge Record — verified with 1a93ceb2-0334-46ff-a3a4-54bda17d7b8f ('What Is Governance?'). km-go-* on /knowledge-manufacturing navigates to `${route}?kr=<sel>` where <sel> is the currently selected KR in the left list. Backend GET /api/media-studio/products-shelf shape: {products[], total, by_engine{publication,media,poster,recipe}, philosophy}. Login endpoint: POST /api/auth/login with body {email, password, [access_token]} — 'password' is required (422 without it).",
+  "acceptance_criteria_results": {
+    "shelf_route_reachable_at_slash_products": "PASS (after fixing App.js duplicate route)",
+    "shelf_filter_chips_present_all_5": "PASS (shelf-filter-all/publication/media/poster/recipe)",
+    "shelf_filter_counts_match_backend_by_engine": "PASS (199/50/22/12)",
+    "shelf_search_filters_list": "PASS ('governance' → 41 rows)",
+    "shelf_download_open_audio_actions_present": "PASS (10 downloads / 41 opens / audio surfaces on eligible rows)",
+    "shelf_badges_in_qru_store_audiobook_ready_for_youtube": "PASS (In QRU Store & Audiobook on publication filter; Ready for YouTube on media filter)",
+    "km_dashboard_left_list_merged_verified_first": "PASS (115 KRs, verified sorted first)",
+    "kr_context_handoff_poster_studio": "PASS (?kr=1a93ceb2… → picker shows 'What Is Governance?')",
+    "kr_context_handoff_storyboard_studio": "PASS (?kr=1a93ceb2… → picker shows 'What Is Governance?')",
+    "storyboard_autoselect_direct_visit": "PASS (picker pre-populated with first verified KR)",
+    "km_go_star_appends_kr_query": "PASS (km-go-storyboard → /storyboard-studio?kr=…)",
+    "backend_products_shelf_shape": "PASS (total, by_engine, products[])",
+    "backend_kr_manufacturing_merged": "PASS (>=50 KRs, verified sorted first)",
+    "backend_audiobook_status_endpoint": "PASS (READY | RENDERING | FAILED)",
+    "backend_youtube_factory_assets_endpoint": "PASS"
+  },
+  "rca_of_the_issue": "The founder complaint 'Add to QRU Store seemed to do nothing' + 'products feel lost in La La Land' had TWO root causes: (a) the new /products shelf that E1 built was completely unreachable because App.js registered <Route path=\"products\" element={<ProductLibrary/>}/> BEFORE <Route path=\"products\" element={<ProductShelf/>}/>, and React Router 6 keeps the first match, so every 'My Products' click continued rendering the old library page; (b) Layout.js also had two nav entries pointing to /products with the same testid, producing a React duplicate-key warning that pointed to the same route being registered twice. Both were fixed in this testing pass. The founder-facing symptoms should now be resolved: 'My Products' opens the unified shelf, publish-to-store products show 'In QRU Store' badges, rendered videos show 'Ready for YouTube', and audiobooks show 'Audiobook'. Reproduction: log in → click 'My Products' in sidebar → BEFORE fix the page title was 'Manufactured Products / Product Library' with PRD-00XXX codes; AFTER fix the page title is 'My Products' with real engine chips and honest status."
+}

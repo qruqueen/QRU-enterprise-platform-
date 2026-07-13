@@ -10,7 +10,7 @@ import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard, Film,
-  ClipboardList, Boxes, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud, Gavel, Youtube, QrCode, Scale, Compass, Cog, LayoutTemplate,
+  ClipboardList, Boxes, PackageOpen, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud, Gavel, Youtube, QrCode, Scale, Compass, Cog, LayoutTemplate,
 } from "lucide-react";
 
 const NAV = [
@@ -27,6 +27,7 @@ const NAV = [
   { to: "/poster-studio", label: "Poster Studio™", icon: LayoutTemplate, testid: "nav-poster-studio", q: "How do we manufacture governed infographic posters?" },
   { to: "/storyboard-studio", label: "Storyboard Studio™", icon: Clapperboard, testid: "nav-storyboard-studio", q: "How do we turn one Knowledge Record into many media formats?" },
   { to: "/knowledge-manufacturing", label: "Manufacturing Dashboard™", icon: Boxes, testid: "nav-knowledge-manufacturing", q: "What has each Knowledge Record manufactured, and what remains?" },
+  { to: "/products", label: "My Products", icon: PackageOpen, testid: "nav-products", q: "Where is every product I've manufactured?" },
   { section: "The QRU Experience" },
   { to: "/first-dollar", label: "First Dollar Mode™", icon: Coins, testid: "nav-first-dollar", q: "Will a real customer pay for it?" },
   { to: "/factory-readiness", label: "Factory Readiness™", icon: Gauge, testid: "nav-factory-readiness", q: "Which product should we manufacture first?" },
@@ -68,7 +69,7 @@ const NAV = [
   { to: "/orchestrator", label: "Bulk Orchestrator™", icon: Boxes, testid: "nav-orchestrator", q: "How do we scale production without breaking?" },
   { to: "/manufacture", label: "Product Manufacturing", icon: Sparkles, testid: "nav-manufacture", q: "How do we make the actual product?" },
   { to: "/manufacturing-studio", label: "Manufacturing Studio", icon: PackageCheck, testid: "nav-mfg-studio", q: "Is this product ready to ship?" },
-  { to: "/products", label: "Product Library", icon: Library, testid: "nav-products", q: "What have we made?" },
+  { to: "/product-library", label: "Product Library", icon: Library, testid: "nav-product-library", q: "What have we made?" },
   { to: "/product-protection", label: "Product Protection™", icon: ShieldHalf, testid: "nav-protection", q: "Is it protected and properly licensed?" },
   { to: "/trust", label: "Trust & Authenticity™", icon: ShieldCheck, testid: "nav-trust", q: "Is this product authentic, protected, and permanently registered?" },
   { to: "/companion", label: "Companion System™", icon: QrCode, testid: "nav-companion", q: "Does every product live beyond the page?" },

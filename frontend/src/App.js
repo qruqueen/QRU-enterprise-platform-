@@ -87,6 +87,7 @@ import CoverStudio from "@/pages/CoverStudio";
 import PosterStudio from "@/pages/PosterStudio";
 import StoryboardStudio from "@/pages/StoryboardStudio";
 import KnowledgeManufacturing from "@/pages/KnowledgeManufacturing";
+import ProductShelf from "@/pages/ProductShelf";
 import ManufacturingFlow from "@/pages/ManufacturingFlow";
 import EnterpriseArchitecture from "@/pages/EnterpriseArchitecture";
 import Refinement from "@/pages/Refinement";
@@ -143,8 +144,8 @@ function EnterpriseRoutes() {
         <Route path="orchestrator" element={<Orchestrator />} />
         <Route path="manufacture" element={<ProductManufacturing />} />
         <Route path="manufacturing-studio" element={<ManufacturingStudio />} />
-        <Route path="products" element={<ProductLibrary />} />
         <Route path="products/:id" element={<ProductDetail />} />
+        <Route path="product-library" element={<ProductLibrary />} />
         <Route path="product-protection" element={<ProductProtection />} />
         <Route path="workforce" element={<DigitalWorkforce />} />
         <Route path="colleges" element={<Colleges />} />
@@ -192,6 +193,7 @@ function EnterpriseRoutes() {
         <Route path="poster-studio" element={<PosterStudio />} />
         <Route path="storyboard-studio" element={<StoryboardStudio />} />
         <Route path="knowledge-manufacturing" element={<KnowledgeManufacturing />} />
+        <Route path="products" element={<ProductShelf />} />
         <Route path="flow" element={<ManufacturingFlow />} />
         <Route path="architecture" element={<EnterpriseArchitecture />} />
         <Route path="refinement" element={<Refinement />} />

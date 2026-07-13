@@ -136,7 +136,7 @@ export default function KnowledgeManufacturing() {
                             </button>
                           )}
                           {m.route && (
-                            <button onClick={() => nav(m.route)} data-testid={`km-go-${m.key}`} className="text-[10px] text-royal inline-flex items-center gap-0.5 hover:underline">
+                            <button onClick={() => nav(`${m.route}?kr=${sel}`)} data-testid={`km-go-${m.key}`} className="text-[10px] text-royal inline-flex items-center gap-0.5 hover:underline">
                               {m.count > 0 ? "Open" : "Manufacture"} <ArrowRight className="w-3 h-3" />
                             </button>
                           )}

@@ -209,6 +209,31 @@ async def _narration_source(p):
     return _clean_for_narration(body)
 
 
+def _stitch_mp3(parts):
+    """Re-encode TTS chunk MP3s into ONE clean, seekable, browser-playable MP3 (44.1kHz).
+    Byte-concatenating separate OpenAI MP3 streams yields multiple headers that many browser
+    <audio> players cannot decode — so we always run them through ffmpeg."""
+    import subprocess
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        paths = []
+        for i, b in enumerate(parts):
+            p = os.path.join(td, f"p{i}.mp3")
+            with open(p, "wb") as f:
+                f.write(b)
+            paths.append(p)
+        listfile = os.path.join(td, "list.txt")
+        with open(listfile, "w") as f:
+            for p in paths:
+                f.write(f"file '{p}'\n")
+        out = os.path.join(td, "out.mp3")
+        subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", listfile,
+                        "-c:a", "libmp3lame", "-b:a", "96k", "-ar", "44100", out],
+                       check=True, capture_output=True)
+        with open(out, "rb") as f:
+            return f.read()
+
+
 async def _audiobook_job(product_id, voice, model, actor):
     try:
         p = await db.products.find_one({"id": product_id})
@@ -219,9 +244,10 @@ async def _audiobook_job(product_id, voice, model, actor):
         script = f"{title}. Presented by QRU Press. {body}"
         from emergentintegrations.llm.openai import OpenAITextToSpeech
         tts = OpenAITextToSpeech(api_key=os.getenv("EMERGENT_LLM_KEY"))
-        audio = b""
+        parts = []
         for chunk in _chunk_text(script):
-            audio += await tts.generate_speech(text=chunk, model=model, voice=voice)
+            parts.append(await tts.generate_speech(text=chunk, model=model, voice=voice))
+        audio = _stitch_mp3(parts)
         (AUDIOBOOK_DIR / f"{product_id}.mp3").write_bytes(audio)
         est_seconds = int(len(body.split()) / 2.5)
         await db.products.update_one({"id": product_id}, {"$set": {"audiobook": {

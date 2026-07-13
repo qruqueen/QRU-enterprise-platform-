@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge } from "@/components/qru";
@@ -18,7 +19,8 @@ const FORMAT_META = {
 const STATUS_TONE = { DRAFT: "slate", VERIFICATION_REQUIRED: "amber", REVISION_REQUIRED: "rose", MEDIA_APPROVED: "emerald", QRU_GOLD_STANDARD: "gold" };
 
 export default function StoryboardStudio() {
-  const [krId, setKrId] = useState("");
+  const [params] = useSearchParams();
+  const [krId, setKrId] = useState(params.get("kr") || "");
   const [selKr, setSelKr] = useState(null);
   const [formats, setFormats] = useState(["youtube_video", "audio_lesson", "teacher_presentation"]);
   const [busy, setBusy] = useState(false);
@@ -83,7 +85,7 @@ export default function StoryboardStudio() {
             <div>
               <label className="text-[10px] font-bold uppercase tracking-wide text-navy">1 · Choose your Knowledge</label>
               <div className="mt-1">
-                <KnowledgePicker value={krId} testid="storyboard-knowledge"
+                <KnowledgePicker value={krId} testid="storyboard-knowledge" autoSelect
                   onSelect={(k) => { setKrId(k.id); setSelKr(k); }} />
               </div>
               {selKr && (

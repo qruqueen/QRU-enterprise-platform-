@@ -120,7 +120,14 @@ async def kr_manufacturing(kr_id):
 
 
 async def kr_manufacturing_list():
-    krs = [k async for k in db.knowledge_engine_records.find({}, {"_id": 0, "id": 1, "kr_code": 1, "topic": 1, "version": 1, "verification": 1, "status": 1}).sort("created_at", -1).limit(60)]
+    seen, krs = set(), []
+    for coll in (db.knowledge_engine_records, db.knowledge_records):
+        async for k in coll.find({}, {"_id": 0, "id": 1, "kr_code": 1, "topic": 1, "version": 1,
+                                       "verification": 1, "status": 1, "verified_external": 1,
+                                       "created_at": 1}).sort("created_at", -1).limit(200):
+            if k.get("id") and k["id"] not in seen:
+                seen.add(k["id"])
+                krs.append(k)
     out = []
     for k in krs:
         kr_id = k["id"]
@@ -130,8 +137,98 @@ async def kr_manufacturing_list():
                   + await db.inherited_products.count_documents({"kr_id": kr_id})
                   + await db.products.count_documents({"knowledge_record_id": kr_id}))
         verif = k.get("verification") or {}
+        verified = bool(verif.get("evidence_sufficient_for_external_publication") or k.get("verified_external"))
         out.append({"id": kr_id, "kr_code": k.get("kr_code"), "topic": k.get("topic"),
-                    "version": k.get("version", 1),
-                    "verified_external": bool(verif.get("evidence_sufficient_for_external_publication")),
+                    "version": k.get("version", 1), "verified_external": verified,
                     "asset_count": counts})
+    out.sort(key=lambda x: (not x["verified_external"], (x["topic"] or "").lower()))
     return {"knowledge_records": out, "philosophy": "Understand Once. Manufacture Forever."}
+
+
+
+# ── My Products™ — one unified shelf of everything the Factory has manufactured ──
+async def _kr_topic_map():
+    m = {}
+    for coll in (db.knowledge_engine_records, db.knowledge_records):
+        async for k in coll.find({}, {"_id": 0, "id": 1, "topic": 1}):
+            if k.get("id"):
+                m[k["id"]] = k.get("topic")
+    return m
+
+
+def _tone_for(status):
+    s = (status or "").upper()
+    if s.startswith(("PUBLISH", "GOLD", "QRU_GOLD")):
+        return "gold"
+    if s in ("MEDIA_APPROVED", "DESIGN_APPROVED", "PRINT_READY", "PUBLISHING_READY", "RENDERED", "READY", "APPROVED"):
+        return "emerald"
+    if s in ("RENDER_FAILED", "REVISION_REQUIRED", "BLOCKED", "FAILED"):
+        return "rose"
+    if s in ("VERIFICATION_REQUIRED", "NEEDS REVIEW", "NEEDS_REVIEW", "RENDERING", "IN_PRODUCTION"):
+        return "amber"
+    return "slate"
+
+
+async def all_products():
+    topics = await _kr_topic_map()
+    items = []
+
+    async for p in db.products.find({}, {"_id": 0}).sort("updated_at", -1).limit(400):
+        cd = p.get("customer_deliverable") or {}
+        pdf = next((f for f in cd.get("files", []) if f.get("format") == "pdf"), None)
+        published = (p.get("status") == "Published")
+        badges = []
+        if published:
+            badges.append("In QRU Store")
+        if (p.get("audiobook") or {}).get("status") == "READY":
+            badges.append("Audiobook")
+        items.append({
+            "id": p["id"], "name": p.get("title"), "kind": p.get("product_type") or "Product",
+            "engine": "publication", "topic": topics.get(p.get("knowledge_record_id")) or p.get("topic"),
+            "status": p.get("status") or "Draft", "tone": _tone_for(p.get("status")),
+            "updated_at": p.get("updated_at") or p.get("created_at"),
+            "download": (pdf or {}).get("url"), "badges": badges,
+            "route": "/cover-studio" if not published else "/store",
+            "audiobook_url": (p.get("audiobook") or {}).get("url") if (p.get("audiobook") or {}).get("status") == "READY" else None,
+        })
+
+    async for m in db.media_products.find({}, {"_id": 0}).sort("created_at", -1).limit(400):
+        rs = m.get("render_status")
+        fmt = m.get("format")
+        badges = []
+        if rs == "RENDERED" and fmt in ("youtube_video", "promo_short"):
+            badges.append("Ready for YouTube")
+        items.append({
+            "id": m["id"], "name": m.get("label"), "kind": (fmt or "media").replace("_", " ").title(),
+            "engine": "media", "topic": topics.get(m.get("kr_id")),
+            "status": rs or m.get("status") or "STORYBOARD_READY", "tone": _tone_for(rs or m.get("status")),
+            "updated_at": m.get("created_at"), "download": None, "badges": badges,
+            "route": "/storyboard-studio", "audiobook_url": None,
+        })
+
+    async for a in db.poster_assets.find({}, {"_id": 0}).sort("created_at", -1).limit(400):
+        items.append({
+            "id": a["id"], "name": a.get("title") or a.get("family"), "kind": "Poster",
+            "engine": "poster", "topic": topics.get(a.get("kr_id")),
+            "status": a.get("status") or "DRAFT", "tone": _tone_for(a.get("status")),
+            "updated_at": a.get("created_at"),
+            "download": f"/api/publishing/poster/{a['id']}/file?format=png", "badges": [],
+            "route": "/poster-studio", "audiobook_url": None,
+        })
+
+    async for i in db.inherited_products.find({}, {"_id": 0}).sort("created_at", -1).limit(400):
+        f = (i.get("files") or [{}])[0]
+        items.append({
+            "id": i["id"], "name": i.get("label"), "kind": (i.get("type") or "recipe").replace("_", " ").title(),
+            "engine": "recipe", "topic": topics.get(i.get("kr_id")),
+            "status": i.get("status") or "DRAFT", "tone": _tone_for(i.get("status")),
+            "updated_at": i.get("created_at"), "download": f.get("url"), "badges": [],
+            "route": "/knowledge-manufacturing", "audiobook_url": None,
+        })
+
+    items.sort(key=lambda x: (x.get("updated_at") or ""), reverse=True)
+    by_engine = {}
+    for it in items:
+        by_engine[it["engine"]] = by_engine.get(it["engine"], 0) + 1
+    return {"products": items, "total": len(items), "by_engine": by_engine,
+            "philosophy": "Understand Once. Manufacture Forever."}

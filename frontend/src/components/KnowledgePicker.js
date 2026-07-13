@@ -5,21 +5,33 @@ import { BookOpen, Search, CheckCircle2, Clock, Boxes, ChevronRight } from "luci
 
 // QRU Founder Experience Principle™ — Never ask the founder to remember what the Factory already knows.
 // The founder browses/searches Knowledge by TOPIC. Internal record numbers/IDs are never shown.
-export function KnowledgePicker({ value, onSelect, verifiedOnly = false, testid = "knowledge-picker", label = "Browse Verified Knowledge" }) {
+export function KnowledgePicker({ value, onSelect, verifiedOnly = false, autoSelect = false, testid = "knowledge-picker", label = "Browse Verified Knowledge" }) {
   const [open, setOpen] = useState(false);
   const [krs, setKrs] = useState([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!open || krs.length) return;
+    let active = true;
     setLoading(true);
     api.get("/media-studio/knowledge-manufacturing")
-      .then((r) => setKrs(r.data.knowledge_records || []))
+      .then((r) => {
+        if (!active) return;
+        const list = r.data.knowledge_records || [];
+        setKrs(list);
+        const match = value ? list.find((k) => k.id === value) : null;
+        if (match) {
+          onSelect(match);
+        } else if (autoSelect && !value) {
+          const first = list.find((k) => k.verified_external) || list[0];
+          if (first) onSelect(first);
+        }
+      })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, []);
 
   const selected = useMemo(() => krs.find((k) => k.id === value) || (value && value.id ? value : null), [krs, value]);
 

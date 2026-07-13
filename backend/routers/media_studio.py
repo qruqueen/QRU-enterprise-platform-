@@ -28,6 +28,11 @@ async def knowledge_manufacturing_list(user=Depends(get_current_user)):
     return await mdash.kr_manufacturing_list()
 
 
+@router.get("/products-shelf")
+async def products_shelf(user=Depends(get_current_user)):
+    return await mdash.all_products()
+
+
 @router.get("/knowledge-manufacturing/{kr_id}")
 async def knowledge_manufacturing(kr_id: str, user=Depends(get_current_user)):
     res = await mdash.kr_manufacturing(kr_id)

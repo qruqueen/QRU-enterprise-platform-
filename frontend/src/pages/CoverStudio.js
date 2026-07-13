@@ -38,6 +38,7 @@ export default function CoverStudio() {
   const [pubBusy, setPubBusy] = useState(null);
   const [kdpResult, setKdpResult] = useState({});
   const [audioResult, setAudioResult] = useState({});
+  const [storeDone, setStoreDone] = useState({});
   const [voice, setVoice] = useState("onyx");
 
   const load = () => api.get("/publishing/covers").then((r) => { setCovers(r.data.covers); setStates(r.data.states); }).catch(() => {});
@@ -62,7 +63,7 @@ export default function CoverStudio() {
     setPubBusy(`store-${pid}`);
     try {
       const { data } = await api.post(`/publishing/product/${pid}/publish-store`);
-      if (data.ok) toast.success(data.message);
+      if (data.ok) { toast.success(data.message); setStoreDone((s) => ({ ...s, [pid]: true })); }
       else toast.warning(data.message);
     } catch (e) { toast.error(e.response?.data?.detail || "Publish failed."); }
     finally { setPubBusy(null); }
@@ -249,6 +250,9 @@ export default function CoverStudio() {
                                   className="text-[10px] px-2 py-1 rounded-sm border border-emerald-300 bg-emerald-50 text-emerald-800 font-bold inline-flex items-center gap-1 disabled:opacity-50 hover:bg-emerald-100">
                                   {pubBusy === `store-${attachResult[c.id].product_id}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Store className="w-3 h-3" />} Add to QRU Store
                                 </button>
+                                {storeDone[attachResult[c.id].product_id] && (
+                                  <a href="/store" data-testid={`cover-store-link-${c.id}`} className="text-[10px] px-2 py-1 text-emerald-700 font-bold underline inline-flex items-center">✓ Live — View in Store →</a>
+                                )}
                                 <button onClick={() => exportKdp(c.id, attachResult[c.id].product_id)} disabled={pubBusy === `kdp-${attachResult[c.id].product_id}`}
                                   data-testid={`cover-export-kdp-${c.id}`}
                                   className="text-[10px] px-2 py-1 rounded-sm border border-navy/20 bg-white text-navy font-bold inline-flex items-center gap-1 disabled:opacity-50 hover:border-royal">

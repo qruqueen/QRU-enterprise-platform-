@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge } from "@/components/qru";
@@ -23,8 +24,9 @@ export default function PosterStudio() {
   const [sel, setSel] = useState(null);
   const [selKr, setSelKr] = useState(null);
   const [showOverrides, setShowOverrides] = useState(false);
+  const [params] = useSearchParams();
   const [form, setForm] = useState({
-    template_id: "process-formula-v1", is_factual: false, kr_id: "", trademark: true,
+    template_id: "process-formula-v1", is_factual: false, kr_id: params.get("kr") || "", trademark: true,
     eyebrow: "", title: "", tagline: "", subtitle: "", footer: "",
   });
 
