@@ -1,0 +1,13 @@
+[Scene 1] What if you finally understood What Is Memory?? Let's make it simple.
+
+[Scene 2] What Is Memory is the preservation of decisions, evidence, relationships and lessons over time so a system improves rather than forgets; in QRU it is immutable and versioned.
+
+[Scene 3] This record explains What Is Memory? in plain language and connects it to how the QRU Factory works.
+
+[Scene 4] A concrete QRU Factory example of what is memory.
+
+[Scene 5] Connects to related benchmark concepts Feeds Product Manufacturing
+
+[Scene 6] Storage is not memory without lineage and context
+
+[Scene 7] That's the QRU way — we don't just teach information, we create understanding.

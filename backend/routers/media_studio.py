@@ -17,6 +17,23 @@ async def overview(user=Depends(get_current_user)):
     return sm.overview()
 
 
+# ── Enterprise Manufacturing Dashboard™ (Knowledge-first) ───────────────────
+import manufacturing_dashboard as mdash
+
+
+@router.get("/knowledge-manufacturing")
+async def knowledge_manufacturing_list(user=Depends(get_current_user)):
+    return await mdash.kr_manufacturing_list()
+
+
+@router.get("/knowledge-manufacturing/{kr_id}")
+async def knowledge_manufacturing(kr_id: str, user=Depends(get_current_user)):
+    res = await mdash.kr_manufacturing(kr_id)
+    if res is None:
+        raise HTTPException(404, "Knowledge Record not found.")
+    return res
+
+
 @router.get("/storyboards")
 async def list_storyboards(user=Depends(get_current_user)):
     rows = [r async for r in db.storyboard_masters.find({}, {"_id": 0}).sort("created_at", -1).limit(40)]

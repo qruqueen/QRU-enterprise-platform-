@@ -533,14 +533,16 @@ def _build_knowledge_card_svg(c):
     p.append(f'<text x="70" y="{fy+45}" font-family="{SANS}" font-size="20" font-weight="bold" fill="{CARD_NAVY}">RELATED QRU CATEGORY</text>')
     flow_colors = [CARD_GREEN, CARD_NAVY, GOLD]
     fx = 70
-    for i, cat in enumerate(c["category_flow"][:3]):
-        w = 200
+    cats = c["category_flow"][:3]
+    for i, cat in enumerate(cats):
+        lab = _esc(cat[:20])
+        w = max(140, 34 + len(cat[:20]) * 12)
         p.append(f'<rect x="{fx}" y="{fy+65}" width="{w}" height="56" rx="8" fill="{flow_colors[i%3]}"/>')
-        p.append(f'<text x="{fx+w/2}" y="{fy+100}" font-family="{SANS}" font-size="17" font-weight="bold" fill="#FFF" text-anchor="middle">{_esc(cat)}</text>')
+        p.append(f'<text x="{fx+w/2}" y="{fy+100}" font-family="{SANS}" font-size="16" font-weight="bold" fill="#FFF" text-anchor="middle">{lab}</text>')
         fx += w
-        if i < len(c["category_flow"][:3]) - 1:
-            p.append(f'<text x="{fx+16}" y="{fy+102}" font-family="{SANS}" font-size="26" fill="{CARD_NAVY}">\u2192</text>')
-            fx += 44
+        if i < len(cats) - 1:
+            p.append(f'<text x="{fx+12}" y="{fy+102}" font-family="{SANS}" font-size="26" fill="{CARD_NAVY}">\u2192</text>')
+            fx += 40
     # tags
     tx, tline = 70, fy + 155
     for tag in c["tags"][:10]:
@@ -613,9 +615,12 @@ def validate_poster(content, tmpl, png_w, png_h, kr_info, is_factual):
     if tmpl["steps"] > 0:
         chk("All steps complete", len(steps) == tmpl["steps"] and all(s.get("heading") and s.get("body") and s.get("outcome") for s in steps),
             f"{len(steps)}/{tmpl['steps']} steps")
-    else:
+    elif item_key:
         chk("Content items present & complete", len(items) > 0 and all(isinstance(it, dict) and any(it.values()) for it in items),
-            f"{len(items)} {item_key or 'items'}")
+            f"{len(items)} {item_key}")
+    else:
+        core = content.get("plain_definition") or content.get("professional_definition") or content.get("body") or content.get("memory_sentence")
+        chk("Core content present", bool(core), "text-driven template")
     chk("No placeholders / garbled text", not any(tok in all_text for tok in placeholder_tokens))
     chk("No markdown remnants", not any(m in all_text for m in ("**", "##", "](", "`")))
     chk("Correct dimensions", png_w == tmpl["dimensions"]["w"] and png_h == tmpl["dimensions"]["h"], f"{png_w}x{png_h}")
@@ -643,10 +648,21 @@ async def generate_poster(template_id, content=None, kr_id=None, is_factual=Fals
         return {"error": f"Unknown template '{template_id}'."}
     is_factual = bool(is_factual or tmpl.get("factual"))
     builder = BUILDERS[template_id]
-    c = {**DEFAULTS[template_id](), **(content or {})}
+    # Knowledge Record inheritance — the KR is the single source of truth.
+    inherited = {}
+    kr_doc = None
+    if kr_id:
+        import kr_inheritance as kri
+        kr_doc = await kri.load_kr(db, kr_id)
+        if kr_doc:
+            inherited = kri.map_to_template(template_id, kri.build_inheritance(kr_doc))
+    # Precedence: template defaults → inherited from KR → explicit founder content.
+    c = {**DEFAULTS[template_id](), **{k: v for k, v in inherited.items() if v}, **(content or {})}
     for k in ("steps", "rows", "cards", "lesson_points", "sections"):
         if content and content.get(k):
             c[k] = content[k]
+        elif inherited.get(k):
+            c[k] = inherited[k]
 
     kr_info = await _resolve_kr(kr_id)
     if kr_id and kr_info is None:
