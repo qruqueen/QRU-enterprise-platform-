@@ -133,9 +133,13 @@ async def masters(user=Depends(get_current_user)):
     return {"masters": await llp.list_masters()}
 
 
+class MasterApproval(BaseModel):
+    consistency_confirmed: bool = False
+
+
 @router.post("/masters/{char_key}/approve")
-async def approve_master(char_key: str, user=Depends(get_current_user)):
-    res = await llp.approve_master(char_key, actor=user.get("email", "Founder"))
+async def approve_master(char_key: str, body: MasterApproval = MasterApproval(), user=Depends(get_current_user)):
+    res = await llp.approve_master(char_key, actor=user.get("email", "Founder"), consistency_confirmed=body.consistency_confirmed)
     if res is None:
         raise HTTPException(404, "Master not found.")
     return res
@@ -192,3 +196,59 @@ async def pilot_captions(episode_id: str):
     if not p.exists():
         raise HTTPException(404, "Captions not available yet.")
     return FileResponse(str(p), media_type="text/plain")
+
+
+# ─────────── PHASE 4 — Product Kit (kid-format inheriting recipes) ───────────
+@router.post("/episodes/{episode_id}/kit")
+async def manufacture_kit(episode_id: str, user=Depends(get_current_user)):
+    res = await llp.manufacture_kit(episode_id, actor=user.get("email", "Founder"))
+    if res is None:
+        raise HTTPException(404, "Episode not found.")
+    return res
+
+
+@router.get("/episodes/{episode_id}/kit")
+async def kit_status(episode_id: str, user=Depends(get_current_user)):
+    return await llp.kit_status(episode_id)
+
+
+@router.get("/kits")
+async def kits(user=Depends(get_current_user)):
+    return {"kits": await llp.list_kits()}
+
+
+@router.post("/kits/{episode_id}/approve")
+async def approve_kit(episode_id: str, user=Depends(get_current_user)):
+    res = await llp.approve_kit(episode_id, actor=user.get("email", "Founder"))
+    if res is None:
+        raise HTTPException(404, "Kit not found.")
+    return res
+
+
+@router.get("/kits/{episode_id}/{kind}.png")
+async def kit_file(episode_id: str, kind: str):
+    p = llp.kit_file_path(episode_id, kind)
+    if not p.exists():
+        raise HTTPException(404, "Not rendered yet.")
+    return FileResponse(str(p), media_type="image/png")
+
+
+# ─────────── PHASE 4 — Little Legacy Project Zero™ feedback ───────────
+class FeedbackInput(BaseModel):
+    episode_id: str
+    role: Optional[str] = "parent"
+    rating: Optional[int] = None
+    understanding_before: Optional[int] = None
+    understanding_after: Optional[int] = None
+    comment: Optional[str] = None
+    suggested_improvement: Optional[str] = None
+
+
+@router.post("/feedback")
+async def submit_feedback(body: FeedbackInput, user=Depends(get_current_user)):
+    return await llp.submit_feedback(body.episode_id, body.dict(), actor=user.get("email", "Founder"))
+
+
+@router.get("/feedback")
+async def feedback_loop(episode_id: str, user=Depends(get_current_user)):
+    return await llp.feedback_loop(episode_id)

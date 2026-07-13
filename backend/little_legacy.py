@@ -82,6 +82,8 @@ STATUSES = ["Idea", "Intake", "Knowledge Required", "Draft", "In Review", "Chang
             "Publish Ready", "Published", "Paused", "Retired", "Archived"]
 
 
+IDENTITY_STANDARD = "If a child instantly recognizes the character without reading the name, the identity standard has been achieved."
+
 CANON_NOTES = {
     "nova-sparkle": ["Always wears the star crown; carries the “Big Dreams” book.", "Leads adventures but never dominates — invites others to think.", "Star motif and gold accent are canon; never remove the crown."],
     "sunny-bee": ["Heart motif on the body; warm yellow palette is canon.", "Models sharing/kindness — never greedy or preachy."],
@@ -105,6 +107,8 @@ async def _ensure_bible_fields():
             upd["canon_notes"] = CANON_NOTES.get(c["key"], [])
         if not doc.get("version_history"):
             upd["version_history"] = [{"version": doc.get("version", "0.1"), "note": "Seeded canonical draft.", "at": doc.get("updated_at", now_iso())}]
+        if not doc.get("identity_standard"):
+            upd["identity_standard"] = IDENTITY_STANDARD
         if upd:
             await db.ll_characters.update_one({"key": c["key"]}, {"$set": upd})
 
@@ -193,6 +197,7 @@ async def overview():
             "episode_philosophy": EPISODE_PHILOSOPHY,
             "governance": {"statuses": (meta or {}).get("statuses", STATUSES), "checklists": (meta or {}).get("checklists", CHECKLISTS)},
             "inherits": INHERITED_CAPABILITIES,
+            "identity_standard": IDENTITY_STANDARD,
             "phase": "Phase 1 — Foundation", "note": "All records are Draft Pending Founder Approval. Voice, music, animation render and the pilot episode are later governed phases."}
 
 

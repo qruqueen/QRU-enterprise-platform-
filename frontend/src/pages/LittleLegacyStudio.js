@@ -86,6 +86,8 @@ export default function LittleLegacyStudio() {
           <TabsTrigger value="mastering" data-testid="ll-tab-mastering">Character Mastering</TabsTrigger>
           <TabsTrigger value="stories" data-testid="ll-tab-stories">Stories</TabsTrigger>
           <TabsTrigger value="pilots" data-testid="ll-tab-pilots">Pilot Studio</TabsTrigger>
+          <TabsTrigger value="kits" data-testid="ll-tab-kits">Product Kits</TabsTrigger>
+          <TabsTrigger value="feedback" data-testid="ll-tab-feedback">Project Zero™</TabsTrigger>
           <TabsTrigger value="governance" data-testid="ll-tab-governance">Governance</TabsTrigger>
         </TabsList>
 
@@ -267,6 +269,16 @@ export default function LittleLegacyStudio() {
           <PilotTab episodes={episodes} />
         </TabsContent>
 
+        {/* PHASE 4 — PRODUCT KITS (kid-format inheriting recipes) */}
+        <TabsContent value="kits" className="space-y-6">
+          <KitTab episodes={episodes} />
+        </TabsContent>
+
+        {/* PHASE 4 — PROJECT ZERO */}
+        <TabsContent value="feedback" className="space-y-6">
+          <FeedbackTab episodes={episodes} />
+        </TabsContent>
+
         {/* GOVERNANCE */}
         <TabsContent value="governance" className="space-y-6">
           <Panel title="Production Statuses (governed lifecycle)" icon={ClipboardCheck} accent="navy" testid="ll-statuses">
@@ -388,14 +400,17 @@ function MasteringTab({ chars }) {
   };
   const approveMaster = async (key) => {
     try {
-      const { data } = await api.post(`/little-legacy/masters/${key}/approve`);
+      const { data } = await api.post(`/little-legacy/masters/${key}/approve`, { consistency_confirmed: true });
+      if (!data.ok) { toast.warning(data.message); return; }
       toast.success(data.message); load();
     } catch (err) { toast.error(formatApiError(err.response?.data?.detail)); }
   };
+  const [consist, setConsist] = useState({});
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">Phase 2 — Character Mastering. Generate a model sheet, expression sheet and voice profile for each character (AI-assisted concept art via Gemini Nano Banana — governed reference, not final licensed art). Founder approval locks the Character Bible™ at v1.0.</p>
+      <p className="text-sm text-muted-foreground">Phase 2 — Character Mastering. Generate a model sheet, expression sheet and voice profile for each character (AI-assisted concept art via Gemini Nano Banana — governed reference, not final licensed art). The expression sheet inherits from the model-sheet identity anchor, and Founder approval requires a Character Consistency Check™ before locking the Character Bible™ at v1.0.</p>
+      <div className="qru-card p-3 bg-royal/[0.04] border-royal/20 text-[12px] text-navy/85 italic" data-testid="ll-identity-standard">🌟 Identity Standard™: "If a child instantly recognizes the character without reading the name, the identity standard has been achieved."</div>
       <div className="grid md:grid-cols-2 gap-4">
         {chars.map((c) => {
           const m = masters[c.key];
@@ -427,8 +442,16 @@ function MasteringTab({ chars }) {
                     </ul>
                   )}
                   {m.founder_approved
-                    ? <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700"><CheckCircle2 className="w-4 h-4" /> Approved · Character Bible v1.0 (Canon locked)</span>
-                    : <button onClick={() => approveMaster(c.key)} data-testid={`ll-approve-master-${c.key}`} className="text-xs font-bold px-3 py-1.5 rounded-md bg-navy text-white hover:bg-navy/90 transition-colors">Approve & Lock as Canon v1.0</button>}
+                    ? <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700"><CheckCircle2 className="w-4 h-4" /> Approved · Character Bible v1.0 (Canon locked · anchor set)</span>
+                    : (
+                      <div className="space-y-2">
+                        <label className="flex items-start gap-2 text-[11px] text-navy/80 cursor-pointer" data-testid={`ll-consistency-check-${c.key}`}>
+                          <input type="checkbox" checked={!!consist[c.key]} onChange={(e) => setConsist((p) => ({ ...p, [c.key]: e.target.checked }))} className="mt-0.5" data-testid={`ll-consistency-checkbox-${c.key}`} />
+                          <span><span className="font-bold">Character Consistency Check™:</span> I confirm the turnaround and expression sheet show the SAME canonical character — skin tone, hair, facial proportions, eyes, smile, clothing, crown, palette.</span>
+                        </label>
+                        <button onClick={() => approveMaster(c.key)} disabled={!consist[c.key]} data-testid={`ll-approve-master-${c.key}`} className="text-xs font-bold px-3 py-1.5 rounded-md bg-navy text-white hover:bg-navy/90 transition-colors disabled:opacity-50">Approve & Lock as Canon v1.0</button>
+                      </div>
+                    )}
                 </div>
               )}
               {!st && (
@@ -573,6 +596,177 @@ function PublishingPackage({ pkg, approved }) {
             </ul>
           </Row>
         </div>
+      )}
+    </div>
+  );
+}
+
+
+function KitTab({ episodes }) {
+  const [kits, setKits] = useState({});
+  const timers = useRef({});
+  const verified = episodes.filter((e) => e.verification_status === "Verified");
+
+  const loadOne = useCallback(async (id) => {
+    try {
+      const { data } = await api.get(`/little-legacy/episodes/${id}/kit`);
+      setKits((prev) => ({ ...prev, [id]: data }));
+      return data.status;
+    } catch { return null; }
+  }, []);
+  useEffect(() => {
+    verified.forEach((e) => loadOne(e.id));
+    return () => Object.values(timers.current).forEach(clearInterval);
+  }, [episodes]); // eslint-disable-line
+
+  const poll = (id) => {
+    if (timers.current[id]) clearInterval(timers.current[id]);
+    timers.current[id] = setInterval(async () => {
+      const st = await loadOne(id);
+      if (["READY", "APPROVED", "FAILED", "NONE"].includes(st)) clearInterval(timers.current[id]);
+    }, 6000);
+  };
+  const make = async (id) => {
+    try {
+      const { data } = await api.post(`/little-legacy/episodes/${id}/kit`);
+      if (!data.ok) { toast.warning(data.message); return; }
+      toast.success(data.message);
+      setKits((prev) => ({ ...prev, [id]: { status: "RENDERING" } })); poll(id);
+    } catch (err) { toast.error(formatApiError(err.response?.data?.detail)); }
+  };
+  const approve = async (id) => {
+    try {
+      const { data } = await api.post(`/little-legacy/kits/${id}/approve`);
+      if (!data.ok) { toast.warning(data.message); return; }
+      toast.success(data.message); loadOne(id);
+    } catch (err) { toast.error(formatApiError(err.response?.data?.detail)); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">Phase 4 — Product Inheritance. One verified Knowledge Record™ manufactures the full kid catalog through inheritance (no duplication): coloring page, social/marketing asset, storybook cover, Knowledge Cards™, workbook/activity pack, and parent + teacher guides. Artwork inherits the approved Character Bible v1.0 identity anchor.</p>
+      {verified.length === 0 && <p className="text-sm text-muted-foreground py-6 text-center">No verified episode blueprints yet. Create one in the Stories tab.</p>}
+      {verified.map((e) => {
+        const k = kits[e.id] || {};
+        return (
+          <Panel key={e.id} title={e.title} icon={Boxes} accent="gold" testid={`ll-kit-${e.id}`}
+            right={k.status === "APPROVED" ? <StatusChip status="Approved" /> : k.consistency_inherited === false ? <StatusChip status="Consistency Flagged" tone="amber" /> : null}>
+            <p className="text-[11px] text-muted-foreground mb-3">{e.kr_topic} · {e.age_band}</p>
+            {k.status === "RENDERING" && <p className="text-sm text-royal flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Manufacturing the full product family…</p>}
+            {k.status === "FAILED" && <p className="text-sm text-red-600">Failed: {k.error} <button onClick={() => make(e.id)} className="underline ml-2">Retry</button></p>}
+            {(k.status === "READY" || k.status === "APPROVED") && (
+              <div className="space-y-4">
+                {k.consistency_inherited === false && <p className="text-[11px] text-amber-700">⚠ {k.consistency_note}</p>}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {(k.products || []).filter((p) => p.kind === "image").map((p) => (
+                    <div key={p.format} className="text-center" data-testid={`ll-kit-img-${e.id}-${p.format.split(' ')[0]}`}>
+                      <img src={`${BACKEND}${p.url}`} alt={p.format} className="rounded-md border border-navy/10 w-full mb-1" />
+                      <p className="text-[10px] font-semibold text-navy/70">{p.format}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {(k.products || []).filter((p) => p.kind === "text").map((p) => (
+                    <div key={p.format} className="border border-navy/10 rounded-md p-3" data-testid={`ll-kit-text-${e.id}-${p.format.split(' ')[0]}`}>
+                      <p className="text-[11px] font-bold text-royal mb-1">{p.format}</p>
+                      <pre className="text-[10px] text-navy/75 whitespace-pre-wrap font-sans max-h-40 overflow-auto">{JSON.stringify(p.data, null, 1).replace(/[{}\[\]"]/g, "").trim()}</pre>
+                    </div>
+                  ))}
+                </div>
+                {k.status === "APPROVED"
+                  ? <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700"><CheckCircle2 className="w-4 h-4" /> Product Kit approved · full family ready</span>
+                  : <button onClick={() => approve(e.id)} data-testid={`ll-approve-kit-${e.id}`} className="text-xs font-bold px-4 py-2 rounded-md bg-navy text-white hover:bg-navy/90 transition-colors">Approve Product Kit</button>}
+              </div>
+            )}
+            {!["RENDERING", "READY", "APPROVED"].includes(k.status) && (
+              <button onClick={() => make(e.id)} data-testid={`ll-make-kit-${e.id}`} className="text-xs font-bold px-4 py-2 rounded-md bg-royal text-white hover:bg-royal/90 transition-colors flex items-center gap-1.5"><Boxes className="w-4 h-4" /> Manufacture Product Kit</button>
+            )}
+          </Panel>
+        );
+      })}
+    </div>
+  );
+}
+
+function FeedbackTab({ episodes }) {
+  const [ep, setEp] = useState(episodes[0]?.id || "");
+  const [role, setRole] = useState("parent");
+  const [rating, setRating] = useState(5);
+  const [before, setBefore] = useState(2);
+  const [after, setAfter] = useState(5);
+  const [comment, setComment] = useState("");
+  const [improve, setImprove] = useState("");
+  const [loop, setLoop] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async (id) => {
+    if (!id) return;
+    try { const { data } = await api.get(`/little-legacy/feedback?episode_id=${id}`); setLoop(data); } catch { /* ignore */ }
+  }, []);
+  useEffect(() => { load(ep); }, [ep, load]);
+
+  const submit = async () => {
+    if (!ep) { toast.warning("Choose an episode."); return; }
+    setBusy(true);
+    try {
+      const { data } = await api.post("/little-legacy/feedback", {
+        episode_id: ep, role, rating: Number(rating),
+        understanding_before: Number(before), understanding_after: Number(after),
+        comment, suggested_improvement: improve,
+      });
+      if (!data.ok) { toast.warning(data.message); } else { toast.success(data.message); }
+      setComment(""); setImprove(""); load(ep);
+    } catch (err) { toast.error(formatApiError(err.response?.data?.detail)); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">Phase 4 — Little Legacy Project Zero™. Real parent, teacher and child feedback + learning outcomes flow back into the originating Knowledge Record™, so every future product improves through inheritance. Deterministic — no fabricated metrics (Treasure Standard™).</p>
+      <Panel title="Share Feedback" icon={ClipboardCheck} accent="royal" testid="ll-feedback-form">
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-[11px] font-bold uppercase tracking-wide text-navy/70 block mb-1.5">Episode</label>
+            <select value={ep} onChange={(e) => setEp(e.target.value)} data-testid="ll-feedback-episode" className="w-full border border-navy/15 rounded-md px-3 py-2 text-sm bg-white">
+              {episodes.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-[11px] font-bold uppercase tracking-wide text-navy/70 block mb-1.5">I am a…</label>
+            <select value={role} onChange={(e) => setRole(e.target.value)} data-testid="ll-feedback-role" className="w-full border border-navy/15 rounded-md px-3 py-2 text-sm bg-white">
+              <option value="parent">Parent</option><option value="teacher">Teacher</option><option value="child">Child</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-[11px] font-bold uppercase tracking-wide text-navy/70 block mb-1.5">Rating (1–5)</label>
+            <input type="number" min="1" max="5" value={rating} onChange={(e) => setRating(e.target.value)} data-testid="ll-feedback-rating" className="w-full border border-navy/15 rounded-md px-3 py-2 text-sm" />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><label className="text-[10px] font-bold uppercase text-navy/70 block mb-1">Understood before</label><input type="number" min="1" max="5" value={before} onChange={(e) => setBefore(e.target.value)} data-testid="ll-feedback-before" className="w-full border border-navy/15 rounded-md px-2 py-2 text-sm" /></div>
+            <div><label className="text-[10px] font-bold uppercase text-navy/70 block mb-1">Understood after</label><input type="number" min="1" max="5" value={after} onChange={(e) => setAfter(e.target.value)} data-testid="ll-feedback-after" className="w-full border border-navy/15 rounded-md px-2 py-2 text-sm" /></div>
+          </div>
+        </div>
+        <textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="What did the child learn / enjoy?" data-testid="ll-feedback-comment" className="w-full border border-navy/15 rounded-md px-3 py-2 text-sm mt-3" rows={2} />
+        <textarea value={improve} onChange={(e) => setImprove(e.target.value)} placeholder="Suggested improvement (feeds the Knowledge Record)" data-testid="ll-feedback-improve" className="w-full border border-navy/15 rounded-md px-3 py-2 text-sm mt-2" rows={2} />
+        <button onClick={submit} disabled={busy} data-testid="ll-feedback-submit" className="text-xs font-bold px-4 py-2 rounded-md bg-navy text-white hover:bg-navy/90 transition-colors disabled:opacity-50 mt-3">{busy ? "Submitting…" : "Submit Feedback → Knowledge Record"}</button>
+      </Panel>
+      {loop && (
+        <Panel title="Enterprise Learning — feeds the originating Knowledge Record" icon={GitBranch} testid="ll-feedback-loop">
+          <p className="text-sm text-navy/80 mb-2">Feedback count: <span className="font-bold">{loop.aggregate?.feedback_count ?? 0}</span></p>
+          {loop.aggregate?.improvement_signals?.length > 0 && (
+            <div className="mb-2"><p className="text-[10px] font-bold uppercase text-royal mb-1">Improvement signals</p>
+              <div className="flex flex-wrap gap-1">{loop.aggregate.improvement_signals.map((s) => <span key={s.signal} className="text-[10px] px-1.5 py-0.5 rounded bg-navy/[0.06] border border-navy/10">{s.signal} ({s.mentions})</span>)}</div>
+            </div>
+          )}
+          <div className="space-y-1.5 max-h-60 overflow-auto">
+            {(loop.episode_feedback || loop.feedback || []).map((f) => (
+              <div key={f.id} className="text-[11px] border border-navy/10 rounded p-2" data-testid={`ll-feedback-item-${f.id}`}>
+                <span className="font-semibold text-navy">{f.source}</span> · ★{f.rating ?? "—"} · {f.comment || f.summary}
+                {f.suggested_improvement && <span className="text-royal"> · 💡 {f.suggested_improvement}</span>}
+              </div>
+            ))}
+          </div>
+        </Panel>
       )}
     </div>
   );

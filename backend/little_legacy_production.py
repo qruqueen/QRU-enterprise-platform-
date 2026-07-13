@@ -162,25 +162,34 @@ async def _master_job(char_key, actor):
         if not c:
             return
         cv = _char_visual(c)
-        sheets = {
-            "model_sheet": f"Character model sheet and turnaround of {cv} Show front, three-quarter and side full-body poses on a clean neutral studio background. {STYLE}",
-            "expression_sheet": f"Expression sheet of {cv} Six head-and-shoulders expressions: happy, curious, proud, kind, surprised, thoughtful, arranged in a neat grid on a clean background. {STYLE}",
-        }
-        files = {}
-        for kind, prompt in sheets.items():
-            png = await ai_service.generate_image(prompt, session_id=f"ll-master-{char_key}-{kind}")
-            if not png:
-                png = _branded_card(c["name"], c["role"])
-            p = LL_DIR / "masters" / f"{char_key}_{kind}.png"
-            p.write_bytes(png)
-            files[kind] = f"/api/little-legacy/masters/{char_key}/{kind}.png"
+        model_prompt = (f"Character model sheet and turnaround of {cv} Show front, three-quarter and side "
+                        f"full-body poses on a clean neutral studio background. {STYLE}")
+        model_png = await ai_service.generate_image(model_prompt, session_id=f"ll-master-{char_key}-model")
+        if not model_png:
+            model_png = _branded_card(c["name"], c["role"])
+        (LL_DIR / "masters" / f"{char_key}_model_sheet.png").write_bytes(model_png)
+        # Expression sheet INHERITS from the model sheet (identity anchor) so both are the SAME character.
+        expr_prompt = (f"Expression sheet of {cv} Using the SAME character exactly as the provided reference "
+                       f"(identical skin tone, hair texture, facial proportions, eye shape, smile, clothing, "
+                       f"crown placement and color palette), show six head-and-shoulders expressions — happy, "
+                       f"curious, proud, kind, surprised, thoughtful — in a neat grid on a clean background. {STYLE}")
+        expr_png = await ai_service.generate_image_with_reference(expr_prompt, session_id=f"ll-master-{char_key}-expr", reference_pngs=[model_png])
+        if not expr_png:
+            expr_png = _branded_card(c["name"], "Expressions")
+        (LL_DIR / "masters" / f"{char_key}_expression_sheet.png").write_bytes(expr_png)
+        files = {"model_sheet": f"/api/little-legacy/masters/{char_key}/model_sheet.png",
+                 "expression_sheet": f"/api/little-legacy/masters/{char_key}/expression_sheet.png"}
         vp = VOICE_PROFILES.get(char_key, {"voice": NARRATOR_VOICE, "tone": "warm and encouraging"})
         await db.ll_character_masters.update_one({"key": char_key}, {"$set": {
             "id": gen_id(), "key": char_key, "name": c["name"], "status": "READY",
             "model_sheet_url": files["model_sheet"], "expression_sheet_url": files["expression_sheet"],
+            "anchor_url": files["model_sheet"],
             "voice_profile": vp, "color_palette": c.get("palette", []), "canon_notes": ll.CANON_NOTES.get(char_key, []),
-            "founder_approved": False, "version": "0.1",
-            "technique": "AI-assisted concept art (Gemini Nano Banana) — governed reference, not final licensed art.",
+            "identity_standard": ll.IDENTITY_STANDARD,
+            "expression_inherits_anchor": True,
+            "founder_approved": False, "consistency_confirmed": False, "version": "0.1",
+            "technique": "AI-assisted concept art (Gemini Nano Banana) — governed reference, not final licensed art. "
+                         "Expression sheet inherits from the model-sheet identity anchor.",
             "created_by": actor, "updated_at": now_iso()}}, upsert=True)
         await ll.remember("character_mastered", f"{c['name']} master art + voice profile produced (Draft).", actor, char_key)
     except Exception as e:
@@ -207,20 +216,37 @@ async def list_masters():
     return [m async for m in db.ll_character_masters.find({}, {"_id": 0}).sort("key", 1)]
 
 
-async def approve_master(char_key, actor="Founder"):
+async def approve_master(char_key, actor="Founder", consistency_confirmed=False):
     m = await db.ll_character_masters.find_one({"key": char_key})
     if not m:
         return None
     if m.get("status") != "READY":
         return {"ok": False, "message": "Master art is not ready to approve yet."}
+    if not consistency_confirmed:
+        return {"ok": False, "needs_consistency_check": True,
+                "message": "Character Consistency Check™ required: confirm the turnaround and expression sheet show the SAME canonical character (skin tone, hair, facial proportions, eyes, smile, clothing, crown, palette) before locking Character Bible v1.0."}
     await db.ll_character_masters.update_one({"key": char_key}, {"$set": {
-        "founder_approved": True, "status": "Approved", "version": "1.0", "approved_by": actor, "approved_at": now_iso(), "updated_at": now_iso()}})
+        "founder_approved": True, "status": "Approved", "version": "1.0",
+        "consistency_confirmed": True, "consistency_confirmed_by": actor, "consistency_confirmed_at": now_iso(),
+        "anchor_locked": True, "approved_by": actor, "approved_at": now_iso(), "updated_at": now_iso()}})
     await db.ll_characters.update_one({"key": char_key}, {"$set": {
-        "founder_approved": True, "status": "Approved", "version": "1.0", "mastered": True, "updated_at": now_iso()},
-        "$push": {"version_history": {"version": "1.0", "note": "Master art approved — Character Bible locked as Canon v1.0.", "at": now_iso()}}})
-    await ll.remember("character_master_approved", f"{m.get('name')} master art approved as Character Bible v1.0.", actor, char_key)
+        "founder_approved": True, "status": "Approved", "version": "1.0", "mastered": True,
+        "anchor_locked": True, "identity_standard": ll.IDENTITY_STANDARD, "updated_at": now_iso()},
+        "$push": {"version_history": {"version": "1.0", "note": "Consistency Check™ confirmed — Character Bible locked as Canon v1.0; model sheet is the permanent identity anchor.", "at": now_iso()}}})
+    await ll.remember("character_master_approved", f"{m.get('name')} Consistency Check™ confirmed — Character Bible v1.0 locked (identity anchor set).", actor, char_key)
     return {"ok": True, "status": "Approved", "version": "1.0",
-            "message": f"{m.get('name')} master art approved — Character Bible v1.0 (canon locked)."}
+            "message": f"{m.get('name')} passed Character Consistency Check™ — Character Bible v1.0 locked. Every future asset inherits from this anchor."}
+
+
+async def _approved_anchor(char_key):
+    """Return the approved model-sheet PNG bytes (permanent identity anchor) for a locked Character Bible, else None."""
+    if not char_key:
+        return None
+    m = await db.ll_character_masters.find_one({"key": char_key, "founder_approved": True})
+    if not m:
+        return None
+    p = master_file_path(char_key, "model_sheet")
+    return p.read_bytes() if p.exists() else None
 
 
 def master_file_path(char_key, kind):
@@ -361,13 +387,11 @@ async def _pilot_job(episode_id, actor):
         title, scenes = _build_scenes(ep, inh, char)
         voice = VOICE_PROFILES.get(ep.get("featured_character"), {}).get("voice", NARRATOR_VOICE)
 
-        # Reference consistency — inherit appearance from the approved Character Bible v1.0 master art.
+        # Reference consistency — inherit appearance from the approved Character Bible v1.0 identity anchor.
         ref_pngs = None
-        if char:
-            master = await db.ll_character_masters.find_one({"key": char["key"], "founder_approved": True})
-            mp = master_file_path(char["key"], "model_sheet") if master else None
-            if mp and mp.exists():
-                ref_pngs = [mp.read_bytes()]
+        anchor = await _approved_anchor(char["key"]) if char else None
+        if anchor:
+            ref_pngs = [anchor]
 
         segments, durations, captions = [], [], []
         for idx, sc in enumerate(scenes):
@@ -394,11 +418,13 @@ async def _pilot_job(episode_id, actor):
         joined = " ".join(s["narration"] for s in scenes).lower()
         unsafe = [w for w in PROHIBITED if w in joined]
         verified = ep.get("verification_status") == "Verified"
+        consistent = bool(ref_pngs)
         gates = {
             "knowledge_first": {"pass": verified, "detail": "Source Knowledge Record is externally Verified." if verified else "Source not verified."},
+            "character_consistency": {"pass": consistent, "detail": "Every scene inherits the approved Character Bible v1.0 identity anchor." if consistent else "FLAGGED: featured character has no approved Canon v1.0 anchor — appearance may drift. Approve the Character Bible first."},
             "child_safety": {"pass": not unsafe, "detail": "No prohibited content detected." if not unsafe else f"Flagged terms: {unsafe}"},
             "accessibility": {"pass": True, "detail": "Burned captions + downloadable .srt; warm clear narration; 16:9 720p."},
-            "treasure_standard": {"pass": verified and not unsafe, "detail": "Understanding clear, craftsmanship complete, aligns with QRU values." if (verified and not unsafe) else "Held — resolve blocking gates."},
+            "treasure_standard": {"pass": verified and not unsafe and consistent, "detail": "Understanding clear, craftsmanship complete, character on-model, aligns with QRU values." if (verified and not unsafe and consistent) else "Held — resolve blocking gates."},
         }
         all_pass = all(g["pass"] for g in gates.values())
 
@@ -490,3 +516,167 @@ def pilot_file_path(episode_id):
 
 def captions_file_path(episode_id):
     return LL_DIR / "pilots" / f"{episode_id}.srt"
+
+
+
+# ─────────────────── PHASE 4 — PRODUCT KIT (kid-format inheriting recipes) ───────────────────
+# One verified Knowledge Record → the full kid catalog, through inheritance. No duplication:
+# images inherit the approved Character Bible v1.0 anchor; text inherits the KR.
+(LL_DIR / "kits").mkdir(parents=True, exist_ok=True)
+
+
+def _kit_text_products(ep, inh, char):
+    topic = inh.get("term") or ep.get("kr_topic") or "our topic"
+    cname = char["name"] if char else "the Little Legacy Learners"
+    objective = ep.get("learning_objective") or inh.get("definition_plain") or f"Understand {topic}."
+    points = (inh.get("key_concepts") or inh.get("examples") or [])[:6]
+    cards = [{"front": f"What is {topic}?", "back": inh.get("definition_plain") or objective}]
+    for i, p in enumerate(points, 1):
+        cards.append({"front": f"Knowledge Card {i}", "back": str(p)})
+    workbook = {
+        "title": f"{topic.title()} Workbook",
+        "warm_up": f"Draw {cname}! What do you think {topic} means?",
+        "trace_words": [topic, cname.split()[0], "kind", "learn"],
+        "match": [{"prompt": str(p)[:40], "answer": topic} for p in points[:3]] or [{"prompt": topic, "answer": objective[:40]}],
+        "questions": (inh.get("challenge_questions") or [f"Can you explain {topic} in your own words?"]) + [f"Where did {cname} see {topic} today?"],
+    }
+    parent_guide = {
+        "objective": objective,
+        "watch_together": f"Notice how {cname} stays curious and kind while learning about {topic}.",
+        "discuss": [f"What did {cname} discover about {topic}?", f"Where can we see {topic} in our day?"],
+        "activity": f"Point out an example of {topic} at home and talk about it.",
+    }
+    teacher_guide = {
+        "objective": objective,
+        "standards_note": "Supports early SEL, curiosity and verification habits (Knowledge-First).",
+        "lesson_flow": ["Watch the episode", "Discuss the Treasure Takeaway", "Complete the workbook page", "Share one thing learned"],
+        "assessment": f"Ask each child to explain {topic} in their own words.",
+    }
+    return {"knowledge_cards": cards, "workbook": workbook, "parent_guide": parent_guide,
+            "teacher_guide": teacher_guide,
+            "social_caption": f"New from Little Legacy Learners: {cname} learns about {topic}! Little lessons today, big impact tomorrow. #LittleLegacyLearners"}
+
+
+async def _kit_job(episode_id, actor):
+    try:
+        ep = await db.ll_episodes.find_one({"id": episode_id})
+        kr = await kri.load_kr(db, ep.get("primary_kr")) if ep.get("primary_kr") else None
+        inh = kri.build_inheritance(kr) if kr else {}
+        char = next((x for x in ll.CHARACTERS if x["key"] == ep.get("featured_character")), None)
+        cv = _char_visual(char) if char else "the six Little Legacy Learners"
+        topic = inh.get("term") or ep.get("kr_topic") or "our topic"
+        anchor = await _approved_anchor(char["key"]) if char else None
+        consistent = bool(anchor)
+        ref = [anchor] if anchor else None
+
+        images = {}
+        specs = {
+            "coloring_page": (f"Black and white line-art COLORING PAGE for young children of {cv} at Little Legacy "
+                              f"Village. Clean bold outlines, no shading, no color, plenty of white space to color in. "
+                              f"Keep the character exactly on-model to the reference."),
+            "social_asset": (f"Bright square social media poster of {cv} with a warm smile, joyful and inviting, "
+                             f"gold and royal-purple QRU brand accents. Keep the character on-model to the reference."),
+            "storybook_cover": (f"Storybook cover illustration of {cv} exploring {topic} at Little Legacy Village, "
+                                f"warm and premium, on-model to the reference."),
+        }
+        for kind, prompt in specs.items():
+            png = await ai_service.generate_image_with_reference(prompt + " " + STYLE, session_id=f"ll-kit-{episode_id[:8]}-{kind}", reference_pngs=ref)
+            if not png:
+                png = _branded_card(topic.title(), kind.replace("_", " ").title())
+            (LL_DIR / "kits" / f"{episode_id}_{kind}.png").write_bytes(png)
+            images[kind] = f"/api/little-legacy/kits/{episode_id}/{kind}.png"
+
+        text = _kit_text_products(ep, inh, char)
+        products = [
+            {"format": "Coloring Page", "kind": "image", "url": images["coloring_page"]},
+            {"format": "Social / Marketing Asset", "kind": "image", "url": images["social_asset"], "caption": text["social_caption"]},
+            {"format": "Storybook Cover", "kind": "image", "url": images["storybook_cover"]},
+            {"format": "Knowledge Cards", "kind": "text", "data": text["knowledge_cards"]},
+            {"format": "Activity Pack / Workbook", "kind": "text", "data": text["workbook"]},
+            {"format": "Parent Guide", "kind": "text", "data": text["parent_guide"]},
+            {"format": "Teacher Guide", "kind": "text", "data": text["teacher_guide"]},
+        ]
+        await db.ll_kits.update_one({"episode_id": episode_id}, {"$set": {
+            "id": gen_id(), "episode_id": episode_id, "title": ep.get("title"), "topic": topic,
+            "featured_character": ep.get("featured_character"), "status": "READY",
+            "consistency_inherited": consistent,
+            "consistency_note": "All artwork inherits the approved Character Bible v1.0 identity anchor." if consistent else "FLAGGED: no approved anchor for the featured character — art may drift.",
+            "products": products, "founder_approved": False,
+            "created_by": actor, "created_at": now_iso(), "updated_at": now_iso()}}, upsert=True)
+        await ll.remember("product_kit_manufactured", f"Product Kit for '{ep.get('title')}' manufactured ({len(products)} formats).", actor, episode_id)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        await db.ll_kits.update_one({"episode_id": episode_id}, {"$set": {
+            "episode_id": episode_id, "status": "FAILED", "error": str(e)[:240], "updated_at": now_iso()}}, upsert=True)
+
+
+async def manufacture_kit(episode_id, actor="Founder"):
+    ep = await db.ll_episodes.find_one({"id": episode_id})
+    if not ep:
+        return None
+    if ep.get("verification_status") != "Verified":
+        return {"ok": False, "blocked": True,
+                "message": "Knowledge-First: verify this episode's Knowledge Record before manufacturing kids' products (Treasure Standard)."}
+    await db.ll_kits.update_one({"episode_id": episode_id}, {"$set": {
+        "episode_id": episode_id, "title": ep.get("title"), "status": "RENDERING", "created_by": actor, "updated_at": now_iso()}}, upsert=True)
+    asyncio.create_task(_kit_job(episode_id, actor))
+    return {"ok": True, "status": "RENDERING",
+            "message": "Manufacturing the full Product Kit (coloring page, social/marketing asset, storybook cover, knowledge cards, workbook, parent & teacher guides) from the one verified Knowledge Record — inheriting the approved Character Bible anchor."}
+
+
+async def kit_status(episode_id):
+    return await db.ll_kits.find_one({"episode_id": episode_id}, {"_id": 0}) or {"status": "NONE"}
+
+
+async def list_kits():
+    return [k async for k in db.ll_kits.find({}, {"_id": 0}).sort("created_at", -1).limit(50)]
+
+
+async def approve_kit(episode_id, actor="Founder"):
+    k = await db.ll_kits.find_one({"episode_id": episode_id})
+    if not k:
+        return None
+    if k.get("status") != "READY":
+        return {"ok": False, "message": "Kit is not ready to approve yet."}
+    await db.ll_kits.update_one({"episode_id": episode_id}, {"$set": {
+        "founder_approved": True, "status": "APPROVED", "approved_by": actor, "approved_at": now_iso(), "updated_at": now_iso()}})
+    await ll.remember("product_kit_approved", f"Product Kit for '{k.get('title')}' Founder-approved.", actor, episode_id)
+    return {"ok": True, "status": "APPROVED", "message": "Product Kit approved — the full family is ready for distribution."}
+
+
+def kit_file_path(episode_id, kind):
+    return LL_DIR / "kits" / f"{episode_id}_{kind}.png"
+
+
+# ─────────────────── PHASE 4 — LITTLE LEGACY PROJECT ZERO (inherits project_zero) ───────────────────
+import project_zero
+
+
+async def submit_feedback(episode_id, payload, actor="Learner"):
+    ep = await db.ll_episodes.find_one({"id": episode_id})
+    if not ep or not ep.get("primary_kr"):
+        return {"ok": False, "message": "Episode or its Knowledge Record not found."}
+    role = (payload.get("role") or "parent").lower()
+    fb_payload = {
+        "product_id": episode_id, "product_type": "little_legacy_episode",
+        "source": role, "rating": payload.get("rating"),
+        "understanding_before": payload.get("understanding_before"),
+        "understanding_after": payload.get("understanding_after"),
+        "comment": payload.get("comment"),
+        "suggested_improvement": payload.get("suggested_improvement"),
+    }
+    res = await project_zero.ingest_feedback(ep["primary_kr"], fb_payload, actor=f"{role}:{actor}")
+    if res is None:
+        return {"ok": False, "message": "Could not attach feedback to the Knowledge Record."}
+    await ll.remember("project_zero_feedback", f"{role.title()} feedback on '{ep.get('title')}' fed back into the originating Knowledge Record.", actor, episode_id)
+    return {"ok": True, "message": "Thank you — verified improvements flow back into the originating Knowledge Record so every future product improves.", **res}
+
+
+async def feedback_loop(episode_id):
+    ep = await db.ll_episodes.find_one({"id": episode_id})
+    if not ep or not ep.get("primary_kr"):
+        return {"feedback": [], "aggregate": {"feedback_count": 0}}
+    data = await project_zero.loop(ep["primary_kr"])
+    data["episode_feedback"] = [f for f in data.get("feedback", []) if f.get("product_id") == episode_id]
+    return data

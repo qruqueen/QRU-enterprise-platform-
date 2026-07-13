@@ -1,0 +1,23 @@
+1
+00:00:00,000 --> 00:00:07,530
+Governance Adventure
+
+2
+00:00:07,530 --> 00:00:12,040
+Explanation task
+
+3
+00:00:12,040 --> 00:00:22,040
+Let's understand it together
+
+4
+00:00:22,040 --> 00:00:28,250
+In real life
+
+5
+00:00:28,250 --> 00:00:31,390
+Now it's your turn
+
+6
+00:00:31,390 --> 00:00:38,420
+One-line anchor for what is governance.
