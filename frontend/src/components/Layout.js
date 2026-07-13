@@ -10,7 +10,7 @@ import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard, Film,
-  ClipboardList, Boxes, PackageOpen, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud, Gavel, Youtube, QrCode, Scale, Compass, Cog, LayoutTemplate,
+  ClipboardList, Boxes, PackageOpen, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud, Gavel, Youtube, QrCode, Scale, Compass, Cog, LayoutTemplate, Baby,
 } from "lucide-react";
 
 const NAV = [
@@ -26,6 +26,7 @@ const NAV = [
   { to: "/cover-studio", label: "Cover Studio™", icon: Palette, testid: "nav-cover-studio", q: "How do we produce premium, on-brand covers?" },
   { to: "/poster-studio", label: "Poster Studio™", icon: LayoutTemplate, testid: "nav-poster-studio", q: "How do we manufacture governed infographic posters?" },
   { to: "/storyboard-studio", label: "Storyboard Studio™", icon: Clapperboard, testid: "nav-storyboard-studio", q: "How do we turn one Knowledge Record into many media formats?" },
+  { to: "/little-legacy", label: "Little Legacy Learners™", icon: Baby, testid: "nav-little-legacy", q: "What would you like to teach children today?" },
   { to: "/knowledge-manufacturing", label: "Manufacturing Dashboard™", icon: Boxes, testid: "nav-knowledge-manufacturing", q: "What has each Knowledge Record manufactured, and what remains?" },
   { to: "/products", label: "My Products", icon: PackageOpen, testid: "nav-products", q: "Where is every product I've manufactured?" },
   { section: "The QRU Experience" },

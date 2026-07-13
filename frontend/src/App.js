@@ -88,6 +88,7 @@ import PosterStudio from "@/pages/PosterStudio";
 import StoryboardStudio from "@/pages/StoryboardStudio";
 import KnowledgeManufacturing from "@/pages/KnowledgeManufacturing";
 import ProductShelf from "@/pages/ProductShelf";
+import LittleLegacyStudio from "@/pages/LittleLegacyStudio";
 import ManufacturingFlow from "@/pages/ManufacturingFlow";
 import EnterpriseArchitecture from "@/pages/EnterpriseArchitecture";
 import Refinement from "@/pages/Refinement";
@@ -194,6 +195,7 @@ function EnterpriseRoutes() {
         <Route path="storyboard-studio" element={<StoryboardStudio />} />
         <Route path="knowledge-manufacturing" element={<KnowledgeManufacturing />} />
         <Route path="products" element={<ProductShelf />} />
+        <Route path="little-legacy" element={<LittleLegacyStudio />} />
         <Route path="flow" element={<ManufacturingFlow />} />
         <Route path="architecture" element={<EnterpriseArchitecture />} />
         <Route path="refinement" element={<Refinement />} />

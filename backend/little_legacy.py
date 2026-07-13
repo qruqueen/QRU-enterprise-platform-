@@ -146,11 +146,21 @@ async def seed(force=False):
 async def overview():
     fr = await db.ll_franchise.find_one({"key": "little-legacy-learners"}, {"_id": 0})
     chars = await db.ll_characters.count_documents({})
+    approved_chars = await db.ll_characters.count_documents({"founder_approved": True})
     locs = await db.ll_locations.count_documents({})
     eps = await db.ll_episodes.count_documents({})
+    mem = await db.ll_memory.count_documents({})
+    ub = await db.ll_universe_bible.find_one({"key": "universe-bible"}, {"_id": 0, "status": 1})
     meta = await db.ll_meta.find_one({"key": "checklists"}, {"_id": 0})
-    return {"franchise": fr, "counts": {"characters": chars, "locations": locs, "episodes": eps},
+    return {"franchise": fr,
+            "counts": {"characters": chars, "characters_approved": approved_chars, "locations": locs, "episodes": eps, "memory_events": mem},
+            "universe_bible_status": (ub or {}).get("status", DRAFT),
+            "responsibilities": FIVE_RESPONSIBILITIES,
+            "knowledge_flow": KNOWLEDGE_FLOW,
+            "production_catalog": PRODUCTION_CATALOG,
+            "episode_philosophy": EPISODE_PHILOSOPHY,
             "governance": {"statuses": (meta or {}).get("statuses", STATUSES), "checklists": (meta or {}).get("checklists", CHECKLISTS)},
+            "inherits": INHERITED_CAPABILITIES,
             "phase": "Phase 1 — Foundation", "note": "All records are Draft Pending Founder Approval. Voice, music, animation render and the pilot episode are later governed phases."}
 
 
@@ -173,6 +183,7 @@ async def update_character(char_id, changes, founder_approved=False):
         return None
     locked_attempts = [k for k in changes if k in LOCKED_FIELDS and changes[k] != c.get(k)]
     if locked_attempts and not founder_approved:
+        await remember("canon_change_blocked", f"Blocked change to canon fields {locked_attempts} on {c.get('name')} — Founder approval required.", "System", char_id)
         return {"ok": False, "blocked": True, "locked_fields": locked_attempts,
                 "message": f"Canon-protected fields {locked_attempts} require explicit Founder approval and a new governed version. Change blocked (Treasure Standard™)."}
     changes = {k: v for k, v in changes.items() if k not in ("id", "key", "canon_locked")}
@@ -181,6 +192,8 @@ async def update_character(char_id, changes, founder_approved=False):
         changes["founder_approved"] = True
     changes["updated_at"] = now_iso()
     await db.ll_characters.update_one({"id": char_id}, {"$set": changes})
+    if locked_attempts:
+        await remember("canon_change_approved", f"Founder-approved canon change {locked_attempts} on {c.get('name')} → v{changes['version']}.", "Founder", char_id)
     return {"ok": True, "blocked": False, "message": "Character updated.", "versioned": bool(locked_attempts)}
 
 
@@ -209,8 +222,118 @@ async def create_episode_blueprint(kr_id, title, age_band, featured_character_ke
     }
     await db.ll_episodes.insert_one(dict(ep))
     ep.pop("_id", None)
+    await remember("episode_blueprint_created",
+                   f"Blueprint '{ep['title']}' from {inh['topic']} — {ep['verification_status']}.",
+                   actor, ep["id"])
     return {"ok": True, **ep}
 
 
 async def list_episodes():
     return [e async for e in db.ll_episodes.find({}, {"_id": 0}).sort("created_at", -1).limit(100)]
+
+
+
+# ── The Five Responsibilities — the entire Studio is organized around only these ──
+FIVE_RESPONSIBILITIES = [
+    {"key": "universe", "name": "Universe", "owner": "Universe Department",
+     "source_of_truth": "Little Legacy Learners™ Universe Bible",
+     "owns": ["Universe Bible™", "World Rules", "Locations", "History", "Timeline",
+              "Season Planning", "Continuity", "Canon", "Relationship Map", "Educational Philosophy"]},
+    {"key": "characters", "name": "Characters", "owner": "Character Department",
+     "source_of_truth": "Character Bible™",
+     "owns": ["The 6 Canonical Characters", "Character Bible™", "Expressions", "Voices", "Personalities",
+              "Growth", "Friendships", "Visual Identity", "Catchphrases", "Approved artwork",
+              "Character continuity", "Merchandise standards", "Trademark readiness"]},
+    {"key": "stories", "name": "Stories", "owner": "Story Department",
+     "source_of_truth": "QRU Knowledge Records™ → Episode Blueprints™",
+     "owns": ["Episode Blueprints™", "Scripts", "Dialogue", "Educational objectives", "Knowledge translation",
+              "Songs", "Games", "Activities", "Parent Guides", "Teacher Guides", "Workbook integration",
+              "Knowledge Record alignment"]},
+    {"key": "production", "name": "Production", "owner": "Production Department",
+     "source_of_truth": "Master Asset Vault™",
+     "owns": ["Storyboards", "Animation", "Voice production", "Music", "Audio", "Visual assets",
+              "Backgrounds", "Props", "Editing", "Captions", "Publishing packages", "YouTube assets",
+              "Derivative products"]},
+    {"key": "governance", "name": "Governance", "owner": "Governance Department",
+     "source_of_truth": "Treasure Standard™ + Verification Lion™",
+     "owns": ["Verification Lion™", "Treasure Standard™", "Child Safety", "Accessibility", "Copyright review",
+              "Trademark readiness", "Brand review", "Continuity review", "Quality assurance",
+              "Version history", "Rights management", "Publishing approval"]},
+]
+
+# Knowledge Flow — no stage is skipped. Every episode begins with a verified Knowledge Record.
+KNOWLEDGE_FLOW = ["Question", "Knowledge Record™", "Story", "Storyboard", "Animation", "Verification",
+                  "Treasure Standard™", "Publishing", "Enterprise Memory"]
+
+# One approved Knowledge Record automatically manufactures all applicable products (later phases).
+PRODUCTION_CATALOG = ["Animated Episode", "YouTube Shorts", "Storybook", "Workbook", "Knowledge Cards™",
+                      "Activity Pages", "Teacher Guide", "Parent Guide", "Songs", "Games", "Posters",
+                      "Coloring Pages", "Marketing Assets"]
+
+EPISODE_PHILOSOPHY = ["Create curiosity", "Teach understanding", "Build confidence", "Encourage questions",
+                      "Celebrate kindness", "Promote teamwork", "Model problem solving",
+                      "Encourage verification", "End with hope", "Leave children wanting to learn more"]
+
+# Existing QRU Factory™ capabilities this Studio INHERITS (never recreates).
+INHERITED_CAPABILITIES = ["Factory Concierge™", "Knowledge Manufacturing Engine™", "Product Manufacturing Engine™",
+                          "Enterprise Learning Engine™", "Enterprise Memory™", "Master Asset Vault™",
+                          "Verification Lion™", "Treasure Standard™", "Governance Binding Layer™",
+                          "Universal Manufacturing Flow Engine™", "QRU Enterprise Publishing Standard™",
+                          "Visual Manufacturing Standard™", "Storyboard Master™"]
+
+
+async def remember(event, detail, actor="Founder", entity=None):
+    """Enterprise Memory™ integration — every governance decision teaches the Factory (append-only ledger)."""
+    await db.ll_memory.insert_one({"id": gen_id(), "franchise": "little-legacy-learners",
+                                   "event": event, "detail": detail, "entity": entity,
+                                   "actor": actor, "at": now_iso()})
+
+
+async def memory_ledger(limit=100):
+    return [m async for m in db.ll_memory.find({}, {"_id": 0}).sort("at", -1).limit(limit)]
+
+
+async def get_franchise():
+    return await db.ll_franchise.find_one({"key": "little-legacy-learners"}, {"_id": 0})
+
+
+async def get_character(char_id):
+    return await db.ll_characters.find_one({"id": char_id}, {"_id": 0})
+
+
+async def approve_character(char_id, actor="Founder"):
+    """Founder approval promotes the approved QRU character poster to Version 1.0 of the Character Bible."""
+    c = await db.ll_characters.find_one({"id": char_id})
+    if not c:
+        return None
+    await db.ll_characters.update_one({"id": char_id}, {"$set": {
+        "founder_approved": True, "status": "Approved", "version": "1.0",
+        "approved_by": actor, "approved_at": now_iso(), "updated_at": now_iso()}})
+    await remember("character_approved", f"{c['name']} Character Bible approved as v1.0 (canon locked).", actor, char_id)
+    return {"ok": True, "status": "Approved", "version": "1.0",
+            "message": f"{c['name']} Character Bible approved as Version 1.0 — canon is now locked (Treasure Standard™)."}
+
+
+async def approve_universe_bible(actor="Founder"):
+    ub = await db.ll_universe_bible.find_one({"key": "universe-bible"})
+    if not ub:
+        return None
+    await db.ll_universe_bible.update_one({"key": "universe-bible"}, {"$set": {
+        "status": "Approved", "version": "1.0", "approved_by": actor, "approved_at": now_iso(), "updated_at": now_iso()}})
+    await remember("universe_bible_approved", "Universe Bible approved as v1.0 — permanent source of truth.", actor, "universe-bible")
+    return {"ok": True, "status": "Approved", "version": "1.0",
+            "message": "Universe Bible approved as Version 1.0 — the permanent source of truth is now canon."}
+
+
+async def approve_episode(episode_id, actor="Founder"):
+    """Governance gate: an episode can only reach Approved when its knowledge is Verified (Knowledge-First)."""
+    e = await db.ll_episodes.find_one({"id": episode_id})
+    if not e:
+        return None
+    if e.get("verification_status") != "Verified":
+        return {"ok": False, "blocked": True,
+                "message": "This blueprint's Knowledge Record is not externally verified. Route it through Knowledge Manufacturing & Verification Lion™ first — the Factory never approves children's episodes on unverified knowledge (Treasure Standard™)."}
+    await db.ll_episodes.update_one({"id": episode_id}, {"$set": {
+        "founder_approved": True, "status": "Approved", "approved_by": actor, "approved_at": now_iso(), "updated_at": now_iso()}})
+    return {"ok": True, "status": "Approved",
+            "message": "Episode blueprint approved. It still passes child-safety, accessibility, brand, rights and Treasure gates before any production phase."}

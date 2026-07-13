@@ -1,0 +1,40 @@
+{
+  "summary": "Frontend-only E2E testing of Little Legacy Learners™ Studio (PHASE 1 FOUNDATION) at /little-legacy. All 6 test areas verified end-to-end using the real preview URL, logged in as Founder. Navigation, all 5 tabs (Overview, Universe Bible, Characters, Stories, Governance), all 4 metric cards, all 6 character bibles, all 6 governance checklists, Universe Bible approval, Character Bible approval, and both critical Knowledge-First acceptance tests PASSED.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "KnowledgePicker dialog", "issues": ["Radix DialogContent warning: missing 'Description' or aria-describedby (accessibility warning, non-blocking). Reported by React console."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(Optional) Add DialogDescription (or aria-describedby) to KnowledgePicker's DialogContent to silence Radix accessibility warning."
+  ],
+  "critical_code_review_comments": [
+    "LittleLegacyStudio.js is clean, single-responsibility, ~340 lines — well within limits.",
+    "Character keys are seeded with dashes (e.g. 'bella-butterfly'), so data-testid 'll-approve-character-bella-butterfly' — matches the pattern 'll-approve-character-<key>' from the spec. (Spec examples used underscores, but the contract 'key from backend' is honored — no bug.)",
+    "EpisodeCreator posts kr_id: kr?.id || null when no KR is picked, and the backend correctly returns ok:false with a Knowledge-First warning message — surfaces via toast.warning. Good governance behaviour.",
+    "KnowledgePicker in LittleLegacyStudio uses verifiedOnly=true so only verified KRs appear — matches Knowledge-First principle."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped by request)", "frontend": "100%"},
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (used, not changed)",
+  "seed_data_creation": "One episode blueprint was created via the UI titled 'TEST_Episode_Acceptance' using verified KR 'What Is Governance?' with featured character Nova Sparkle. Universe Bible was approved to v1.0. Bella Butterfly Character Bible was Founder-approved to v1.0. These are governance-approved state changes that main agent said are expected.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Little Legacy Studio PHASE 1 fully verified via UI. Universe Bible v1.0 is now Approved, Bella Butterfly v1.0 is Founder-approved, and there are now 2 episode blueprints (1 pre-existing 'Governance Adventure' + 1 test 'TEST_Episode_Acceptance'). If retesting is needed, use another character (Nova Sparkle / Sunny Bee / Tilly Turtle / Eli Elephant / Rio Rainbow) for approval-button visibility.",
+  "detailed_verification": {
+    "1_navigation_and_header": "PASS — nav-little-legacy present in sidebar; route /little-legacy renders page with H1 'Little Legacy Learners™' and status chip 'Draft Pending Founder Approval' (data-testid ll-franchise-status).",
+    "2_overview_tab": "PASS — 4 metric cards found (Character Bibles=6/1 Founder-approved, World Locations=16, Episode Blueprints=2, Universe Bible=Approved). Five Responsibilities panel with all 5 keys (universe, characters, stories, production, governance). Knowledge Flow list, Production catalog, and 'Inherits from existing QRU Factory' list all render.",
+    "3_universe_bible_tab": "PASS — ll-universe-panel and ll-locations-panel render. 16 location chips shown. Clicking ll-approve-bible-btn shows success toast 'Universe Bible approved as Version 1.0 — the permanent source of truth is now canon.' Button disappears and universe metric flips to 'Approved'.",
+    "4_characters_tab": "PASS — 6 character cards render (bella-butterfly, eli-elephant, nova-sparkle, rio-rainbow, sunny-bee, tilly-turtle). Each has 'Canon locked' badge (6 total). Clicking ll-approve-character-bella-butterfly shows success toast 'Bella Butterfly™ Character Bible approved as Version 1.0 — canon is now locked (Treasure Standard™).' Card flips to Founder-approved v1.0 (2 approved indicators visible after refresh — one on card, one likely in metric sub).",
+    "5_stories_tab": "PASS (both acceptance tests): (a) Clicking Draft with NO KR selected produces a WARNING toast: 'No verified Knowledge Record supplied. Route this topic through Knowledge Manufacturing first — the Factory never invents facts for children.' — Knowledge Required behaviour confirmed. (b) Opening ll-episode-kr-trigger opens the dialog (2 verified KRs visible), picking 'What Is Governance?', setting title 'TEST_Episode_Acceptance', featured character Nova Sparkle, and clicking Draft produces SUCCESS toast 'Episode blueprint drafted from verified Knowledge.' — new blueprint appears in the list with 'Verified' chip AND 'Draft' status chip.",
+    "6_governance_tab": "PASS — ll-statuses panel renders with governed lifecycle chips. All 6 checklists render as separate panels: child_safety, accessibility, rights_provenance, treasure_standard, youtube_publish, verification_lion."
+  },
+  "console_warnings": [
+    "React DevTools install hint (info, ignore).",
+    "Radix DialogContent missing 'Description' / aria-describedby (accessibility a11y warning) — appears when KnowledgePicker dialog opens. Non-blocking."
+  ]
+}
