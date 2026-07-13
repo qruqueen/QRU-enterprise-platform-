@@ -602,6 +602,43 @@ function PublishingPackage({ pkg, approved }) {
 }
 
 
+function KitAtom({ value }) {
+  if (value === null || value === undefined) return null;
+  if (Array.isArray(value)) {
+    return (
+      <div className="space-y-1">
+        {value.map((item, i) => {
+          if (item && typeof item === "object" && "front" in item) {
+            return <div key={i} className="text-[11px] border-l-2 border-gold/60 pl-2"><span className="font-semibold text-navy">{item.front}</span> — <span className="text-navy/75">{item.back}</span></div>;
+          }
+          if (item && typeof item === "object" && "prompt" in item) {
+            return <div key={i} className="text-[11px] text-navy/80">{item.prompt} → <span className="font-semibold">{item.answer}</span></div>;
+          }
+          return <div key={i} className="text-[11px] text-navy/80 flex gap-1.5"><span className="text-gold">•</span> {String(item)}</div>;
+        })}
+      </div>
+    );
+  }
+  return <span className="text-[11px] text-navy/80">{String(value)}</span>;
+}
+
+function KitValue({ value }) {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return (
+      <div className="space-y-1">
+        {Object.entries(value).map(([k, v]) => (
+          <div key={k} className="text-[11px]">
+            <span className="font-semibold text-navy/60 uppercase tracking-wide text-[9px]">{k.replace(/_/g, " ")}: </span>
+            <KitAtom value={v} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return <KitAtom value={value} />;
+}
+
+
 function KitTab({ episodes }) {
   const [kits, setKits] = useState({});
   const timers = useRef({});
@@ -668,8 +705,8 @@ function KitTab({ episodes }) {
                 <div className="grid sm:grid-cols-2 gap-2">
                   {(k.products || []).filter((p) => p.kind === "text").map((p) => (
                     <div key={p.format} className="border border-navy/10 rounded-md p-3" data-testid={`ll-kit-text-${e.id}-${p.format.split(' ')[0]}`}>
-                      <p className="text-[11px] font-bold text-royal mb-1">{p.format}</p>
-                      <pre className="text-[10px] text-navy/75 whitespace-pre-wrap font-sans max-h-40 overflow-auto">{JSON.stringify(p.data, null, 1).replace(/[{}\[\]"]/g, "").trim()}</pre>
+                      <p className="text-[11px] font-bold text-royal mb-1.5">{p.format}</p>
+                      <div className="max-h-48 overflow-auto"><KitValue value={p.data} /></div>
                     </div>
                   ))}
                 </div>

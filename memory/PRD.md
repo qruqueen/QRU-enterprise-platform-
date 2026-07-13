@@ -219,6 +219,13 @@ Founder Beta Dashboard, Automatic Knowledge Extraction, PreviewViewer. (all VERI
 
 ## Roadmap (Founder-approved, remaining)
 
+### Session 2026-07-13 — Little Legacy Learners™ Phase 4+ (Identity Consistency, Kits, Project Zero) — DONE & VERIFIED (iter 67 UI 100%)
+- **Character Identity Consistency™:** expression sheet now INHERITS the model-sheet identity anchor (`generate_image_with_reference`); verified same-character across all 6 expressions. Approval requires a **Character Consistency Check™** (`consistency_confirmed` — rejects without it). Pilots/kits inherit the approved v1.0 anchor; a `character_consistency` governance gate FLAGS any asset generated without an approved anchor (no silent accept). Identity Standard sentence added to every Character Bible + overview: "If a child instantly recognizes the character without reading the name, the identity standard has been achieved."
+- **Flagship pilot** renamed to "Nova and the Fair Choices Adventure" and re-manufactured reference-locked (all 5 gates pass; polished Publishing Package™ title).
+- **Product Kits (kid-format inheriting recipes):** one verified KR → 7 formats (coloring page, social/marketing asset, storybook cover [reference-inherited images] + Knowledge Cards, workbook/activity pack, parent & teacher guides [KR-derived text]). `ll_kits`, Founder-approvable. Verified: real on-model coloring page.
+- **Little Legacy Project Zero™:** parent/teacher/child feedback + learning outcomes via existing `project_zero` (no duplication) → feeds the originating KR (improvement signals). `ll_feedback` surfaced in a Project Zero™ tab.
+- New collections: ll_kits (+ reuses project_zero_feedback). New tabs: Product Kits, Project Zero™. Files: ai_service.py, little_legacy.py (IDENTITY_STANDARD), little_legacy_production.py (anchor/consistency/kit/feedback), routers/little_legacy.py, LittleLegacyStudio.js (KitTab/FeedbackTab/KitValue).
+
 ### Session 2026-07-13 — Little Legacy Learners™ Phase 4 (Production Readiness) — DONE & VERIFIED (iter 66 UI 100%)
 - All 6 Character Bibles mastered + approved as Canon v1.0 (model+expression sheets, voice, palette, canon notes, version history).
 - Flagship pilot rendered reference-locked (720p, 37s) — verified on-model. Honestly labeled QRU Animated Storybook Pilot™.
