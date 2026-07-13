@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { BookOpen, Search, CheckCircle2, Clock, Boxes, ChevronRight } from "lucide-react";
 
 // QRU Founder Experience Principle™ — Never ask the founder to remember what the Factory already knows.
@@ -71,6 +71,7 @@ export function KnowledgePicker({ value, onSelect, verifiedOnly = false, autoSel
             <DialogTitle className="flex items-center gap-2 text-navy">
               <BookOpen className="w-5 h-5 text-royal" /> Browse Verified Knowledge
             </DialogTitle>
+            <DialogDescription className="text-xs">Search Verified Knowledge by topic. The Factory inherits its verified content automatically.</DialogDescription>
           </DialogHeader>
           <div className="relative">
             <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />

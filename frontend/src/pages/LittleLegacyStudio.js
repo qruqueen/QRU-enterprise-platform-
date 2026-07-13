@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import api, { formatApiError } from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import { Panel, MetricCard, StatusChip, GovernedBy } from "@/components/qru";
@@ -7,8 +7,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   Sparkles, Users, BookOpen, Clapperboard, ShieldCheck, Lock, CheckCircle2,
-  Globe, MapPin, GitBranch, Boxes, Baby, ClipboardCheck,
+  Globe, MapPin, GitBranch, Boxes, Baby, ClipboardCheck, Wand2, Film, PlayCircle, Loader2, Mic,
 } from "lucide-react";
+
+const BACKEND = process.env.REACT_APP_BACKEND_URL;
 
 const RESP_ICON = { universe: Globe, characters: Users, stories: BookOpen, production: Clapperboard, governance: ShieldCheck };
 const AGE_BANDS = ["Early Learners", "Growing Learners", "Emerging Thinkers", "Future Leaders"];
@@ -81,7 +83,9 @@ export default function LittleLegacyStudio() {
           <TabsTrigger value="overview" data-testid="ll-tab-overview">Overview</TabsTrigger>
           <TabsTrigger value="universe" data-testid="ll-tab-universe">Universe Bible</TabsTrigger>
           <TabsTrigger value="characters" data-testid="ll-tab-characters">Characters</TabsTrigger>
+          <TabsTrigger value="mastering" data-testid="ll-tab-mastering">Character Mastering</TabsTrigger>
           <TabsTrigger value="stories" data-testid="ll-tab-stories">Stories</TabsTrigger>
+          <TabsTrigger value="pilots" data-testid="ll-tab-pilots">Pilot Studio</TabsTrigger>
           <TabsTrigger value="governance" data-testid="ll-tab-governance">Governance</TabsTrigger>
         </TabsList>
 
@@ -226,6 +230,11 @@ export default function LittleLegacyStudio() {
           </div>
         </TabsContent>
 
+        {/* PHASE 2 — CHARACTER MASTERING */}
+        <TabsContent value="mastering" className="space-y-4">
+          <MasteringTab chars={chars} />
+        </TabsContent>
+
         {/* STORIES — Knowledge-First Episode Blueprints */}
         <TabsContent value="stories" className="space-y-6">
           <EpisodeCreator chars={chars} onCreated={load} />
@@ -250,6 +259,11 @@ export default function LittleLegacyStudio() {
               </div>
             )}
           </Panel>
+        </TabsContent>
+
+        {/* PHASE 3 — PILOT STUDIO */}
+        <TabsContent value="pilots" className="space-y-6">
+          <PilotTab episodes={episodes} />
         </TabsContent>
 
         {/* GOVERNANCE */}
@@ -334,5 +348,171 @@ function EpisodeCreator({ chars, onCreated }) {
         </button>
       </div>
     </Panel>
+  );
+}
+
+
+function MasteringTab({ chars }) {
+  const [masters, setMasters] = useState({});
+  const timers = useRef({});
+
+  const load = useCallback(async () => {
+    try {
+      const { data } = await api.get("/little-legacy/masters");
+      const map = {};
+      (data.masters || []).forEach((m) => { map[m.key] = m; });
+      setMasters(map);
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => { load(); return () => Object.values(timers.current).forEach(clearInterval); }, [load]);
+
+  const poll = (key) => {
+    if (timers.current[key]) clearInterval(timers.current[key]);
+    timers.current[key] = setInterval(async () => {
+      try {
+        const { data } = await api.get(`/little-legacy/characters/${key}/master`);
+        setMasters((prev) => ({ ...prev, [key]: data }));
+        if (["READY", "Approved", "FAILED"].includes(data.status)) { clearInterval(timers.current[key]); }
+      } catch { /* ignore */ }
+    }, 5000);
+  };
+
+  const startMaster = async (key) => {
+    try {
+      const { data } = await api.post(`/little-legacy/characters/${key}/master`);
+      toast.success(data.message);
+      setMasters((prev) => ({ ...prev, [key]: { key, status: "RENDERING" } }));
+      poll(key);
+    } catch (err) { toast.error(formatApiError(err.response?.data?.detail)); }
+  };
+  const approveMaster = async (key) => {
+    try {
+      const { data } = await api.post(`/little-legacy/masters/${key}/approve`);
+      toast.success(data.message); load();
+    } catch (err) { toast.error(formatApiError(err.response?.data?.detail)); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">Phase 2 — Character Mastering. Generate a model sheet, expression sheet and voice profile for each character (AI-assisted concept art via Gemini Nano Banana — governed reference, not final licensed art). Founder approval locks the Character Bible™ at v1.0.</p>
+      <div className="grid md:grid-cols-2 gap-4">
+        {chars.map((c) => {
+          const m = masters[c.key];
+          const st = m?.status;
+          return (
+            <div key={c.key} className="qru-card p-5" data-testid={`ll-master-${c.key}`}>
+              <div className="flex items-center justify-between mb-3">
+                <p className="font-heading font-bold text-navy">{c.name}</p>
+                {st && <StatusChip status={st === "RENDERING" ? "Generating" : st === "READY" ? "Ready" : st} />}
+              </div>
+              {st === "RENDERING" && <p className="text-sm text-royal flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Generating master art & voice… (a minute or two)</p>}
+              {st === "FAILED" && <p className="text-sm text-red-600">Mastering failed: {m.error}</p>}
+              {(st === "READY" || st === "Approved") && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <img src={`${BACKEND}${m.model_sheet_url}`} alt="Model sheet" className="rounded-md border border-navy/10 w-full" data-testid={`ll-master-model-${c.key}`} />
+                    <img src={`${BACKEND}${m.expression_sheet_url}`} alt="Expression sheet" className="rounded-md border border-navy/10 w-full" data-testid={`ll-master-expr-${c.key}`} />
+                  </div>
+                  <p className="text-[11px] text-navy/70 flex items-center gap-1.5"><Mic className="w-3.5 h-3.5 text-royal" /> Voice: <span className="font-semibold">{m.voice_profile?.voice}</span> — {m.voice_profile?.tone}</p>
+                  {m.founder_approved
+                    ? <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700"><CheckCircle2 className="w-4 h-4" /> Approved · Character Bible v1.0</span>
+                    : <button onClick={() => approveMaster(c.key)} data-testid={`ll-approve-master-${c.key}`} className="text-xs font-bold px-3 py-1.5 rounded-md bg-navy text-white hover:bg-navy/90 transition-colors">Approve Master (Founder)</button>}
+                </div>
+              )}
+              {!st && (
+                <button onClick={() => startMaster(c.key)} data-testid={`ll-master-btn-${c.key}`} className="text-xs font-bold px-3 py-1.5 rounded-md bg-royal text-white hover:bg-royal/90 transition-colors flex items-center gap-1.5"><Wand2 className="w-3.5 h-3.5" /> Master this character</button>
+              )}
+              {st === "READY" && !m.founder_approved && <button onClick={() => startMaster(c.key)} className="text-[10px] text-muted-foreground underline mt-2 block">Regenerate</button>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PilotTab({ episodes }) {
+  const [pilots, setPilots] = useState({});
+  const timers = useRef({});
+
+  const loadOne = useCallback(async (id) => {
+    try {
+      const { data } = await api.get(`/little-legacy/episodes/${id}/pilot`);
+      setPilots((prev) => ({ ...prev, [id]: data }));
+      return data.status;
+    } catch { return null; }
+  }, []);
+
+  useEffect(() => {
+    episodes.forEach((e) => loadOne(e.id));
+    return () => Object.values(timers.current).forEach(clearInterval);
+  }, [episodes, loadOne]);
+
+  const poll = (id) => {
+    if (timers.current[id]) clearInterval(timers.current[id]);
+    timers.current[id] = setInterval(async () => {
+      const st = await loadOne(id);
+      if (["READY", "APPROVED", "FAILED", "NONE"].includes(st)) clearInterval(timers.current[id]);
+    }, 6000);
+  };
+
+  const manufacture = async (id) => {
+    try {
+      const { data } = await api.post(`/little-legacy/episodes/${id}/pilot`);
+      if (!data.ok) { toast.warning(data.message); return; }
+      toast.success(data.message);
+      setPilots((prev) => ({ ...prev, [id]: { status: "RENDERING" } }));
+      poll(id);
+    } catch (err) { toast.error(formatApiError(err.response?.data?.detail)); }
+  };
+  const approve = async (id) => {
+    try {
+      const { data } = await api.post(`/little-legacy/pilots/${id}/approve`);
+      if (!data.ok) { toast.warning(data.message); return; }
+      toast.success(data.message); loadOne(id);
+    } catch (err) { toast.error(formatApiError(err.response?.data?.detail)); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">Phase 3 — Pilot Episode Manufacturing. From a Verified episode blueprint, the Factory manufactures a <span className="font-semibold text-navy">QRU Animated Storybook Pilot™</span> — AI-generated key art with cinematic motion, warm narration and burned captions (image-based motion animation, honestly stated — not frame-by-frame cel animation). Pilots are reviewable DRAFT previews; nothing is auto-published.</p>
+      {episodes.length === 0 && <p className="text-sm text-muted-foreground py-6 text-center">No episode blueprints yet. Create one in the Stories tab first.</p>}
+      {episodes.map((e) => {
+        const p = pilots[e.id] || {};
+        const verified = e.verification_status === "Verified";
+        return (
+          <Panel key={e.id} title={e.title} icon={Film} accent="gold" testid={`ll-pilot-${e.id}`}
+            right={<StatusChip status={verified ? "Verified" : "Knowledge Required"} tone={verified ? "emerald" : "amber"} />}>
+            <p className="text-[11px] text-muted-foreground mb-3">{e.kr_topic} · {e.age_band}</p>
+            {!verified && <p className="text-sm text-amber-700">Knowledge-First: this episode's Knowledge Record is not externally Verified. Verify it before manufacturing a children's pilot.</p>}
+            {verified && p.status === "RENDERING" && <p className="text-sm text-royal flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Manufacturing pilot — generating scenes, narration & rendering MP4… (a few minutes)</p>}
+            {verified && p.status === "FAILED" && <p className="text-sm text-red-600">Render failed: {p.error} <button onClick={() => manufacture(e.id)} className="underline ml-2">Retry</button></p>}
+            {verified && (p.status === "READY" || p.status === "APPROVED") && (
+              <div className="space-y-3">
+                <video src={`${BACKEND}${p.video_url}`} controls className="w-full rounded-md border border-navy/10 bg-black" data-testid={`ll-pilot-video-${e.id}`} />
+                <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                  <span>{p.duration_seconds}s · {p.scenes?.length} scenes · voice {p.voice}</span>
+                  <a href={`${BACKEND}${p.captions_url}`} target="_blank" rel="noreferrer" className="text-royal font-semibold underline">Captions (.srt)</a>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {Object.entries(p.gates || {}).map(([g, v]) => (
+                    <div key={g} className="flex items-start gap-2 text-[11px]">
+                      {v.pass ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" /> : <ShieldCheck className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" />}
+                      <span><span className="font-semibold text-navy">{g.replace(/_/g, " ")}:</span> {v.detail}</span>
+                    </div>
+                  ))}
+                </div>
+                {p.status === "APPROVED"
+                  ? <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700"><CheckCircle2 className="w-4 h-4" /> Founder-approved · available in YouTube Publisher™ (no re-upload)</span>
+                  : <button onClick={() => approve(e.id)} disabled={!p.governance_passed} data-testid={`ll-approve-pilot-${e.id}`} className="text-xs font-bold px-4 py-2 rounded-md bg-navy text-white hover:bg-navy/90 transition-colors disabled:opacity-50">Approve Pilot for Distribution</button>}
+              </div>
+            )}
+            {verified && !["RENDERING", "READY", "APPROVED"].includes(p.status) && (
+              <button onClick={() => manufacture(e.id)} data-testid={`ll-manufacture-pilot-${e.id}`} className="text-xs font-bold px-4 py-2 rounded-md bg-royal text-white hover:bg-royal/90 transition-colors flex items-center gap-1.5"><PlayCircle className="w-4 h-4" /> Manufacture Animated Pilot</button>
+            )}
+          </Panel>
+        );
+      })}
+    </div>
   );
 }

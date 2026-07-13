@@ -1,0 +1,36 @@
+{
+  "summary": "Frontend-only E2E verification of Little Legacy Learners™ PHASE 2 (Character Mastering) and PHASE 3 (Pilot Episode Manufacturing) at /little-legacy as Founder. All 7 tabs render (Overview, Universe Bible, Characters, Character Mastering, Stories, Pilot Studio, Governance). Pilot Studio shows the pre-rendered 720p pilot for TEST_Episode_Acceptance with video/mp4, captions .srt, 4 green governance gates and an ENABLED Approve button (NOT clicked, per instructions). Character Mastering starts a background job (toast + Generating spinner + button hides) on Nova Sparkle. Zero uncaught console errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "LittleLegacyStudio.js is now ~519 lines with two large in-file components (MasteringTab, PilotTab). Still under the 700-line threshold, but for future extensibility consider extracting MasteringTab and PilotTab into their own files under src/pages/little-legacy/ — they each own polling timers and local state and would test independently.",
+    "PilotTab polls every 6s and MasteringTab every 5s. On unmount both properly clear intervals via useRef cleanup — good. However, if the user leaves the tab (Radix TabsContent still mounts children conditionally) polling may keep running unnecessarily. Consider gating polling on active tab if this becomes costly.",
+    "Approve button (ll-approve-pilot-*) is correctly disabled via `disabled={!p.governance_passed}`, so the Knowledge-First / governance guard is enforced at the UI layer in addition to the API layer. Good.",
+    "Verified-only manufacture gate: `verified = e.verification_status === 'Verified'` — the manufacture button and video only render when verified, and an amber 'Knowledge Required' chip + warning show otherwise. Correctly implemented (couldn't be exercised in this state — both current episode blueprints are Verified).",
+    "Video and image srcs use `${BACKEND}${p.video_url}` / `${BACKEND}${m.model_sheet_url}` — BACKEND is process.env.REACT_APP_BACKEND_URL. Correct, no hardcoding.",
+    "MasteringTab.startMaster optimistically sets status to 'RENDERING' before polling — good UX. If the POST fails after optimistic update, the local state would drift; the catch shows a toast but doesn't roll back the optimistic state. Minor UX concern, not a bug for the current flow."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped by request)", "frontend": "100%"},
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (used, not changed)",
+  "seed_data_creation": "Started ONE mastering background job for character 'nova-sparkle' (POST /api/little-legacy/characters/nova-sparkle/master). This is an async AI-image + TTS job (~1-2 min). The founder will see it complete in the Character Mastering tab shortly.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Phase 2 & Phase 3 UI is verified. The rendered pilot for TEST_Episode_Acceptance is present at /api/little-legacy/pilots/1eb35216-0a20-4e1a-8a0d-fd7eab38881c.mp4 (2MB, 720p, 36.9s, 6 scenes, voice=nova, all 4 gates PASS). A second blueprint 'Governance Adventure' is Verified but never manufactured — the Manufacture Animated Pilot button is exposed for it (ll-manufacture-pilot-9f81ee70-...). Nova Sparkle character mastering job was STARTED at 2026-07-13 14:04 UTC — should complete in 1-2 min; next agent can verify sheets + Approve Master button then.",
+  "detailed_verification": {
+    "1_tabs_render_no_errors": "PASS — all 7 tabs (overview, universe, characters, mastering, stories, pilots, governance) found by data-testid ll-tab-<key>. Zero uncaught console errors across page load + tab switches.",
+    "2_pilot_studio_rendered_pilot": "PASS — TEST_Episode_Acceptance panel has: (a) <video data-testid='ll-pilot-video-1eb35216-...'> with src=https://understanding-os.preview.emergentagent.com/api/little-legacy/pilots/1eb35216-....mp4 (HTTP 200, content-type video/mp4, 2,033,997 bytes); (b) all 4 gates rendered with green check icons (knowledge first, child safety, accessibility, treasure standard) with detail text visible; (c) Captions (.srt) link -> /api/little-legacy/pilots/....srt (HTTP 200, text/plain 339 bytes); (d) duration/scenes/voice line reads '36.9s · 6 scenes · voice nova'; (e) Approve Pilot for Distribution button (ll-approve-pilot-...) is ENABLED (governance passed). Per instructions, NOT clicked.",
+    "3_knowledge_first_guard": "N/A-DIRECT — no un-verified episode currently exists in DB (both blueprints are Verified). Static code review confirms the guard is implemented correctly: when verification_status !== 'Verified', an amber 'Knowledge Required' chip is shown, an amber warning message renders ('Knowledge-First: this episode's Knowledge Record is not externally Verified…') and the manufacture button/video are hidden. Cannot be functionally exercised in this environment without creating an un-verified draft.",
+    "4_character_mastering_start": "PASS — Character Mastering tab shows 6 cards (bella-butterfly, eli-elephant, nova-sparkle, rio-rainbow, sunny-bee, tilly-turtle). Clicking ll-master-btn-nova-sparkle: (a) shows a success toast 'Mastering Nova Sparkle™ — generating model sheet, expression sheet and voice profile in the background.'; (b) card status flips to 'Generating' chip; (c) inline text 'Generating master art & voice… (a minute or two)' with animated spinner (.animate-spin) renders; (d) the master button disappears. Did NOT wait for RENDERING -> READY completion (async 1-2 min AI job).",
+    "5_no_uncaught_errors": "PASS — no red console errors across Overview → Universe → Characters → Character Mastering → Stories → Pilot Studio → Governance tab navigation and the Master button click. No pageerror events. Only expected banner is the Founder 'Set Permanent Password' info banner (product feature, not an error)."
+  },
+  "console_warnings": [
+    "No uncaught errors during this run. (Radix a11y DialogDescription warning was noted in iter64 for KnowledgePicker; that dialog was not opened this run.)"
+  ]
+}

@@ -215,6 +215,8 @@ def _stitch_mp3(parts):
     <audio> players cannot decode — so we always run them through ffmpeg."""
     import subprocess
     import tempfile
+    import imageio_ffmpeg
+    ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
     with tempfile.TemporaryDirectory() as td:
         paths = []
         for i, b in enumerate(parts):
@@ -227,7 +229,7 @@ def _stitch_mp3(parts):
             for p in paths:
                 f.write(f"file '{p}'\n")
         out = os.path.join(td, "out.mp3")
-        subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", listfile,
+        subprocess.run([ffmpeg, "-y", "-f", "concat", "-safe", "0", "-i", listfile,
                         "-c:a", "libmp3lame", "-b:a", "96k", "-ar", "44100", out],
                        check=True, capture_output=True)
         with open(out, "rb") as f:

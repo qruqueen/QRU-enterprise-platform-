@@ -8,10 +8,13 @@ import re
 import logging
 import tempfile
 import subprocess
+import imageio_ffmpeg
 
 from emergentintegrations.llm.openai import OpenAITextToSpeech
 
 logger = logging.getLogger("qru.media_render")
+
+FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
 TTS_MODEL = "tts-1"
@@ -63,13 +66,14 @@ async def synthesize_voice(text: str, voice: str = DEFAULT_VOICE, model: str = T
 
 def _audio_duration(path: str) -> float:
     try:
-        out = subprocess.run(
-            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-             "-of", "default=noprint_wrappers=1:nokey=1", path],
-            capture_output=True, text=True, timeout=30)
-        return float(out.stdout.strip())
+        out = subprocess.run([FFMPEG, "-hide_banner", "-i", path], capture_output=True, text=True, timeout=30)
+        m = re.search(r"Duration:\s*(\d+):(\d+):(\d+\.\d+)", out.stderr)
+        if m:
+            h, mi, s = m.groups()
+            return int(h) * 3600 + int(mi) * 60 + float(s)
     except Exception:
-        return 0.0
+        pass
+    return 0.0
 
 
 def make_slideshow_video(images: list, audio_bytes: bytes) -> bytes:
@@ -105,7 +109,7 @@ def make_slideshow_video(images: list, audio_bytes: bytes) -> bytes:
 
         out = os.path.join(tmp, "out.mp4")
         cmd = [
-            "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", listfile, "-i", audio_path,
+            FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", listfile, "-i", audio_path,
             "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "24",
             "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,"
                    "pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=0x221A42,setsar=1,format=yuv420p",

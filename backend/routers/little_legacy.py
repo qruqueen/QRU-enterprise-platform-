@@ -6,11 +6,13 @@ gates and Knowledge-First Episode Blueprints. Nothing here generates animation, 
 are later governed phases. Every write respects canon protection and the Knowledge-First rule.
 """
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 
 from auth import get_current_user
 import little_legacy as ll
+import little_legacy_production as llp
 
 router = APIRouter(prefix="/api/little-legacy", tags=["little-legacy"])
 
@@ -110,3 +112,83 @@ async def approve_episode(episode_id: str, user=Depends(get_current_user)):
     if res is None:
         raise HTTPException(404, "Episode not found.")
     return res
+
+
+# ─────────── PHASE 2 — Character Mastering ───────────
+@router.post("/characters/{char_key}/master")
+async def master_character(char_key: str, user=Depends(get_current_user)):
+    res = await llp.master_character(char_key, actor=user.get("email", "Founder"))
+    if res is None:
+        raise HTTPException(404, "Character not found.")
+    return res
+
+
+@router.get("/characters/{char_key}/master")
+async def master_character_status(char_key: str, user=Depends(get_current_user)):
+    return await llp.master_status(char_key)
+
+
+@router.get("/masters")
+async def masters(user=Depends(get_current_user)):
+    return {"masters": await llp.list_masters()}
+
+
+@router.post("/masters/{char_key}/approve")
+async def approve_master(char_key: str, user=Depends(get_current_user)):
+    res = await llp.approve_master(char_key, actor=user.get("email", "Founder"))
+    if res is None:
+        raise HTTPException(404, "Master not found.")
+    return res
+
+
+@router.get("/masters/{char_key}/{kind}.png")
+async def master_file(char_key: str, kind: str):
+    if kind not in ("model_sheet", "expression_sheet"):
+        raise HTTPException(404, "Unknown sheet.")
+    p = llp.master_file_path(char_key, kind)
+    if not p.exists():
+        raise HTTPException(404, "Not rendered yet.")
+    return FileResponse(str(p), media_type="image/png")
+
+
+# ─────────── PHASE 3 — Pilot Episode Manufacturing ───────────
+@router.post("/episodes/{episode_id}/pilot")
+async def manufacture_pilot(episode_id: str, user=Depends(get_current_user)):
+    res = await llp.manufacture_pilot(episode_id, actor=user.get("email", "Founder"))
+    if res is None:
+        raise HTTPException(404, "Episode not found.")
+    return res
+
+
+@router.get("/episodes/{episode_id}/pilot")
+async def pilot_status(episode_id: str, user=Depends(get_current_user)):
+    return await llp.pilot_status(episode_id)
+
+
+@router.get("/pilots")
+async def pilots(user=Depends(get_current_user)):
+    return {"pilots": await llp.list_pilots()}
+
+
+@router.post("/pilots/{episode_id}/approve")
+async def approve_pilot(episode_id: str, user=Depends(get_current_user)):
+    res = await llp.approve_pilot(episode_id, actor=user.get("email", "Founder"))
+    if res is None:
+        raise HTTPException(404, "Pilot not found.")
+    return res
+
+
+@router.get("/pilots/{episode_id}.mp4")
+async def pilot_file(episode_id: str):
+    p = llp.pilot_file_path(episode_id)
+    if not p.exists():
+        raise HTTPException(404, "Pilot not rendered yet.")
+    return FileResponse(str(p), media_type="video/mp4")
+
+
+@router.get("/pilots/{episode_id}.srt")
+async def pilot_captions(episode_id: str):
+    p = llp.captions_file_path(episode_id)
+    if not p.exists():
+        raise HTTPException(404, "Captions not available yet.")
+    return FileResponse(str(p), media_type="text/plain")

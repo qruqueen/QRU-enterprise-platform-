@@ -13,6 +13,8 @@ import kr_inheritance as kri
 
 DRAFT = "Draft Pending Founder Approval"
 QRU_COLORS = {"royal_purple": "#35106A", "qru_gold": "#F5B21A", "deep_navy": "#1F1840", "white": "#FFFFFF"}
+# Founder-provided canonical character poster — the visual baseline for Character Bible™ Version 1.0.
+CANONICAL_POSTER = "https://customer-assets.emergentagent.com/job_understanding-os/artifacts/2c8rokuf_98FD632F-0CDA-4930-A078-8BC7A06779AD.png"
 
 CHARACTERS = [
     {"key": "nova-sparkle", "name": "Nova Sparkle™", "role": "The Little Star With a Big Heart",
@@ -93,6 +95,8 @@ async def seed(force=False):
         "legacy_statement": "Knowledge Changes Everything. Legacy Changes Generations.™",
         "purpose": "Build character, confidence, understanding and responsible decision-making through entertaining educational stories.",
         "colors": QRU_COLORS, "values": VALUES, "age_bands": AGE_BANDS,
+        "canonical_poster": CANONICAL_POSTER,
+        "canonical_poster_note": "Founder-provided character poster — the approved visual baseline for Character Bible™ Version 1.0. Characters remain Draft Pending Founder Approval in-app until each is explicitly approved.",
         "status": DRAFT, "version": "0.1", "updated_at": now_iso(),
     }}, upsert=True)
 
