@@ -159,6 +159,14 @@ async def _resolve_factory_asset(asset_id):
 
 async def _metadata_from_factory_asset(doc):
     """Auto-fill title/description/tags from a Factory asset + its Production Acceptance Record."""
+    # Little Legacy pilots carry an approved Publishing Package™ — prefer it (one-click publish, no re-entry).
+    if doc.get("publish_title"):
+        return {"title": doc["publish_title"], "description": doc.get("publish_description") or "",
+                "tags": doc.get("publish_tags") or []}
+    pkg = doc.get("publishing_package") or {}
+    if pkg.get("youtube_title"):
+        return {"title": pkg["youtube_title"], "description": pkg.get("seo_description") or "",
+                "tags": pkg.get("keywords") or []}
     record = await db.production_acceptance_records.find_one({"final_asset_id": doc.get("qru_asset_id")}) or {}
     topic = record.get("topic") or ""
     title = doc.get("title") or record.get("product_title") or "QRU Educational Video"

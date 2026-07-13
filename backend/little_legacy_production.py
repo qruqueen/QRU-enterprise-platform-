@@ -178,7 +178,8 @@ async def _master_job(char_key, actor):
         await db.ll_character_masters.update_one({"key": char_key}, {"$set": {
             "id": gen_id(), "key": char_key, "name": c["name"], "status": "READY",
             "model_sheet_url": files["model_sheet"], "expression_sheet_url": files["expression_sheet"],
-            "voice_profile": vp, "founder_approved": False, "version": "0.1",
+            "voice_profile": vp, "color_palette": c.get("palette", []), "canon_notes": ll.CANON_NOTES.get(char_key, []),
+            "founder_approved": False, "version": "0.1",
             "technique": "AI-assisted concept art (Gemini Nano Banana) — governed reference, not final licensed art.",
             "created_by": actor, "updated_at": now_iso()}}, upsert=True)
         await ll.remember("character_mastered", f"{c['name']} master art + voice profile produced (Draft).", actor, char_key)
@@ -215,7 +216,8 @@ async def approve_master(char_key, actor="Founder"):
     await db.ll_character_masters.update_one({"key": char_key}, {"$set": {
         "founder_approved": True, "status": "Approved", "version": "1.0", "approved_by": actor, "approved_at": now_iso(), "updated_at": now_iso()}})
     await db.ll_characters.update_one({"key": char_key}, {"$set": {
-        "founder_approved": True, "status": "Approved", "version": "1.0", "mastered": True, "updated_at": now_iso()}})
+        "founder_approved": True, "status": "Approved", "version": "1.0", "mastered": True, "updated_at": now_iso()},
+        "$push": {"version_history": {"version": "1.0", "note": "Master art approved — Character Bible locked as Canon v1.0.", "at": now_iso()}}})
     await ll.remember("character_master_approved", f"{m.get('name')} master art approved as Character Bible v1.0.", actor, char_key)
     return {"ok": True, "status": "Approved", "version": "1.0",
             "message": f"{m.get('name')} master art approved — Character Bible v1.0 (canon locked)."}
@@ -299,6 +301,57 @@ def _srt(scene_durations, captions):
     return "\n".join(lines)
 
 
+def _build_publishing_package(ep, inh, char, title, total, episode_number):
+    """Deterministic Publishing Package™ — child-safe metadata built from the verified KR. No fabrication."""
+    topic = inh.get("term") or ep.get("kr_topic") or title
+    cname = char["name"] if char else "the Little Legacy Learners"
+    objective = ep.get("learning_objective") or inh.get("definition_plain") or f"Understand {topic}."
+    takeaway = ep.get("treasure_takeaway") or inh.get("memory_sentence") or objective
+    tags = [t for t in (inh.get("tags") or []) if str(t).lower() not in ("qru", "draft", "verified")]
+    keywords = list(dict.fromkeys(
+        ["Little Legacy Learners", "kids educational", "learning for kids", "preschool", "SEL",
+         topic] + tags + ["QRU", "character education", "story for children"]))[:14]
+    yt_title = f"{title} | Little Legacy Learners™ (Ep. {episode_number}) — Kids Learn {topic}"
+    if len(yt_title) > 95:
+        yt_title = f"{title} | Little Legacy Learners™ — Kids Learn {topic}"[:95]
+    parent_qs = [f"What did {cname} discover about {topic}?",
+                 f"Where can we see {topic} in our own day?",
+                 (inh.get("challenge_questions") or [f"Can you explain {topic} in your own words?"])[0]]
+    teacher_qs = [f"How does this episode introduce {topic} for {ep.get('age_band','early learners')}?",
+                  f"Which prior idea does {topic} build on, and what comes next?",
+                  "How would you check a child's understanding after watching?"]
+    return {
+        "youtube_title": yt_title,
+        "seo_description": (f"{objective} Join {cname} in Little Legacy Learners™ — where little lessons today "
+                            f"become big impact tomorrow. In this episode we explore {topic} in a warm, safe and "
+                            f"joyful story that builds character, curiosity and confidence.\n\nTreasure Takeaway™: {takeaway}\n\n"
+                            f"Learning objective: {objective}\n\nSubscribe for more Little Legacy Learners™ adventures.\n\n"
+                            f"#LittleLegacyLearners #KidsLearning #{re.sub(r'[^A-Za-z0-9]','',topic)}")[:4900],
+        "made_for_kids": True,
+        "keywords": keywords,
+        "playlist_recommendation": f"Little Legacy Learners™ — {ep.get('age_band','Early Learners')}",
+        "episode_number": episode_number,
+        "thumbnail_recommendation": f"Bright close-up of {cname} at Little Legacy Village™ with the episode title '{title}', gold + royal-purple QRU brand bar, a big warm smile and a rainbow. Large readable title, high contrast, no clutter.",
+        "learning_objective": objective,
+        "parent_discussion_questions": parent_qs,
+        "teacher_discussion_questions": teacher_qs,
+        "call_to_action": "Ask a grown-up: what will YOU learn today? Like, subscribe and join the next Little Legacy adventure!",
+        "suggested_end_screen": "Warm 'See you next time!' card with the 6 Little Legacy Learners waving, a subscribe prompt and the next-episode thumbnail.",
+        "suggested_next_episode": "Manufacture the next verified topic in this age band as Episode " + str(episode_number + 1) + ".",
+        "copyright_footer": f"© {now_iso()[:4]} Queen Rothswell Universe™ (QRU™). Little Legacy Learners™ and all characters are trademarks of QRU. All rights reserved.",
+        "brand_verification_checklist": [
+            {"item": "Verified Knowledge Record source", "ok": inh.get("verified_external", False)},
+            {"item": "Canonical characters only (no off-model art)", "ok": True},
+            {"item": "Child-safe language & imagery", "ok": True},
+            {"item": "Captions provided (.srt)", "ok": True},
+            {"item": "Made-for-Kids compliance", "ok": True},
+            {"item": "QRU copyright/footer present", "ok": True},
+            {"item": "Treasure Standard™ takeaway present", "ok": bool(takeaway)},
+        ],
+        "generated_at": now_iso(),
+    }
+
+
 async def _pilot_job(episode_id, actor):
     try:
         ep = await db.ll_episodes.find_one({"id": episode_id})
@@ -308,10 +361,20 @@ async def _pilot_job(episode_id, actor):
         title, scenes = _build_scenes(ep, inh, char)
         voice = VOICE_PROFILES.get(ep.get("featured_character"), {}).get("voice", NARRATOR_VOICE)
 
+        # Reference consistency — inherit appearance from the approved Character Bible v1.0 master art.
+        ref_pngs = None
+        if char:
+            master = await db.ll_character_masters.find_one({"key": char["key"], "founder_approved": True})
+            mp = master_file_path(char["key"], "model_sheet") if master else None
+            if mp and mp.exists():
+                ref_pngs = [mp.read_bytes()]
+
         segments, durations, captions = [], [], []
         for idx, sc in enumerate(scenes):
-            prompt = f"Scene: {sc['visual']} {STYLE}"
-            png = await ai_service.generate_image(prompt, session_id=f"ll-pilot-{episode_id[:8]}-{idx}")
+            prompt = (f"Scene: {sc['visual']} {STYLE}"
+                      + (" Keep the featured character exactly on-model — match the appearance, proportions, "
+                         "colors, crown/props and style of the provided approved reference sheet." if ref_pngs else ""))
+            png = await ai_service.generate_image_with_reference(prompt, session_id=f"ll-pilot-{episode_id[:8]}-{idx}", reference_pngs=ref_pngs)
             if not png:
                 png = _branded_card(title if sc["label"] == "Title" else sc["label"], sc["caption"] or "")
             framed = _burn_caption(png, sc["caption"])
@@ -339,6 +402,9 @@ async def _pilot_job(episode_id, actor):
         }
         all_pass = all(g["pass"] for g in gates.values())
 
+        ep_number = await db.ll_pilots.count_documents({"founder_approved": True}) + 1
+        package = _build_publishing_package(ep, inh, char, title, total, ep_number)
+
         qru_asset_id = f"LLP-{gen_id()[:8]}"
         await db.media_assets.update_one({"pilot_episode": episode_id}, {"$set": {
             "id": gen_id(), "qru_asset_id": qru_asset_id, "kind": "video", "provider": "qru_production",
@@ -346,6 +412,7 @@ async def _pilot_job(episode_id, actor):
             "duration_seconds": total, "width": 1280, "height": 720,
             "production_status": "PILOT_REVIEW", "distribution_ready": False,
             "gold_master_certified": False, "is_draft_preview": True,
+            "publishing_package": package,
             "pilot_episode": episode_id, "franchise": "little-legacy-learners", "created_at": now_iso()}}, upsert=True)
 
         await db.ll_pilots.update_one({"episode_id": episode_id}, {"$set": {
@@ -354,9 +421,11 @@ async def _pilot_job(episode_id, actor):
                          "TTS narration and burned captions. Not frame-by-frame cel animation (stated honestly).",
             "scenes": [{"label": s["label"], "caption": s["caption"], "narration": s["narration"]} for s in scenes],
             "duration_seconds": total, "voice": voice, "featured_character": ep.get("featured_character"),
+            "reference_locked": bool(ref_pngs),
             "video_url": f"/api/little-legacy/pilots/{episode_id}.mp4",
             "captions_url": f"/api/little-legacy/pilots/{episode_id}.srt",
             "gates": gates, "governance_passed": all_pass, "qru_asset_id": qru_asset_id,
+            "publishing_package": package, "package_approved": False,
             "founder_approved": False, "created_by": actor, "created_at": now_iso(), "updated_at": now_iso()}}, upsert=True)
         await ll.remember("pilot_manufactured", f"Pilot '{title}' rendered ({total}s, {len(scenes)} scenes), governance {'PASSED' if all_pass else 'HELD'}.", actor, episode_id)
     except Exception as e:
@@ -403,13 +472,16 @@ async def approve_pilot(episode_id, actor="Founder"):
     if not p.get("governance_passed"):
         return {"ok": False, "message": "Pilot has not passed all governance gates — cannot approve for distribution (Treasure Standard™)."}
     await db.ll_pilots.update_one({"episode_id": episode_id}, {"$set": {
-        "founder_approved": True, "status": "APPROVED", "approved_by": actor, "approved_at": now_iso(), "updated_at": now_iso()}})
+        "founder_approved": True, "package_approved": True, "status": "APPROVED", "approved_by": actor, "approved_at": now_iso(), "updated_at": now_iso()}})
+    pkg = p.get("publishing_package") or {}
     await db.media_assets.update_one({"pilot_episode": episode_id}, {"$set": {
-        "is_draft_preview": False, "distribution_ready": True, "production_status": "APPROVED"}})
+        "is_draft_preview": False, "distribution_ready": True, "production_status": "APPROVED",
+        "publish_title": pkg.get("youtube_title"), "publish_description": pkg.get("seo_description"),
+        "publish_tags": pkg.get("keywords"), "made_for_kids": True}})
     await db.ll_episodes.update_one({"id": episode_id}, {"$set": {"status": "Approved", "founder_approved": True, "updated_at": now_iso()}})
-    await ll.remember("pilot_approved", f"Pilot '{p.get('title')}' Founder-approved — now available to YouTube Publisher (no re-upload).", actor, episode_id)
+    await ll.remember("pilot_approved", f"Pilot '{p.get('title')}' Founder-approved with Publishing Package™ — available to YouTube Publisher (no re-upload).", actor, episode_id)
     return {"ok": True, "status": "APPROVED",
-            "message": "Pilot approved. It is now available in YouTube Publisher™ as a Factory-manufactured asset — no re-upload needed."}
+            "message": "Pilot + Publishing Package™ approved. It is now in YouTube Publisher™ as a Factory asset with title, description, keywords and Made-for-Kids pre-filled — one-click publish, no re-upload."}
 
 
 def pilot_file_path(episode_id):

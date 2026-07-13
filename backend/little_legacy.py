@@ -82,7 +82,35 @@ STATUSES = ["Idea", "Intake", "Knowledge Required", "Draft", "In Review", "Chang
             "Publish Ready", "Published", "Paused", "Retired", "Archived"]
 
 
+CANON_NOTES = {
+    "nova-sparkle": ["Always wears the star crown; carries the “Big Dreams” book.", "Leads adventures but never dominates — invites others to think.", "Star motif and gold accent are canon; never remove the crown."],
+    "sunny-bee": ["Heart motif on the body; warm yellow palette is canon.", "Models sharing/kindness — never greedy or preachy."],
+    "tilly-turtle": ["Glasses and calm posture are canon; green + purple palette.", "Represents patience — never portrayed as slow-witted, only deliberate."],
+    "bella-butterfly": ["Heart motif on wings; pink + purple palette is canon.", "Encourages self-worth — never vain or appearance-obsessed."],
+    "eli-elephant": ["Learning cap + memory book are canon.", "Smart and gentle — knowledge is shared kindly, never to show off."],
+    "rio-rainbow": ["Rainbow motif; a human child who includes everyone.", "Represents diversity/community — never a token; always an equal lead."],
+}
+
+
+async def _ensure_bible_fields():
+    """Idempotent migration — enrich existing Character Bibles with color palette, canon notes and version history."""
+    for c in CHARACTERS:
+        doc = await db.ll_characters.find_one({"key": c["key"]})
+        if not doc:
+            continue
+        upd = {}
+        if not doc.get("color_palette"):
+            upd["color_palette"] = c["palette"]
+        if not doc.get("canon_notes"):
+            upd["canon_notes"] = CANON_NOTES.get(c["key"], [])
+        if not doc.get("version_history"):
+            upd["version_history"] = [{"version": doc.get("version", "0.1"), "note": "Seeded canonical draft.", "at": doc.get("updated_at", now_iso())}]
+        if upd:
+            await db.ll_characters.update_one({"key": c["key"]}, {"$set": upd})
+
+
 async def seed(force=False):
+    await _ensure_bible_fields()
     existing = await db.ll_franchise.find_one({"key": "little-legacy-learners"})
     if existing and not force:
         return {"seeded": False, "reason": "Already seeded."}

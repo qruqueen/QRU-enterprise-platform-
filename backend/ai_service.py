@@ -13,14 +13,24 @@ IMAGE_MODEL = "gemini-3.1-flash-image-preview"
 
 async def generate_image(prompt: str, session_id: str):
     """Generate a branded image via Gemini Nano Banana (Emergent key). Returns raw PNG bytes or None."""
+    return await generate_image_with_reference(prompt, session_id, reference_pngs=None)
+
+
+async def generate_image_with_reference(prompt: str, session_id: str, reference_pngs=None):
+    """Generate an image, optionally conditioned on reference image(s) for visual consistency."""
     import base64
     import asyncio
+    from emergentintegrations.llm.chat import ImageContent
     for attempt in range(3):
         try:
             chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=session_id,
                            system_message="You are QRU Creative Studio, a premium educational brand designer.")
             chat.with_model("gemini", IMAGE_MODEL).with_params(modalities=["image", "text"])
-            _, images = await chat.send_message_multimodal_response(UserMessage(text=prompt))
+            fc = None
+            if reference_pngs:
+                fc = [ImageContent(image_base64=base64.b64encode(p).decode()) for p in reference_pngs[:3]]
+            msg = UserMessage(text=prompt, file_contents=fc) if fc else UserMessage(text=prompt)
+            _, images = await chat.send_message_multimodal_response(msg)
             if images:
                 try:
                     import cost_meter

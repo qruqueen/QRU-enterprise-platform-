@@ -125,12 +125,13 @@ export default function LittleLegacyStudio() {
               </ol>
             </Panel>
             <Panel title="One Knowledge Record → many products" icon={Boxes} accent="gold" testid="ll-production-catalog">
-              <p className="text-[11px] text-muted-foreground mb-3">Later phases. The Factory manufactures every applicable product from one verified source — nothing invented for children.</p>
-              <div className="flex flex-wrap gap-1.5">
+              <p className="text-[11px] text-muted-foreground mb-3">The Factory manufactures every applicable product from one verified source — through inheritance, never duplication. Nothing invented for children.</p>
+              <div className="flex flex-wrap gap-1.5 mb-3">
                 {(ov.production_catalog || []).map((p) => (
                   <span key={p} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gold/12 text-navy border border-gold/40">{p}</span>
                 ))}
               </div>
+              <a href="/knowledge-manufacturing" className="text-[11px] font-bold text-royal underline" data-testid="ll-inheritance-link">Manufacture more from a verified topic → Manufacturing Dashboard™</a>
             </Panel>
           </div>
 
@@ -414,9 +415,20 @@ function MasteringTab({ chars }) {
                     <img src={`${BACKEND}${m.expression_sheet_url}`} alt="Expression sheet" className="rounded-md border border-navy/10 w-full" data-testid={`ll-master-expr-${c.key}`} />
                   </div>
                   <p className="text-[11px] text-navy/70 flex items-center gap-1.5"><Mic className="w-3.5 h-3.5 text-royal" /> Voice: <span className="font-semibold">{m.voice_profile?.voice}</span> — {m.voice_profile?.tone}</p>
+                  {m.color_palette?.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-navy/60">Palette</span>
+                      {m.color_palette.map((col) => <span key={col} className="w-4 h-4 rounded-full border border-navy/20" style={{ background: col }} title={col} />)}
+                    </div>
+                  )}
+                  {m.canon_notes?.length > 0 && (
+                    <ul className="text-[10px] text-navy/70 space-y-0.5 list-disc pl-4">
+                      {m.canon_notes.map((n) => <li key={n}>{n}</li>)}
+                    </ul>
+                  )}
                   {m.founder_approved
-                    ? <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700"><CheckCircle2 className="w-4 h-4" /> Approved · Character Bible v1.0</span>
-                    : <button onClick={() => approveMaster(c.key)} data-testid={`ll-approve-master-${c.key}`} className="text-xs font-bold px-3 py-1.5 rounded-md bg-navy text-white hover:bg-navy/90 transition-colors">Approve Master (Founder)</button>}
+                    ? <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700"><CheckCircle2 className="w-4 h-4" /> Approved · Character Bible v1.0 (Canon locked)</span>
+                    : <button onClick={() => approveMaster(c.key)} data-testid={`ll-approve-master-${c.key}`} className="text-xs font-bold px-3 py-1.5 rounded-md bg-navy text-white hover:bg-navy/90 transition-colors">Approve & Lock as Canon v1.0</button>}
                 </div>
               )}
               {!st && (
@@ -502,9 +514,13 @@ function PilotTab({ episodes }) {
                     </div>
                   ))}
                 </div>
+                {p.publishing_package && <PublishingPackage pkg={p.publishing_package} approved={p.package_approved} />}
                 {p.status === "APPROVED"
-                  ? <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700"><CheckCircle2 className="w-4 h-4" /> Founder-approved · available in YouTube Publisher™ (no re-upload)</span>
-                  : <button onClick={() => approve(e.id)} disabled={!p.governance_passed} data-testid={`ll-approve-pilot-${e.id}`} className="text-xs font-bold px-4 py-2 rounded-md bg-navy text-white hover:bg-navy/90 transition-colors disabled:opacity-50">Approve Pilot for Distribution</button>}
+                  ? <div className="flex items-center gap-3 flex-wrap">
+                      <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700"><CheckCircle2 className="w-4 h-4" /> Approved · Publishing Package™ locked</span>
+                      <a href="/youtube" className="text-xs font-bold px-3 py-1.5 rounded-md bg-royal text-white hover:bg-royal/90 transition-colors" data-testid={`ll-open-youtube-${e.id}`}>Open in YouTube Publisher™ →</a>
+                    </div>
+                  : <button onClick={() => approve(e.id)} disabled={!p.governance_passed} data-testid={`ll-approve-pilot-${e.id}`} className="text-xs font-bold px-4 py-2 rounded-md bg-navy text-white hover:bg-navy/90 transition-colors disabled:opacity-50">Approve Pilot + Publishing Package™ (→ one-click publish)</button>}
               </div>
             )}
             {verified && !["RENDERING", "READY", "APPROVED"].includes(p.status) && (
@@ -516,3 +532,49 @@ function PilotTab({ episodes }) {
     </div>
   );
 }
+
+function PublishingPackage({ pkg, approved }) {
+  const [open, setOpen] = useState(false);
+  const Row = ({ label, children }) => (
+    <div className="py-1.5 border-b border-navy/5 last:border-0">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-royal">{label}</p>
+      <div className="text-[12px] text-navy/85 mt-0.5">{children}</div>
+    </div>
+  );
+  return (
+    <div className="border border-gold/40 rounded-md bg-gold/[0.04]" data-testid="ll-publishing-package">
+      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between px-4 py-2.5 text-left" data-testid="ll-package-toggle">
+        <span className="font-heading font-bold text-navy text-sm flex items-center gap-2"><Boxes className="w-4 h-4 text-royal" /> Publishing Package™ {approved && <span className="text-[10px] font-bold text-emerald-700">· Approved</span>}</span>
+        <span className="text-[11px] text-royal font-semibold">{open ? "Hide" : "Review"}</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-0.5">
+          <Row label="YouTube Title">{pkg.youtube_title}</Row>
+          <Row label="Episode #">{pkg.episode_number}</Row>
+          <Row label="SEO Description"><p className="whitespace-pre-wrap text-[11px]">{pkg.seo_description}</p></Row>
+          <Row label="Made for Kids">{pkg.made_for_kids ? "Yes (COPPA — Made for Kids)" : "No"}</Row>
+          <Row label="Keywords"><div className="flex flex-wrap gap-1">{(pkg.keywords || []).map((k) => <span key={k} className="text-[10px] px-1.5 py-0.5 rounded bg-navy/[0.06] border border-navy/10">{k}</span>)}</div></Row>
+          <Row label="Playlist">{pkg.playlist_recommendation}</Row>
+          <Row label="Learning Objective">{pkg.learning_objective}</Row>
+          <Row label="Thumbnail Recommendation">{pkg.thumbnail_recommendation}</Row>
+          <Row label="Parent Discussion Questions"><ul className="list-disc pl-4">{(pkg.parent_discussion_questions || []).map((q) => <li key={q}>{q}</li>)}</ul></Row>
+          <Row label="Teacher Discussion Questions"><ul className="list-disc pl-4">{(pkg.teacher_discussion_questions || []).map((q) => <li key={q}>{q}</li>)}</ul></Row>
+          <Row label="Call to Action">{pkg.call_to_action}</Row>
+          <Row label="Suggested End Screen">{pkg.suggested_end_screen}</Row>
+          <Row label="Suggested Next Episode">{pkg.suggested_next_episode}</Row>
+          <Row label="Copyright / Footer">{pkg.copyright_footer}</Row>
+          <Row label="QRU Brand Verification Checklist">
+            <ul className="space-y-0.5">
+              {(pkg.brand_verification_checklist || []).map((c) => (
+                <li key={c.item} className="flex items-center gap-1.5">
+                  {c.ok ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <ShieldCheck className="w-3 h-3 text-amber-500" />} {c.item}
+                </li>
+              ))}
+            </ul>
+          </Row>
+        </div>
+      )}
+    </div>
+  );
+}
+
