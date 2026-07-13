@@ -219,6 +219,21 @@ Founder Beta Dashboard, Automatic Knowledge Extraction, PreviewViewer. (all VERI
 
 ## Roadmap (Founder-approved, remaining)
 
+### Session 2026-07-14 — Real distribution keys, audiobook fix, unified shelf, GPS navigation
+- **Pexels + Pixabay keys wired** (founder-supplied, saved encrypted, CONNECTED): MP4 video renders now succeed and appear in YouTube Publisher factory-assets automatically.
+- **Audiobook silence fixed**: chunk MP3s are now re-encoded/stitched via ffmpeg into ONE clean 44.1kHz stream (byte-concatenated MP3s wouldn't play in browsers). Background job + status polling + 8-min client deadline; `_audiobook_job` fully wrapped so failures always reach a terminal FAILED state.
+- **Unified "My Products" shelf** (`/products`, new nav): one list of EVERY manufactured product across engines (publication/media/poster/recipe) with honest status, badges (In QRU Store / Audiobook / Ready for YouTube), search, engine filters, download/open/audio actions. Answers "where do products go". (Testing agent fixed a duplicate `/products` route that had hidden it; legacy library moved to `/product-library`.)
+- **KR-context handoff**: dashboard `km-go-*` and shelf `Open` navigate with `?kr=<id>`; Poster/Storyboard pickers pre-select that exact KR; Storyboard auto-selects first verified KR.
+- **Manufacturing Dashboard KR list** merges both KR collections + unified verified logic (was missing verified KRs).
+- **Manufacturing GPS links now work**: recommended action → "Go →" (current_route) and blocker → "resolve →" are clickable (were plain text). This is where "Awaiting Founder Decision" projects are actioned (inside My Projects).
+- **Book → Publish**: Add to QRU Store (+ View in Store link), KDP-Ready Export, Create Audiobook — all in Cover Studio after cover attach.
+
+### Backlog
+- Poster template families for the 5 provided design references (Identity Anatomy, Give-Credit 10-panel, Why-Forex data poster, Knowledge Utility Principle, Brain Translation) — P1.
+- Course / Marketing / Bundle inheriting recipes still Coming Soon — P2.
+- Perf: `all_products`/`_kr_topic_map` should use `$facet` + cache at factory scale — P2.
+
+
 ### Book → Publish last mile + Audiobook editions + honest video status — DONE (2026-07-13, iteration_61, backend 12/12 + frontend 15/15)
 - **Book → Publish** (`product_publishing.py` + `routers/publishing.py`): after a book's deliverable is rendered (with cover), Cover Studio now offers **Add to QRU Store™** (real — sets Published/purchasable, honest refusal if not rendered) and **KDP-Ready Export™** (honest — a ZIP with interior.pdf + cover.png + a fpdf2 metadata/keywords sheet + step-by-step KDP upload instructions; Amazon has NO publish API so we never fake an "on Amazon" state). Endpoints: /product/{pid}/publish-store, /kdp-package, /kdp-file.
 - **Audiobook edition from any product** (Founder request): **Create Audiobook** with voice select in Cover Studio → OpenAI TTS (Emergent key) narrates the book content (or the verified KR if the book has little text). Runs as a BACKGROUND asyncio job (the ingress hard-caps requests at 60s → synchronous TTS 502s); the UI polls audiobook-status (8-min client deadline) → READY. Endpoints: /product/{pid}/audiobook, /audiobook-status, /audiobook-file. Verified real 9MB–35MB MP3s.

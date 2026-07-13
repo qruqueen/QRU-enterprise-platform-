@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
 import { Loader2, Compass, MapPin, ArrowRight, HelpCircle, AlertTriangle, CheckCircle2, CircleDot, Circle } from "lucide-react";
 
 // QRU Manufacturing GPS™ + Why-Am-I-Here™ (STD-EIP-0002) — persistent production awareness on any project.
 export function ManufacturingGPS({ projectId, route = "/projects" }) {
+  const nav = useNavigate();
   const [nsi, setNsi] = useState(null);
   const [why, setWhy] = useState(null);
   const [open, setOpen] = useState(false);
@@ -14,6 +16,7 @@ export function ManufacturingGPS({ projectId, route = "/projects" }) {
   }, [projectId, route]);
 
   const healthTone = { "On Track": "text-emerald-600", "Awaiting Approval": "text-amber-600", Blocked: "text-red-600", Complete: "text-emerald-600" };
+  const go = (r) => { if (r) nav(r); };
 
   return (
     <div className="border border-navy/15 rounded-md bg-white mb-4" data-testid="manufacturing-gps">
@@ -29,8 +32,20 @@ export function ManufacturingGPS({ projectId, route = "/projects" }) {
             <span className="font-bold text-navy">{nsi.current_stage}</span>
             {nsi.next_stage && nsi.next_stage !== "Complete" && <><ArrowRight className="w-3 h-3 text-navy/30" /><span className="inline-flex items-center gap-1 text-navy/50"><Circle className="w-3 h-3" />{nsi.next_stage}</span></>}
           </div>
-          <p className="text-[11px] text-navy/80 flex items-start gap-1.5"><ArrowRight className="w-3 h-3 mt-0.5 shrink-0 text-royal" />{nsi.recommended_next_action}</p>
-          {nsi.blockers?.length > 0 && <p className="text-[10px] text-red-600 mt-1 flex items-start gap-1"><AlertTriangle className="w-3 h-3 mt-0.5" />{nsi.blockers[0].reason}</p>}
+          <button onClick={() => go(nsi.current_route)} disabled={!nsi.current_route}
+            data-testid="gps-go-current"
+            className="w-full text-left text-[11px] text-navy/80 flex items-start gap-1.5 hover:text-royal disabled:hover:text-navy/80 group">
+            <ArrowRight className="w-3 h-3 mt-0.5 shrink-0 text-royal" />
+            <span className="flex-1">{nsi.recommended_next_action}</span>
+            {nsi.current_route && <span className="text-[10px] font-bold text-royal underline shrink-0 group-hover:no-underline">Go →</span>}
+          </button>
+          {nsi.blockers?.length > 0 && (
+            <button onClick={() => go(nsi.blockers[0].route)} disabled={!nsi.blockers[0].route}
+              data-testid="gps-go-blocker"
+              className="text-[10px] text-red-600 mt-1 flex items-start gap-1 hover:underline text-left">
+              <AlertTriangle className="w-3 h-3 mt-0.5" />{nsi.blockers[0].reason}{nsi.blockers[0].route ? " — resolve →" : ""}
+            </button>
+          )}
           {nsi.approvals_required?.length > 0 && <p className="text-[10px] text-amber-700 mt-1">Waiting on your approval: {nsi.approvals_required.join(", ")}</p>}
           {nsi.remaining_stages?.length > 0 && <p className="text-[9px] text-muted-foreground mt-1">Remaining: {nsi.remaining_stages.join(" · ")}</p>}
         </div>

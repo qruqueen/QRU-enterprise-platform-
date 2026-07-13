@@ -89,7 +89,7 @@ export default function ProductShelf() {
                   {p.download && (
                     <a href={`${BACKEND}${p.download}`} target="_blank" rel="noreferrer" data-testid={`shelf-download-${p.id}`} className="text-[10px] text-royal inline-flex items-center gap-1 hover:underline"><Download className="w-3 h-3" /> Download</a>
                   )}
-                  <button onClick={() => nav(p.route)} data-testid={`shelf-open-${p.id}`} className="text-[10px] text-navy inline-flex items-center gap-0.5 hover:text-royal font-semibold">Open <ArrowRight className="w-3 h-3" /></button>
+                  <button onClick={() => nav(p.kr_id ? `${p.route}?kr=${p.kr_id}` : p.route)} data-testid={`shelf-open-${p.id}`} className="text-[10px] text-navy inline-flex items-center gap-0.5 hover:text-royal font-semibold">Open <ArrowRight className="w-3 h-3" /></button>
                 </div>
               </div>
             ))}

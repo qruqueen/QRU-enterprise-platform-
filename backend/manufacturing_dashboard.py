@@ -184,7 +184,7 @@ async def all_products():
             badges.append("Audiobook")
         items.append({
             "id": p["id"], "name": p.get("title"), "kind": p.get("product_type") or "Product",
-            "engine": "publication", "topic": topics.get(p.get("knowledge_record_id")) or p.get("topic"),
+            "engine": "publication", "kr_id": p.get("knowledge_record_id"), "topic": topics.get(p.get("knowledge_record_id")) or p.get("topic"),
             "status": p.get("status") or "Draft", "tone": _tone_for(p.get("status")),
             "updated_at": p.get("updated_at") or p.get("created_at"),
             "download": (pdf or {}).get("url"), "badges": badges,
@@ -200,7 +200,7 @@ async def all_products():
             badges.append("Ready for YouTube")
         items.append({
             "id": m["id"], "name": m.get("label"), "kind": (fmt or "media").replace("_", " ").title(),
-            "engine": "media", "topic": topics.get(m.get("kr_id")),
+            "engine": "media", "kr_id": m.get("kr_id"), "topic": topics.get(m.get("kr_id")),
             "status": rs or m.get("status") or "STORYBOARD_READY", "tone": _tone_for(rs or m.get("status")),
             "updated_at": m.get("created_at"), "download": None, "badges": badges,
             "route": "/storyboard-studio", "audiobook_url": None,
@@ -209,7 +209,7 @@ async def all_products():
     async for a in db.poster_assets.find({}, {"_id": 0}).sort("created_at", -1).limit(400):
         items.append({
             "id": a["id"], "name": a.get("title") or a.get("family"), "kind": "Poster",
-            "engine": "poster", "topic": topics.get(a.get("kr_id")),
+            "engine": "poster", "kr_id": a.get("kr_id"), "topic": topics.get(a.get("kr_id")),
             "status": a.get("status") or "DRAFT", "tone": _tone_for(a.get("status")),
             "updated_at": a.get("created_at"),
             "download": f"/api/publishing/poster/{a['id']}/file?format=png", "badges": [],
@@ -220,7 +220,7 @@ async def all_products():
         f = (i.get("files") or [{}])[0]
         items.append({
             "id": i["id"], "name": i.get("label"), "kind": (i.get("type") or "recipe").replace("_", " ").title(),
-            "engine": "recipe", "topic": topics.get(i.get("kr_id")),
+            "engine": "recipe", "kr_id": i.get("kr_id"), "topic": topics.get(i.get("kr_id")),
             "status": i.get("status") or "DRAFT", "tone": _tone_for(i.get("status")),
             "updated_at": i.get("created_at"), "download": f.get("url"), "badges": [],
             "route": "/knowledge-manufacturing", "audiobook_url": None,
