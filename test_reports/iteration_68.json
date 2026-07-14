@@ -1,0 +1,24 @@
+{
+  "summary": "Frontend testing of new Factory Map page (/factory-map) for QRU Factory Capability Consolidation. All 8 requested testcases PASSED: nav link 'Factory Map™' renders with data-testid nav-factory-map, page loads, Manufacturing Promise panel with all 5 pillar cards renders, registry-summary shows 91 capabilities (71 Active / 0 Inherited / 1 Deprecated / 9 Merged / 10 Future Backlog), tab-map shows flow rail + 12 layered map-node-* panels + 91 map-cap-* chips + map-destinations panel with QRU Store/YouTube/Podcast/Classroom/Enterprise/Future, clicking map-cap-little-legacy navigates to /little-legacy, tab-registry shows table with 91 cap-row-* rows and per-row cap-status-* chips + cap-select-* dropdowns, PATCH /api/capability-registry/{id}/status via dropdown succeeded with 'Status updated' toast, filter-all=91 filter-active=71 filter-merged=9 rows (correctly filtered — verified merged filter shows only Merged status rows).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "FactoryMap.js (~200 lines) is clean and well-scoped. Handles loading state, error toasts, and dropdown status updates correctly.",
+    "Minor: map-cap-* buttons rely on onClick with disabled visual state via className opacity, but disabled attribute is properly set — good for a11y.",
+    "Nit: api.get/patch calls all silently swallow errors on load with .catch(() => {}) — if any of the 3 initial requests fail the page will show the infinite loader (map/summary null). Consider surfacing a load error state."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped by request)", "frontend": "100%"},
+  "test_credentials": "Founder login (super-admin): 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026!",
+  "seed_data_creation": "None. Status PATCH change was reverted to original value after verification.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Factory Map page at /factory-map is fully functional. Nav link 'Factory Map™' with testid nav-factory-map is the first item under 'Start Here' section. Registry has 91 capabilities; map has 12 non-empty layers (knowledge, engine, publishing, learning, entertainment, marketing, assessment, distribution, governance, enterprise, admin, future). Dropdown status updates emit 'Status updated' sonner toast. Filters: filter-all/filter-active/filter-inherited/filter-deprecated/filter-merged/filter-future.",
+  "rca of the issue": "No issues found."
+}

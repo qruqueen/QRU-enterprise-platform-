@@ -94,6 +94,7 @@ import EnterpriseArchitecture from "@/pages/EnterpriseArchitecture";
 import Refinement from "@/pages/Refinement";
 import Constitution from "@/pages/Constitution";
 import ProjectsContinuity from "@/pages/ProjectsContinuity";
+import FactoryMap from "@/pages/FactoryMap";
 import ConsumerHome from "@/pages/consumer/ConsumerHome";
 import ConsumerLearn from "@/pages/consumer/ConsumerLearn";
 import ConsumerMyLearning from "@/pages/consumer/ConsumerMyLearning";
@@ -201,6 +202,7 @@ function EnterpriseRoutes() {
         <Route path="refinement" element={<Refinement />} />
         <Route path="constitution" element={<Constitution />} />
         <Route path="projects" element={<ProjectsContinuity />} />
+        <Route path="factory-map" element={<FactoryMap />} />
         <Route path="connectors" element={<Connectors />} />
         <Route path="ai-services" element={<AIServices />} />
         <Route path="notifications" element={<Notifications />} />

@@ -10,11 +10,12 @@ import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard, Film,
-  ClipboardList, Boxes, PackageOpen, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud, Gavel, Youtube, QrCode, Scale, Compass, Cog, LayoutTemplate, Baby,
+  ClipboardList, Boxes, PackageOpen, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud, Gavel, Youtube, QrCode, Scale, Compass, Cog, LayoutTemplate, Baby, Map,
 } from "lucide-react";
 
 const NAV = [
   { section: "Start Here" },
+  { to: "/factory-map", label: "Factory Map™", icon: Map, testid: "nav-factory-map", q: "How does one Knowledge Record become many products — and what does every capability do?" },
   { to: "/create", label: "Create", icon: Sparkles, testid: "nav-create", q: "What would you like to create today?" },
   { to: "/concierge", label: "Factory Concierge™", icon: MessageSquareText, testid: "nav-concierge", q: "Tell me what you want — I'll set up the right workflow." },
   { to: "/flow", label: "Manufacturing Flow™", icon: Workflow, testid: "nav-flow", q: "Where is every project and what happens next?" },

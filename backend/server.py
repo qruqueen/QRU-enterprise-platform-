@@ -79,6 +79,7 @@ from routers.enterprise_architecture import router as enterprise_architecture_ro
 from routers.refinement import router as refinement_router
 from routers.media_studio import router as media_studio_router
 from routers.little_legacy import router as little_legacy_router
+from routers.capability_registry import router as capability_registry_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
 from routers.misc import (
@@ -138,6 +139,7 @@ for r in [
     refinement_router,
     media_studio_router,
     little_legacy_router,
+    capability_registry_router,
 ]:
     app.include_router(r)
 
@@ -180,6 +182,8 @@ async def startup():
     await refinement_engine.seed_refinement()
     import little_legacy
     await little_legacy.seed()
+    import capability_registry
+    await capability_registry.seed()
     import seed_forex_seeds
     await seed_forex_seeds.seed()
     import asyncio
