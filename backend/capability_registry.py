@@ -275,9 +275,8 @@ DEFINITIONS = [
        "Configure the factory.", "Configuration."),
 
     # ---------- FUTURE BACKLOG (Phase 8 — architecture-ready, not built) ----------
-    _c("media-division", "Media Manufacturing Division™", "future", "future", None, None,
-       "Governed division: one KR → full media catalog.", "Stone 2 of this initiative.",
-       note="Books, PDFs, posters, slides, guides, audiobooks, podcasts, storybooks, episodes, shorts, social clips."),
+    _c("media-division", "Media Manufacturing Division™", "publishing", "active", "media_division.py", "/media-division",
+       "One verified KR → the full media catalog.", "Manufacture books, guides, slides, posters & scripts from one governed KR. Every product inherits the Manufacturing Promise™.", moat=True),
     _c("cinema-studio", "Story & Cinema Studio™", "future", "future", None, None,
        "Manufacturing department for motion & film.", "Stone 3 of this initiative.",
        note="Motion Storybooks™, character animation, episodes; feature film prep is future-only."),
@@ -306,7 +305,8 @@ def _now():
 
 
 async def seed():
-    """Idempotent. Founder status edits are preserved; descriptive fields refresh."""
+    """Idempotent. Founder status edits (founder_locked=True) are preserved; everything
+    else follows the authoritative definitions and descriptive fields refresh on boot."""
     for d in DEFINITIONS:
         setter = {k: v for k, v in d.items() if k != "status"}
         setter["updated_at"] = _now()
@@ -315,6 +315,11 @@ async def seed():
             {"$set": setter,
              "$setOnInsert": {"status": d["status"], "founder_locked": False, "created_at": _now()}},
             upsert=True,
+        )
+        # Non-locked capabilities follow the definition's status (keeps the registry authoritative).
+        await db[COLLECTION].update_one(
+            {"id": d["id"], "founder_locked": {"$ne": True}},
+            {"$set": {"status": d["status"]}},
         )
 
 

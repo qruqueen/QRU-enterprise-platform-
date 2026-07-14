@@ -17,13 +17,13 @@ import {
 // Icon per capability route — keeps the established visual language.
 const ICON = {
   "/factory-map": Map, "/": LayoutDashboard, "/create": Sparkles, "/concierge": MessageSquareText, "/projects": Workflow,
-  "/knowledge": BookOpen, "/kr2": BookOpenCheck, "/topic-registry": ClipboardList, "/promotion-pipeline": Sprout,
+  "/knowledge": BookOpen, "/kr2": BookOpenCheck, "/kr-manufacturing": FlaskConical, "/topic-registry": ClipboardList, "/promotion-pipeline": Sprout,
   "/library-import": FolderUp, "/translation-engine": Wand2, "/research": FlaskConical, "/verification": ShieldCheck,
   "/verification-team": ShieldCheck, "/memory-engineering": Brain, "/qiks": BookOpenCheck,
   "/refinement": Cog, "/flow": Workflow, "/architecture": Compass, "/workflows": Workflow, "/orchestrator": Boxes,
   "/director": Gavel, "/manufacturing": Factory, "/manufacture": Sparkles, "/knowledge-manufacturing": Boxes,
   "/manufacturing-studio": PackageCheck, "/mfg-command": Gauge,
-  "/publishing": BookOpenCheck, "/cover-studio": Palette, "/products": PackageOpen, "/product-library": Library, "/companion": QrCode,
+  "/publishing": BookOpenCheck, "/media-division": Boxes, "/cover-studio": Palette, "/products": PackageOpen, "/product-library": Library, "/companion": QrCode,
   "/colleges": GraduationCap, "/teach": Rocket,
   "/storyboard-studio": Clapperboard, "/little-legacy": Baby, "/flagship-showcase": Film, "/media-studio": Clapperboard,
   "/wis": UsersRound, "/media-library": Clapperboard, "/creative-studio": Palette, "/visual-studio": Eye, "/media-starter-kit": PackageCheck,

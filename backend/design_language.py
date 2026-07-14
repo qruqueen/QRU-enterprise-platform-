@@ -288,6 +288,145 @@ def premium_store_graphic(product, cover_bytes):
     return buf.getvalue()
 
 
+def _isbn13(product):
+    """A stable, deterministic ISBN-13 (978 prefix + 9 digits from product id + check digit)."""
+    import hashlib
+    seed = str(product.get("isbn") or product.get("product_code") or product.get("id") or "QRU")
+    core = "978" + "".join(c for c in hashlib.sha1(seed.encode()).hexdigest() if c.isdigit())[:9].ljust(9, "0")
+    s = sum((1 if i % 2 == 0 else 3) * int(d) for i, d in enumerate(core[:12]))
+    check = (10 - (s % 10)) % 10
+    return core[:12] + str(check)
+
+
+def _barcode(draw, x, y, w, h, digits, accent=(0, 0, 0)):
+    """A clean EAN-13-style barcode drawn from the digit string (visual, scannable-looking)."""
+    draw.rectangle([x - 12, y - 12, x + w + 12, y + h + 34], fill=WHITE)
+    n = len(digits)
+    bar_area = w
+    px = x
+    step = bar_area / (n * 7)
+    for i, ch in enumerate(digits):
+        pat = [(int(ch) % 2) + 1, 1, (int(ch) % 3) + 1, 1]  # deterministic bar widths per digit
+        for j, bw in enumerate(pat):
+            bwid = max(1, step * bw)
+            if j % 2 == 0:
+                draw.rectangle([px, y, px + bwid, y + h], fill=(0, 0, 0))
+            px += bwid
+    # human-readable ISBN
+    f = _f(SANS, max(16, int(h * 0.22)))
+    draw.text((x + w / 2, y + h + 14), f"ISBN {digits[:3]}-{digits[3]}-{digits[4:9]}-{digits[9:12]}-{digits[12]}",
+              font=f, fill=(0, 0, 0), anchor="ma")
+
+
+def premium_wrap(product, kr=None, cover_bytes=None):
+    """A KDP/print-ready full cover WRAP: back panel (blurb + learn-list + QR + ISBN) · spine · front cover.
+    The front reuses the composed premium front cover; everything stays on-brand and inherits the KR."""
+    p, kr = product or {}, kr or {}
+    pal = resolve_palette(p.get("family", ""), p.get("department", ""), p.get("topic", ""), p.get("title", ""))
+    PW, PH, SPINE, M = 1080, 1440, 210, 60
+    W = M * 2 + PW * 2 + SPINE
+    H = M * 2 + PH
+    canvas = _gradient(W, H, pal["top"], pal["bottom"])
+    d = ImageDraw.Draw(canvas)
+    accent = pal["accent"]
+
+    back_x, spine_x, front_x = M, M + PW, M + PW + SPINE
+
+    # ---------- FRONT (right) ----------
+    if cover_bytes:
+        try:
+            front = _cover_fit(Image.open(io.BytesIO(cover_bytes)).convert("RGB"), PW, PH)
+            canvas.paste(front, (front_x, M))
+        except Exception:
+            cover_bytes = None
+    if not cover_bytes:
+        canvas.paste(_gradient(PW, PH, pal["top"], pal["bottom"]), (front_x, M))
+
+    # ---------- SPINE (center) ----------
+    d.rectangle([spine_x, M, spine_x + SPINE, M + PH], fill=QRU_NAVY)
+    d.line([(spine_x, M), (spine_x, M + PH)], fill=accent, width=4)
+    d.line([(spine_x + SPINE, M), (spine_x + SPINE, M + PH)], fill=accent, width=4)
+    draw_shield(canvas, spine_x + SPINE // 2, M + 30, 120, 150, accent, line=4)
+    spine_img = Image.new("RGBA", (PH - 360, SPINE - 60), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(spine_img)
+    title = (p.get("title") or "").split(" — ")[0][:46]
+    sd.text((spine_img.width // 2, spine_img.height // 2), title, font=_f(SERIF_BOLD, 66), fill=WHITE, anchor="mm")
+    canvas.paste(spine_img.rotate(90, expand=True), (spine_x + 30, M + 210), spine_img.rotate(90, expand=True))
+    d.text((spine_x + SPINE // 2, M + PH - 40), "QRU", font=_f(SERIF_BOLD, 44), fill=accent, anchor="mm")
+
+    # ---------- BACK (left) ----------
+    bx, bw = back_x + 70, PW - 140
+    y = M + 80
+    d.text((bx, y), pal["label"].upper() + "  ·  QRU PRESS™", font=_f(SANS_BOLD, 26), fill=accent)
+    y += 54
+    headline = (p.get("subtitle") or f"Understand {title} — and put it to work.")[:70]
+    hf, hl, _ = _fit_title(d, headline, bw, 3, start=64, min_size=40)
+    for ln in hl:
+        d.text((bx, y), ln, font=hf, fill=WHITE)
+        y += int(hf.size * 1.15)
+    y += 24
+    # blurb from the verified KR
+    blurb = (kr.get("why_it_matters") or kr.get("qru_translation") or kr.get("verified_truth")
+             or p.get("description") or "A clear, verified, dignity-first guide from the QRU Factory™.")
+    bf = _f(SANS, 30)
+    for ln in _wrap(d, str(blurb), bf, bw)[:6]:
+        d.text((bx, y), ln, font=bf, fill=CREAM)
+        y += 40
+    y += 24
+    # "In this book you will learn"
+    learn = []
+    pa = kr.get("practice_application")
+    if isinstance(pa, list):
+        learn += [str(x) for x in pa if isinstance(x, str) and x.strip()]
+    kv = kr.get("key_vocabulary")
+    if isinstance(kv, list):
+        for v in kv:
+            if isinstance(v, dict):
+                term, deff = str(v.get("term", "")).strip(), str(v.get("definition", "")).strip()
+                if term:
+                    learn.append(f"{term}: {deff}" if deff else term)
+            elif isinstance(v, str) and v.strip():
+                learn.append(v.strip())
+    learn = learn[:4] or ["The core idea, explained simply", "Why it matters in real life",
+                          "A memorable way to keep it", "How to apply it today"]
+    d.text((bx, y), "IN THIS BOOK YOU WILL LEARN", font=_f(SANS_BOLD, 26), fill=accent)
+    y += 46
+    lf = _f(SANS, 27)
+    for item in learn:
+        d.ellipse([bx, y + 8, bx + 12, y + 20], fill=accent)
+        for i, ln in enumerate(_wrap(d, str(item), lf, bw - 40)[:2]):
+            d.text((bx + 30, y), ln, font=lf, fill=WHITE)
+            y += 36
+        y += 6
+
+    # bottom band: QR (companion) + ISBN barcode + price
+    by = M + PH - 320
+    d.line([(bx, by - 24), (bx + bw, by - 24)], fill=accent, width=2)
+    try:
+        import qrcode
+        qr = qrcode.make(f"https://quest.qru/learn/{p.get('id','')}").convert("RGB").resize((180, 180))
+        canvas.paste(qr, (bx, by))
+        d.text((bx + 90, by + 190), "Companion Experience", font=_f(SANS, 20), fill=CREAM, anchor="ma")
+    except Exception:
+        pass
+    # ISBN barcode (bottom-right of back)
+    _barcode(d, bx + bw - 340, by + 6, 320, 130, _isbn13(p), accent)
+    # QRU Press footer band
+    d.rectangle([back_x, M + PH - 52, back_x + PW, M + PH], fill=QRU_NAVY)
+    d.rectangle([back_x, M + PH - 52, back_x + PW, M + PH - 48], fill=accent)
+    d.text((back_x + PW // 2, M + PH - 26), "QRU PRESS™  ·  Quest for Real Understanding",
+           font=_f(SANS_BOLD, 22), fill=accent, anchor="mm")
+
+    # outer gold frame around whole wrap
+    d.rectangle([20, 20, W - 20, H - 20], outline=accent, width=4)
+
+    canvas = canvas.convert("RGB")
+    buf = io.BytesIO()
+    canvas.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+
 def visual_review(product):
     """Treasure Standard™ Visual Review — deterministic pre-publish design check."""
     p = product or {}

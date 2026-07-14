@@ -351,6 +351,18 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
             except Exception as e2:
                 logger.error(f"pdf fallback failed for {pid}: {e2}")
 
+    # 2b) Print-ready full cover WRAP (front + spine + back) for book-format products.
+    if recipe.get("category") == "book":
+        try:
+            wrap = dl.premium_wrap(p_clean, kr, cover_bytes)
+            fid = re_engine._save("deliverable-wrap", "png", wrap)
+            files.append({"format": "wrap", "label": "Print-Ready Cover Wrap (KDP)",
+                          "url": re_engine._asset_url(fid), "media_type": "image/png",
+                          "filename": fid, "bytes": len(wrap)})
+        except Exception as e:
+            logger.warning(f"cover wrap generation failed for {pid}: {e}")
+
+
     validation = validate_deliverable(p_clean, files, primary)
     design = assess_design_quality(p_clean, files, cover_bytes, recipe=recipe)
     deliverable = {

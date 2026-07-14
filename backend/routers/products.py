@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
 
@@ -368,3 +368,27 @@ async def set_status(pid: str, data: StatusInput, user=Depends(get_current_user)
 async def delete_product(pid: str, user=Depends(get_current_user)):
     await db.products.delete_one({"id": pid})
     return {"message": "deleted"}
+
+
+
+@router.post("/{pid}/regenerate-cover")
+async def regenerate_cover(pid: str, request: Request, user=Depends(get_current_user)):
+    """Force-refresh a product's cover to the current Gold Standard (new hero art + wrap),
+    then re-render its deliverables. Respects Founder-attached Cover Studio covers."""
+    p = await db.products.find_one({"id": pid})
+    if not p:
+        raise HTTPException(404, "Product not found.")
+    base_url = str(request.base_url).rstrip("/")
+    # Clear the old auto-cover so a fresh hero-art cover is generated (skip vault reuse).
+    await db.products.update_one({"id": pid}, {"$set": {"asset_mode": "generate", "cover_has_hero_art": False},
+                                               "$unset": {"cover_url": "", "customer_deliverable": ""}})
+    import rendering_engine as _re
+    import deliverable_renderer as _dr
+    try:
+        await _re.ensure_branded_assets(pid, actor=user["name"], allow_ai_hero_art=True)
+        await _dr.ensure_deliverable(pid, actor=user["name"], base_url=base_url, build_marketing=False)
+    except Exception as e:
+        raise HTTPException(500, f"Cover regeneration failed: {str(e)[:160]}")
+    prod = await db.products.find_one({"id": pid}, {"_id": 0})
+    return {"ok": True, "cover_url": prod.get("cover_url"), "cover_has_hero_art": prod.get("cover_has_hero_art"),
+            "deliverables": (prod.get("customer_deliverable") or {}).get("files", [])}
