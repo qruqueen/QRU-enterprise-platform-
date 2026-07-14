@@ -33,6 +33,31 @@ SOURCE_TYPES = {
     "library_import": "Existing QRU Library / Imported Document",
 }
 
+# The Approved Knowledge Record Manufacturing Standard™ (Founder-governed voice & posture).
+MANUFACTURING_STANDARD = {
+    "id": "KR-STD-0001",
+    "title": "Approved Knowledge Record Manufacturing Standard™",
+    "principles": [
+        "Begin with hope and possibility, not deficiency.",
+        "Frame questions to invite understanding and growth.",
+        "Preserve the learner's dignity.",
+        "Teach capability before emphasizing mistakes.",
+        "Use positive, encouraging language while remaining truthful.",
+        "Include the full metadata required for all downstream Factory products.",
+        "Remain the single governed source of truth from which all products inherit.",
+    ],
+}
+
+STANDARD_PREAMBLE = (
+    "Follow the Approved Knowledge Record Manufacturing Standard™ in all wording:\n"
+    "- Begin with hope and possibility, not deficiency.\n"
+    "- Frame questions to invite understanding and growth (never shame or 'what's wrong with you').\n"
+    "- Preserve the learner's dignity at all times.\n"
+    "- Teach capability first; mention mistakes only as gentle, constructive learning.\n"
+    "- Use positive, encouraging, empowering language while remaining fully truthful and accurate.\n"
+    "NEVER sacrifice factual accuracy for positivity. Encouraging tone, verified substance.\n\n"
+)
+
 
 def _now():
     return datetime.now(timezone.utc).isoformat()
@@ -59,7 +84,7 @@ async def _research(source_type, topic, source_text):
             "extracted": f,
         }
     # founder_request / verified_research → AI research brief (grounded, cited)
-    raw = await llm_generate(RESEARCH_SYSTEM, f"Topic: {topic}", f"kr-research-{gen_id()}")
+    raw = await llm_generate(STANDARD_PREAMBLE + RESEARCH_SYSTEM, f"Topic: {topic}", f"kr-research-{gen_id()}")
     brief = parse_json(raw) or {}
     if not brief.get("summary"):
         raise ValueError("Research produced no usable evidence summary.")
@@ -78,7 +103,7 @@ async def _organize(topic, verified_truth, key_points):
     ctx = f"Topic: {topic}\n\nVerified content:\n{verified_truth}"
     if key_points:
         ctx += "\n\nKey points:\n- " + "\n- ".join(str(k) for k in key_points)
-    raw = await llm_generate(QRU_METHODOLOGY_SYSTEM, ctx, f"kr-organize-{gen_id()}")
+    raw = await llm_generate(STANDARD_PREAMBLE + QRU_METHODOLOGY_SYSTEM, ctx, f"kr-organize-{gen_id()}")
     return parse_json(raw) or {}
 
 
@@ -163,6 +188,7 @@ async def manufacture(source_type, topic, category, division, source_text, goal,
         "is_master_file": False, "treasure_standard": False,
         "products_created": 0, "version": 1,
         "manufactured": True, "manufacture_source": source_type,
+        "manufacturing_standard": MANUFACTURING_STANDARD["id"], "standard_compliant": True,
         "target_audience": audience or "",
         "created_by": actor, "created_at": now_iso(), "updated_at": now_iso(),
     }

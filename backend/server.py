@@ -80,6 +80,7 @@ from routers.refinement import router as refinement_router
 from routers.media_studio import router as media_studio_router
 from routers.little_legacy import router as little_legacy_router
 from routers.capability_registry import router as capability_registry_router
+from routers.kr_manufacturing import router as kr_manufacturing_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
 from routers.misc import (
@@ -140,6 +141,7 @@ for r in [
     media_studio_router,
     little_legacy_router,
     capability_registry_router,
+    kr_manufacturing_router,
 ]:
     app.include_router(r)
 

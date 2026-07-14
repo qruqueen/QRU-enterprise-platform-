@@ -77,6 +77,8 @@ def _c(cid, name, layer, status, owner, route, original, current,
 # ============================================================
 DEFINITIONS = [
     # ---------- KNOWLEDGE (source) ----------
+    _c("kr-manufacturing", "Knowledge Record Manufacturing™", "knowledge", "active", "kr_manufacturing.py", "/kr-manufacturing",
+       "Manufacture governed Knowledge Records from a source.", "The Factory's first responsibility — Idea→Research→Verify→Founder Review→Enterprise Memory™. One KR, many products.", moat=True),
     _c("knowledge-records", "Knowledge Records", "knowledge", "active", "routers/knowledge.py", "/knowledge",
        "Store verified knowledge.", "Single source of verified truth — every product inherits from here.", moat=True),
     _c("kr2", "Knowledge Architecture™ (KR 2.0)", "knowledge", "active", "routers/knowledge_v2.py", "/kr2",
