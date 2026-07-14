@@ -30,6 +30,11 @@ async def shelf(state: Optional[str] = None, user=Depends(get_current_user)):
     return {"decoders": await de.shelf(state)}
 
 
+@router.get("/needs-attention")
+async def needs_attention(user=Depends(get_current_user)):
+    return {"decoders": await de.needs_attention()}
+
+
 @router.get("/{did}")
 async def get_one(did: str, user=Depends(get_current_user)):
     d = await de.get_decoder(did)

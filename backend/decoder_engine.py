@@ -12,20 +12,22 @@ from models import gen_id, now_iso, clean
 from ai_service import llm_generate, parse_json
 from media_division import _resolve_kr, _is_verified
 from org_activity import log_org
+import product_governance
 
 logger = logging.getLogger("qru.decoder")
 COLL = "decoder_records"
 
 # Governed lifecycle (§6 of authorization). Treasure Standard™ is earned separately, never auto.
 REVIEW_STATES = ["Draft", "Automated Quality Review", "Verification Review", "Educational Review",
-                 "Accessibility Review", "Brand Review", "Founder Review Required", "Revision Requested",
-                 "Founder Approved", "Production Ready", "Treasure Standard Candidate",
-                 "Treasure Standard Certified", "Published", "Superseded", "Archived"]
+                 "Accessibility Review", "Brand Review", "Manufacturing Ready", "Revision Recommended",
+                 "Founder Approved", "Treasure Standard Candidate", "Treasure Standard Certified",
+                 "Published", "Superseded", "Archived"]
 
 # Governed shelving taxonomy (§27). Founder-authorized additions only.
 DOMAINS = ["AI Literacy", "Finance", "Trading", "Health", "Human Capability", "Emotions", "Life Skills",
            "Science", "Technology", "Leadership", "Faith and Philosophy", "Children", "Little Legacy Learners™", "General"]
 HIGH_STAKES = ["medical", "medicine", "health", "legal", "law", "financial", "finance", "invest", "trading",
+               "forex", "currency", "stock", "crypto", "gambling", "tax",
                "mental health", "safety", "child", "diagnos", "treatment", "dosage", "suicide"]
 OVERPROMISE = ["a-z", "a to z", "complete guide", "comprehensive", "everything", "encyclopedia", "mastery", "ultimate", "all you need"]
 
@@ -159,6 +161,48 @@ def _kr_context(kr, audience, level):
         f"Confidence: {kr.get('confidence_score','')}")
 
 
+def _confidence_summary(gen, det):
+    """Factory Confidence Summary™ — the standard PASS/HOLD summary. Honest: only gates the
+    Understanding Engine actually evaluates are scored; downstream gates are marked PENDING."""
+    det_ok = all(c["pass"] for c in det["checks"])
+    constitution_ok = det_ok and not det["overpromise"]
+    verification_ok = bool(gen.get("verification"))
+    treasure_candidate = det_ok and constitution_ok and verification_ok
+
+    def row(gate, status, detail, owner="Factory"):
+        return {"gate": gate, "status": status, "detail": detail, "owner": owner}
+
+    rows = [
+        row("Knowledge", "PASS", "Inherits a Verified Knowledge Record™ (Knowledge-First)."),
+        row("Verification", "PASS" if verification_ok else "HOLD", "Source support & uncertainty carried into the Decoder."),
+        row("Decoder", "PASS" if det_ok else "HOLD", "38-field contract, 5-part Understanding Test, honest analogy."),
+        row("Treasure Candidate", "PASS" if treasure_candidate else "HOLD",
+            "All governed standards passed — candidate for Founder certification." if treasure_candidate else "Not yet a candidate."),
+        row("Constitution", "PASS" if constitution_ok else "HOLD", "Knowledge-First, no overpromise, provenance attached."),
+        row("Recipe", "PENDING", "Evaluated at product manufacturing.", "Product Engine"),
+        row("Engineering", "PENDING", "Evaluated at product manufacturing.", "Product Engine"),
+        row("Architecture", "PENDING", "Evaluated at product manufacturing.", "Product Engine"),
+    ]
+    all_governed_pass = det_ok and constitution_ok and verification_ok
+    return rows, all_governed_pass, treasure_candidate
+
+
+def _autonomy_decision(det, all_governed_pass):
+    """Constitutional Autonomy Rule: the Factory autonomously executes every decision governed by
+    established standards. Only genuine human/expert judgment leaves the Factory (as a recommendation)."""
+    if all_governed_pass:
+        if det["high_stakes"]:
+            return {"state": "Manufacturing Ready",
+                    "recommendation": "MANUFACTURING READY · Expert Review Recommended",
+                    "human_review_recommended": True,
+                    "review_recommendation": "High-stakes domain — the Factory recommends qualified expert review before publication. Ownership has still transferred to the Product Manufacturing Engine."}
+        return {"state": "Manufacturing Ready", "recommendation": "MANUFACTURING READY",
+                "human_review_recommended": False, "review_recommendation": ""}
+    return {"state": "Revision Recommended", "recommendation": "REVISION RECOMMENDED",
+            "human_review_recommended": True,
+            "review_recommendation": "One or more governed standards did not pass — the Factory recommends revision before manufacturing."}
+
+
 async def decode(kr_id, audience, level, actor):
     kr = await _resolve_kr(kr_id)
     if not kr:
@@ -178,19 +222,32 @@ async def decode(kr_id, audience, level, actor):
     det = _deterministic_checks(kr, gen, audience, level)
     adv = await _advisory(kr, gen)
     scorecard = _scorecard(det, adv)
+    conf_rows, all_governed_pass, treasure_candidate = _confidence_summary(gen, det)
+    decision = _autonomy_decision(det, all_governed_pass)
 
-    # versioning: supersede prior canonical for same KR+audience
+    # versioning: append-only; canonical is never overwritten.
     existing = await db[COLL].count_documents({"source_kr_ids.kr_id": kr.get("id")})
     did = f"DEC-{await db[COLL].count_documents({}) + 1:05d}"
+    version = existing + 1
     safety = ("HIGH-STAKES TOPIC: education only, not individualized professional advice. Specialist review recommended."
               if det["high_stakes"] else "")
     rationale = gen.get("rationale") or {}
+    governance_package = product_governance.build_package(
+        "Decoder Record™", title=gen.get("title") or kr.get("title"), version=version, domain=domain,
+        audience=audience or "General learner",
+        source={"kr_code": kr.get("kr_code"), "kr_id": kr.get("id"), "version": kr.get("version", 1)},
+        decoded_by=actor, high_stakes=det["high_stakes"], accessibility_notes=gen.get("accessibility_notes"))
+    factory_confidence = {
+        "rows": conf_rows, "recommendation": decision["recommendation"],
+        "all_governed_pass": all_governed_pass, "generated_by": "Factory (autonomous)",
+        "note": "Advisory scores support — never replace — human/constitutional judgment.",
+    }
     rec = {
         "id": gen_id(), "decoder_id": did, "artifact_type": "QRU Decoder Record™",
         "title": gen.get("title") or kr.get("title"), "purpose": gen.get("purpose", ""),
-        "governance_banner": "Governed · inherits a Verified Knowledge Record™ · pending Founder educational review",
+        "governance_banner": "Governed · inherits a Verified Knowledge Record™ · Factory-owned (Quiet Factory™)",
         "source_kr_ids": [{"kr_id": kr.get("id"), "kr_code": kr.get("kr_code"), "version": kr.get("version", 1)}],
-        "decoder_version": existing + 1, "is_canonical": existing == 0,
+        "decoder_version": version, "is_canonical": existing == 0,
         "domain": domain, "subdomain": kr.get("category", ""), "audience": audience or "General learner",
         "level": level or "Introductory", "learning_objective": gen.get("purpose", ""),
         "confidence_status": kr.get("verification_status", "Verified"),
@@ -209,16 +266,27 @@ async def decode(kr_id, audience, level, actor):
         "inheritance": {"canonical_of": None, "variants": []},
         "educational_design_rationale": rationale,
         "scorecard": scorecard,
+        "factory_confidence": factory_confidence,
+        "governance_package": governance_package,
         "flags": ([("Medical, Financial, or Safety Review Required") ] if det["high_stakes"] else []) + (["Title overpromises scope"] if det["overpromise"] else []),
-        "review_state": "Founder Review Required",
-        "shelf_location": f"{domain} › QRU Decoder Record™ › {audience or 'General'} › Review Shelf",
+        "review_state": decision["state"],
+        "human_review_recommended": decision["human_review_recommended"],
+        "review_recommendation": decision["review_recommendation"],
+        "shelf_location": f"{domain} › QRU Decoder Record™ › {audience or 'General'} › {decision['state']}",
+        "treasure_standard_candidate": treasure_candidate,
         "treasure_standard_certified": False,
-        "review_history": [{"state": "Automated Quality Review", "by": "Decoder Engine™", "at": _now(),
-                            "note": f"deterministic {'passed' if scorecard['deterministic_ok'] else 'flagged'}"}],
+        "review_history": [
+            {"state": "Automated Quality Review", "by": "Decoder Engine™", "at": _now(),
+             "note": f"deterministic {'passed' if scorecard['deterministic_ok'] else 'flagged'}"},
+            {"state": decision["state"], "by": "Factory (autonomous)", "at": _now(),
+             "note": decision["recommendation"]},
+        ],
         "created_by": actor, "created_at": _now(), "updated_at": _now(),
     }
     await db[COLL].insert_one(dict(rec))
-    await log_org("Decoder Engine™", "Knowledge", f"decoded {did} from {kr.get('kr_code')} → Founder Review Shelf™", did, "success")
+    await log_org("Decoder Engine™", "Knowledge",
+                  f"decoded {did} from {kr.get('kr_code')} → {decision['state']} (autonomous)", did,
+                  "success" if all_governed_pass else "warning")
     return {"ok": True, "decoder": clean(rec)}
 
 
@@ -226,6 +294,14 @@ async def decode(kr_id, audience, level, actor):
 async def shelf(state=None):
     q = {} if not state else {"review_state": state}
     docs = await db[COLL].find(q, {"_id": 0}).sort("created_at", -1).to_list(300)
+    return docs
+
+
+async def needs_attention():
+    """Records the Factory recommends for human/expert judgment (never a mandatory Founder gate)."""
+    docs = await db[COLL].find(
+        {"$or": [{"human_review_recommended": True}, {"review_state": "Revision Recommended"}]},
+        {"_id": 0}).sort("created_at", -1).to_list(300)
     return docs
 
 
@@ -242,8 +318,9 @@ async def _transition(did, state, actor, note=""):
     upd = {"review_state": state, "updated_at": _now(), "review_history": hist}
     dom = d.get("domain", "General")
     aud = d.get("audience", "General")
-    stage = {"Founder Approved": "Approved Shelf", "Revision Requested": "Revision Shelf",
-             "Archived": "Archive", "Treasure Standard Certified": "Treasure Vault"}.get(state, "Review Shelf")
+    stage = {"Founder Approved": "Founder Approved", "Revision Requested": "Revision Shelf",
+             "Revision Recommended": "Revision Shelf", "Manufacturing Ready": "Manufacturing Ready",
+             "Archived": "Archive", "Treasure Standard Certified": "Treasure Vault"}.get(state, "Review")
     upd["shelf_location"] = f"{dom} › QRU Decoder Record™ › {aud} › {stage}"
     if state == "Treasure Standard Certified":
         upd["treasure_standard_certified"] = True
@@ -268,16 +345,21 @@ async def certify_treasure(did, actor):
     d = await db[COLL].find_one({"id": did})
     if not d:
         return None
-    if d.get("review_state") != "Founder Approved":
-        return {"error": "Treasure Standard™ certification requires Founder Approved state first."}
-    return await _transition(did, "Treasure Standard Certified", actor, "Treasure Standard™ certified.")
+    if not d.get("treasure_standard_candidate"):
+        return {"error": "Treasure Standard™ certification requires an eligible Treasure Candidate™ "
+                "(all governed standards passed). The Factory has not yet marked this record as a candidate."}
+    return await _transition(did, "Treasure Standard Certified", actor, "Treasure Standard™ certified by Founder.")
 
 
 async def stats():
     total = await db[COLL].count_documents({})
-    pending = await db[COLL].count_documents({"review_state": "Founder Review Required"})
-    approved = await db[COLL].count_documents({"review_state": {"$in": ["Founder Approved", "Treasure Standard Certified"]}})
-    return {"total": total, "pending_review": pending, "approved": approved}
+    manufacturing_ready = await db[COLL].count_documents({"review_state": "Manufacturing Ready"})
+    needs_attention = await db[COLL].count_documents(
+        {"$or": [{"human_review_recommended": True}, {"review_state": "Revision Recommended"}]})
+    treasure_candidates = await db[COLL].count_documents({"treasure_standard_candidate": True})
+    certified = await db[COLL].count_documents({"treasure_standard_certified": True})
+    return {"total": total, "manufacturing_ready": manufacturing_ready, "needs_attention": needs_attention,
+            "treasure_candidates": treasure_candidates, "certified": certified}
 
 
 TAXONOMY = {"domains": DOMAINS, "review_states": REVIEW_STATES}

@@ -165,10 +165,69 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
     pdf.set_draw_color(*GOLD); pdf.set_line_width(0.5)
     pdf.line(pdf.l_margin, pdf.get_y(), pdf.l_margin + 55, pdf.get_y())
 
-    # --- Content ---
+    # --- Reading Experience Standard™ (STD-READ-0001): the Recipe owns the reading journey ---
+    import book_structure as bs
+    import product_governance as pg
+    raw_body = product.get("content") or ""
+    structure = bs.parse_book(raw_body)
+    is_book = len(structure["chapters"]) >= 2  # a real multi-chapter reading experience
+
+    # Front Matter — Copyright & inherited Product Governance Package™ (never manual per-book).
+    front_items = []
+    if is_book:
+        gp = product.get("governance_package") or pg.build_package(
+            "Book", title=product.get("title", ""), version=product.get("kr_version", 1),
+            domain=product.get("family", ""), audience=product.get("audience", ""),
+            high_stakes=bool(product.get("high_stakes")))
+        front_items = ["Copyright", "Product Governance Package(TM)", "Transparency & Disclaimer", "Table of Contents"]
+        pdf.add_page(); pdf.set_text_color(*ROYAL); pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(0, 7, _strip_md("FRONT MATTER")); pdf.ln(10)
+        pdf.set_text_color(*NAVY); pdf.set_font("Times", "", 11)
+        pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md(gp.get("copyright", "")))
+        pdf.ln(1); pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md(gp.get("licensing", "")))
+        pdf.ln(4); pdf.set_font("Helvetica", "B", 11); pdf.set_text_color(*ROYAL)
+        pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md("Product Governance Package(TM)")); pdf.set_text_color(*NAVY)
+        pdf.set_font("Times", "", 10.5)
+        for dstmt in gp.get("disclaimers", []):
+            pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md("- " + dstmt))
+        cg = gp.get("category_governance")
+        if cg:
+            pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md(f"- {cg['domain']}: {cg['statement']}"))
+        pdf.ln(2); pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md(gp.get("transparency", "")))
+        pdf.ln(1); pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md("Accessibility: " + gp.get("accessibility", "")))
+
+        # Table of Contents — a learning journey, not a heading dump.
+        pdf.add_page(); pdf.set_text_color(*NAVY); pdf.set_font("Times", "B", 22)
+        pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 11, _strip_md("Table of Contents")); pdf.ln(1)
+        pdf.set_draw_color(*GOLD); pdf.set_line_width(0.5)
+        pdf.line(pdf.l_margin, pdf.get_y() + 1, pdf.l_margin + 40, pdf.get_y() + 1); pdf.ln(6)
+        for group_name, rows in bs.toc_entries(structure, front_items):
+            if group_name:
+                pdf.set_font("Helvetica", "B", 9); pdf.set_text_color(*ROYAL)
+                pdf.ln(2); pdf.set_x(pdf.l_margin); pdf.cell(0, 6, _strip_md(group_name.upper())); pdf.ln(7)
+            for row in rows:
+                pdf.set_x(pdf.l_margin)
+                if "title" in row:  # a chapter
+                    pdf.set_font("Helvetica", "B", 12); pdf.set_text_color(*NAVY)
+                    pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6.5, _strip_md(f"{row['label']}"))
+                    pdf.set_font("Times", "I", 12); pdf.set_text_color(70, 62, 96)
+                    pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md(row["title"]))
+                    pdf.set_font("Times", "", 10.5); pdf.set_text_color(110, 104, 128)
+                    for s in row.get("sections", []):
+                        pdf.set_x(pdf.l_margin + 8)
+                        pdf.multi_cell(0, 5.2, _strip_md(f"{s['num']}  {s['title']}"))
+                    pdf.ln(1.5)
+                else:  # front/back item
+                    pdf.set_font("Times", "", 11.5); pdf.set_text_color(*NAVY)
+                    pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md(row["label"]))
+        pdf.set_text_color(*NAVY)
+
+    # --- Content (instructional) — chapters & sections, navigation stripped ---
     pdf.add_page(); pdf.set_text_color(*NAVY)
-    body = product.get("content") or ""
+    body = bs.strip_navigation(raw_body) if is_book else raw_body
     lines = body.split("\n")
+    chap_no = 0
+    sec_no = 0
     for i, block in enumerate(lines):
         b = _strip_md(block).strip()
         pdf.set_x(pdf.l_margin)
@@ -178,9 +237,19 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
             pdf.ln(2); pdf.set_draw_color(210, 205, 220); pdf.set_line_width(0.3)
             pdf.line(pdf.l_margin + 55, pdf.get_y(), pdf.w - pdf.r_margin - 55, pdf.get_y())
             pdf.ln(4); continue
-        if block.startswith("## "):
-            pdf.ln(4)
-            pdf.set_font("Helvetica", "B", 15); pdf.set_text_color(*ROYAL)
+        if block.startswith("### ") and is_book and chap_no:
+            sec_no += 1
+            pdf.ln(3); pdf.set_font("Helvetica", "B", 12); pdf.set_text_color(*NAVY)
+            pdf.multi_cell(0, 7, _strip_md(f"{chap_no}.{sec_no}  {b}"))
+            pdf.ln(1); pdf.set_text_color(*NAVY)
+        elif block.startswith("## "):
+            kind = bs.classify_heading(b) if is_book else "chapter"
+            pdf.ln(5)
+            if is_book and kind == "chapter":
+                chap_no += 1; sec_no = 0
+                pdf.set_font("Helvetica", "B", 9); pdf.set_text_color(*GOLD)
+                pdf.cell(0, 5, _strip_md(f"CHAPTER {chap_no}")); pdf.ln(6)
+            pdf.set_font("Times", "B", 17); pdf.set_text_color(*ROYAL)
             pdf.multi_cell(0, 8, b)
             pdf.set_draw_color(*GOLD); pdf.set_line_width(0.4)
             pdf.line(pdf.l_margin, pdf.get_y() + 0.5, pdf.l_margin + 32, pdf.get_y() + 0.5)

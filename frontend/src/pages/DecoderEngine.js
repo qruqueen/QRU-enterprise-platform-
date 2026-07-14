@@ -6,18 +6,12 @@ import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge, MetricCard } from "@/components/qru";
 import {
   Loader2, Sparkles, ShieldCheck, ThumbsUp, RotateCcw, Archive, Award, ArrowLeft,
-  Brain, BookOpen, Layers, Eye, ChevronDown, ChevronRight, Download, Lightbulb,
-  GitBranch, ScrollText, ListChecks, CheckCircle2, Clock, FlaskConical,
+  Brain, BookOpen, Layers, ChevronDown, ChevronRight, Download, Lightbulb,
+  GitBranch, ScrollText, ListChecks, CheckCircle2, Clock, FlaskConical, Factory, AlertTriangle, ShieldQuestion,
 } from "lucide-react";
 
 const SUPER = ["Founder & CEO", "Administrator"];
-const SHELVES = ["Founder Review Required", "Revision Requested", "Founder Approved", "Treasure Standard Certified", "Archived"];
-
-const EVAL_BADGE = {
-  deterministic: { label: "Deterministic", tone: "navy" },
-  "AI-assisted advisory": { label: "AI-Advisory", tone: "royal" },
-  "human-reviewed": { label: "Human-Reviewed", tone: "emerald" },
-};
+const CONF_TONE = { PASS: "emerald", HOLD: "amber", PENDING: "slate" };
 
 function Section({ title, icon: Icon, children, defaultOpen = false, testid }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -62,6 +56,31 @@ function Field({ label, value }) {
   );
 }
 
+function ConfidenceSummary({ fc, testid }) {
+  if (!fc) return null;
+  const ready = fc.all_governed_pass;
+  return (
+    <div className="qru-card qru-goldline p-4" data-testid={testid}>
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+        <p className="font-heading font-bold text-navy flex items-center gap-2 text-sm">
+          <Factory className="w-4 h-4 text-royal" /> Factory Confidence Summary™
+        </p>
+        <StatusChip status={fc.recommendation} tone={ready ? "emerald" : "amber"} testid="confidence-recommendation" />
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" data-testid="confidence-rows">
+        {(fc.rows || []).map((r, i) => (
+          <div key={i} className="border border-border rounded-md px-2.5 py-2">
+            <p className="text-[11px] font-bold text-navy">{r.gate}</p>
+            <StatusChip status={r.status} tone={CONF_TONE[r.status] || "slate"} />
+            <p className="text-[10px] text-muted-foreground mt-1 leading-tight">{r.detail}</p>
+          </div>
+        ))}
+      </div>
+      <p className="text-[10px] text-muted-foreground mt-2 italic">{fc.note}</p>
+    </div>
+  );
+}
+
 export default function DecoderEngine() {
   const { user } = useAuth();
   const isSuper = SUPER.includes(user?.role);
@@ -69,30 +88,33 @@ export default function DecoderEngine() {
   const [krs, setKrs] = useState([]);
   const [form, setForm] = useState({ kr_id: "", audience: "", level: "" });
   const [busy, setBusy] = useState(false);
-  const [shelf, setShelf] = useState([]);
-  const [filter, setFilter] = useState("Founder Review Required");
+  const [ready, setReady] = useState([]);
+  const [attention, setAttention] = useState([]);
   const [selected, setSelected] = useState(null);
   const [acting, setActing] = useState(false);
 
-  const loadShelf = (state) => {
-    api.get("/decoder/shelf", { params: state ? { state } : {} })
-      .then((r) => setShelf(r.data.decoders)).catch(() => {});
+  const load = () => {
     api.get("/decoder/stats").then((r) => setStats(r.data)).catch(() => {});
+    api.get("/decoder/shelf", { params: { state: "Manufacturing Ready" } }).then((r) => setReady(r.data.decoders)).catch(() => {});
+    api.get("/decoder/needs-attention").then((r) => setAttention(r.data.decoders)).catch(() => {});
   };
   useEffect(() => {
     api.get("/decoder/verified-krs").then((r) => setKrs(r.data.records || [])).catch(() => {});
+    load();
   }, []);
-  useEffect(() => { loadShelf(filter); }, [filter]);
 
   const decode = async () => {
     if (!form.kr_id) { toast.error("Select a Verified Knowledge Record to decode."); return; }
     setBusy(true);
-    toast.message("Decoding governed knowledge into understanding… establishing the core mental model.");
+    toast.message("The Factory is decoding governed knowledge into understanding…");
     try {
       const { data } = await api.post("/decoder/decode", form);
-      toast.success(`${data.decoder.decoder_id} decoded → Founder Review Shelf™.`);
-      setFilter("Founder Review Required");
-      setSelected(data.decoder);
+      const d = data.decoder;
+      if (d.review_state === "Manufacturing Ready")
+        toast.success(`${d.decoder_id} — Manufacturing Ready™. The Factory handled the rest.`);
+      else toast.message(`${d.decoder_id} — ${d.factory_confidence?.recommendation}.`);
+      setSelected(d);
+      load();
     } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
     finally { setBusy(false); }
   };
@@ -105,7 +127,7 @@ export default function DecoderEngine() {
       const { data } = await api.post(`/decoder/${selected.id}/${path}`, body);
       toast.success(label);
       setSelected(data);
-      loadShelf(filter);
+      load();
     } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
     finally { setActing(false); }
   };
@@ -123,25 +145,28 @@ export default function DecoderEngine() {
   return (
     <div data-testid="decoder-engine-page">
       <PageHeader
-        overline="QRU Decoder Engine™ · Version 2.0 · Understanding Engine™"
-        title="Decode Verified Knowledge into Governed Understanding"
-        description="Transform a Verified Knowledge Record™ into a governed 38-field Decoder Record™ — one core mental model, honest analogy, story, visual spec and a 5-part Understanding Test. AI drafts & scores advisory only; the Founder is the final authority."
-        actions={<VerifiedBadge label="Knowledge-First™" testid="decoder-badge" />}
+        overline="QRU Decoder Engine™ · Understanding Engine™ · Quiet Factory™"
+        title="The Factory Decodes Understanding — Autonomously"
+        description="Verified knowledge becomes governed understanding without asking for your review. The Factory runs its own standards and hands off Manufacturing-Ready™ Decoder Records. You only see what genuinely needs your judgment."
+        actions={<VerifiedBadge label="Constitutional Autonomy™" testid="decoder-badge" />}
       />
 
       {stats && (
-        <div className="grid grid-cols-3 gap-3 mb-8" data-testid="decoder-stats">
-          <MetricCard icon={Layers} label="Decoders Manufactured" value={stats.total} testid="stat-total" />
-          <MetricCard icon={Clock} accent="royal" label="Pending Founder Review" value={stats.pending_review}
-            testid="stat-pending" onClick={() => { setFilter("Founder Review Required"); setSelected(null); }} />
-          <MetricCard icon={ShieldCheck} accent="gold" label="Founder Approved" value={stats.approved} testid="stat-approved" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8" data-testid="decoder-stats">
+          <MetricCard icon={Factory} accent="gold" label="Manufacturing Ready™" value={stats.manufacturing_ready} testid="stat-ready" />
+          <MetricCard icon={Award} label="Treasure Candidates™" value={stats.treasure_candidates} testid="stat-candidates" />
+          <MetricCard icon={ShieldQuestion} accent="royal" label="Recommended for Review" value={stats.needs_attention}
+            testid="stat-attention" onClick={() => { setSelected(null); document.getElementById("attention")?.scrollIntoView({ behavior: "smooth" }); }} />
+          <MetricCard icon={Layers} label="Decoders Total" value={stats.total} testid="stat-total" />
         </div>
       )}
 
-      {!selected ? (
+      {selected ? (
+        <DecoderDetail d={selected} isSuper={isSuper} acting={acting} act={act} exportJson={exportJson}
+          onBack={() => { setSelected(null); load(); }} />
+      ) : (
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Decode form */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-6">
             <Panel title="Decode a Knowledge Record" icon={Sparkles} accent="gold" testid="decoder-form">
               <div className="space-y-4">
                 <div>
@@ -154,7 +179,7 @@ export default function DecoderEngine() {
                       <option key={k.id} value={k.id}>{k.title}{k.category ? ` · ${k.category}` : ""}</option>
                     ))}
                   </select>
-                  <p className="text-[10px] text-muted-foreground mt-1">Only Verified records are eligible (Knowledge-First™).</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Only Verified records are eligible (Knowledge-First™). Both KR schemas feed the Decoder.</p>
                 </div>
                 <div>
                   <label className="text-xs font-bold text-navy uppercase tracking-wide">Audience (optional)</label>
@@ -175,39 +200,61 @@ export default function DecoderEngine() {
                   {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
                   Decode into Understanding
                 </button>
+                <p className="text-[10px] text-muted-foreground">The Factory decides autonomously. No mandatory review — you'll only be asked when human judgment is genuinely needed.</p>
               </div>
             </Panel>
           </div>
 
-          {/* Founder Review Shelf */}
-          <div className="lg:col-span-2">
-            <Panel title="Founder Review Shelf™" icon={Eye} accent="royal" testid="decoder-shelf"
-              right={
-                <select data-testid="shelf-filter" value={filter} onChange={(e) => setFilter(e.target.value)}
-                  className="text-xs border border-border rounded-md px-2 py-1 bg-card outline-none">
-                  {SHELVES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              }>
-              {shelf.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">No Decoder Records on this shelf. Decode a Knowledge Record to begin.</p>
+          <div className="lg:col-span-2 space-y-6">
+            <div id="attention">
+              <Panel title="Recommended for Your Judgment" icon={ShieldQuestion} accent="royal" testid="attention-panel">
+                {attention.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4">Nothing needs you right now. The Factory is handling everything. 🟢</p>
+                ) : (
+                  <div className="space-y-3" data-testid="attention-list">
+                    {attention.map((d) => (
+                      <button key={d.id} data-testid={`attention-item-${d.id}`} onClick={() => setSelected(d)}
+                        className="w-full text-left border border-amber-200 bg-amber-50/40 rounded-md p-3 hover:border-amber-400 transition-colors">
+                        <div className="flex items-start justify-between gap-2 flex-wrap">
+                          <div className="min-w-0">
+                            <p className="font-bold text-navy text-sm">{d.title}</p>
+                            <div className="flex items-center gap-2 flex-wrap mt-1">
+                              <span className="font-mono text-[10px] text-muted-foreground">{d.decoder_id}</span>
+                              <StatusChip status={d.review_state} tone="amber" />
+                              {(d.flags || []).slice(0, 1).map((f, i) => <StatusChip key={i} status={f} tone="amber" />)}
+                            </div>
+                          </div>
+                          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                        </div>
+                        <p className="text-[12px] text-amber-800 mt-1.5">{d.review_recommendation}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </Panel>
+            </div>
+
+            <Panel title="Manufacturing Ready™ — Factory Completed" icon={Factory} accent="gold" testid="ready-panel">
+              {ready.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4">No Decoder Records yet. Decode a Knowledge Record to begin.</p>
               ) : (
-                <div className="space-y-3" data-testid="shelf-list">
-                  {shelf.map((d) => (
-                    <button key={d.id} data-testid={`shelf-item-${d.id}`} onClick={() => setSelected(d)}
+                <div className="space-y-2.5" data-testid="ready-list">
+                  {ready.map((d) => (
+                    <button key={d.id} data-testid={`ready-item-${d.id}`} onClick={() => setSelected(d)}
                       className="w-full text-left border border-border rounded-md p-3 hover:border-navy transition-colors">
                       <div className="flex items-start justify-between gap-2 flex-wrap">
                         <div className="min-w-0">
                           <p className="font-bold text-navy text-sm">{d.title}</p>
                           <div className="flex items-center gap-2 flex-wrap mt-1">
                             <span className="font-mono text-[10px] text-muted-foreground">{d.decoder_id}</span>
-                            <StatusChip status={d.review_state} />
-                            {d.is_canonical && <StatusChip status="Canonical" tone="gold" />}
+                            <StatusChip status="Manufacturing Ready" tone="emerald" />
+                            {d.treasure_standard_candidate && <StatusChip status="Treasure Candidate" tone="gold" />}
+                            {d.treasure_standard_certified && <StatusChip status="Treasure Standard Certified" tone="gold" />}
                             <StatusChip status={`v${d.decoder_version}`} tone="navy" />
                           </div>
                         </div>
                         <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
                       </div>
-                      <p className="text-[12px] text-muted-foreground mt-1.5 line-clamp-2">{d.definition}</p>
                     </button>
                   ))}
                 </div>
@@ -215,11 +262,6 @@ export default function DecoderEngine() {
             </Panel>
           </div>
         </div>
-      ) : (
-        <DecoderDetail
-          d={selected} isSuper={isSuper} acting={acting} act={act} exportJson={exportJson}
-          onBack={() => { setSelected(null); loadShelf(filter); }}
-        />
       )}
     </div>
   );
@@ -229,8 +271,8 @@ function DecoderDetail({ d, isSuper, acting, act, exportJson, onBack }) {
   const uc = d.understanding_checks || {};
   const vs = d.visual_spec || {};
   const rows = (d.scorecard || {}).rows || [];
-  const canApprove = d.review_state === "Founder Review Required" || d.review_state === "Revision Requested";
-  const canCertify = d.review_state === "Founder Approved";
+  const gp = d.governance_package || {};
+  const canCertify = d.treasure_standard_candidate && !d.treasure_standard_certified;
 
   const requestRevision = () => {
     const notes = window.prompt("What should be revised? (educational feedback)", "");
@@ -241,53 +283,48 @@ function DecoderDetail({ d, isSuper, acting, act, exportJson, onBack }) {
   return (
     <div data-testid="decoder-detail">
       <button onClick={onBack} data-testid="detail-back" className="inline-flex items-center gap-1.5 text-sm text-navy font-semibold mb-4 hover:underline">
-        <ArrowLeft className="w-4 h-4" /> Back to Founder Review Shelf™
+        <ArrowLeft className="w-4 h-4" /> Back
       </button>
 
-      {/* Header */}
       <div className="qru-card qru-goldline p-5 mb-5">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="min-w-0">
-            <h2 className="font-heading text-2xl font-bold text-navy leading-tight" data-testid="detail-title">{d.title}</h2>
-            <div className="flex items-center gap-2 flex-wrap mt-2">
-              <span className="font-mono text-[11px] text-muted-foreground" data-testid="detail-decoder-id">{d.decoder_id}</span>
-              <StatusChip status={d.review_state} testid="detail-state" />
-              {d.is_canonical && <StatusChip status="Canonical" tone="gold" />}
-              <StatusChip status={`v${d.decoder_version}`} tone="navy" />
-              <StatusChip status={d.domain || "General"} tone="royal" />
-              <StatusChip status={d.audience || "General"} tone="navy" />
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-2">{d.governance_banner}</p>
-          </div>
+        <h2 className="font-heading text-2xl font-bold text-navy leading-tight" data-testid="detail-title">{d.title}</h2>
+        <div className="flex items-center gap-2 flex-wrap mt-2">
+          <span className="font-mono text-[11px] text-muted-foreground" data-testid="detail-decoder-id">{d.decoder_id}</span>
+          <StatusChip status={d.review_state} testid="detail-state" tone={d.review_state === "Manufacturing Ready" ? "emerald" : undefined} />
+          {d.is_canonical && <StatusChip status="Canonical" tone="gold" />}
+          <StatusChip status={`v${d.decoder_version}`} tone="navy" />
+          <StatusChip status={d.domain || "General"} tone="royal" />
+          <StatusChip status={d.audience || "General"} tone="navy" />
         </div>
+        <p className="text-[11px] text-muted-foreground mt-2">{d.governance_banner}</p>
 
+        {d.review_recommendation && (
+          <div className="mt-3 text-[12px] bg-amber-50 border border-amber-200 text-amber-800 rounded-md px-3 py-2" data-testid="detail-recommendation">
+            <b>Factory recommendation:</b> {d.review_recommendation}
+          </div>
+        )}
         {d.safety_notes && (
-          <div className="mt-3 text-[12px] bg-amber-50 border border-amber-200 text-amber-800 rounded-md px-3 py-2" data-testid="detail-safety">
+          <div className="mt-2 text-[12px] bg-amber-50 border border-amber-200 text-amber-800 rounded-md px-3 py-2" data-testid="detail-safety">
             <b>Safety:</b> {d.safety_notes}
           </div>
         )}
-        {(d.flags || []).length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5" data-testid="detail-flags">
-            {d.flags.map((f, i) => <StatusChip key={i} status={f} tone="amber" />)}
-          </div>
-        )}
 
-        {/* Founder actions */}
         <div className="mt-4 flex items-center gap-2 flex-wrap" data-testid="detail-actions">
-          <button data-testid="action-approve" onClick={() => act("approve", "Educational quality approved by Founder.")}
-            disabled={acting || !isSuper || !canApprove}
-            className="inline-flex items-center gap-1.5 bg-emerald-600 text-white px-4 py-2 rounded-md text-sm font-bold disabled:opacity-40">
-            {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsUp className="w-4 h-4" />} Approve
+          <span className="text-[11px] text-muted-foreground w-full">Optional governance — the Factory has already completed its responsibilities.</span>
+          <button data-testid="action-certify" onClick={() => act("certify-treasure", "Treasure Standard™ certified.")}
+            disabled={acting || !isSuper || !canCertify}
+            className="inline-flex items-center gap-1.5 bg-gold text-navy px-4 py-2 rounded-md text-sm font-bold disabled:opacity-40"
+            title={canCertify ? "Certify Treasure Standard™" : "Requires a Treasure Candidate™ (all governed standards passed)"}>
+            <Award className="w-4 h-4" /> Certify Treasure Standard™
           </button>
           <button data-testid="action-revise" onClick={requestRevision} disabled={acting || !isSuper}
             className="inline-flex items-center gap-1.5 border border-royal/40 text-royal px-4 py-2 rounded-md text-sm font-semibold disabled:opacity-40">
             <RotateCcw className="w-4 h-4" /> Request Revision
           </button>
-          <button data-testid="action-certify" onClick={() => act("certify-treasure", "Treasure Standard™ certified.")}
-            disabled={acting || !isSuper || !canCertify}
-            className="inline-flex items-center gap-1.5 bg-gold text-navy px-4 py-2 rounded-md text-sm font-bold disabled:opacity-40"
-            title={canCertify ? "Certify Treasure Standard™" : "Requires Founder Approved first"}>
-            <Award className="w-4 h-4" /> Certify Treasure Standard™
+          <button data-testid="action-approve" onClick={() => act("approve", "Marked Founder Approved.")}
+            disabled={acting || !isSuper}
+            className="inline-flex items-center gap-1.5 border border-emerald-300 text-emerald-700 px-4 py-2 rounded-md text-sm font-semibold disabled:opacity-40">
+            <ThumbsUp className="w-4 h-4" /> Founder Approve
           </button>
           <button data-testid="action-archive" onClick={() => act("archive", "Archived.")} disabled={acting || !isSuper}
             className="inline-flex items-center gap-1.5 border border-border text-muted-foreground px-4 py-2 rounded-md text-sm font-medium disabled:opacity-40">
@@ -298,11 +335,11 @@ function DecoderDetail({ d, isSuper, acting, act, exportJson, onBack }) {
             <Download className="w-4 h-4" /> Export
           </button>
         </div>
-        {!isSuper && <p className="text-[11px] text-amber-700 mt-2">Only the Founder / Administrator can approve, certify, or archive.</p>}
       </div>
 
+      <div className="mb-5"><ConfidenceSummary fc={d.factory_confidence} testid="detail-confidence" /></div>
+
       <div className="grid lg:grid-cols-3 gap-5">
-        {/* Key learning fields */}
         <div className="lg:col-span-2 space-y-4">
           <Panel title="Understanding" icon={Lightbulb} accent="gold" testid="detail-understanding">
             <div className="space-y-4">
@@ -310,9 +347,7 @@ function DecoderDetail({ d, isSuper, acting, act, exportJson, onBack }) {
               <Field label="Definition" value={d.definition} />
               <Field label="Why It Matters" value={d.why_it_matters} />
               <Field label="How It Works" value={d.how_it_works} />
-              <div className="rounded-md bg-royal/[0.05] border border-royal/15 p-3">
-                <Field label="Core Mental Model™" value={d.core_mental_model} />
-              </div>
+              <div className="rounded-md bg-royal/[0.05] border border-royal/15 p-3"><Field label="Core Mental Model™" value={d.core_mental_model} /></div>
               <Field label="Analogy" value={d.analogy} />
               <Field label="Analogy Mapping" value={d.analogy_mapping} />
               <Field label="Analogy Limitations (where it breaks down)" value={d.analogy_limitations} />
@@ -323,17 +358,13 @@ function DecoderDetail({ d, isSuper, acting, act, exportJson, onBack }) {
                   <div className="text-sm text-foreground/90 space-y-1">
                     {vs.purpose && <p><b>Purpose:</b> {vs.purpose}</p>}
                     {vs.primary_subject && <p><b>Subject:</b> {vs.primary_subject}</p>}
-                    {vs.relationship && <p><b>Relationship:</b> {vs.relationship}</p>}
                     {vs.composition && <p><b>Composition:</b> {vs.composition}</p>}
                     {(vs.labels || []).length > 0 && <p><b>Labels:</b> {vs.labels.join(", ")}</p>}
-                    {(vs.must_not_appear || []).length > 0 && <p><b>Must not appear:</b> {vs.must_not_appear.join(", ")}</p>}
                     {vs.alt_text && <p><b>Alt text:</b> {vs.alt_text}</p>}
                   </div>
                 </div>
               )}
-              <div className="rounded-md bg-gold/[0.08] border border-gold/30 p-3">
-                <Field label="Memory Anchor™" value={d.memory_anchor} />
-              </div>
+              <div className="rounded-md bg-gold/[0.08] border border-gold/30 p-3"><Field label="Memory Anchor™" value={d.memory_anchor} /></div>
               <Field label="Verification" value={d.verification} />
             </div>
           </Panel>
@@ -357,28 +388,9 @@ function DecoderDetail({ d, isSuper, acting, act, exportJson, onBack }) {
             <Field label="Practice" value={d.practice} />
             <Field label="Reflection" value={d.reflection} />
             <Field label="Next Understanding" value={d.next_understanding} />
-            {(d.applications || []).length > 0 && (
-              <div>
-                <p className="text-[11px] font-bold text-navy uppercase tracking-wide mb-1">Applications</p>
-                <ul className="list-disc pl-5 text-sm text-foreground/90 space-y-1">{d.applications.map((a, i) => <li key={i}>{typeof a === "object" ? Object.values(a).join(" — ") : a}</li>)}</ul>
-              </div>
-            )}
-            {(d.vocabulary || []).length > 0 && (
-              <div>
-                <p className="text-[11px] font-bold text-navy uppercase tracking-wide mb-1">Vocabulary</p>
-                <dl className="text-sm space-y-1">{d.vocabulary.map((v, i) => (
-                  <div key={i}><dt className="font-semibold text-navy inline">{v.term}: </dt><dd className="inline text-foreground/90">{v.definition}</dd></div>
-                ))}</dl>
-              </div>
-            )}
-            {(d.misconceptions || []).length > 0 && (
-              <div>
-                <p className="text-[11px] font-bold text-navy uppercase tracking-wide mb-1">Misconceptions → Corrections</p>
-                <ul className="text-sm space-y-1.5">{d.misconceptions.map((m, i) => (
-                  <li key={i}><span className="text-red-600 line-through">{m.misconception}</span> — <span className="text-emerald-700">{m.why_wrong}</span></li>
-                ))}</ul>
-              </div>
-            )}
+            <Field label="Applications" value={d.applications} />
+            <Field label="Vocabulary" value={d.vocabulary} />
+            <Field label="Misconceptions" value={d.misconceptions} />
             <Field label="Accessibility Notes" value={d.accessibility_notes} />
             <Field label="Downstream Notes" value={d.downstream_notes} />
           </Section>
@@ -386,21 +398,18 @@ function DecoderDetail({ d, isSuper, acting, act, exportJson, onBack }) {
           {d.educational_design_rationale && Object.keys(d.educational_design_rationale).length > 0 && (
             <Section title="Educational Design Rationale™ (auditable)" icon={GitBranch} testid="detail-rationale">
               {Object.entries(d.educational_design_rationale).map(([k, v]) => (
-                v ? <Field key={k} label={k.replace(/_/g, " ")} value={typeof v === "string" ? v : JSON.stringify(v)} /> : null
+                v ? <Field key={k} label={k.replace(/_/g, " ")} value={v} /> : null
               ))}
             </Section>
           )}
         </div>
 
-        {/* Scorecard + provenance */}
         <div className="space-y-4">
           <Panel title="Decoder Scorecard™" icon={FlaskConical} accent="royal" testid="detail-scorecard">
-            <p className="text-[11px] text-muted-foreground mb-3">
-              {(d.scorecard || {}).model_note || "Advisory scores support — never replace — Founder judgment."}
-            </p>
+            <p className="text-[11px] text-muted-foreground mb-3">{(d.scorecard || {}).model_note || "Advisory scores support — never replace — governance judgment."}</p>
             <div className="space-y-2" data-testid="scorecard-rows">
               {rows.map((r, i) => {
-                const badge = EVAL_BADGE[r.evaluator] || { label: r.evaluator, tone: "slate" };
+                const badge = r.evaluator === "deterministic" ? { label: "Deterministic", tone: "navy" } : { label: "AI-Advisory", tone: "royal" };
                 const awaiting = r.score == null || r.score === "";
                 return (
                   <div key={i} className="flex items-start justify-between gap-2 text-[12px] border-b border-border/60 pb-1.5">
@@ -408,46 +417,46 @@ function DecoderDetail({ d, isSuper, acting, act, exportJson, onBack }) {
                       <p className="text-navy leading-tight">{r.dimension}</p>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <StatusChip status={badge.label} tone={badge.tone} />
-                        {r.evaluator === "deterministic" && <StatusChip status={r.score ? "pass" : "review"} />}
-                        {awaiting && r.evaluator !== "deterministic" && <StatusChip status="Awaiting Review" tone="amber" />}
+                        {awaiting && r.evaluator !== "deterministic" && <StatusChip status="Awaiting" tone="amber" />}
                       </div>
                     </div>
-                    {r.evaluator !== "deterministic" && !awaiting && (
-                      <span className="font-bold text-navy shrink-0">{r.score}</span>
-                    )}
-                    {r.evaluator === "deterministic" && (
-                      r.score ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-                    )}
+                    {r.evaluator !== "deterministic" && !awaiting && <span className="font-bold text-navy shrink-0">{r.score}</span>}
+                    {r.evaluator === "deterministic" && (r.score ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <Clock className="w-4 h-4 text-amber-600 shrink-0" />)}
                   </div>
                 );
               })}
             </div>
-            {(d.scorecard || {}).advisory_notes && (
-              <p className="text-[11px] text-muted-foreground mt-3 italic">{d.scorecard.advisory_notes}</p>
-            )}
           </Panel>
+
+          <Section title="Product Governance Package™ (inherited)" icon={ShieldCheck} testid="detail-governance" defaultOpen>
+            <div className="text-[12px] space-y-1.5 text-foreground/90">
+              <p className="text-[10px] text-muted-foreground">{gp.standard_id} · {gp.owner}</p>
+              {(gp.disclaimers || []).map((x, i) => <p key={i}><b>Disclaimer:</b> {x}</p>)}
+              {gp.category_governance && <p><b>{gp.category_governance.domain}:</b> {gp.category_governance.statement}</p>}
+              <p><b>Transparency:</b> {gp.transparency}</p>
+              <p><b>Copyright:</b> {gp.copyright}</p>
+              <p><b>Licensing:</b> {gp.licensing}</p>
+              <p><b>Accessibility:</b> {gp.accessibility}</p>
+              {gp.versioning && <p><b>Versioning:</b> v{gp.versioning.version} — {gp.versioning.policy}</p>}
+            </div>
+          </Section>
 
           <Section title="Provenance & Metadata" icon={ScrollText} testid="detail-provenance">
             <div className="text-[12px] space-y-1.5 text-foreground/90">
               <p><b>Decoder ID:</b> <span className="font-mono">{d.decoder_id}</span></p>
               <p><b>Version:</b> v{d.decoder_version} {d.is_canonical && "(Canonical)"}</p>
-              <p><b>Confidence Status:</b> {d.confidence_status}</p>
               <p><b>Domain:</b> {d.domain}{d.subdomain ? ` › ${d.subdomain}` : ""}</p>
               <p><b>Audience / Level:</b> {d.audience} · {d.level}</p>
               <p><b>Shelf:</b> {d.shelf_location}</p>
-              <div>
-                <b>Source Knowledge Record(s):</b>
+              <div><b>Source Knowledge Record(s):</b>
                 <ul className="list-disc pl-5 mt-0.5">
-                  {(d.source_kr_ids || []).map((s, i) => (
-                    <li key={i} className="font-mono text-[11px]">{s.kr_code || s.kr_id} · v{s.version}</li>
-                  ))}
+                  {(d.source_kr_ids || []).map((s, i) => <li key={i} className="font-mono text-[11px]">{s.kr_code || s.kr_id} · v{s.version}</li>)}
                 </ul>
               </div>
-              <p><b>Decoded by:</b> {(d.provenance || {}).decoded_by} · {(d.provenance || {}).at}</p>
             </div>
           </Section>
 
-          <Section title="Review History (audit log)" icon={ListChecks} testid="detail-history">
+          <Section title="Audit History" icon={ListChecks} testid="detail-history">
             <ol className="space-y-2" data-testid="review-history">
               {(d.review_history || []).map((h, i) => (
                 <li key={i} className="text-[12px] border-l-2 border-royal/30 pl-3">
