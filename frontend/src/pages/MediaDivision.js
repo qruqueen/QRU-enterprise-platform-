@@ -91,14 +91,17 @@ export default function MediaDivision() {
         ) : (
           <select data-testid="md-kr-dropdown" value={krId} onChange={(e) => setKrId(e.target.value)}
             className="w-full px-3 py-2.5 text-sm border border-border rounded-md bg-card outline-none focus:border-navy">
-            {krs.map((k) => <option key={k.id} value={k.id}>{k.kr_code} — {k.title} ({k.category})</option>)}
+            {krs.map((k) => {
+              const label = `${k.kr_code} — ${k.title} (${k.category})`;
+              return <option key={k.id} value={k.id}>{label}</option>;
+            })}
           </select>
         )}
       </Panel>
 
       {/* Catalog */}
       <Panel title="2 · Select the products to manufacture" icon={Layers} testid="md-catalog" className="mb-6"
-        actions={<button data-testid="md-manufacture-all" onClick={() => manufacture(catalog.map((c) => c.id))} disabled={busy || !krId}
+        actions={<button data-testid="md-manufacture-all" onClick={() => { if (window.confirm(`Manufacture ALL ${catalog.length} formats from this Knowledge Record? Document formats use AI and can take a few minutes.`)) manufacture(catalog.map((c) => c.id)); }} disabled={busy || !krId}
           className="inline-flex items-center gap-2 bg-gold text-navy px-4 py-2 rounded-md text-sm font-bold disabled:opacity-60">
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Manufacture Everything</button>}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-4">
