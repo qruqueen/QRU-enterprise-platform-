@@ -391,9 +391,9 @@ async def publish_center(book_id):
         "cover_approved": cover_selected,
         "metadata_approved": design_done,
         "ai_disclosures_completed": bool(b.get("ai_disclosure")),
-        "pricing_approved": False,
+        "pricing_approved": bool((b.get("pricing") or {}).get("approved")),
         "platform_files_passed": design_done,
-        "founder_authorization_received": False,
+        "founder_authorization_received": bool((b.get("founder_authorization") or {}).get("authorized")),
     }
     return {"book_title": b["title"], "book_code": b["book_code"], "destinations": destinations,
             "final_release_gate": gate,
