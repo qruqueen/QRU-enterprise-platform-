@@ -71,8 +71,12 @@ async def _resolve_kr(kr_id):
 
 
 def _is_verified(kr):
-    return (kr.get("verification_status") == "Verified" or kr.get("approval_status") == "Approved"
-            or bool(kr.get("treasure_standard")) or bool(kr.get("verified_external")))
+    if (kr.get("verification_status") == "Verified" or kr.get("approval_status") == "Approved"
+            or bool(kr.get("treasure_standard")) or bool(kr.get("verified_external"))):
+        return True
+    # KR 2.0 (knowledge_engine_records): eligible only when externally verified (Knowledge-First honesty).
+    st = str(kr.get("status") or "")
+    return "Verified External" in st or "Gold Standard" in st
 
 
 async def _manufacture_document(kr, spec, actor, base_url):
@@ -164,7 +168,19 @@ async def verified_krs(limit=100):
         {"_id": 0, "id": 1, "kr_code": 1, "title": 1, "category": 1, "products_created": 1,
          "verification_status": 1, "media_division_run_at": 1}
     ).sort("created_at", -1).to_list(limit)
-    return clean(krs)
+    for k in krs:
+        k["schema"] = "kr1"
+    # KR 2.0 (knowledge_engine_records): only externally verified Gold Standard records are eligible.
+    ker = await db.knowledge_engine_records.find(
+        {"status": {"$regex": "Verified External|Gold Standard"}},
+        {"_id": 0, "id": 1, "kr_code": 1, "topic": 1, "recipe": 1, "status": 1, "version": 1, "products_created": 1}
+    ).sort("created_at", -1).to_list(limit)
+    for k in ker:
+        k["title"] = k.get("topic")
+        k["category"] = (k.get("recipe") or "Knowledge Engine")
+        k["verification_status"] = "Verified"
+        k["schema"] = "kr2"
+    return clean(krs) + clean(ker)
 
 
 async def stats():

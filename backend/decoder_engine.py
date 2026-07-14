@@ -135,6 +135,30 @@ def _scorecard(det, adv):
             "model_note": "Advisory scores are AI-assisted and support—never replace—Founder judgment."}
 
 
+def _kr_context(kr, audience, level):
+    """Schema-aware source context — supports legacy KR (flat fields) and KR 2.0 (sections dict)."""
+    def _fmt(v):
+        if isinstance(v, (list, tuple)):
+            return "; ".join(str(x) for x in v)
+        if isinstance(v, dict):
+            return "; ".join(f"{k}: {x}" for k, x in v.items())
+        return str(v or "")
+    head = (f"Title: {kr.get('title')}\nDomain: {kr.get('category') or kr.get('recipe') or ''}\n"
+            f"Audience: {audience or 'General learner'}\nLevel: {level or 'Introductory'}\n")
+    sections = kr.get("sections")
+    if isinstance(sections, dict) and sections:  # KR 2.0 (knowledge_engine_records)
+        body = "".join(f"{k.replace('_', ' ').title()}: {_fmt(v)}\n" for k, v in sections.items() if v)
+        conf = _fmt(kr.get("confidence_profile"))
+        return head + body + (f"Confidence Profile: {conf}\n" if conf else "") + \
+            f"Verification: {_fmt(kr.get('verification'))}\n"
+    # legacy KR
+    return head + (
+        f"Verified Truth: {kr.get('verified_truth','')}\n"
+        f"Why It Matters: {kr.get('why_it_matters','')}\nHow/Analogy: {kr.get('everyday_analogy','')}\n"
+        f"Example: {kr.get('real_world_example','')}\nMemory: {kr.get('memory_sentence','')}\n"
+        f"Confidence: {kr.get('confidence_score','')}")
+
+
 async def decode(kr_id, audience, level, actor):
     kr = await _resolve_kr(kr_id)
     if not kr:
@@ -142,11 +166,7 @@ async def decode(kr_id, audience, level, actor):
     if not _is_verified(kr):
         return {"ok": False, "flag": "Verification Required",
                 "error": "This Knowledge Record is not Verified. It must be an approved source of truth before decoding."}
-    ctx = (f"Title: {kr.get('title')}\nDomain: {kr.get('category','')}\nAudience: {audience or 'General learner'}\n"
-           f"Level: {level or 'Introductory'}\nVerified Truth: {kr.get('verified_truth','')}\n"
-           f"Why It Matters: {kr.get('why_it_matters','')}\nHow/Analogy: {kr.get('everyday_analogy','')}\n"
-           f"Example: {kr.get('real_world_example','')}\nMemory: {kr.get('memory_sentence','')}\n"
-           f"Confidence: {kr.get('confidence_score','')}")
+    ctx = _kr_context(kr, audience, level)
     try:
         gen = parse_json(await llm_generate(GEN_SYSTEM, ctx, f"decoder-{kr_id}")) or {}
     except Exception:
