@@ -397,9 +397,7 @@ async def publish_center(book_id):
     }
     return {"book_title": b["title"], "book_code": b["book_code"], "destinations": destinations,
             "final_release_gate": gate,
-            "gate_ready": all([gate["title_author"], gate["imprint"], gate["rights_confirmed"],
-                               gate["proof_approved"], gate["cover_approved"], gate["metadata_approved"],
-                               gate["ai_disclosures_completed"], gate["platform_files_passed"]]),
+            "gate_ready": all(gate.values()),
             "honesty": "No publication, sale, or irreversible external action occurs without explicit Founder authorization. The Factory never reports a platform action succeeded unless it truly did."}
 
 
