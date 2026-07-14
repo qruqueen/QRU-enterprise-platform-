@@ -103,6 +103,8 @@ DEFINITIONS = [
        "Remember what QRU has learned.", "Standards library — Governed-by traceability source.", moat=True),
 
     # ---------- UNDERSTANDING ENGINE ----------
+    _c("decoder-engine", "QRU Decoder Engine™", "engine", "active", "decoder_engine.py", "/decoder-engine",
+       "Turn verified knowledge into governed understanding.", "Version 2.0 — transforms a Verified Knowledge Record™ into a governed 38-field Decoder Record™ (definition, mental model, analogy, story, Understanding Test) with a Decoder Scorecard™ and the Founder Review Shelf™. Everything downstream inherits understanding from here.", moat=True),
     _c("refinement", "Refinement Engines™", "engine", "active", "refinement_engine.py", "/refinement",
        "Prove the factory manufactures knowledge & products.", "Knowledge/product manufacturing proof engine."),
     _c("flow", "Manufacturing Flow™", "engine", "active", "manufacturing_flow.py", "/flow",

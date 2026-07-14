@@ -98,6 +98,7 @@ import FactoryMap from "@/pages/FactoryMap";
 import KRManufacturing from "@/pages/KRManufacturing";
 import MediaDivision from "@/pages/MediaDivision";
 import CinemaStudio from "@/pages/CinemaStudio";
+import DecoderEngine from "@/pages/DecoderEngine";
 import ConsumerHome from "@/pages/consumer/ConsumerHome";
 import ConsumerLearn from "@/pages/consumer/ConsumerLearn";
 import ConsumerMyLearning from "@/pages/consumer/ConsumerMyLearning";
@@ -209,6 +210,7 @@ function EnterpriseRoutes() {
         <Route path="kr-manufacturing" element={<KRManufacturing />} />
         <Route path="media-division" element={<MediaDivision />} />
         <Route path="cinema-studio" element={<CinemaStudio />} />
+        <Route path="decoder-engine" element={<DecoderEngine />} />
         <Route path="connectors" element={<Connectors />} />
         <Route path="ai-services" element={<AIServices />} />
         <Route path="notifications" element={<Notifications />} />

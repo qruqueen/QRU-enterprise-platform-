@@ -17,7 +17,8 @@ logger = logging.getLogger("qru.decoder")
 COLL = "decoder_records"
 
 # Governed lifecycle (§6 of authorization). Treasure Standard™ is earned separately, never auto.
-REVIEW_STATES = ["Draft", "Automated Quality Review", "Founder Review Required", "Revision Requested",
+REVIEW_STATES = ["Draft", "Automated Quality Review", "Verification Review", "Educational Review",
+                 "Accessibility Review", "Brand Review", "Founder Review Required", "Revision Requested",
                  "Founder Approved", "Production Ready", "Treasure Standard Candidate",
                  "Treasure Standard Certified", "Published", "Superseded", "Archived"]
 
