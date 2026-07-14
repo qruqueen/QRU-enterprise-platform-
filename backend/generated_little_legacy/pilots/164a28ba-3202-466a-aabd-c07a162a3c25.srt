@@ -1,0 +1,23 @@
+1
+00:00:00,000 --> 00:00:07,270
+Memory Adventure
+
+2
+00:00:07,270 --> 00:00:11,750
+Explanation task
+
+3
+00:00:11,750 --> 00:00:23,170
+Let's understand it together
+
+4
+00:00:23,170 --> 00:00:29,140
+In real life
+
+5
+00:00:29,140 --> 00:00:32,330
+Now it's your turn
+
+6
+00:00:32,330 --> 00:00:39,050
+One-line anchor for what is memory.

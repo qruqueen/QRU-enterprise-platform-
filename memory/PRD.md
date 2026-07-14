@@ -219,7 +219,25 @@ Founder Beta Dashboard, Automatic Knowledge Extraction, PreviewViewer. (all VERI
 
 ## Roadmap (Founder-approved, remaining)
 
-### Session 2026-07-13 — Little Legacy Learners™ Phase 4+ (Identity Consistency, Kits, Project Zero) — DONE & VERIFIED (iter 67 UI 100%)
+### Session 2026-07-13 — Knowledge Record visibility fix (all production lines) — DONE
+Founder reported only Governance/Memory KRs populating in Little Legacy & Storyboard pickers.
+ROOT CAUSE: two KR schemas coexist — 39 `knowledge_engine_records` (use `topic`) and 76 legacy
+`knowledge_records` that store their name in `title` (not `topic`) and mark verified via
+`verification_status="Verified"`/`approval_status="Approved"` (not `verified_external`). The dashboard
+list read only `topic` + `verified_external`, so the 76 legacy KRs showed as blank/None and unverified,
+leaving only 2 named+verified.
+FIX (`manufacturing_dashboard.kr_manufacturing_list`): derive topic = topic|title|the_question|subtitle
+(skip truly empty shells) and verified across BOTH schemas. Result: 115 KRs now surface with real names,
+40 verified (was 2). `KnowledgePicker` now shows ALL KRs with a "Verified only" toggle (Little Legacy
+defaults to verified per Knowledge-First; Cover/Poster/Storyboard show all). Single source of truth: all
+four production lines read this one endpoint (reads both collections), so any uploaded KR — incl. Asset
+Vault import (`library_import.py`) — auto-distributes to every production line.
+
+OPEN ITEM: YouTube publish blocked — OAuth refresh token `invalid_grant` (expired/revoked). Founder must
+reconnect the YouTube channel in Publishing Connectors; flagship is fully staged (approved, metadata +
+made-for-kids pre-filled, MP4 in secure media root) for one-click publish once reconnected.
+
+
 - **Character Identity Consistency™:** expression sheet now INHERITS the model-sheet identity anchor (`generate_image_with_reference`); verified same-character across all 6 expressions. Approval requires a **Character Consistency Check™** (`consistency_confirmed` — rejects without it). Pilots/kits inherit the approved v1.0 anchor; a `character_consistency` governance gate FLAGS any asset generated without an approved anchor (no silent accept). Identity Standard sentence added to every Character Bible + overview: "If a child instantly recognizes the character without reading the name, the identity standard has been achieved."
 - **Flagship pilot** renamed to "Nova and the Fair Choices Adventure" and re-manufactured reference-locked (all 5 gates pass; polished Publishing Package™ title).
 - **Product Kits (kid-format inheriting recipes):** one verified KR → 7 formats (coloring page, social/marketing asset, storybook cover [reference-inherited images] + Knowledge Cards, workbook/activity pack, parent & teacher guides [KR-derived text]). `ll_kits`, Founder-approvable. Verified: real on-model coloring page.

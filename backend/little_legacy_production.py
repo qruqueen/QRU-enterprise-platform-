@@ -500,10 +500,26 @@ async def approve_pilot(episode_id, actor="Founder"):
     await db.ll_pilots.update_one({"episode_id": episode_id}, {"$set": {
         "founder_approved": True, "package_approved": True, "status": "APPROVED", "approved_by": actor, "approved_at": now_iso(), "updated_at": now_iso()}})
     pkg = p.get("publishing_package") or {}
-    await db.media_assets.update_one({"pilot_episode": episode_id}, {"$set": {
+    # Copy the pilot MP4 into the secure media root so it publishes through the existing pipeline (no re-upload).
+    dist_path = str(out_path) if (out_path := pilot_file_path(episode_id)).exists() else None
+    try:
+        import media_production as mp
+        import shutil
+        media_root = mp.MEDIA_ROOT
+        os.makedirs(media_root, exist_ok=True)
+        if out_path.exists():
+            dest = os.path.join(media_root, f"{p.get('qru_asset_id','LLP')}_{episode_id}.mp4")
+            shutil.copyfile(str(out_path), dest)
+            dist_path = dest
+    except Exception:
+        pass
+    set_fields = {
         "is_draft_preview": False, "distribution_ready": True, "production_status": "APPROVED",
         "publish_title": pkg.get("youtube_title"), "publish_description": pkg.get("seo_description"),
-        "publish_tags": pkg.get("keywords"), "made_for_kids": True}})
+        "publish_tags": pkg.get("keywords"), "made_for_kids": True}
+    if dist_path:
+        set_fields["internal_storage_url"] = dist_path
+    await db.media_assets.update_one({"pilot_episode": episode_id}, {"$set": set_fields})
     await db.ll_episodes.update_one({"id": episode_id}, {"$set": {"status": "Approved", "founder_approved": True, "updated_at": now_iso()}})
     await ll.remember("pilot_approved", f"Pilot '{p.get('title')}' Founder-approved with Publishing Package™ — available to YouTube Publisher (no re-upload).", actor, episode_id)
     return {"ok": True, "status": "APPROVED",
@@ -672,6 +688,33 @@ async def approve_kit(episode_id, actor="Founder"):
 
 def kit_file_path(episode_id, kind):
     return LL_DIR / "kits" / f"{episode_id}_{kind}.png"
+
+
+# ─────────────────── PHASE 4 — ONE-CLICK "MANUFACTURE THE WHOLE FAMILY" ───────────────────
+async def manufacture_family(episode_id, actor="Founder"):
+    """One click → the animated pilot AND the full Product Kit from one verified Knowledge Record."""
+    ep = await db.ll_episodes.find_one({"id": episode_id})
+    if not ep:
+        return None
+    if ep.get("verification_status") != "Verified":
+        return {"ok": False, "blocked": True,
+                "message": "Knowledge-First: verify this episode's Knowledge Record before manufacturing (Treasure Standard)."}
+    await db.ll_pilots.update_one({"episode_id": episode_id}, {"$set": {"episode_id": episode_id, "title": ep.get("title"), "status": "RENDERING", "created_by": actor, "updated_at": now_iso()}}, upsert=True)
+    await db.ll_kits.update_one({"episode_id": episode_id}, {"$set": {"episode_id": episode_id, "title": ep.get("title"), "status": "RENDERING", "created_by": actor, "updated_at": now_iso()}}, upsert=True)
+    asyncio.create_task(_pilot_job(episode_id, actor))
+    asyncio.create_task(_kit_job(episode_id, actor))
+    await ll.remember("family_manufacture_started", f"Whole-family manufacture started for '{ep.get('title')}' (pilot + product kit).", actor, episode_id)
+    return {"ok": True, "status": "RENDERING",
+            "message": "Manufacturing the whole family from one verified Knowledge Record — the animated pilot AND the full Product Kit. Review both in Pilot Studio and Product Kits when ready."}
+
+
+async def family_status(episode_id):
+    p = await pilot_status(episode_id)
+    k = await kit_status(episode_id)
+    ready = (p.get("status") in ("READY", "APPROVED")) and (k.get("status") in ("READY", "APPROVED"))
+    return {"pilot": {"status": p.get("status"), "video_url": p.get("video_url"), "governance_passed": p.get("governance_passed")},
+            "kit": {"status": k.get("status"), "products": len(k.get("products", []))},
+            "ready": ready}
 
 
 # ─────────────────── PHASE 4 — LITTLE LEGACY PROJECT ZERO (inherits project_zero) ───────────────────

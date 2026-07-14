@@ -13,6 +13,7 @@ from typing import Optional, Dict, Any
 from auth import get_current_user
 import little_legacy as ll
 import little_legacy_production as llp
+import little_legacy_animation as lla
 
 router = APIRouter(prefix="/api/little-legacy", tags=["little-legacy"])
 
@@ -225,6 +226,19 @@ async def approve_kit(episode_id: str, user=Depends(get_current_user)):
     return res
 
 
+@router.post("/episodes/{episode_id}/family")
+async def manufacture_family(episode_id: str, user=Depends(get_current_user)):
+    res = await llp.manufacture_family(episode_id, actor=user.get("email", "Founder"))
+    if res is None:
+        raise HTTPException(404, "Episode not found.")
+    return res
+
+
+@router.get("/episodes/{episode_id}/family")
+async def family_status(episode_id: str, user=Depends(get_current_user)):
+    return await llp.family_status(episode_id)
+
+
 @router.get("/kits/{episode_id}/{kind}.png")
 async def kit_file(episode_id: str, kind: str):
     p = llp.kit_file_path(episode_id, kind)
@@ -252,3 +266,55 @@ async def submit_feedback(body: FeedbackInput, user=Depends(get_current_user)):
 @router.get("/feedback")
 async def feedback_loop(episode_id: str, user=Depends(get_current_user)):
     return await llp.feedback_loop(episode_id)
+
+
+# ─────────── QRU Animation Manufacturing Platform™ ───────────
+@router.get("/animation/status")
+async def animation_status(episode_id: Optional[str] = None, user=Depends(get_current_user)):
+    return await lla.engine_status(episode_id)
+
+
+@router.get("/animation/providers")
+async def animation_providers(user=Depends(get_current_user)):
+    return await lla.list_providers()
+
+
+@router.post("/animation/providers/{provider_id}/activate")
+async def activate_provider(provider_id: str, user=Depends(get_current_user)):
+    return await lla.set_active_provider(provider_id)
+
+
+@router.get("/animation/performance-library")
+async def performance_library(user=Depends(get_current_user)):
+    return lla.performance_library()
+
+
+@router.get("/animation/identity/{char_key}")
+async def identity_package(char_key: str, user=Depends(get_current_user)):
+    idp = await lla.identity_package(char_key)
+    if not idp:
+        raise HTTPException(404, "Character not found.")
+    return idp
+
+
+@router.get("/animation/identities")
+async def identities(user=Depends(get_current_user)):
+    out = []
+    for c in ll.CHARACTERS:
+        idp = await lla.identity_package(c["key"])
+        if idp:
+            out.append(idp)
+    return {"identities": out}
+
+
+@router.post("/animation/performance-plan/{episode_id}")
+async def build_plan(episode_id: str, user=Depends(get_current_user)):
+    plan = await lla.build_performance_plan(episode_id, actor=user.get("email", "Founder"))
+    if plan is None:
+        raise HTTPException(404, "Episode not found.")
+    return plan
+
+
+@router.get("/animation/performance-plan/{episode_id}")
+async def get_plan(episode_id: str, user=Depends(get_current_user)):
+    return await lla.get_performance_plan(episode_id) or {"beats": []}

@@ -10,6 +10,7 @@ export function KnowledgePicker({ value, onSelect, verifiedOnly = false, autoSel
   const [krs, setKrs] = useState([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
+  const [verifiedView, setVerifiedView] = useState(verifiedOnly);
 
   useEffect(() => {
     let active = true;
@@ -37,11 +38,11 @@ export function KnowledgePicker({ value, onSelect, verifiedOnly = false, autoSel
 
   const filtered = useMemo(() => {
     let list = krs;
-    if (verifiedOnly) list = list.filter((k) => k.verified_external);
+    if (verifiedView) list = list.filter((k) => k.verified_external);
     const s = q.trim().toLowerCase();
     if (s) list = list.filter((k) => (k.topic || "").toLowerCase().includes(s));
     return [...list].sort((a, b) => (b.verified_external ? 1 : 0) - (a.verified_external ? 1 : 0));
-  }, [krs, q, verifiedOnly]);
+  }, [krs, q, verifiedView]);
 
   const pick = (k) => { onSelect(k); setOpen(false); };
 
@@ -80,6 +81,13 @@ export function KnowledgePicker({ value, onSelect, verifiedOnly = false, autoSel
               className="w-full border border-navy/15 rounded-md pl-9 pr-3 py-2.5 text-sm focus:border-royal outline-none" />
           </div>
           <p className="text-[10px] text-muted-foreground -mt-1">Pick a topic. The Factory inherits its verified content, examples, definitions and assessment automatically — you never re-enter what is already understood.</p>
+          <div className="flex items-center justify-between -mt-1">
+            <button type="button" onClick={() => setVerifiedView((v) => !v)} data-testid={`${testid}-verified-toggle`}
+              className={`text-[10px] font-bold px-2 py-1 rounded-full border transition-colors ${verifiedView ? "bg-emerald-50 border-emerald-300 text-emerald-700" : "bg-navy/[0.04] border-navy/15 text-navy/70"}`}>
+              {verifiedView ? "✓ Verified only" : "Showing all Knowledge"}
+            </button>
+            <span className="text-[10px] text-muted-foreground">{filtered.length} record{filtered.length === 1 ? "" : "s"}</span>
+          </div>
           <div className="max-h-[380px] overflow-y-auto space-y-1.5 pr-1">
             {loading ? (
               <p className="text-sm text-muted-foreground py-8 text-center">Loading Knowledge…</p>

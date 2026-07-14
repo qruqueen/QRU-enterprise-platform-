@@ -122,8 +122,10 @@ async def kr_manufacturing(kr_id):
 async def kr_manufacturing_list():
     seen, krs = set(), []
     for coll in (db.knowledge_engine_records, db.knowledge_records):
-        async for k in coll.find({}, {"_id": 0, "id": 1, "kr_code": 1, "topic": 1, "version": 1,
+        async for k in coll.find({}, {"_id": 0, "id": 1, "kr_code": 1, "topic": 1, "title": 1,
+                                       "the_question": 1, "subtitle": 1, "version": 1,
                                        "verification": 1, "status": 1, "verified_external": 1,
+                                       "verification_status": 1, "approval_status": 1,
                                        "created_at": 1}).sort("created_at", -1).limit(200):
             if k.get("id") and k["id"] not in seen:
                 seen.add(k["id"])
@@ -131,14 +133,24 @@ async def kr_manufacturing_list():
     out = []
     for k in krs:
         kr_id = k["id"]
+        # Topic lives under different keys across the two KR schemas — derive a real display name.
+        topic = (k.get("topic") or k.get("title") or k.get("the_question") or k.get("subtitle") or "").strip()
+        if not topic:
+            continue  # skip empty/incomplete shells (no knowledge to manufacture from)
         counts = (await db.poster_assets.count_documents({"kr_id": kr_id})
                   + await db.media_products.count_documents({"kr_id": kr_id})
                   + await db.storyboard_masters.count_documents({"kr_id": kr_id})
                   + await db.inherited_products.count_documents({"kr_id": kr_id})
                   + await db.products.count_documents({"knowledge_record_id": kr_id}))
         verif = k.get("verification") or {}
-        verified = bool(verif.get("evidence_sufficient_for_external_publication") or k.get("verified_external"))
-        out.append({"id": kr_id, "kr_code": k.get("kr_code"), "topic": k.get("topic"),
+        # Verified across BOTH schemas: engine evidence flag OR legacy Verified/Approved status.
+        verified = bool(
+            verif.get("evidence_sufficient_for_external_publication")
+            or k.get("verified_external")
+            or str(k.get("verification_status", "")).lower() == "verified"
+            or str(k.get("approval_status", "")).lower() == "approved"
+        )
+        out.append({"id": kr_id, "kr_code": k.get("kr_code"), "topic": topic,
                     "version": k.get("version", 1), "verified_external": verified,
                     "asset_count": counts})
     out.sort(key=lambda x: (not x["verified_external"], (x["topic"] or "").lower()))

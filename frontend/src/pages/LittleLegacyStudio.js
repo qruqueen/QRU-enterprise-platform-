@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   Sparkles, Users, BookOpen, Clapperboard, ShieldCheck, Lock, CheckCircle2,
-  Globe, MapPin, GitBranch, Boxes, Baby, ClipboardCheck, Wand2, Film, PlayCircle, Loader2, Mic,
+  Globe, MapPin, GitBranch, Boxes, Baby, ClipboardCheck, Wand2, Film, PlayCircle, Loader2, Mic, Workflow, Plug,
 } from "lucide-react";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
@@ -88,6 +88,7 @@ export default function LittleLegacyStudio() {
           <TabsTrigger value="pilots" data-testid="ll-tab-pilots">Pilot Studio</TabsTrigger>
           <TabsTrigger value="kits" data-testid="ll-tab-kits">Product Kits</TabsTrigger>
           <TabsTrigger value="feedback" data-testid="ll-tab-feedback">Project Zero™</TabsTrigger>
+          <TabsTrigger value="animation" data-testid="ll-tab-animation">Performance Engine™</TabsTrigger>
           <TabsTrigger value="governance" data-testid="ll-tab-governance">Governance</TabsTrigger>
         </TabsList>
 
@@ -241,6 +242,7 @@ export default function LittleLegacyStudio() {
         {/* STORIES — Knowledge-First Episode Blueprints */}
         <TabsContent value="stories" className="space-y-6">
           <EpisodeCreator chars={chars} onCreated={load} />
+          <WholeFamily episodes={episodes} />
           <Panel title={`Episode Blueprints (${episodes.length})`} icon={Clapperboard} testid="ll-episodes-panel">
             {episodes.length === 0 ? (
               <p className="text-sm text-muted-foreground py-6 text-center">No episode blueprints yet. Every episode begins with a verified Knowledge Record™ — create one above.</p>
@@ -277,6 +279,11 @@ export default function LittleLegacyStudio() {
         {/* PHASE 4 — PROJECT ZERO */}
         <TabsContent value="feedback" className="space-y-6">
           <FeedbackTab episodes={episodes} />
+        </TabsContent>
+
+        {/* QRU ANIMATION MANUFACTURING PLATFORM */}
+        <TabsContent value="animation" className="space-y-6">
+          <PerformanceEngineTab episodes={episodes} chars={chars} />
         </TabsContent>
 
         {/* GOVERNANCE */}
@@ -805,6 +812,191 @@ function FeedbackTab({ episodes }) {
           </div>
         </Panel>
       )}
+    </div>
+  );
+}
+
+function WholeFamily({ episodes }) {
+  const [ep, setEp] = useState("");
+  const [fam, setFam] = useState(null);
+  const timer = useRef(null);
+  const verified = episodes.filter((e) => e.verification_status === "Verified");
+  useEffect(() => { if (!ep && verified[0]) setEp(verified[0].id); }, [episodes]); // eslint-disable-line
+  useEffect(() => () => timer.current && clearInterval(timer.current), []);
+
+  const poll = (id) => {
+    timer.current && clearInterval(timer.current);
+    timer.current = setInterval(async () => {
+      try { const { data } = await api.get(`/little-legacy/episodes/${id}/family`); setFam(data); if (data.ready || (data.pilot.status === "FAILED" && data.kit.status !== "RENDERING")) clearInterval(timer.current); } catch { /* ignore */ }
+    }, 6000);
+  };
+  const go = async () => {
+    if (!ep) return;
+    try {
+      const { data } = await api.post(`/little-legacy/episodes/${ep}/family`);
+      if (!data.ok) { toast.warning(data.message); return; }
+      toast.success(data.message); setFam({ pilot: { status: "RENDERING" }, kit: { status: "RENDERING" }, ready: false }); poll(ep);
+    } catch (err) { toast.error(formatApiError(err.response?.data?.detail)); }
+  };
+
+  return (
+    <Panel title="Manufacture the Whole Family™ — one click, one verified Knowledge Record" icon={Boxes} accent="royal" testid="ll-whole-family">
+      <p className="text-[11px] text-muted-foreground mb-3">Fires the animated pilot AND the full Product Kit (coloring page, social asset, storybook cover, Knowledge Cards, workbook, parent & teacher guides, song & mini-course) together. Review the video in Pilot Studio and the kit in Product Kits.</p>
+      <div className="flex items-center gap-2 mb-3">
+        <select value={ep} onChange={(e) => setEp(e.target.value)} data-testid="ll-family-episode" className="border border-navy/15 rounded-md px-3 py-2 text-sm bg-white">
+          {verified.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
+        </select>
+        <button onClick={go} disabled={!ep} data-testid="ll-family-go" className="text-xs font-bold px-4 py-2 rounded-md bg-royal text-white hover:bg-royal/90 transition-colors disabled:opacity-50 flex items-center gap-1.5"><Sparkles className="w-4 h-4" /> Manufacture the Whole Family</button>
+      </div>
+      {fam && (
+        <div className="flex gap-4 text-[12px]">
+          <span className="flex items-center gap-1.5"><Film className="w-4 h-4 text-royal" /> Pilot: <b>{fam.pilot.status}</b>{fam.pilot.status === "RENDERING" && <Loader2 className="w-3.5 h-3.5 animate-spin" />}</span>
+          <span className="flex items-center gap-1.5"><Boxes className="w-4 h-4 text-royal" /> Kit: <b>{fam.kit.status}</b>{fam.kit.status === "RENDERING" && <Loader2 className="w-3.5 h-3.5 animate-spin" />}</span>
+          {fam.ready && <span className="text-emerald-700 font-bold flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Family ready — review & approve</span>}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+
+
+function PerformanceEngineTab({ episodes, chars }) {
+  const [status, setStatus] = useState(null);
+  const [lib, setLib] = useState(null);
+  const [identities, setIdentities] = useState([]);
+  const [ep, setEp] = useState("");
+  const [plan, setPlan] = useState(null);
+  const [openId, setOpenId] = useState(null);
+  const verified = episodes.filter((e) => e.verification_status === "Verified");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [s, l, id] = await Promise.all([
+          api.get("/little-legacy/animation/status"),
+          api.get("/little-legacy/animation/performance-library"),
+          api.get("/little-legacy/animation/identities"),
+        ]);
+        setStatus(s.data); setLib(l.data); setIdentities(id.data.identities || []);
+      } catch { /* ignore */ }
+    })();
+  }, []);
+  useEffect(() => { if (!ep && verified[0]) setEp(verified[0].id); }, [episodes]); // eslint-disable-line
+  useEffect(() => {
+    if (!ep) return;
+    api.get(`/little-legacy/animation/performance-plan/${ep}`).then((r) => setPlan(r.data)).catch(() => {});
+  }, [ep]);
+
+  const activate = async (pid) => {
+    try { const { data } = await api.post(`/little-legacy/animation/providers/${pid}/activate`); if (!data.ok) toast.warning(data.message); else { toast.success(data.message); const s = await api.get("/little-legacy/animation/status"); setStatus(s.data); } }
+    catch (err) { toast.error(formatApiError(err.response?.data?.detail)); }
+  };
+  const buildPlan = async () => {
+    try { const { data } = await api.post(`/little-legacy/animation/performance-plan/${ep}`); setPlan(data); toast.success("Performance Plan built."); }
+    catch (err) { toast.error(formatApiError(err.response?.data?.detail)); }
+  };
+
+  if (!status || !lib) return <p className="text-muted-foreground">Loading Performance Engine™…</p>;
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">QRU Animation Manufacturing Platform™ — a vendor-agnostic engine that separates <span className="font-semibold text-navy">identity</span> from <span className="font-semibold text-navy">motion</span>. Any current or future AI animation model plugs into the Provider Layer without changing the rest of the Factory.</p>
+
+      {/* Pipeline */}
+      <Panel title="QRU Character Performance Engine™ — Pipeline" icon={Workflow} accent="royal" testid="ll-anim-pipeline">
+        <div className="flex flex-wrap items-center gap-2">
+          {status.pipeline.map((s, i) => (
+            <div key={s} className="flex items-center gap-2">
+              <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${s === "Performance Plan" ? "bg-gold/15 border-gold/50 text-navy" : "bg-navy/[0.06] border-navy/10 text-navy/80"}`}>{s}{s === "Performance Plan" && " ✨"}</span>
+              {i < status.pipeline.length - 1 && <span className="text-navy/30">→</span>}
+            </div>
+          ))}
+        </div>
+        <p className="text-[11px] text-muted-foreground mt-3">{status.render_note}</p>
+      </Panel>
+
+      {/* Provider Layer */}
+      <Panel title="Animation Provider Layer (pluggable · no vendor lock-in)" icon={Plug} testid="ll-anim-providers">
+        <div className="space-y-2">
+          {status.provider_layer.map((p) => (
+            <div key={p.id} className="flex items-center justify-between border border-navy/10 rounded-md p-3" data-testid={`ll-provider-${p.id}`}>
+              <div>
+                <p className="text-sm font-semibold text-navy">{p.name} {p.active && <span className="text-[10px] font-bold text-emerald-700">· ACTIVE</span>}</p>
+                <p className="text-[11px] text-muted-foreground">{p.produces_character_motion ? "Produces true character motion" : "Cinematic camera motion"} · {p.available ? "Available" : p.reason}</p>
+              </div>
+              {!p.active && p.available && <button onClick={() => activate(p.id)} data-testid={`ll-activate-${p.id}`} className="text-xs font-bold px-3 py-1.5 rounded-md bg-navy text-white hover:bg-navy/90 transition-colors">Activate</button>}
+              {!p.available && <span className="text-[10px] font-bold text-amber-600 px-2 py-1 rounded bg-amber-50 border border-amber-200">Provider slot — connect a model</span>}
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      {/* Character Identity System */}
+      <Panel title="Canonical Character Identity System™ (stored once · handed to every provider)" icon={Users} accent="navy" testid="ll-anim-identities">
+        <div className="grid md:grid-cols-2 gap-3">
+          {identities.map((idp) => (
+            <div key={idp.key} className="border border-navy/10 rounded-md" data-testid={`ll-identity-${idp.key}`}>
+              <button onClick={() => setOpenId(openId === idp.key ? null : idp.key)} className="w-full flex items-center justify-between px-3 py-2.5 text-left">
+                <span className="font-semibold text-navy text-sm">{idp.character} {idp.canon_locked && <Lock className="w-3 h-3 inline text-amber-600" />}</span>
+                <span className="text-[11px] text-royal">{openId === idp.key ? "Hide" : "Identity Package"}</span>
+              </button>
+              {openId === idp.key && (
+                <div className="px-3 pb-3 space-y-1.5 text-[11px] text-navy/80">
+                  {idp.canonical_appearance?.anchor_url && <img src={`${BACKEND}${idp.canonical_appearance.anchor_url}`} alt="anchor" className="rounded border border-navy/10 w-full mb-2" />}
+                  <div><b>Palette:</b> {(idp.color_palette || []).map((c) => <span key={c} className="inline-block w-3 h-3 rounded-full border border-navy/20 ml-1 align-middle" style={{ background: c }} />)}</div>
+                  <div><b>Facial proportions:</b> {idp.facial_proportions}</div>
+                  <div><b>Voice:</b> {idp.voice?.voice} — {idp.voice?.tone}</div>
+                  <div><b>Movement style:</b> {idp.movement_style}</div>
+                  <div><b>Emotional style:</b> {idp.emotional_style}</div>
+                  <div><b>Vocabulary:</b> {(idp.vocabulary || []).join(" · ")}</div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      {/* Performance Library */}
+      <Panel title={`Character Performance Library™ — ${lib.total_shipped} shipped / ${lib.total_target} target`} icon={Boxes} accent="gold" testid="ll-anim-library">
+        <p className="text-[11px] text-muted-foreground mb-3">{lib.note}</p>
+        <div className="grid sm:grid-cols-2 gap-3">
+          {lib.categories.map((c) => (
+            <div key={c.category} className="border border-navy/10 rounded-md p-3" data-testid={`ll-lib-${c.category}`}>
+              <p className="text-[11px] font-bold text-navy mb-1">{c.label} <span className="text-muted-foreground font-normal">({c.shipped}/{c.target_capacity})</span></p>
+              <div className="flex flex-wrap gap-1">{c.primitives.map((p) => <span key={p} className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-navy/[0.06] text-navy/70 border border-navy/10">{p}</span>)}</div>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      {/* Performance Plan */}
+      <Panel title="Performance Plan (data-driven direction per beat)" icon={GitBranch} testid="ll-anim-plan">
+        <div className="flex items-center gap-2 mb-3">
+          <select value={ep} onChange={(e) => setEp(e.target.value)} data-testid="ll-plan-episode" className="border border-navy/15 rounded-md px-3 py-2 text-sm bg-white">
+            {verified.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
+          </select>
+          <button onClick={buildPlan} disabled={!ep} data-testid="ll-build-plan" className="text-xs font-bold px-3 py-2 rounded-md bg-royal text-white hover:bg-royal/90 transition-colors disabled:opacity-50">Build / Rebuild Plan</button>
+        </div>
+        {plan?.beats?.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-[11px]">
+              <thead><tr className="text-left text-navy/60 border-b border-navy/10">
+                <th className="py-1 pr-2">#</th><th className="pr-2">Scene</th><th className="pr-2">Expression</th><th className="pr-2">Gesture</th><th className="pr-2">Walk</th><th className="pr-2">Emotion</th><th className="pr-2">Camera</th><th className="pr-2">Pose</th>
+              </tr></thead>
+              <tbody>
+                {plan.beats.map((b) => (
+                  <tr key={b.beat} className="border-b border-navy/5" data-testid={`ll-beat-${b.beat}`}>
+                    <td className="py-1 pr-2">{b.beat}</td><td className="pr-2 font-semibold text-navy">{b.scene}</td>
+                    <td className="pr-2">{b.expression}</td><td className="pr-2">{b.gesture}</td><td className="pr-2">{b.walk}</td>
+                    <td className="pr-2">{b.emotion}</td><td className="pr-2">{b.camera}</td><td className="pr-2">{b.educational_pose}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <p className="text-sm text-muted-foreground py-4 text-center">No plan yet — build one for the selected episode.</p>}
+      </Panel>
     </div>
   );
 }
