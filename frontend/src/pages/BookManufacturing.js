@@ -58,6 +58,16 @@ export default function BookManufacturing() {
   const doApprove = () => run(() => api.post(`/book-mfg/books/${book.id}/approve-edition`), "Editorial edition locked.");
   const doDesign = () => run(() => api.post(`/book-mfg/books/${book.id}/design`, { base_url: A }), "Design drafted.");
   const doSelectCover = (concept) => run(() => api.post(`/book-mfg/books/${book.id}/select-cover`, { concept }), `Cover concept ${concept} selected.`);
+  const doAssemble = async () => {
+    setBusy(true);
+    try {
+      const { data } = await api.post(`/book-mfg/books/${book.id}/assemble-package`);
+      toast.success(`Master Output Package assembled (${data.size_kb} KB).`);
+      window.open(abs(data.url), "_blank");
+      await reload(book.id);
+    } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
+    finally { setBusy(false); }
+  };
 
   if (!book) return <div className="p-8 text-muted-foreground" data-testid="book-mfg-loading">Loading Book Manufacturing System™…</div>;
 
@@ -88,6 +98,13 @@ export default function BookManufacturing() {
             <StatusChip status={`Editorial: ${book.editorial_status}`} tone={book.editorial_locked ? "emerald" : "amber"} testid="editorial-status" />
             <StatusChip status={`Publication: ${book.publication_status}`} tone="slate" testid="publication-status" />
           </div>
+        </div>
+        <div className="mt-3 pt-3 border-t border-border/60 flex items-center justify-between gap-3 flex-wrap">
+          <p className="text-[11px] text-muted-foreground">Master Output Package™ — one governed, provenance-stamped bundle of everything the Factory has truly produced.</p>
+          <button data-testid="assemble-package-btn" onClick={doAssemble} disabled={busy}
+            className="inline-flex items-center gap-1.5 bg-gold text-navy px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Assemble &amp; Download Package
+          </button>
         </div>
       </div>
 

@@ -114,6 +114,14 @@ async def monitor(book_id: str, user=Depends(get_current_user)):
     return r
 
 
+@router.post("/books/{book_id}/assemble-package")
+async def assemble_package(book_id: str, user=Depends(require_super_admin)):
+    r = await bm.assemble_master_package(book_id, user.get("name", "Founder"))
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    return r
+
+
 @router.get("/books/{book_id}/master-package")
 async def master_package(book_id: str, user=Depends(get_current_user)):
     r = await bm.master_package(book_id)

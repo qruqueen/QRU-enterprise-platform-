@@ -451,6 +451,83 @@ async def master_package(book_id):
     }
 
 
+async def assemble_master_package(book_id, actor):
+    """ONE click → ONE complete, provenance-stamped publication ZIP (the 10 governed sections)."""
+    import json
+    import zipfile
+    import os
+    import rendering_engine as re_engine
+    b = await db[COLL].find_one({"id": book_id}, {"_id": 0})
+    if not b:
+        return None
+
+    def _read_asset(url):
+        if not url:
+            return None
+        fid = url.rstrip("/").split("/")[-1]
+        path = os.path.join(re_engine.ASSET_DIR, fid)
+        return open(path, "rb").read() if os.path.exists(path) else None
+
+    design_art = b.get("artifacts", {}).get("design", {})
+    meta = {k: b.get(k) for k in ("title", "subtitle", "author", "imprint", "series", "edition",
+                                  "language", "audience", "genre", "rights_holder", "book_code")}
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        readme = (f"QRU Book Manufacturing System(TM) v1.0 — Master Output Package\n"
+                  f"Title: {b['title']}   |   Book Record: {b['book_code']}\n"
+                  f"Imprint: {b.get('imprint')}   |   Author: {b.get('author')}\n"
+                  f"Assembled: {_now()} by {actor}\n\n"
+                  f"Honest package: only artifacts that truly exist are included. Nothing simulated.\n")
+        z.writestr("README.txt", readme)
+        # 01_SOURCE
+        z.writestr("01_SOURCE/immutable_original.md", b["original"]["content"])
+        z.writestr("01_SOURCE/canonical_book_record.json", json.dumps(clean(b), indent=2, default=str))
+        z.writestr("01_SOURCE/version_history.json", json.dumps(b.get("revision_history", []), indent=2, default=str))
+        # 02_EDITORIAL
+        if b.get("proofing_report"):
+            z.writestr("02_EDITORIAL/proofing_report.json", json.dumps(b["proofing_report"], indent=2, default=str))
+        if b.get("editorial_edition"):
+            z.writestr("02_EDITORIAL/approved_editorial_master.md", b["editorial_edition"]["content"])
+        # 03_PRINT / 04_EBOOK
+        pdf = _read_asset(design_art.get("print", {}).get("paperback_interior_pdf"))
+        if pdf:
+            z.writestr("03_PRINT/paperback_interior.pdf", pdf)
+        epub = _read_asset(design_art.get("ebook", {}).get("epub"))
+        if epub:
+            z.writestr("04_EBOOK/book.epub", epub)
+        sel = design_art.get("selected_cover")
+        cover = _read_asset(sel.get("url")) if sel else None
+        if cover:
+            z.writestr("04_EBOOK/cover.png", cover)
+        # 07_METADATA
+        z.writestr("07_METADATA/master_metadata.json", json.dumps(meta, indent=2, default=str))
+        # 09_RIGHTS_AND_GOVERNANCE
+        if design_art.get("governance_package"):
+            z.writestr("09_RIGHTS_AND_GOVERNANCE/product_governance_package.json",
+                       json.dumps(design_art["governance_package"], indent=2, default=str))
+        z.writestr("09_RIGHTS_AND_GOVERNANCE/transparent_provenance.json",
+                   json.dumps(b.get("transparent_provenance", {}), indent=2, default=str))
+        # manifest of what's included vs pending (honest)
+        included = [n for n in z.namelist()]
+        z.writestr("00_MANIFEST.json", json.dumps({
+            "included": included,
+            "pending": {"audio": "Guided package (Button 4) — not yet rendered",
+                        "video": "Guided package (Button 5) — not yet rendered",
+                        "marketing": "Prepared at Design/Publish",
+                        "monitoring": "Activates post-publication"},
+        }, indent=2))
+    data = buf.getvalue()
+    safe = "".join(c for c in b["title"] if c.isalnum() or c in " -_").strip().replace(" ", "_")
+    fid = re_engine._save(f"master-package-{safe}", "zip", data)
+    url = re_engine._asset_url(fid)
+    await db[COLL].update_one({"id": book_id}, {"$set": {
+        "master_package_url": url, "master_package_at": _now(), "updated_at": _now()},
+        "$push": {"revision_history": {"stage": "Master Package", "by": actor, "at": _now(),
+                                       "note": f"Assembled Master Output Package ({len(data)//1024} KB)."}}})
+    await log_org("Book Manufacturing™", "Manufacturing", f"assembled Master Output Package for '{b['title']}'", b["book_code"], "success")
+    return {"ok": True, "url": url, "size_kb": len(data) // 1024, "sections": len(buf.getvalue()) and True}
+
+
 async def get_book(book_id):
     b = await db[COLL].find_one({"id": book_id}, {"_id": 0})
     return clean(b) if b else None
