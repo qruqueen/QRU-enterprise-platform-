@@ -64,6 +64,23 @@ export default function ProjectsContinuity() {
     finally { setBusy(null); }
   };
 
+  const renderProduct = async (p) => {
+    setBusy(p.id + "render");
+    toast.message("Manufacturing your product from the verified Knowledge Record…");
+    try {
+      const { data } = await api.post(`/factory-os/projects/${p.id}/render`);
+      if (data?.project) setProjects((ps) => ps.map((x) => (x.id === p.id ? data.project : x)));
+      const primary = (data.deliverables || []).find((f) => f.format === "pdf") || (data.deliverables || [])[0];
+      toast.success("Product manufactured — your downloadable file is ready.");
+      setItems((m) => ({ ...m, [p.id]: undefined }));
+      setItemsOpen((o) => ({ ...o, [p.id]: true }));
+      const { data: it } = await api.get(`/factory-os/projects/${p.id}/items`);
+      setItems((m) => ({ ...m, [p.id]: it }));
+      if (primary?.url) window.open(`${BACKEND}${primary.url}`, "_blank");
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not manufacture the product."); }
+    finally { setBusy(null); }
+  };
+
   if (projects === null) return <div className="flex justify-center py-32"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
   if (projects === false) return <p className="text-sm text-muted-foreground p-8">Could not load projects.</p>;
 
@@ -146,8 +163,14 @@ export default function ProjectsContinuity() {
                     )}
                     {cur?.status === "in_progress" && cur?.route && (
                       <>
-                        <button onClick={() => nav(cur.route + (cur.route === "/flagship-showcase" ? `?project=${p.id}` : ""))} data-testid={`project-open-${p.id}`} className="text-[11px] inline-flex items-center gap-1 bg-navy text-white px-3 py-1.5 rounded-sm font-medium">Open workflow <ArrowRight className="w-3 h-3" /></button>
-                        <button onClick={() => act(p.id, "complete-stage")} disabled={busy} data-testid={`project-complete-${p.id}`} className="text-[11px] inline-flex items-center gap-1 border border-navy/20 text-navy px-3 py-1.5 rounded-sm font-medium">Mark stage done</button>
+                        {!["video", "podcast", "audiobook"].includes(p.outcome_id) && (
+                          <button onClick={() => renderProduct(p)} disabled={busy === p.id + "render"} data-testid={`project-render-${p.id}`}
+                            className="text-[11px] inline-flex items-center gap-1 bg-gold text-navy px-3 py-1.5 rounded-sm font-bold disabled:opacity-60">
+                            {busy === p.id + "render" ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />}
+                            Manufacture the {p.outcome_name}
+                          </button>
+                        )}
+                        <button onClick={() => nav(cur.route + (cur.route === "/flagship-showcase" ? `?project=${p.id}` : ""))} data-testid={`project-open-${p.id}`} className="text-[11px] inline-flex items-center gap-1 border border-navy/20 text-navy px-3 py-1.5 rounded-sm font-medium">Open workflow <ArrowRight className="w-3 h-3" /></button>
                       </>
                     )}
                     {cur?.status === "blocked" && cur?.route && (

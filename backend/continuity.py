@@ -387,6 +387,99 @@ async def project_items(pid):
 
 
 
+# ---- One-click product manufacturing (fixes "I can't actually render a book") ----
+# Maps a project's outcome to a renderable document product type.
+OUTCOME_PRODUCT_TYPE = {
+    "book": "Book", "workbook": "Workbook", "presentation": "Presentation",
+    "course": "Course", "guide": "Teacher Guide",
+}
+RENDER_SYSTEM = (
+    "You are the QRU Manufacturing Director producing a publication-ready {pt}. "
+    "Use ONLY the verified knowledge provided — never invent facts. Structure the {pt} "
+    "with a clear title, an introduction, well-titled chapters/sections with real explanatory "
+    "prose, concrete examples, and a closing summary. Return clean, well-structured Markdown "
+    "with # / ## headings. Do not include production notes or placeholders."
+)
+
+
+async def render_product(pid, actor, base_url=""):
+    """Manufacture and render the actual downloadable product (e.g. a real book PDF/EPUB)
+    from the project's verified Knowledge Record — then complete the current workflow stage.
+    Knowledge-First: a Knowledge Record must exist before a product can be manufactured."""
+    p = _clean(await db.continuity_projects.find_one({"id": pid}))
+    if not p:
+        return {"ok": False, "error": "Project not found."}
+    kr = await _load_kr_full(p.get("knowledge_record"))
+    if not kr:
+        return {"ok": False, "error": "This project has no Knowledge Record yet. Knowledge always comes "
+                "before products — manufacture the Knowledge Record first in the Promotion Pipeline™."}
+    kr_id = kr.get("id")
+
+    pt = OUTCOME_PRODUCT_TYPE.get(p.get("outcome_id"))
+    if not pt:
+        name = (p.get("outcome_name") or "").lower()
+        pt = ("Workbook" if "workbook" in name else
+              "Presentation" if ("present" in name or "slide" in name) else "Book")
+
+    product = await db.products.find_one({"knowledge_record_id": kr_id, "product_type": pt})
+    if not product:
+        from ai_service import llm_generate
+        context = (
+            f"Verified Truth: {kr.get('verified_truth','')}\n"
+            f"QRU Translation: {kr.get('qru_translation') or kr.get('consumer_translation','')}\n"
+            f"Why It Matters: {kr.get('why_it_matters','')}\n"
+            f"Real-World Example: {kr.get('real_world_example','')}\n"
+            f"Everyday Analogy: {kr.get('everyday_analogy','')}\n"
+            f"Deep Roots: {kr.get('deep_roots','')}\n"
+        )
+        prompt = (f"Topic: {kr.get('title')}\nAudience: {p.get('audience') or 'General public'}\n"
+                  f"{context}\nProduce the {pt}.")
+        try:
+            content = await llm_generate(RENDER_SYSTEM.format(pt=pt), prompt, f"project-render-{pid}")
+        except Exception:
+            return {"ok": False, "error": "The AI writer is temporarily unavailable (service or budget). "
+                    "Please try again in a moment."}
+        count = await db.products.count_documents({})
+        product = {
+            "id": gen_id(), "product_code": f"PRD-{count + 1:05d}",
+            "title": f"{kr.get('title')} — {pt}", "product_type": pt,
+            "family": kr.get("category", "General"), "topic": kr.get("title"),
+            "audience": p.get("audience") or "General public", "learning_level": "Introductory",
+            "content": content, "status": "Draft", "knowledge_record_id": kr_id,
+            "kr_version": kr.get("version", 1), "assembled": False, "asset_mode": "director",
+            "project_id": pid, "created_by": actor, "created_at": now_iso(), "updated_at": now_iso(),
+        }
+        await db.products.insert_one(dict(product))
+        await db.knowledge_records.update_one({"id": kr_id}, {"$inc": {"products_created": 1}})
+
+    # Render the real downloadable deliverable (deterministic; PDF/EPUB/HTML).
+    import deliverable_renderer as dr
+    try:
+        await dr.ensure_deliverable(product["id"], actor=actor, base_url=base_url, build_marketing=False)
+    except Exception as e:
+        return {"ok": False, "error": f"Rendering failed: {str(e)[:160]}"}
+    product = _clean(await db.products.find_one({"id": product["id"]}))
+    files = (product.get("customer_deliverable") or {}).get("files", [])
+    if not files:
+        return {"ok": False, "error": "The renderer produced no files. Please retry."}
+
+    # A rendered document IS the finished manuscript + interior — complete every
+    # production workflow stage in one pass, then auto-continue to the Founder gate.
+    changed = False
+    for s in p["chain"]:
+        if s["kind"] == "workflow" and s["status"] != "complete":
+            s["status"] = "complete"
+            changed = True
+    if changed:
+        _advance_auto(p)
+        p.setdefault("history", []).append(
+            {"at": now_iso(), "actor": actor, "action": "rendered_product", "product": product["id"]})
+        await _save(p)
+    return {"ok": True, "product": product, "deliverables": files,
+            "primary": (product.get("customer_deliverable") or {}).get("download_url"),
+            "project": {**p, "summary": _summary(p)}}
+
+
 # ---- Zero-touch effort reduction (Founder Effort Reduction Directive) ----
 # eliminating manual status tracking and manual re-linking between modules.
 

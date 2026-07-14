@@ -1,5 +1,5 @@
 """QRU Factory Operating System™ — API surface (Constitution §7/§8). Outcome-first Create experience."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
 
@@ -106,6 +106,15 @@ async def complete_stage(pid: str, user=Depends(get_current_user)):
     if not p:
         raise HTTPException(404, "Project not found.")
     return p
+
+
+@router.post("/projects/{pid}/render")
+async def render_project_product(pid: str, request: Request, user=Depends(get_current_user)):
+    base_url = str(request.base_url).rstrip("/")
+    res = await cont.render_product(pid, user["name"], base_url)
+    if not res.get("ok"):
+        raise HTTPException(400, res.get("error", "Could not manufacture the product."))
+    return res
 
 
 class ModeInput(BaseModel):
