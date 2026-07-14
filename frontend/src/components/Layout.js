@@ -25,7 +25,7 @@ const ICON = {
   "/manufacturing-studio": PackageCheck, "/mfg-command": Gauge,
   "/publishing": BookOpenCheck, "/media-division": Boxes, "/cover-studio": Palette, "/products": PackageOpen, "/product-library": Library, "/companion": QrCode,
   "/colleges": GraduationCap, "/teach": Rocket,
-  "/storyboard-studio": Clapperboard, "/little-legacy": Baby, "/flagship-showcase": Film, "/media-studio": Clapperboard,
+  "/storyboard-studio": Clapperboard, "/cinema-studio": Film, "/little-legacy": Baby, "/flagship-showcase": Film, "/media-studio": Clapperboard,
   "/wis": UsersRound, "/media-library": Clapperboard, "/creative-studio": Palette, "/visual-studio": Eye, "/media-starter-kit": PackageCheck,
   "/poster-studio": LayoutTemplate, "/inspection": ShieldHalf,
   "/store": Store, "/youtube": Youtube, "/connectors": UploadCloud, "/distribution": Radio,
