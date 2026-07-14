@@ -20,12 +20,16 @@ export default function FactoryMap() {
   const [meta, setMeta] = useState({ statuses: [], layers: [] });
   const [filter, setFilter] = useState("all");
   const [tab, setTab] = useState("map");
+  const [loadError, setLoadError] = useState(false);
   const nav = useNavigate();
 
   const load = () => {
-    api.get("/capability-registry/map").then((r) => setMap(r.data)).catch(() => {});
-    api.get("/capability-registry/summary").then((r) => setSummary(r.data)).catch(() => {});
-    api.get("/capability-registry").then((r) => { setCaps(r.data.capabilities); setMeta({ statuses: r.data.statuses, layers: r.data.layers }); }).catch(() => {});
+    setLoadError(false);
+    Promise.all([
+      api.get("/capability-registry/map").then((r) => setMap(r.data)),
+      api.get("/capability-registry/summary").then((r) => setSummary(r.data)),
+      api.get("/capability-registry").then((r) => { setCaps(r.data.capabilities); setMeta({ statuses: r.data.statuses, layers: r.data.layers }); }),
+    ]).catch(() => setLoadError(true));
   };
   useEffect(load, []);
 
@@ -39,6 +43,13 @@ export default function FactoryMap() {
     }
   };
 
+  if (loadError) return (
+    <div data-testid="factory-map-error" className="flex flex-col items-center justify-center py-32 text-center">
+      <p className="text-navy font-semibold mb-2">Couldn't load the Manufacturing Map™.</p>
+      <p className="text-sm text-muted-foreground mb-4">The Factory reported an error fetching the Capability Registry.</p>
+      <button data-testid="factory-map-retry" onClick={load} className="px-4 py-2 rounded-md bg-navy text-white text-sm font-semibold hover:bg-navy/90">Retry</button>
+    </div>
+  );
   if (!map || !summary) return <div className="flex justify-center py-32"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
 
   const layerName = (k) => (meta.layers.find((l) => l.value === k) || {}).name || k;

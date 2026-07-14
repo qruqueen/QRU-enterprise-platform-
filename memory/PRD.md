@@ -20,6 +20,28 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 ## Phase Next — Manufacturing Orders (approved sequence)
 MO-001 Quality Gates ✅ · MO-002 Enterprise Manufacturing Dashboard ✅ · MO-003 Knowledge Record 2.0 ✅ · MO-004 QRU Design Language ✅ · MO-005 Manufacturing Director™ ✅ · MO-006 YouTube Publisher™ (Founder Upload Mode) ✅ · MO-007 Universal Distribution Framework™ ✅ · MO-008 Governance Binding Layer™ ✅. Build one at a time; deterministic infra before AI content.
 
+## Capability Consolidation & Media Expansion Initiative™ (2026-07-14, active)
+Founder directive: strengthen (not redesign) the Factory. "One Knowledge Record™ → Many Products™. One Carefully Laid Stone at a Time™." Founder approved starting with Stone 1; Founder will review deprecation/merge recommendations after (did NOT ask to approve each). Streamline goal: easy access to ALL creative engines, ALL outputs, ALL distribution.
+
+### STONE 1 — Governance & Architecture Foundation (Phases 1/6/7) ✅ DONE & VERIFIED (iteration_68, 8/8 frontend 100%)
+- **Capability Registry™** — `capability_registry.py` (engine + 91 seeded capabilities) + `routers/capability_registry.py`. Every capability has an intentional status: active/inherited/deprecated/merged/future. Founder status edits persisted ($setOnInsert on status, founder_locked=true), descriptive fields refresh on boot. Seeded at startup.
+  - Audit result: 71 active · 9 merged (consolidation recs) · 1 deprecated (experience-lab) · 10 future backlog · 20 strategic moats.
+  - Merge recommendations (for Founder review): manufacturing-studio→manufacture, mfg-command→knowledge-manufacturing, product-library→products, creative-studio/visual-studio/media-starter-kit→media-studio, command→concierge, enterprise-health→factory-health, blueprint→architecture.
+- **Manufacturing Promise™** (Phase 6) — 5 pillars (Verified Knowledge™, Constitutional Governance™, Enterprise Memory™, Treasure Standard™, Continuous Craftsmanship™). GET /api/capability-registry/promise; surfaced on Factory Map.
+- **Factory Map™** (Phase 7) — `pages/FactoryMap.js` at `/factory-map` (nav-factory-map, first item under "Start Here"). Two tabs: Manufacturing Map (flow rail KR→Understanding Engine→Creative Divisions→Distribution + 12 layered nodes with clickable capability chips + destinations panel) and Capability Registry (filterable governed table with per-row founder status dropdown). Has load error/retry state.
+  - APIs: GET /api/capability-registry (+layer/status filters), /summary, /map, /promise; PATCH /api/capability-registry/{id}/status (super-admin gated).
+  - Map layers: knowledge, engine, publishing, learning, entertainment, marketing, audio(0), video(0), assessment, distribution, governance, enterprise, admin, future. Audio/Video empty by design — populated by Stone 2/3.
+
+### NEXT STONES (approved sequence, not yet built)
+- **Stone 2 — Media Manufacturing Division™ (Phases 2 & 5):** governed division; ONE verified KR → full media catalog (books, PDFs, posters, slides, teacher/parent guides, audiobooks, podcasts, motion storybooks, episodes, shorts, YT long/short, social clips, promo, marketing). KR inheritance review — extend 36-layer KR schema only where needed (one record, many products; no duplicate metadata). Populates 'audio'/'video' map layers.
+- **Stone 3 — Story & Cinema Studio™ + Podcast Studio™ (Phases 3 & 4):** as manufacturing departments (not separate apps). Truthful messaging (never claim frame-by-frame if image-based motion). Podcast reuses narration/Voice Profiles™/KRs.
+- **Phase 8 Future Backlog (architecture-ready only):** Feature Film, Streaming, Interactive Learning, Trending Topics, Multi-language, AI Tutor, Documentary — already seeded as 'future' capabilities.
+
+### Pre-existing open blocker (carried)
+- **YouTube OAuth invalid_grant (P0):** token expired/revoked — Founder must re-authenticate from UI. Do NOT fix via code.
+- **Shopify Store Publishing (P1):** deferred; connector exists in distribution/connectors.py, push logic pending Founder token.
+
+
 ## Completed (recent → older)
 ### Session 2026-07-10 (fork) — MO-007 expansion, MO-011, MO-015/016/017, MO-018, MO-021/023 foundation
 - **MO-009/010 Visual & Media Studio™ wired** into `/visual-studio` (route + nav). VERIFIED iteration_35.
