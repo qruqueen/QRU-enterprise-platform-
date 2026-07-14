@@ -153,7 +153,7 @@ export default function KRManufacturing() {
               <div className="mt-4 flex items-center gap-2">
                 <button data-testid={`result-approve-${result.kr_id}`} onClick={() => decide(result.kr_id, "approve")} disabled={acting}
                   className="inline-flex items-center gap-1.5 bg-emerald-600 text-white px-4 py-2 rounded-md text-sm font-bold disabled:opacity-60"><ThumbsUp className="w-4 h-4" /> Approve → Enterprise Memory™</button>
-                <button data-testid={`result-view-${result.kr_id}`} onClick={() => nav(`/kr2`)} className="inline-flex items-center gap-1.5 border border-navy/20 text-navy px-4 py-2 rounded-md text-sm font-medium">Review sections <ArrowRight className="w-4 h-4" /></button>
+                <button data-testid={`result-view-${result.kr_id}`} onClick={() => nav(`/knowledge/${result.kr_id}`)} className="inline-flex items-center gap-1.5 border border-navy/20 text-navy px-4 py-2 rounded-md text-sm font-medium">Review record <ArrowRight className="w-4 h-4" /></button>
               </div>
             </Panel>
           )}

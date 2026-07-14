@@ -28,9 +28,12 @@ Fix:
 - Verified: book projects render 600KB+ PDF/EPUB, land on "Founder Approval", PDF HTTP 200. No more bounce to Cover Studio.
 - Known minor (follow-up): /projects/{pid}/items lists deliverables across the whole linked KR (may show a poster from another project using the same KR). Book files are clearly labeled; not blocking.
 
-## IN PROGRESS (paused for P0) — Knowledge Record Manufacturing Engine™
-- Directive: make manufacturing governed KRs the Factory's first responsibility (Idea→Research→Evidence→Verification→Organization→KR→Founder Review→Enterprise Memory→Recipes). Founder approved governed AI-assisted defaults (AI drafts → verify → Founder approves → becomes truth); sources: Founder Request + Verified Research + Imported Library docs.
-- Status: backend engine `/app/backend/kr_manufacturing.py` DRAFTED but NOT yet wired (no router, not in server.py, no seed, no UI, UNTESTED). Reuses ai_service, verification_engine, knowledge_record_v2, knowledge_extraction. Next: add router + register + `/kr-manufacturing` page + Founder Review approve/reject UI + register a capability in the Registry, then test.
+## Knowledge Record Manufacturing Engine™ ✅ DONE & VERIFIED (iteration_71, 8/8 100%)
+- The Factory's first responsibility: manufacture governed KRs from a source. Route `/kr-manufacturing` (nav under Knowledge; registry id `kr-manufacturing`, moat).
+- Governed by the **Approved Knowledge Record Manufacturing Standard™ (KR-STD-0001)**: hope/possibility not deficiency, invite growth, preserve dignity, capability before mistakes, positive+truthful, full metadata, single source of truth. Embedded as `STANDARD_PREAMBLE` into research + organization prompts; stamped on every KR (`manufacturing_standard`, `standard_compliant`).
+- Pipeline (`kr_manufacturing.py`): Idea → Research (AI brief, cited) → Evidence → Knowledge Organization (10 methodology fields + KR2 36-section migrate) → Advisory Verification (scores only) → Draft/Under Review → Founder approve/reject. Sources: founder_request, verified_research, library_import (deterministic extract).
+- Governance honored: AI drafts only; created Draft/Pending Founder Review; NEVER auto-verified. On Founder approve → Verified + Approved + treasure_standard + `enterprise_memory=True` + ledger `kr_enterprise_memory`; ready to inherit into products.
+- Router `routers/kr_manufacturing.py`: POST /manufacture, /{id}/approve & /{id}/reject (super-admin), GET /standard /stats /jobs /pending-review. Verified via curl + frontend.
 
 
 ## Capability Consolidation & Media Expansion Initiative™ (2026-07-14, active)
