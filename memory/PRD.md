@@ -20,6 +20,19 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 ## Phase Next — Manufacturing Orders (approved sequence)
 MO-001 Quality Gates ✅ · MO-002 Enterprise Manufacturing Dashboard ✅ · MO-003 Knowledge Record 2.0 ✅ · MO-004 QRU Design Language ✅ · MO-005 Manufacturing Director™ ✅ · MO-006 YouTube Publisher™ (Founder Upload Mode) ✅ · MO-007 Universal Distribution Framework™ ✅ · MO-008 Governance Binding Layer™ ✅. Build one at a time; deterministic infra before AI content.
 
+## P0 FIX — "I can't actually render a book" (2026-07-14) ✅ DONE & VERIFIED (iteration_70, 6/6 100%)
+Founder blocker: from My Projects, clicking "Go"/"Open workflow" bounced to Cover Studio (or a studio) and there was NO way to actually produce the book file. Root cause: /projects only offered "Open workflow" (routes into a stage studio); nothing invoked the real renderer.
+Fix:
+- Backend `continuity.render_product(pid, actor, base_url)` + router `POST /api/factory-os/projects/{pid}/render`: resolves the project's KR (Knowledge-First — errors clearly if none), generates the product from the KR (LLM), calls `deliverable_renderer.ensure_deliverable` to materialize real HTML+EPUB+PDF, completes ALL production workflow stages, and advances to the Founder Approval gate.
+- Frontend `ProjectsContinuity.js`: gold "Manufacture the {outcome}" button (data-testid `project-render-<id>`) on in-progress workflow stages (hidden for video/podcast/audiobook). Auto-opens the items drawer with downloadable deliverables + opens the PDF.
+- Verified: book projects render 600KB+ PDF/EPUB, land on "Founder Approval", PDF HTTP 200. No more bounce to Cover Studio.
+- Known minor (follow-up): /projects/{pid}/items lists deliverables across the whole linked KR (may show a poster from another project using the same KR). Book files are clearly labeled; not blocking.
+
+## IN PROGRESS (paused for P0) — Knowledge Record Manufacturing Engine™
+- Directive: make manufacturing governed KRs the Factory's first responsibility (Idea→Research→Evidence→Verification→Organization→KR→Founder Review→Enterprise Memory→Recipes). Founder approved governed AI-assisted defaults (AI drafts → verify → Founder approves → becomes truth); sources: Founder Request + Verified Research + Imported Library docs.
+- Status: backend engine `/app/backend/kr_manufacturing.py` DRAFTED but NOT yet wired (no router, not in server.py, no seed, no UI, UNTESTED). Reuses ai_service, verification_engine, knowledge_record_v2, knowledge_extraction. Next: add router + register + `/kr-manufacturing` page + Founder Review approve/reject UI + register a capability in the Registry, then test.
+
+
 ## Capability Consolidation & Media Expansion Initiative™ (2026-07-14, active)
 Founder directive: strengthen (not redesign) the Factory. "One Knowledge Record™ → Many Products™. One Carefully Laid Stone at a Time™." Founder approved starting with Stone 1; Founder will review deprecation/merge recommendations after (did NOT ask to approve each). Streamline goal: easy access to ALL creative engines, ALL outputs, ALL distribution.
 
