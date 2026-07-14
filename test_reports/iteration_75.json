@@ -1,0 +1,57 @@
+{
+  "summary": "QRU Book Manufacturing System v1.0 — end-to-end + honesty + mobile validation. 12/13 backend pytest cases pass. Frontend renders all 7 buttons, book identity (title before Book Record ID), founder-nav 5 cards, upload canonical/intake/provenance, proof panel, design panel with 3 covers + PDF + EPUB downloads, publish destinations + release gate, monitor. Mobile (iPhone 390px) is usable — buttons scroll horizontally, nav cards stack, no horizontal overflow. One CRITICAL honesty bug found: gate_ready reports True even when founder_authorization_received and pricing_approved are False, violating the core 'never simulate success' principle.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "GET /api/book-mfg/books/{id}/publish",
+        "issue": "final_release_gate.gate_ready evaluates to True even when pricing_approved=False AND founder_authorization_received=False. In book_manufacturing.py publish_center(), the all([...]) expression omits those two keys. Result: after lock+design+cover-select the UI shows a green 'Gate ready for Founder authorization' chip while two of ten gate items are literally Pending. Violates the stated principle: 'Nothing reports success that didn't happen'.",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "PublishPanel gate-ready chip",
+        "issue": "Chip shows 'Gate ready for Founder authorization' (emerald) even though the same panel lists 'Pricing Approved: Pending' and 'Founder Authorization Received: Pending'. This is a direct visual consequence of the backend gate_ready bug — will resolve when backend is fixed. No frontend change required if backend is patched.",
+        "selector": "[data-testid=\"gate-ready\"]",
+        "priority": "CRITICAL"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "BookManufacturing (all)",
+        "issues": [
+          "Layout, contrast, spacing OK on desktop and mobile. Seven buttons scroll horizontally on 390px viewport; nav cards stack 2-col; no page overflow."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration75_book_manufacturing.py",
+    "/app/test_reports/pytest/iteration75.xml"
+  ],
+  "action_items": [
+    "FIX gate_ready in /app/backend/book_manufacturing.py publish_center(): include gate['pricing_approved'] and gate['founder_authorization_received'] inside the all([...]). Simplest fix: `gate_ready: all(gate.values())`. This is the ONLY code change required — everything else is honest and correct.",
+    "Optional: after the fix, add an /api/book-mfg/books/{id}/authorize endpoint (or founder-set fields) so the gate can eventually flip to Ready when the Founder explicitly authorizes + confirms pricing. Currently there is no legitimate path to gate_ready=True — which is fine for now (honest), but the Publish button/flow has no forward action past 'Ready for manual submission'."
+  ],
+  "critical_code_review_comments": [
+    "book_manufacturing.py publish_center(): gate_ready all() omits two required keys (pricing_approved, founder_authorization_received). This is a direct honesty-principle regression.",
+    "book_manufacturing.py design(): reads first cover file to embed in the interior PDF regardless of which concept the Founder eventually selects. Consider re-rendering the interior after select_cover so the paperback PDF reflects the CHOSEN cover, not always concept 1.",
+    "book_manufacturing.py design(): silently swallows EPUB rendering exceptions (`except Exception: epub_url = None`). Should at least log and surface as a design-panel warning so Founder isn't unaware the EPUB was skipped.",
+    "book_manufacturing.py proof_polish(): correctly does NOT rewrite content (verified via checksum). Good.",
+    "BookManufacturing.js: intake-scan panel labels Ready-to-Proof with tone='amber' even when the value is 'Ready to Proof' (green-worthy). Minor tone mismatch, low impact."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration75_book_manufacturing.py"
+  ],
+  "success_rate": {"backend": "92% (12/13)", "frontend": "100% (all UI elements + integrations verified)"},
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (login response field: access_token)",
+  "seed_data_creation": "Pilot 'The Understanding Tree' (BOOK-0001) was seeded on backend startup. Backend tests mutated its state: proof run, editorial locked, design rendered, cover concept 2 selected. Per main-agent guidance, residual state is acceptable.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Pilot BOOK-0001 is now editorial_locked + designed + cover-2 selected. To re-verify design-blocked-before-lock the DB row would need to be reset. Backend test skips those pre-lock cases if already locked. The single failing test (test_publish_gate_not_ready) will pass once book_manufacturing.py:400-402 is patched to include pricing_approved and founder_authorization_received in the all([...]).",
+  "rca of the issue": "publish_center() computes 'gate_ready' via all([...]) but the argument list explicitly includes 8 of the 10 gate items — omitting pricing_approved and founder_authorization_received. Both those fields are hard-coded False in the same function (they can only be true via a not-yet-implemented explicit Founder action). Because they are excluded from the all(), the moment the other 8 flip true (edition locked + design + cover selected), gate_ready becomes true — even though the two most important human-in-the-loop items are still Pending. Reproduction: POST /approve-edition → POST /design → POST /select-cover → GET /publish and inspect final_release_gate.gate_ready. Mitigation: change to `all(gate.values())` OR append the two keys to the existing list."
+}

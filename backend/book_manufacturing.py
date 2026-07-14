@@ -82,6 +82,8 @@ async def create_book_record(payload, actor):
     content = payload.get("content") or ""
     meta = payload.get("meta") or {}
     high_stakes = bool(meta.get("high_stakes"))
+    src_filename = meta.get("source_filename", "manuscript")
+    is_draft = "draft" in src_filename.lower() or "draft" in title.lower()
     record = {
         "id": gen_id(),
         "book_code": f"BOOK-{await db[COLL].count_documents({}) + 1:04d}",
@@ -100,11 +102,22 @@ async def create_book_record(payload, actor):
         # immutable original + separate working copy (source manuscript never altered on upload)
         "original": {"content": content, "checksum": _checksum(content), "sealed_at": _now(), "immutable": True},
         "working_copy": {"content": content, "updated_at": _now()},
-        "source_file_history": [{"file": meta.get("source_filename", "manuscript"), "at": _now(), "by": actor}],
+        "source_file_history": [{"file": src_filename, "at": _now(), "by": actor}],
         "revision_history": [{"stage": "Upload", "by": actor, "at": _now(), "note": "Canonical Book Record created."}],
+        # Honest governance statuses — a file named "Draft" is NEVER auto-interpreted as approved.
+        "source_status": "Draft received" if is_draft else "Manuscript received",
+        "editorial_status": "Founder review required",
+        "publication_status": "Not ready",
         "approval_status": "Draft",
-        "editorial_status": "Not started",
         "editorial_locked": False,
+        "transparent_provenance": {
+            "source_filename": src_filename,
+            "immutable_original_checksum": _checksum(content),
+            "received_at": _now(), "received_by": actor,
+            "rights_holder": meta.get("rights_holder", meta.get("author", "")),
+            "ai_contribution": meta.get("ai_disclosure", "AI-assisted manufacturing; human-authored & human-approved."),
+            "governance": "Draft governed honestly — not moved forward as approved.",
+        },
         "intake_scan": _intake_scan(title, content, meta),
         "high_stakes": high_stakes,
         "manufacturing_job": {"stage": "Upload complete", "next": "Proof & Polish"},
@@ -454,7 +467,7 @@ async def list_books():
 
 
 # ------------------------------- PILOT SEED -------------------------------
-PILOT_URL = "https://customer-assets.emergentagent.com/job_understanding-os/artifacts/1minxyfc_The%20Understanding%20Tree%20Draft.docx"
+PILOT_URL = "https://customer-assets.emergentagent.com/job_understanding-os/artifacts/9fibyutd_The%20Understanding%20Tree%20Draft.docx"
 
 
 def _docx_to_markdown(raw_bytes):
@@ -467,20 +480,24 @@ def _docx_to_markdown(raw_bytes):
         if not txt:
             out.append("")
             continue
-        style = (p.style.name or "").lower()
-        is_heading = "heading" in style
+        style = ""
+        try:
+            style = (p.style.name or "").lower() if p.style is not None else ""
+        except Exception:
+            style = ""
+        is_heading_style = "heading" in style or "title" in style
         upper = txt.upper()
-        if is_heading and upper.startswith("CHAPTER"):
+        is_chapter = upper.startswith("CHAPTER") and len(txt) < 90
+        if is_chapter:
             out.append(f"## {txt}")
-        elif is_heading and not title_done:
+        elif not title_done and (is_heading_style or len(txt) < 80):
             out.append(f"# {txt}")
             title_done = True
-        elif txt == "\u2767" or txt == "❧":
+        elif txt in ("\u2767", "\u2748", "* * *", "***"):
             out.append("---")
         else:
             out.append(txt)
-    md = "\n\n".join(out)
-    return md
+    return "\n\n".join(out)
 
 
 async def seed_pilot(actor="Founder"):
@@ -496,7 +513,7 @@ async def seed_pilot(actor="Founder"):
     except Exception as e:
         return None
     payload = {"title": "The Understanding Tree", "content": content,
-               "meta": {"subtitle": "a novel", "author": "E.Q. Rothwell", "imprint": "Ascend",
+               "meta": {"subtitle": "A Novel", "author": "E.Q. Rothwell", "imprint": "QRU Press™",
                         "genre": "Literary Fiction", "audience": "Adult",
                         "rights_holder": "Ascend Development Group LLC",
                         "source_filename": "The Understanding Tree Draft.docx",

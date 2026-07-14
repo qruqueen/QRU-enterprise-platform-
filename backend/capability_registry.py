@@ -279,6 +279,8 @@ DEFINITIONS = [
     # ---------- FUTURE BACKLOG (Phase 8 — architecture-ready, not built) ----------
     _c("media-division", "Media Manufacturing Division™", "publishing", "active", "media_division.py", "/media-division",
        "One verified KR → the full media catalog.", "Manufacture books, guides, slides, posters & scripts from one governed KR. Every product inherits the Manufacturing Promise™.", moat=True),
+    _c("book-mfg", "Book Manufacturing System™", "publishing", "active", "book_manufacturing.py", "/book-manufacturing",
+       "One approved manuscript in → one complete publication package out.", "The seven-button governed book workflow (Upload · Proof & Polish · Design · Audio · Video · Publish · Monitor). Orchestrates existing capabilities; honest platform states; immutable original preserved.", moat=True),
     _c("cinema-studio", "Story & Cinema Studio™", "video", "active", "cinema_studio.py", "/cinema-studio",
        "Manufacture narrated motion video from a verified KR.", "Motion Storybooks™, episodes, shorts & promos — image-based motion (Ken Burns) + narration. Truthful: not frame-by-frame animation.", moat=True),
     _c("podcast-studio", "Podcast Studio™", "audio", "active", "cinema_studio.py", "/cinema-studio",

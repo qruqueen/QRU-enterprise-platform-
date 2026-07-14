@@ -84,6 +84,7 @@ from routers.kr_manufacturing import router as kr_manufacturing_router
 from routers.media_division import router as media_division_router
 from routers.cinema_studio import router as cinema_studio_router
 from routers.decoder_engine import router as decoder_engine_router
+from routers.book_manufacturing import router as book_manufacturing_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
 from routers.misc import (
@@ -148,6 +149,7 @@ for r in [
     media_division_router,
     cinema_studio_router,
     decoder_engine_router,
+    book_manufacturing_router,
 ]:
     app.include_router(r)
 
@@ -194,6 +196,8 @@ async def startup():
     await capability_registry.seed()
     import seed_forex_seeds
     await seed_forex_seeds.seed()
+    import book_manufacturing
+    await book_manufacturing.seed_pilot()
     import asyncio
     import continuous_improvement
     asyncio.create_task(continuous_improvement.watcher_loop())
