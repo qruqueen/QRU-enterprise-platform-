@@ -255,10 +255,18 @@ async def ensure_branded_assets(pid, actor="Creative Studio™", allow_ai_hero_a
     hero = None
     if allow_ai_hero_art:
         try:
-            prompt = (f"Elegant editorial illustration for an educational product about "
-                      f"'{p.get('title','')}' ({p.get('family','')}). {pal['label']} theme, "
-                      f"palette accent {'#%02X%02X%02X' % pal['accent']}, deep {pal['label']} tones, "
-                      f"premium flat-vector style, atmospheric, NO text, portrait composition.")
+            accent_hex = '#%02X%02X%02X' % pal['accent']
+            prompt = (
+                f"Premium book-cover hero illustration for an educational product titled "
+                f"'{p.get('title','')}' (subject: {p.get('topic') or p.get('family','')}). "
+                f"Cinematic, dramatic and aspirational editorial artwork in the QRU luxury brand style: "
+                f"deep navy-to-royal-purple background with radial depth and glow, rich metallic GOLD "
+                f"accents and light rays, elegant symbolic imagery representing the topic, subtle world/data "
+                f"motifs, refined premium finish like a bestselling non-fiction cover. Accent color {accent_hex}. "
+                f"Portrait composition, generous negative space in the CENTER and TOP for a title overlay, "
+                f"absolutely NO text, NO letters, NO words, NO logos in the image. High detail, professional, "
+                f"treasure-worthy, gallery quality."
+            )
             hero = await generate_image(prompt, f"hero-{pid}")
         except Exception:
             hero = None

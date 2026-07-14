@@ -282,13 +282,25 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
         if ca and ca.get("file") and os.path.exists(ca["file"]):
             with open(ca["file"], "rb") as f:
                 cover_bytes = f.read()
+    # Reuse an existing premium hero-art cover (no AI spend); otherwise generate one.
+    if cover_bytes is None and p.get("cover_url") and p.get("cover_has_hero_art"):
+        path = os.path.join(re_engine.ASSET_DIR, p["cover_url"].split("/")[-1])
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                cover_bytes = f.read()
     if cover_bytes is None:
-        cu = p.get("cover_url")
-        if cu:
-            path = os.path.join(re_engine.ASSET_DIR, cu.split("/")[-1])
-            if os.path.exists(path):
-                with open(path, "rb") as f:
-                    cover_bytes = f.read()
+        # Generate a premium hero-art cover (AI illustration composited under the QRU frame).
+        try:
+            import rendering_engine as _re
+            assets = await _re.ensure_branded_assets(product_id, actor=actor, allow_ai_hero_art=True)
+            cu = (assets or {}).get("cover_url") or (await db.products.find_one({"id": product_id}, {"cover_url": 1}) or {}).get("cover_url")
+            if cu:
+                path = os.path.join(re_engine.ASSET_DIR, cu.split("/")[-1])
+                if os.path.exists(path):
+                    with open(path, "rb") as f:
+                        cover_bytes = f.read()
+        except Exception as e:
+            logger.warning(f"hero-art cover generation unavailable: {e}")
     if cover_bytes is None:
         cover_bytes = dl.premium_cover(p, kr or {})
 

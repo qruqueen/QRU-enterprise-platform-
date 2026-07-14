@@ -122,38 +122,108 @@ def _default_process_content(topic="The QRU Learning Formula"):
     }
 
 
+def _defs():
+    """Shared brand gradients — rich navy→purple depth and metallic gold, inherited by every template."""
+    return (
+        '<defs>'
+        '<radialGradient id="bgGrad" cx="50%" cy="32%" r="90%">'
+        '<stop offset="0%" stop-color="#2C1F68"/>'
+        '<stop offset="45%" stop-color="#151543"/>'
+        '<stop offset="100%" stop-color="#05040E"/>'
+        '</radialGradient>'
+        '<linearGradient id="goldGrad" x1="0%" y1="0%" x2="0%" y2="100%">'
+        '<stop offset="0%" stop-color="#F9E4A6"/>'
+        '<stop offset="42%" stop-color="#E7B53C"/>'
+        '<stop offset="100%" stop-color="#AE7A21"/>'
+        '</linearGradient>'
+        '<linearGradient id="goldH" x1="0%" y1="0%" x2="100%" y2="0%">'
+        '<stop offset="0%" stop-color="#C08E28"/><stop offset="50%" stop-color="#F9E4A6"/><stop offset="100%" stop-color="#C08E28"/>'
+        '</linearGradient>'
+        '<radialGradient id="panelGrad" cx="50%" cy="24%" r="95%">'
+        '<stop offset="0%" stop-color="#1B1740"/><stop offset="100%" stop-color="#0B0A1E"/>'
+        '</radialGradient>'
+        '<radialGradient id="navyGrad" cx="50%" cy="30%" r="85%">'
+        '<stop offset="0%" stop-color="#20204F"/><stop offset="100%" stop-color="#0A0E2C"/>'
+        '</radialGradient>'
+        '<radialGradient id="crestGrad" cx="50%" cy="28%" r="90%">'
+        '<stop offset="0%" stop-color="#26235A"/><stop offset="100%" stop-color="#0C0F30"/>'
+        '</radialGradient>'
+        '</defs>'
+    )
+
+
+def _crown(cx, y, w, color="url(#goldGrad)"):
+    """A small heraldic crown centered at cx, sitting on baseline y."""
+    h = w * 0.62
+    return (
+        f'<g><path d="M{cx-w/2},{y} L{cx-w/2+2},{y-h*0.55} L{cx-w/4},{y-h*0.2} '
+        f'L{cx},{y-h} L{cx+w/4},{y-h*0.2} L{cx+w/2-2},{y-h*0.55} L{cx+w/2},{y} Z" '
+        f'fill="{color}" stroke="#8A5E17" stroke-width="1"/>'
+        f'<rect x="{cx-w/2}" y="{y}" width="{w}" height="{h*0.22}" fill="{color}" stroke="#8A5E17" stroke-width="1"/>'
+        f'<circle cx="{cx-w/2+2}" cy="{y-h*0.55}" r="{w*0.06}" fill="#F9E4A6"/>'
+        f'<circle cx="{cx}" cy="{y-h}" r="{w*0.07}" fill="#F9E4A6"/>'
+        f'<circle cx="{cx+w/2-2}" cy="{y-h*0.55}" r="{w*0.06}" fill="#F9E4A6"/></g>'
+    )
+
+
 def _shield(x, y, s, color=GOLD):
-    """A compact QRU crest at (x,y) with size s."""
+    """A refined QRU crest: crowned heraldic shield with quartered emblems and QRU wordmark."""
+    cx = x + s * 0.5
     return (
         f'<g transform="translate({x},{y})">'
-        f'<path d="M0,0 L{s},0 L{s},{s*0.72} Q{s},{s*1.02} {s*0.5},{s*1.15} '
-        f'Q0,{s*1.02} 0,{s*0.72} Z" fill="{NAVY}" stroke="{color}" stroke-width="3"/>'
-        f'<text x="{s*0.5}" y="{s*0.62}" font-family="{SERIF}" font-size="{s*0.34}" font-weight="bold" '
-        f'fill="{color}" text-anchor="middle">QRU</text>'
+        # crown above shield
+        f'{_crown(s*0.5, -s*0.04, s*0.5)}'
+        # shield body with gradient + double gold border
+        f'<path d="M{s*0.06},{s*0.06} L{s*0.94},{s*0.06} L{s*0.94},{s*0.72} '
+        f'Q{s*0.94},{s*1.04} {s*0.5},{s*1.18} Q{s*0.06},{s*1.04} {s*0.06},{s*0.72} Z" '
+        f'fill="url(#crestGrad)" stroke="url(#goldGrad)" stroke-width="{max(3,s*0.045)}"/>'
+        f'<path d="M{s*0.13},{s*0.13} L{s*0.87},{s*0.13} L{s*0.87},{s*0.7} '
+        f'Q{s*0.87},{s*0.96} {s*0.5},{s*1.08} Q{s*0.13},{s*0.96} {s*0.13},{s*0.7} Z" '
+        f'fill="none" stroke="{GOLD}" stroke-width="1" opacity="0.55"/>'
+        # quartering lines
+        f'<line x1="{s*0.5}" y1="{s*0.14}" x2="{s*0.5}" y2="{s*0.62}" stroke="{GOLD}" stroke-width="0.8" opacity="0.3"/>'
+        f'<line x1="{s*0.14}" y1="{s*0.38}" x2="{s*0.86}" y2="{s*0.38}" stroke="{GOLD}" stroke-width="0.8" opacity="0.3"/>'
+        # QRU wordmark
+        f'<text x="{s*0.5}" y="{s*0.72}" font-family="{SERIF}" font-size="{s*0.4}" font-weight="bold" '
+        f'fill="url(#goldGrad)" text-anchor="middle" letter-spacing="1">QRU</text>'
         f'</g>'
     )
 
 
 def _seal(cx, cy, r):
+    """A premium gold medallion with concentric rings, stars and the Quest motto."""
     return (
-        f'<g><circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="{GOLD}" stroke-width="3"/>'
-        f'<circle cx="{cx}" cy="{cy}" r="{r-8}" fill="none" stroke="{GOLD}" stroke-width="1"/>'
-        f'<text x="{cx}" y="{cy-6}" font-family="{SANS}" font-size="16" font-weight="bold" fill="{GOLD}" text-anchor="middle">QUEST FOR</text>'
-        f'<text x="{cx}" y="{cy+14}" font-family="{SERIF}" font-size="20" font-weight="bold" fill="{GOLD}" text-anchor="middle">REAL</text>'
-        f'<text x="{cx}" y="{cy+34}" font-family="{SANS}" font-size="13" font-weight="bold" fill="{GOLD}" text-anchor="middle">UNDERSTANDING</text></g>'
+        f'<g><circle cx="{cx}" cy="{cy}" r="{r}" fill="url(#navyGrad)" stroke="url(#goldGrad)" stroke-width="4"/>'
+        f'<circle cx="{cx}" cy="{cy}" r="{r-9}" fill="none" stroke="{GOLD}" stroke-width="1.2" opacity="0.7"/>'
+        f'<circle cx="{cx}" cy="{cy}" r="{r-16}" fill="none" stroke="{GOLD}" stroke-width="0.6" opacity="0.4" stroke-dasharray="2 5"/>'
+        f'{_crown(cx, cy-r*0.42, r*0.5)}'
+        f'<text x="{cx}" y="{cy+4}" font-family="{SANS}" font-size="15" font-weight="bold" fill="{GOLD}" text-anchor="middle" letter-spacing="1">QUEST FOR</text>'
+        f'<text x="{cx}" y="{cy+24}" font-family="{SERIF}" font-size="19" font-weight="bold" fill="url(#goldGrad)" text-anchor="middle">REAL</text>'
+        f'<text x="{cx}" y="{cy+42}" font-family="{SANS}" font-size="11" font-weight="bold" fill="{GOLD}" text-anchor="middle" letter-spacing="1">UNDERSTANDING</text>'
+        f'<text x="{cx}" y="{cy+r-8}" font-family="{SANS}" font-size="14" fill="{GOLD}" text-anchor="middle">\u2726</text></g>'
+    )
+
+
+def _treasure_seal(cx, cy, r):
+    """The Treasure Standard™ medallion for approved work."""
+    return (
+        f'<g><circle cx="{cx}" cy="{cy}" r="{r}" fill="url(#goldGrad)" stroke="#8A5E17" stroke-width="2"/>'
+        f'<circle cx="{cx}" cy="{cy}" r="{r-7}" fill="url(#navyGrad)" stroke="#8A5E17" stroke-width="1"/>'
+        f'<text x="{cx}" y="{cy-r*0.28}" font-family="{SANS}" font-size="{r*0.2}" font-weight="bold" fill="{GOLD}" text-anchor="middle" letter-spacing="1">TREASURE</text>'
+        f'<text x="{cx}" y="{cy-r*0.04}" font-family="{SERIF}" font-size="{r*0.24}" font-weight="bold" fill="url(#goldGrad)" text-anchor="middle">STANDARD\u2122</text>'
+        f'<path d="M{cx-r*0.16},{cy+r*0.2} L{cx},{cy+r*0.42} L{cx+r*0.16},{cy+r*0.2} L{cx},{cy+r*0.08} Z" fill="{GOLD}"/>'
+        f'<text x="{cx}" y="{cy+r*0.72}" font-family="{SANS}" font-size="{r*0.13}" fill="{CREAM}" text-anchor="middle">PROUDLY TREASURED</text></g>'
     )
 
 
 def _build_process_svg(c):
     W, H = 1600, 2000
     parts = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">']
-    # background
-    parts.append(f'<rect width="{W}" height="{H}" fill="{INK}"/>')
-    parts.append(f'<rect x="10" y="10" width="{W-20}" height="{H-20}" fill="none" stroke="{GOLD}" stroke-width="2" opacity="0.5"/>')
+    parts.append(_frame(W, H))
 
     # ── Header ──
-    parts.append(_shield(70, 60, 120))
-    parts.append(_seal(W - 150, 130, 92))
+    parts.append(_shield(64, 52, 122))
+    parts.append(_seal(W - 150, 132, 94))
     parts.append(f'<text x="{W/2}" y="95" font-family="{SERIF}" font-size="46" font-weight="bold" fill="{GOLD}" text-anchor="middle" letter-spacing="4">{_esc(c["eyebrow"])}</text>')
     tm = '<tspan font-size="34" dy="-28">\u2122</tspan>' if c.get("trademark") else ""
     parts.append(f'<text x="{W/2}" y="165" font-family="{SERIF}" font-size="84" font-weight="bold" fill="{WHITE}" text-anchor="middle" letter-spacing="2">{_esc(c["title"])}{tm}</text>')
@@ -167,7 +237,7 @@ def _build_process_svg(c):
     for i, st in enumerate(c["steps"][:4]):
         col = STEP_COLORS[i]
         x = pad + i * (pw + pad)
-        parts.append(f'<rect x="{x}" y="{top}" width="{pw}" height="{bot-top}" rx="18" fill="#0E0C20" stroke="{col}" stroke-width="2.5"/>')
+        parts.append(f'<rect x="{x}" y="{top}" width="{pw}" height="{bot-top}" rx="18" fill="url(#panelGrad)" stroke="{col}" stroke-width="2.5"/>')
         # number badge
         cx = x + pw / 2
         parts.append(f'<circle cx="{cx}" cy="{top+55}" r="34" fill="none" stroke="{col}" stroke-width="3"/>')
@@ -206,7 +276,7 @@ def _build_process_svg(c):
 
     # ── Summary strip ──
     sy = 1560
-    parts.append(f'<rect x="40" y="{sy}" width="{W-80}" height="230" rx="14" fill="#0E0C20" stroke="{GOLD}" stroke-width="1.5" opacity="0.9"/>')
+    parts.append(f'<rect x="40" y="{sy}" width="{W-80}" height="230" rx="14" fill="url(#panelGrad)" stroke="{GOLD}" stroke-width="1.5" opacity="0.9"/>')
     sw = (W - 80) / 4
     for i, s in enumerate(c["summary"][:4]):
         col = STEP_COLORS[i]
@@ -231,23 +301,37 @@ BUILDERS = {"process-formula-v1": _build_process_svg}
 DEFAULTS = {"process-formula-v1": _default_process_content}
 
 
+def _frame(W, H):
+    """Gradient background, double gold frame and corner flourishes — shared by all dark templates."""
+    g = _defs()
+    g += f'<rect width="{W}" height="{H}" fill="url(#bgGrad)"/>'
+    g += f'<rect x="16" y="16" width="{W-32}" height="{H-32}" fill="none" stroke="url(#goldGrad)" stroke-width="3"/>'
+    g += f'<rect x="26" y="26" width="{W-52}" height="{H-52}" fill="none" stroke="{GOLD}" stroke-width="1" opacity="0.4"/>'
+    for (cx, cy, sx, sy) in [(16, 16, 1, 1), (W-16, 16, -1, 1), (16, H-16, 1, -1), (W-16, H-16, -1, -1)]:
+        g += (f'<path d="M{cx},{cy+sy*70} L{cx},{cy} L{cx+sx*70},{cy}" fill="none" stroke="url(#goldGrad)" stroke-width="6"/>'
+              f'<circle cx="{cx+sx*18}" cy="{cy+sy*18}" r="5" fill="{GOLD}"/>')
+    return g
+
+
 def _svg_open():
     return [f'<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="2000" viewBox="0 0 1600 2000">',
-            f'<rect width="1600" height="2000" fill="{INK}"/>',
-            f'<rect x="10" y="10" width="1580" height="1980" fill="none" stroke="{GOLD}" stroke-width="2" opacity="0.5"/>']
+            _frame(1600, 2000)]
 
 
 def _header(parts, c, W=1600):
-    parts.append(_shield(70, 60, 110))
-    parts.append(_seal(W - 150, 128, 86))
+    parts.append(_shield(64, 52, 118))
+    parts.append(_seal(W - 150, 128, 90))
     tm = '<tspan font-size="30" dy="-24">\u2122</tspan>' if c.get("trademark") else ""
-    parts.append(f'<text x="{W/2}" y="130" font-family="{SERIF}" font-size="72" font-weight="bold" fill="{WHITE}" text-anchor="middle" letter-spacing="1">{_esc(c["title"])}{tm}</text>')
-    parts.append(f'<text x="{W/2}" y="185" font-family="{SANS}" font-size="26" font-weight="bold" fill="{GOLD}" text-anchor="middle" letter-spacing="2">{_esc(c.get("subtitle",""))}</text>')
+    parts.append(f'<text x="{W/2}" y="128" font-family="{SERIF}" font-size="72" font-weight="bold" fill="{WHITE}" text-anchor="middle" letter-spacing="1">{_esc(c["title"])}{tm}</text>')
+    parts.append(f'<rect x="{W/2-190}" y="150" width="380" height="4" rx="2" fill="url(#goldH)"/>')
+    parts.append(f'<text x="{W/2}" y="196" font-family="{SANS}" font-size="26" font-weight="bold" fill="{GOLD}" text-anchor="middle" letter-spacing="2">{_esc(c.get("subtitle",""))}</text>')
 
 
 def _footer(parts, text, W=1600, H=2000):
-    parts.append(f'<rect x="10" y="{H-84}" width="{W-20}" height="74" fill="{NAVY}"/>')
-    parts.append(f'<text x="{W/2}" y="{H-38}" font-family="{SANS}" font-size="24" font-weight="bold" fill="{GOLD}" text-anchor="middle" letter-spacing="1">{_esc(text)}</text>')
+    parts.append(f'<rect x="16" y="{H-92}" width="{W-32}" height="76" fill="url(#navyGrad)"/>')
+    parts.append(f'<rect x="16" y="{H-92}" width="{W-32}" height="4" fill="url(#goldH)"/>')
+    parts.append(_shield(40, H - 86, 54))
+    parts.append(f'<text x="{W/2+20}" y="{H-42}" font-family="{SANS}" font-size="24" font-weight="bold" fill="{GOLD}" text-anchor="middle" letter-spacing="1">{_esc(text)}</text>')
 
 
 # ── Data Comparison Poster ──────────────────────────────────────────────────
@@ -283,7 +367,7 @@ def _build_data_comparison_svg(c):
     for i, row in enumerate(rows):
         ry = y0 + rh * (i + 1)
         if i % 2 == 0:
-            parts.append(f'<rect x="{x0}" y="{ry}" width="1480" height="{rh}" fill="#0E0C20"/>')
+            parts.append(f'<rect x="{x0}" y="{ry}" width="1480" height="{rh}" fill="url(#panelGrad)"/>')
         parts.append(f'<text x="{x0+20}" y="{ry+rh*0.62}" font-family="{SANS}" font-size="24" font-weight="bold" fill="{CREAM}">{_esc(row["label"])}</text>')
         for j, val in enumerate(row["values"][:len(cols)]):
             cx = x0 + label_w + j * col_w + col_w / 2
@@ -322,7 +406,7 @@ def _build_scorecard_svg(c):
         r, cc = divmod(i, cols)
         x = x0 + cc * (cw + gap); y = y0 + r * (ch + gap)
         col = STEP_COLORS[i % len(STEP_COLORS)]
-        parts.append(f'<rect x="{x}" y="{y}" width="{cw}" height="{ch}" rx="16" fill="#0E0C20" stroke="{col}" stroke-width="2.5"/>')
+        parts.append(f'<rect x="{x}" y="{y}" width="{cw}" height="{ch}" rx="16" fill="url(#panelGrad)" stroke="{col}" stroke-width="2.5"/>')
         parts.append(f'<text x="{x+30}" y="{y+60}" font-family="{SANS}" font-size="30" font-weight="bold" fill="{WHITE}">{_esc(card["name"])}</text>')
         parts.append(f'<circle cx="{x+cw-70}" cy="{y+60}" r="42" fill="none" stroke="{col}" stroke-width="3"/>')
         parts.append(f'<text x="{x+cw-70}" y="{y+74}" font-family="{SERIF}" font-size="40" font-weight="bold" fill="{col}" text-anchor="middle">{_esc(card["grade"])}</text>')
@@ -358,7 +442,7 @@ def _build_illustrated_svg(c):
         r, cc = divmod(i, cols)
         x = x0 + cc * (cw + gap); y = y0 + r * (ch + gap)
         col = STEP_COLORS[i % len(STEP_COLORS)]
-        parts.append(f'<rect x="{x}" y="{y}" width="{cw}" height="{ch}" rx="18" fill="#0E0C20" stroke="{col}" stroke-width="2"/>')
+        parts.append(f'<rect x="{x}" y="{y}" width="{cw}" height="{ch}" rx="18" fill="url(#panelGrad)" stroke="{col}" stroke-width="2"/>')
         cx = x + 90
         parts.append(f'<circle cx="{cx}" cy="{y+90}" r="52" fill="{col}" opacity="0.15"/>')
         parts.append(f'<circle cx="{cx}" cy="{y+90}" r="52" fill="none" stroke="{col}" stroke-width="2"/>')
@@ -400,7 +484,7 @@ def _build_decoder_svg(c):
         r, cc = divmod(i, cols)
         x = x0 + cc * (cw + gap); y = y0 + r * (ch + gap)
         col = STEP_COLORS[i % len(STEP_COLORS)]
-        parts.append(f'<rect x="{x}" y="{y}" width="{cw}" height="{ch}" rx="12" fill="#0E0C20" stroke="{col}" stroke-width="2"/>')
+        parts.append(f'<rect x="{x}" y="{y}" width="{cw}" height="{ch}" rx="12" fill="url(#panelGrad)" stroke="{col}" stroke-width="2"/>')
         parts.append(f'<circle cx="{x+40}" cy="{y+40}" r="26" fill="{col}"/>')
         parts.append(f'<text x="{x+40}" y="{y+50}" font-family="{SERIF}" font-size="28" font-weight="bold" fill="{INK}" text-anchor="middle">{i+1}</text>')
         for k, ln in enumerate(_wrap(s["heading"], 30)):
@@ -464,8 +548,10 @@ def _card_pill(parts, x, y, w, label, dot_color):
 def _build_knowledge_card_svg(c):
     W, H = 1500, 2143
     p = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">']
+    p.append(_defs())
     p.append(f'<rect width="{W}" height="{H}" fill="{CARD_PAGE}"/>')
-    p.append(f'<rect x="12" y="12" width="{W-24}" height="{H-24}" rx="20" fill="none" stroke="{GOLD}" stroke-width="3"/>')
+    p.append(f'<rect x="12" y="12" width="{W-24}" height="{H-24}" rx="20" fill="none" stroke="url(#goldGrad)" stroke-width="4"/>')
+    p.append(f'<rect x="22" y="22" width="{W-44}" height="{H-44}" rx="16" fill="none" stroke="{GOLD}" stroke-width="1" opacity="0.4"/>')
 
     # Header
     p.append(_shield(50, 40, 130, GOLD))
@@ -608,7 +694,7 @@ def _build_identity_anatomy_svg(c):
     parts = _svg_open(); _header(parts, c)
     left = c.get("parts_left", [])[:5]; right = c.get("parts_right", [])[:5]
     cx, cy = 800, 900
-    parts.append(f'<circle cx="{cx}" cy="{cy}" r="210" fill="#0E0C20" stroke="{GOLD}" stroke-width="3"/>')
+    parts.append(f'<circle cx="{cx}" cy="{cy}" r="210" fill="url(#panelGrad)" stroke="{GOLD}" stroke-width="3"/>')
     parts.append(f'<circle cx="{cx}" cy="{cy}" r="210" fill="none" stroke="{GOLD}" stroke-width="1" opacity="0.4" stroke-dasharray="6 10"/>')
     for k, ln in enumerate(_wrap(c.get("center_label", ""), 12)):
         parts.append(f'<text x="{cx}" y="{cy-10 + k*54}" font-family="{SERIF}" font-size="48" font-weight="bold" fill="{GOLD}" text-anchor="middle">{_esc(ln)}</text>')
@@ -646,7 +732,7 @@ def _build_give_credit_svg(c):
         r, cc = divmod(i, cols)
         x = x0 + cc * (cw + gap); y = y0 + r * (ch + gap)
         col = STEP_COLORS[i % len(STEP_COLORS)]
-        parts.append(f'<rect x="{x}" y="{y}" width="{cw}" height="{ch}" rx="16" fill="#0E0C20" stroke="{col}" stroke-width="2"/>')
+        parts.append(f'<rect x="{x}" y="{y}" width="{cw}" height="{ch}" rx="16" fill="url(#panelGrad)" stroke="{col}" stroke-width="2"/>')
         parts.append(f'<rect x="{x}" y="{y}" width="74" height="{ch}" rx="16" fill="{col}" opacity="0.16"/>')
         parts.append(f'<text x="{x+37}" y="{y+ch/2+16}" font-family="{SERIF}" font-size="46" font-weight="bold" fill="{col}" text-anchor="middle">{i+1}</text>')
         for k, ln in enumerate(_wrap(p.get("title", ""), 30)):
@@ -672,7 +758,7 @@ def _default_why_forex(topic="Why It Matters"):
 def _build_why_forex_svg(c):
     parts = _svg_open(); _header(parts, c)
     cx, cy = 800, 720
-    parts.append(f'<circle cx="{cx}" cy="{cy}" r="250" fill="#0E0C20" stroke="{GOLD}" stroke-width="4"/>')
+    parts.append(f'<circle cx="{cx}" cy="{cy}" r="250" fill="url(#panelGrad)" stroke="{GOLD}" stroke-width="4"/>')
     parts.append(f'<text x="{cx}" y="{cy+10}" font-family="{SERIF}" font-size="120" font-weight="bold" fill="{GOLD}" text-anchor="middle">{_esc(c.get("headline_stat",""))}</text>')
     for k, ln in enumerate(_wrap(c.get("stat_caption", ""), 30)):
         parts.append(f'<text x="{cx}" y="{cy+110 + k*28}" font-family="{SANS}" font-size="22" fill="{CREAM}" text-anchor="middle">{_esc(ln)}</text>')
@@ -683,7 +769,7 @@ def _build_why_forex_svg(c):
         r, cc = divmod(i, cols)
         x = x0 + cc * (cw + gap); y = y0 + r * (ch + gap)
         col = STEP_COLORS[i % len(STEP_COLORS)]
-        parts.append(f'<rect x="{x}" y="{y}" width="{cw}" height="{ch}" rx="14" fill="#0E0C20" stroke="{col}" stroke-width="2"/>')
+        parts.append(f'<rect x="{x}" y="{y}" width="{cw}" height="{ch}" rx="14" fill="url(#panelGrad)" stroke="{col}" stroke-width="2"/>')
         parts.append(f'<circle cx="{x+50}" cy="{y+50}" r="26" fill="{col}" opacity="0.2"/><circle cx="{x+50}" cy="{y+50}" r="26" fill="none" stroke="{col}" stroke-width="2"/>')
         parts.append(f'<text x="{x+100}" y="{y+60}" font-family="{SANS}" font-size="28" font-weight="bold" fill="{WHITE}">{_esc(co.get("title",""))}</text>')
         for k, ln in enumerate(_wrap(co.get("desc", ""), 42)[:3]):
@@ -725,14 +811,14 @@ def _build_utility_principle_svg(c):
         ang = -math.pi / 2 + i * 2 * math.pi / n
         x = cx + R * math.cos(ang); y = cy + R * math.sin(ang)
         col = STEP_COLORS[i % len(STEP_COLORS)]
-        parts.append(f'<circle cx="{x}" cy="{y}" r="76" fill="#0E0C20" stroke="{col}" stroke-width="3"/>')
+        parts.append(f'<circle cx="{x}" cy="{y}" r="76" fill="url(#panelGrad)" stroke="{col}" stroke-width="3"/>')
         parts.append(f'<text x="{x}" y="{y-6}" font-family="{SERIF}" font-size="34" font-weight="bold" fill="{col}" text-anchor="middle">{i+1}</text>')
         parts.append(f'<text x="{x}" y="{y+30}" font-family="{SANS}" font-size="19" font-weight="bold" fill="{WHITE}" text-anchor="middle">{_esc(str(s)[:12])}</text>')
     parts.append(f'<text x="{cx}" y="{cy+10}" font-family="{SERIF}" font-size="40" font-weight="bold" fill="{GOLD}" text-anchor="middle">CYCLE</text>')
     boxes = (c.get("info_boxes") or [])[:2]
     for i, b in enumerate(boxes):
         x = 60 + i * (740 + 20); y = 1180
-        parts.append(f'<rect x="{x}" y="{y}" width="740" height="300" rx="16" fill="#0E0C20" stroke="{GOLD}" stroke-width="2"/>')
+        parts.append(f'<rect x="{x}" y="{y}" width="740" height="300" rx="16" fill="url(#panelGrad)" stroke="{GOLD}" stroke-width="2"/>')
         parts.append(f'<text x="{x+30}" y="{y+56}" font-family="{SANS}" font-size="28" font-weight="bold" fill="{GOLD}">{_esc(b.get("title",""))}</text>')
         for k, ln in enumerate(_wrap(b.get("body", ""), 46)[:6]):
             parts.append(f'<text x="{x+30}" y="{y+110 + k*32}" font-family="{SANS}" font-size="21" fill="{CREAM}">{_esc(ln)}</text>')
