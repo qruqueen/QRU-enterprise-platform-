@@ -1,0 +1,26 @@
+{
+  "summary": "Frontend-only testing of QRU self-cleaning sidebar (Capability Registry-driven navigation). All 8 requested testcases PASSED: sidebar-nav renders after founder login and is generated from GET /api/capability-registry/navigation; 'Start Here' pinned group contains all 5 expected items (nav-factory-map, nav-dashboard, nav-create, nav-concierge, nav-projects); all 11 division section headers render in correct order (Knowledge, Manufacturing Engine, Publishing, Learning, Story & Cinema, Marketing, Quality, Distribution, Governance & Trust, Mission Control, Administration); division nav links navigate correctly (nav-little-legacy -> /little-legacy, nav-store -> /store, nav-knowledge-records -> /knowledge, all loaded without error boundaries); Legacy — Under Review drawer collapsed by default, toggle badge shows 10, expanding reveals the 10 legacy items including nav-command (MERGED), nav-product-library (MERGED), nav-media-starter-kit (MERGED), nav-experience-lab (DEPRECATED) each with visible status label; legacy-review-link navigates to /factory-map and factory-map-page renders; regression check on Factory Map Capability Registry tab confirmed 92 cap-select-* dropdowns render (91 shown in iteration_68, one added — expected due to registry evolution).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Minor documentation note: The test request references 'nav-knowledge' testid for the Knowledge Records link, but the actual testid emitted by the backend registry is 'nav-knowledge-records' (route /knowledge). Not a bug — routing works — but E1 may want to align the example testid in the spec, or add a synonym."
+  ],
+  "critical_code_review_comments": [
+    "Layout.js useEffect deps use `[location.pathname === '/factory-map']` (a boolean). This re-fetches only when the boolean flips (true<->false), which effectively triggers on entering AND leaving /factory-map. Works as intended but is unusual — consider `[location.pathname]` if refresh only on route change is desired, or leave a comment.",
+    "FALLBACK constant is defined at module scope — good. Consider also displaying a small toast/error state when /capability-registry/navigation fails so the founder knows the sidebar is running on a stale fallback.",
+    "Legacy drawer items use NavLink but the click doesn't collapse the drawer — minor UX polish (drawer stays open after picking a legacy item, which is fine)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped by request)", "frontend": "100%"},
+  "test_credentials": "Founder login (super-admin): 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026!",
+  "seed_data_creation": "None. No mutations performed — Factory Map registry dropdowns were only counted (92 present), not changed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Sidebar navigation is generated live from GET /api/capability-registry/navigation. Pinned section = 5 items, then 11 division sections (Knowledge/Manufacturing Engine/Publishing/Learning/Story & Cinema/Marketing/Quality/Distribution/Governance & Trust/Mission Control/Administration). Legacy drawer = 10 items (Command Console, Creative Studio, Enterprise Blueprint, Enterprise Health, Experience Lab (DEPRECATED), Manufacturing Co..., Manufacturing Studio, Media Starter Kit, Product Library, Visual & Media Studio — all merged/deprecated). Data-testids follow nav-<capability-id> convention. The section headers render with CSS text-transform: uppercase (overline class) so use case-insensitive matching or check element .innerText. Registry now has 92 capabilities (was 91 in iteration_68 — one added, minor).",
+  "rca of the issue": "No issues found. Feature works end-to-end."
+}

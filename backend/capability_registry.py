@@ -203,6 +203,8 @@ DEFINITIONS = [
        "Repeat great QRU design.", "Design language & pattern library."),
 
     # ---------- ENTERPRISE & MISSION CONTROL ----------
+    _c("factory-map", "Factory Map™", "enterprise", "active", "capability_registry.py", "/factory-map",
+       "See the canonical manufacturing architecture.", "Capability Registry™ + Manufacturing Map™ — one KR, many products.", moat=True),
     _c("dashboard", "Founder Console", "enterprise", "active", "routers/command.py", "/",
        "Focus the Founder each day.", "Founder mission-control home."),
     _c("create", "Create", "enterprise", "active", "factory_os.py", "/create",
@@ -383,3 +385,64 @@ async def set_status(cap_id, status, founder_name):
     if not res.matched_count:
         return None
     return await db[COLLECTION].find_one({"id": cap_id}, {"_id": 0})
+
+
+# --- Self-cleaning sidebar (driven by the Registry) ---
+# Layers pinned to the top "Start Here" section (by capability id).
+NAV_PINNED = ["factory-map", "dashboard", "create", "concierge", "projects"]
+# Friendly sidebar section titles per layer.
+NAV_SECTION = {
+    "knowledge": "Knowledge",
+    "engine": "Manufacturing Engine",
+    "publishing": "Publishing",
+    "learning": "Learning",
+    "entertainment": "Story & Cinema",
+    "marketing": "Marketing",
+    "audio": "Audio",
+    "video": "Video",
+    "assessment": "Quality",
+    "distribution": "Distribution",
+    "governance": "Governance & Trust",
+    "enterprise": "Mission Control",
+    "admin": "Administration",
+}
+
+
+async def navigation():
+    """The sidebar, generated from the Registry. Active/Inherited routed capabilities
+    are grouped by division; Merged/Deprecated collapse into 'Legacy — Under Review'."""
+    docs = await db[COLLECTION].find({}, {"_id": 0}).to_list(1000)
+    by_id = {d["id"]: d for d in docs}
+
+    pinned = []
+    for cid in NAV_PINNED:
+        d = by_id.get(cid)
+        if d and d.get("route"):
+            pinned.append({"id": d["id"], "label": d["name"], "route": d["route"],
+                           "hint": d.get("current_purpose", ""), "moat": d.get("moat", False)})
+
+    order = {k: i for i, (k, _, _) in enumerate(LAYERS)}
+    sections, legacy = [], []
+    grouped = {}
+    for d in docs:
+        if d["id"] in NAV_PINNED:
+            continue
+        route = d.get("route")
+        if not route:
+            continue
+        status = d.get("status")
+        item = {"id": d["id"], "label": d["name"], "route": route,
+                "hint": d.get("current_purpose", ""), "moat": d.get("moat", False), "status": status}
+        if status in ("merged", "deprecated"):
+            item["duplicate_of"] = d.get("duplicate_of")
+            legacy.append(item)
+        elif status in ("active", "inherited"):
+            grouped.setdefault(d["layer"], []).append(item)
+
+    for layer_key in sorted(grouped.keys(), key=lambda k: order.get(k, 99)):
+        items = sorted(grouped[layer_key], key=lambda x: x["label"])
+        sections.append({"layer": layer_key, "label": NAV_SECTION.get(layer_key, layer_key), "items": items})
+
+    legacy.sort(key=lambda x: x["label"])
+    return {"pinned": pinned, "sections": sections, "legacy": legacy}
+

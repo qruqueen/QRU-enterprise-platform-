@@ -28,6 +28,11 @@ async def manufacturing_map(user=Depends(get_current_user)):
     return await cr.manufacturing_map()
 
 
+@router.get("/navigation")
+async def navigation(user=Depends(get_current_user)):
+    return await cr.navigation()
+
+
 @router.get("/promise")
 async def promise(user=Depends(get_current_user)):
     return cr.MANUFACTURING_PROMISE
