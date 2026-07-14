@@ -114,6 +114,70 @@ async def monitor(book_id: str, user=Depends(get_current_user)):
     return r
 
 
+@router.post("/books/{book_id}/audio-prototype")
+async def audio_prototype(book_id: str, user=Depends(require_super_admin)):
+    r = await bm.render_audio_prototype(book_id, user.get("name", "Founder"))
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    if isinstance(r, dict) and r.get("error"):
+        raise HTTPException(400, r["error"])
+    return r
+
+
+class PricingReq(BaseModel):
+    list_price: float
+    currency: Optional[str] = "USD"
+
+
+@router.post("/books/{book_id}/pricing")
+async def pricing(book_id: str, req: PricingReq, user=Depends(require_super_admin)):
+    r = await bm.set_pricing(book_id, req.list_price, req.currency, user.get("name", "Founder"))
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    return r
+
+
+@router.post("/books/{book_id}/authorize")
+async def authorize(book_id: str, user=Depends(require_super_admin)):
+    r = await bm.authorize_release(book_id, user.get("name", "Founder"))
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    if isinstance(r, dict) and r.get("error"):
+        raise HTTPException(400, r["error"])
+    return r
+
+
+class ShareReq(BaseModel):
+    hours: Optional[int] = 72
+    base_url: Optional[str] = ""
+
+
+@router.post("/books/{book_id}/share")
+async def share(book_id: str, req: ShareReq = ShareReq(), user=Depends(require_super_admin)):
+    r = await bm.create_share(book_id, req.hours, user.get("name", "Founder"), req.base_url or "")
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    if isinstance(r, dict) and r.get("error"):
+        raise HTTPException(400, r["error"])
+    return r
+
+
+@router.get("/share/{token}")
+async def resolve_share(token: str):
+    import os
+    from fastapi.responses import FileResponse, JSONResponse
+    import rendering_engine as re_engine
+    s = await bm.resolve_share(token)
+    if s.get("error"):
+        return JSONResponse(status_code=410 if "expired" in s["error"] else 404, content=s)
+    fid = s["package_url"].rstrip("/").split("/")[-1]
+    path = os.path.join(re_engine.ASSET_DIR, fid)
+    if not os.path.exists(path):
+        return JSONResponse(status_code=404, content={"error": "Package file no longer available."})
+    fname = "".join(c for c in s["book_title"] if c.isalnum() or c in " -_").strip().replace(" ", "_")
+    return FileResponse(path, media_type="application/zip", filename=f"{fname}_Master_Package.zip")
+
+
 @router.post("/books/{book_id}/assemble-package")
 async def assemble_package(book_id: str, user=Depends(require_super_admin)):
     r = await bm.assemble_master_package(book_id, user.get("name", "Founder"))

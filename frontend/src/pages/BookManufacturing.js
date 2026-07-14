@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge, MetricCard } from "@/components/qru";
 import {
   Upload, SpellCheck, Palette, Mic, Video, Send, Activity, Loader2, CheckCircle2,
-  Lock, FileText, ShieldCheck, ChevronRight, BookOpen, AlertTriangle, Download, MapPin,
+  Lock, FileText, ShieldCheck, ChevronRight, BookOpen, AlertTriangle, Download, MapPin, Share2, Play, DollarSign,
 } from "lucide-react";
 
 const ICONS = { upload: Upload, "spell-check": SpellCheck, palette: Palette, mic: Mic, video: Video, send: Send, activity: Activity };
@@ -68,6 +68,19 @@ export default function BookManufacturing() {
     } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
     finally { setBusy(false); }
   };
+  const doRenderAudio = () => run(async () => { await api.post(`/book-mfg/books/${book.id}/audio-prototype`); const { data } = await api.get(`/book-mfg/books/${book.id}/audio`); setAudio(data); }, "Narration prototype rendered.");
+  const doPricing = (price, currency) => run(() => api.post(`/book-mfg/books/${book.id}/pricing`, { list_price: parseFloat(price), currency }), "Pricing approved.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
+  const doAuthorize = () => run(() => api.post(`/book-mfg/books/${book.id}/authorize`), "Release authorized.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
+  const doShare = async () => {
+    setBusy(true);
+    try {
+      const { data } = await api.post(`/book-mfg/books/${book.id}/share`, { hours: 72, base_url: A });
+      await navigator.clipboard?.writeText(abs(data.share_url)).catch(() => {});
+      toast.success(`Share link created (expires ${new Date(data.expires_at).toLocaleDateString()}). Copied to clipboard.`);
+      window.open(abs(data.share_url), "_blank");
+    } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
+    finally { setBusy(false); }
+  };
 
   if (!book) return <div className="p-8 text-muted-foreground" data-testid="book-mfg-loading">Loading Book Manufacturing System™…</div>;
 
@@ -105,6 +118,10 @@ export default function BookManufacturing() {
             className="inline-flex items-center gap-1.5 bg-gold text-navy px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50">
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Assemble &amp; Download Package
           </button>
+          <button data-testid="share-package-btn" onClick={doShare} disabled={busy}
+            className="inline-flex items-center gap-1.5 border border-navy/30 text-navy px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50">
+            <Share2 className="w-4 h-4" /> Share Link
+          </button>
         </div>
       </div>
 
@@ -135,9 +152,9 @@ export default function BookManufacturing() {
       {tab === "upload" && <UploadPanel book={book} />}
       {tab === "proof" && <ProofPanel book={book} proof={proof} busy={busy} doProof={doProof} doApprove={doApprove} />}
       {tab === "design" && <DesignPanel book={book} busy={busy} doDesign={doDesign} doSelectCover={doSelectCover} />}
-      {tab === "audio" && <PlanPanel title="Audio" icon={Mic} data={audio} render={renderAudio} />}
+      {tab === "audio" && <AudioPanel book={book} audio={audio} busy={busy} onRender={doRenderAudio} />}
       {tab === "video" && <PlanPanel title="Video" icon={Video} data={video} render={renderVideo} />}
-      {tab === "publish" && <PublishPanel data={publish} />}
+      {tab === "publish" && <PublishPanel data={publish} book={book} busy={busy} doPricing={doPricing} doAuthorize={doAuthorize} />}
       {tab === "monitor" && <PlanPanel title="Monitor" icon={Activity} data={monitor} render={renderMonitor} />}
     </div>
   );
@@ -160,8 +177,13 @@ function founderNav(b, tab) {
   if (b.editorial_locked) completed.push("Editorial lock");
   if (design) completed.push("Design");
   const missing = [];
-  (b.intake_scan?.missing_essentials || []).forEach((m) => missing.push(m));
+  (b.intake_scan?.missing_essentials || []).forEach((m) => {
+    if (/cover/i.test(m) && design) return; // resolved once Design runs
+    missing.push(m);
+  });
   if (design && !design.selected_cover) missing.push("Select final cover");
+  if (b.editorial_locked && !b.pricing?.approved) missing.push("Approve pricing");
+  if (b.editorial_locked && !b.founder_authorization?.authorized) missing.push("Founder authorization");
   let decision = "None right now";
   if ((b.proofing_report?.unresolved_questions || []).length) decision = b.proofing_report.unresolved_questions[0];
   else if (!b.editorial_locked && b.proofing_report) decision = "Approve & lock editorial edition";
@@ -323,6 +345,33 @@ function DesignPanel({ book, busy, doDesign, doSelectCover }) {
   );
 }
 
+function AudioPanel({ book, audio, busy, onRender }) {
+  const proto = book.artifacts?.audio?.prototype || audio?.prototype;
+  const timing = book.artifacts?.audio || {};
+  return (
+    <div data-testid="panel-audio">
+      <Panel title="Audio" icon={Mic} accent="royal"
+        right={
+          <button data-testid="render-audio-btn" onClick={onRender} disabled={busy}
+            className="inline-flex items-center gap-1.5 bg-navy text-white px-4 py-2 rounded-md text-sm font-bold disabled:opacity-60">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} Render Narration Prototype
+          </button>
+        }>
+        {proto ? (
+          <div className="mb-4 border border-gold/40 bg-gold/[0.06] rounded-md p-3" data-testid="audio-prototype">
+            <p className="text-[12px] text-amber-800 font-semibold mb-2">{proto.label}</p>
+            <audio controls src={abs(proto.url)} className="w-full" data-testid="audio-player" />
+            <p className="text-[11px] text-muted-foreground mt-1">Voice: {proto.voice} · {proto.duration_sec}s · Full-book estimate ~{timing.full_book_estimate_min} min</p>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground mb-4">Render a real AI narration prototype of Chapter 1's opening for pacing review. It is honestly labeled — not for commercial distribution.</p>
+        )}
+        {audio && renderAudio(audio)}
+      </Panel>
+    </div>
+  );
+}
+
 function PlanPanel({ title, icon, data, render }) {
   return (
     <Panel title={title} icon={icon} accent="royal" testid={`panel-${title.toLowerCase()}`}>
@@ -374,7 +423,8 @@ function renderMonitor(d) {
   );
 }
 
-function PublishPanel({ data }) {
+function PublishPanel({ data, book, busy, doPricing, doAuthorize }) {
+  const [price, setPrice] = useState("");
   if (!data) return <Panel title="Publish" icon={Send}><p className="text-sm text-muted-foreground py-4">Loading…</p></Panel>;
   const g = data.final_release_gate;
   return (
@@ -398,6 +448,30 @@ function PublishPanel({ data }) {
               {v ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <StatusChip status="Pending" tone="amber" />}
             </div>
           ))}
+        </div>
+
+        {/* Pricing input */}
+        {!g.pricing_approved && (
+          <div className="mt-3 flex items-center gap-2" data-testid="pricing-input">
+            <DollarSign className="w-4 h-4 text-muted-foreground" />
+            <input type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)}
+              placeholder="List price (USD)" className="flex-1 px-2 py-1.5 text-sm border border-border rounded-md bg-card outline-none" />
+            <button data-testid="approve-pricing-btn" onClick={() => doPricing(price, "USD")} disabled={busy || !price}
+              className="bg-navy text-white px-3 py-1.5 rounded-md text-sm font-bold disabled:opacity-40">Approve Price</button>
+          </div>
+        )}
+        {book?.pricing?.approved && <p className="text-[12px] text-emerald-700 mt-2">Pricing approved: {book.pricing.currency} {book.pricing.list_price}</p>}
+
+        {/* Founder authorization — human final judgment for irreversible action */}
+        <div className="mt-4">
+          {book?.founder_authorization?.authorized ? (
+            <StatusChip status={`Authorized by ${book.founder_authorization.by}`} tone="emerald" testid="authorized-chip" />
+          ) : (
+            <button data-testid="authorize-btn" onClick={doAuthorize} disabled={busy}
+              className="w-full inline-flex items-center justify-center gap-1.5 bg-gold text-navy px-4 py-2.5 rounded-md text-sm font-bold disabled:opacity-50">
+              <ShieldCheck className="w-4 h-4" /> Authorize Release (Founder)
+            </button>
+          )}
         </div>
         <div className="mt-3">
           <StatusChip status={data.gate_ready ? "Gate ready for Founder authorization" : "Gate not yet ready"} tone={data.gate_ready ? "emerald" : "amber"} testid="gate-ready" />

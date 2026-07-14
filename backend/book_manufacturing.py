@@ -11,6 +11,7 @@ Principles enforced here:
 """
 import io
 import hashlib
+import asyncio
 from datetime import datetime, timezone
 
 from database import db
@@ -226,6 +227,142 @@ async def approve_edition(book_id, actor):
 
 
 # ----------------------------- BUTTON 3 — DESIGN -----------------------------
+def _compose_book_cover(hero_bytes, title, subtitle, author, imprint, palette_hint=""):
+    """Publication-quality trade cover: full-bleed art + legibility scrim + clean serif typography.
+    No learning-product chrome — this is a real book cover."""
+    from PIL import Image, ImageDraw, ImageFont, ImageFilter
+    import design_language as dl
+    W, H = 1024, 1536
+    if hero_bytes:
+        art = Image.open(io.BytesIO(hero_bytes)).convert("RGB")
+        # cover-fill crop to 2:3
+        ar = art.width / art.height
+        if ar > W / H:
+            nh = H; nw = int(H * ar)
+        else:
+            nw = W; nh = int(W / ar)
+        art = art.resize((nw, nh)).crop(((nw - W) // 2, (nh - H) // 2, (nw - W) // 2 + W, (nh - H) // 2 + H))
+    else:
+        base = (34, 26, 66) if "amber" not in palette_hint else (60, 32, 20)
+        art = Image.new("RGB", (W, H), base)
+        d0 = ImageDraw.Draw(art)
+        for y in range(H):
+            t = y / H
+            d0.line([(0, y), (W, y)], fill=tuple(int(base[i] * (1 - 0.55 * t)) for i in range(3)))
+    img = art.copy()
+    # top + bottom scrims for text legibility
+    scrim = Image.new("L", (W, H), 0)
+    sd = ImageDraw.Draw(scrim)
+    for y in range(H):
+        a = 0
+        if y < H * 0.34:
+            a = int(150 * (1 - y / (H * 0.34)))
+        if y > H * 0.5:
+            a = max(a, int(205 * ((y - H * 0.5) / (H * 0.5))))
+        sd.line([(0, y), (W, y)], fill=a)
+    black = Image.new("RGB", (W, H), (8, 6, 18))
+    img = Image.composite(black, img, scrim)
+    d = ImageDraw.Draw(img)
+    gold = (243, 200, 90)
+
+    def font(path, size):
+        try: return ImageFont.truetype(path, size)
+        except Exception: return ImageFont.load_default()
+
+    def wrap(text, fnt, maxw):
+        words, lines, cur = text.split(), [], ""
+        for w in words:
+            t = (cur + " " + w).strip()
+            if d.textlength(t, font=fnt) <= maxw: cur = t
+            else: lines.append(cur); cur = w
+        if cur: lines.append(cur)
+        return lines
+
+    # imprint eyebrow (top)
+    ef = font(dl.SANS_BOLD, 30)
+    d.text((W / 2, 70), (imprint or "").upper(), font=ef, fill=gold, anchor="mm")
+    # title (upper-middle)
+    size = 118 if len(title) <= 18 else (92 if len(title) <= 30 else 70)
+    tf = font(dl.SERIF_BOLD, size)
+    lines = wrap(title.upper(), tf, W - 150)
+    y = H * 0.60 - (len(lines) * size * 0.6)
+    for ln in lines:
+        d.text((W / 2, y), ln, font=tf, fill=(255, 255, 255), anchor="mm")
+        y += size * 1.08
+    # gold rule
+    d.line([(W / 2 - 90, y + 14), (W / 2 + 90, y + 14)], fill=gold, width=4)
+    y += 46
+    if subtitle:
+        sf = font(dl.SERIF, 40)
+        for ln in wrap(subtitle, sf, W - 200):
+            d.text((W / 2, y), ln, font=sf, fill=(232, 226, 240), anchor="mm"); y += 50
+    # author (bottom)
+    if author:
+        af = font(dl.SANS_BOLD, 46)
+        d.text((W / 2, H - 96), author.upper(), font=af, fill=gold, anchor="mm")
+    buf = io.BytesIO(); img.save(buf, "PNG")
+    return buf.getvalue()
+
+
+async def _cover_design_recipe(b, re_engine):
+    """Cover Design Recipe™ — the Design Engine DIRECTS professional cover assets:
+    LLM art-direction → Nano Banana artwork (Gemini) → composited publication typography.
+    Honest per-concept fallback to a branded gradient if AI art is unavailable (never faked)."""
+    import json as _json
+    import design_language as dl
+    import ai_service
+    synopsis = " ".join((b.get("working_copy", {}).get("content", "")).split()[:180])
+    brief_sys = ("You are QRU Cover Art Director for a professional publishing imprint. Given a book, "
+                 "produce EXACTLY 3 strategically DIFFERENT cover art directions. Return strict JSON: "
+                 '{"concepts":[{"name":"short concept name","palette":"comma colors","art_prompt":'
+                 '"a vivid, specific image-generation prompt for the ARTWORK ONLY — evocative scene/subject/mood/lighting, '
+                 'portrait orientation, NO text, NO words, NO lettering, no title on the image"}]}. '
+                 "Make the three genuinely distinct (e.g. symbolic, atmospheric, character/object-focused).")
+    brief_prompt = (f"Title: {b['title']}\nSubtitle: {b.get('subtitle','')}\nGenre: {b.get('genre','')}\n"
+                    f"Audience: {b.get('audience','')}\nSynopsis: {synopsis}")
+    briefs = []
+    try:
+        raw = await ai_service.llm_generate(brief_sys, brief_prompt, f"cover-brief-{b['id']}")
+        raw = raw.strip().replace("```json", "").replace("```", "")
+        briefs = _json.loads(raw).get("concepts", [])[:3]
+    except Exception:
+        briefs = []
+    if len(briefs) < 3:
+        defaults = [{"name": "Symbolic", "palette": "deep navy, gold", "art_prompt": f"A symbolic, atmospheric illustration evoking '{b['title']}', a {b.get('genre','literary')} book; rich lighting, portrait, no text."},
+                    {"name": "Atmospheric", "palette": "twilight blues", "art_prompt": f"A moody atmospheric scene evoking the themes of '{b['title']}'; cinematic, portrait, no text."},
+                    {"name": "Object Focus", "palette": "warm amber", "art_prompt": f"A single meaningful object central to '{b['title']}' on an elegant textured background; portrait, no text."}]
+        briefs = (briefs + defaults)[:3]
+
+    product = {"title": b["title"], "family": b.get("genre") or "Literary", "product_type": "Novel",
+               "audience": b.get("audience", ""), "imprint": b.get("imprint")}
+    kr = {"subtitle": b.get("subtitle", ""), "author": b.get("author", "")}
+
+    async def _gen(idx, brief):
+        try:
+            return await ai_service.generate_image(
+                f"Professional book cover ARTWORK (no text, no lettering, portrait 2:3): {brief.get('art_prompt','')}",
+                f"cover-art-{b['id']}-{idx}")
+        except Exception:
+            return None
+    heroes = await asyncio.gather(*[_gen(i, br) for i, br in enumerate(briefs, 1)])
+
+    concepts = []
+    for idx, (brief, hero) in enumerate(zip(briefs, heroes), 1):
+        cover_out = _compose_book_cover(hero, b["title"], b.get("subtitle", ""), b.get("author", ""),
+                                        b.get("imprint", ""), brief.get("palette", ""))
+        fid = re_engine._save(f"bookcover-c{idx}", "png", cover_out)
+        concepts.append({
+            "concept": idx, "name": brief.get("name", f"Concept {idx}"),
+            "art_direction": brief.get("art_prompt", ""), "palette": brief.get("palette", ""),
+            "url": re_engine._asset_url(fid),
+            "has_ai_art": bool(hero),
+            "thumbnail_legible": True,
+            "rights": "Rights-safe — AI-generated original artwork (no third-party imagery)." if hero
+                      else "Branded typographic cover — AI artwork unavailable (honest fallback, not faked).",
+        })
+    return concepts
+
+
 async def design(book_id, actor, base_url=""):
     b = await db[COLL].find_one({"id": book_id})
     if not b:
@@ -240,26 +377,8 @@ async def design(book_id, actor, base_url=""):
     product = {"title": b["title"], "family": b.get("genre") or b.get("imprint", ""),
                "product_type": "Book", "content": content, "audience": b.get("audience", ""),
                "high_stakes": b.get("high_stakes"), "governance_package": gp, "imprint": b.get("imprint")}
-    # Cover concepts (≥3 strategically different) — deterministic, rights-safe.
-    from PIL import Image, ImageDraw
-    concepts = []
-    palettes = [((53, 16, 106), (34, 26, 66), "Royal Depth"),
-                ((26, 42, 74), (12, 20, 40), "Midnight Ascend"),
-                ((74, 30, 30), (30, 12, 12), "Warm Literary")]
-    for idx, (c1, c2, name) in enumerate(palettes, 1):
-        img = Image.new("RGB", (1024, 1536), c1); d = ImageDraw.Draw(img)
-        for y in range(1536):
-            t = y / 1536
-            d.line([(0, y), (1024, y)], fill=tuple(int(c1[i] + (c2[i] - c1[i]) * t) for i in range(3)))
-        d.rectangle([80, 90, 944, 1446], outline=(245, 178, 26), width=6)
-        d.text((512, 520), b["title"][:40], fill=(255, 255, 255), anchor="mm")
-        if b.get("author"):
-            d.text((512, 1360), b["author"], fill=(245, 178, 26), anchor="mm")
-        d.text((512, 180), b.get("imprint", "").upper(), fill=(245, 178, 26), anchor="mm")
-        buf = io.BytesIO(); img.save(buf, "PNG")
-        fid = re_engine._save(f"bookcover-c{idx}", "png", buf.getvalue())
-        concepts.append({"concept": idx, "name": name, "url": re_engine._asset_url(fid),
-                         "thumbnail_legible": True, "rights": "Rights-safe (generated, no third-party imagery)"})
+    # Cover Design Recipe™ — governed AI art direction → publication-quality concepts.
+    concepts = await _cover_design_recipe(b, re_engine)
     cover_bytes = None
     cpath = concepts[0]["url"].split("/")[-1]
     import os
@@ -322,6 +441,9 @@ async def audio_plan(book_id):
     content = (b.get("editorial_edition") or b.get("working_copy"))["content"]
     return {
         "book_title": b["title"], "book_code": b["book_code"],
+        "prototype": (b.get("artifacts", {}).get("audio") or {}).get("prototype"),
+        "chapter_timing_map": (b.get("artifacts", {}).get("audio") or {}).get("chapter_timing_map"),
+        "full_book_estimate_min": (b.get("artifacts", {}).get("audio") or {}).get("full_book_estimate_min"),
         "paths": {
             "internal_prototype": {"state": "Available on request",
                                    "note": "AI/temporary voice for pacing review only — NOT approved for commercial distribution.",
@@ -338,6 +460,127 @@ async def audio_plan(book_id):
                             "Noise floor", "Sample rate", "Bitrate", "Mono/stereo", "No clicks/clipping/distortion"],
         "honesty": "No package is labeled 'Audible-ready' until all current distributor requirements are checked and passed.",
     }
+
+
+async def render_audio_prototype(book_id, actor):
+    """Button 4·A — Internal Narration Prototype. Renders a REAL TTS master of Chapter 1's opening.
+    Honestly labeled: AI voice, pacing/review only, NOT commercial. Never mislabeled 'Audible-ready'."""
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return None
+    content = (b.get("editorial_edition") or b.get("working_copy"))["content"]
+    structure = bs.parse_book(content)
+    if not structure["chapters"]:
+        return {"error": "No chapters detected to narrate."}
+    ch1 = structure["chapters"][0]
+    lines = bs.strip_navigation(content).split("\n")
+    grab, buf = False, []
+    for ln in lines:
+        st = ln.strip()
+        if st.startswith("## "):
+            if grab:
+                break
+            grab = True
+            continue
+        if grab and st and not st.startswith("#") and st != "---":
+            buf.append(st)
+        if sum(len(x) for x in buf) > 2600:
+            break
+    excerpt = " ".join(buf)[:2800].strip() or ch1["title"]
+    try:
+        import cinema_studio
+        import rendering_engine as re_engine
+        audio = await cinema_studio._tts_bytes(f"{b['title']}. Chapter {ch1['number']}. {ch1['title']}. {excerpt}")
+        fid = re_engine._save("book-audio-prototype", "mp3", audio)
+        dur = round(cinema_studio._duration_from_bytes(audio), 1)
+    except Exception as e:
+        return {"error": f"Narration prototype unavailable (TTS): {str(e)[:120]}. Honest failure — nothing faked."}
+    total_words = len(content.split())
+    chapter_map = [{"number": c["number"], "title": c["title"]} for c in structure["chapters"]]
+    artifacts = b.get("artifacts", {})
+    artifacts["audio"] = {
+        "prototype": {
+            "label": "Internal Narration Prototype™ (Chapter 1 opening) — AI voice 'sage', pacing/review ONLY. NOT for commercial distribution.",
+            "url": re_engine._asset_url(fid), "duration_sec": dur, "voice": "sage (OpenAI TTS-1)",
+            "excerpt_chars": len(excerpt), "generated_at": _now(),
+        },
+        "full_book_estimate_min": round(total_words / 150, 1),
+        "chapter_timing_map": chapter_map,
+    }
+    await db[COLL].update_one({"id": book_id}, {"$set": {"artifacts": artifacts, "updated_at": _now()},
+        "$push": {"revision_history": {"stage": "Audio", "by": actor, "at": _now(),
+                                       "note": f"Narration prototype rendered ({dur}s)."}}})
+    await log_org("Book Manufacturing™", "Manufacturing", f"rendered narration prototype for '{b['title']}'", b["book_code"], "success")
+    return clean(await db[COLL].find_one({"id": book_id}))
+
+
+async def set_pricing(book_id, list_price, currency, actor):
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return None
+    pricing = {"list_price": list_price, "currency": currency or "USD", "approved": True,
+               "approved_by": actor, "approved_at": _now()}
+    await db[COLL].update_one({"id": book_id}, {"$set": {"pricing": pricing, "updated_at": _now()},
+        "$push": {"revision_history": {"stage": "Pricing", "by": actor, "at": _now(),
+                                       "note": f"Pricing approved: {currency or 'USD'} {list_price}."}}})
+    await log_org("Book Manufacturing™", "Manufacturing", f"approved pricing for '{b['title']}'", b["book_code"])
+    return clean(await db[COLL].find_one({"id": book_id}))
+
+
+async def authorize_release(book_id, actor):
+    """Human final judgment for the irreversible release action. Requires the rest of the gate met."""
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return None
+    pc = await publish_center(book_id)
+    gate = dict(pc["final_release_gate"])
+    gate["founder_authorization_received"] = True
+    if not all(gate.values()):
+        unmet = [k.replace("_", " ") for k, v in gate.items() if not v]
+        return {"error": f"Cannot authorize — unmet gate items: {', '.join(unmet)}."}
+    auth = {"authorized": True, "by": actor, "at": _now()}
+    await db[COLL].update_one({"id": book_id}, {"$set": {
+        "founder_authorization": auth, "publication_status": "Authorized for release (manual/authorized submission)",
+        "updated_at": _now()},
+        "$push": {"revision_history": {"stage": "Founder Authorization", "by": actor, "at": _now(),
+                                       "note": "Founder authorized release (irreversible actions permitted)."}}})
+    await log_org("Book Manufacturing™", "Manufacturing", f"FOUNDER AUTHORIZED release of '{b['title']}'", b["book_code"], "success")
+    return clean(await db[COLL].find_one({"id": book_id}))
+
+
+SHARES = "book_shares"
+
+
+async def create_share(book_id, hours, actor, base_url=""):
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return None
+    if not b.get("master_package_url"):
+        r = await assemble_master_package(book_id, actor)
+        pkg_url = r["url"] if r else None
+    else:
+        pkg_url = b["master_package_url"]
+    if not pkg_url:
+        return {"error": "No package to share yet."}
+    from datetime import timedelta
+    token = gen_id().replace("-", "")[:24]
+    expires = (datetime.now(timezone.utc) + timedelta(hours=int(hours or 72))).isoformat()
+    await db[SHARES].insert_one({"token": token, "book_id": book_id, "book_title": b["title"],
+                                 "package_url": pkg_url, "created_by": actor, "created_at": _now(),
+                                 "expires_at": expires, "read_only": True})
+    await log_org("Book Manufacturing™", "Manufacturing", f"created share link for '{b['title']}' (expires {expires[:10]})", b["book_code"])
+    share_url = f"{base_url}/api/book-mfg/share/{token}" if base_url else f"/api/book-mfg/share/{token}"
+    return {"ok": True, "token": token, "share_url": share_url, "expires_at": expires, "read_only": True}
+
+
+async def resolve_share(token):
+    s = await db[SHARES].find_one({"token": token}, {"_id": 0})
+    if not s:
+        return {"error": "Share link not found."}
+    if datetime.fromisoformat(s["expires_at"]) < datetime.now(timezone.utc):
+        return {"error": "This share link has expired."}
+    return s
+
 
 
 async def video_plan(book_id):
@@ -499,6 +742,16 @@ async def assemble_master_package(book_id, actor):
         cover = _read_asset(sel.get("url")) if sel else None
         if cover:
             z.writestr("04_EBOOK/cover.png", cover)
+        # 05_AUDIO — internal narration prototype (honestly labeled)
+        audio_art = b.get("artifacts", {}).get("audio", {})
+        proto = (audio_art or {}).get("prototype")
+        if proto:
+            mp3 = _read_asset(proto.get("url"))
+            if mp3:
+                z.writestr("05_AUDIO/narration_prototype_ch1.mp3", mp3)
+            z.writestr("05_AUDIO/audio_readme.txt", proto.get("label", "") +
+                       f"\nDuration: {proto.get('duration_sec')}s | Voice: {proto.get('voice')}\n" +
+                       f"Full-book estimate: {audio_art.get('full_book_estimate_min')} min (est. @150 wpm)\n")
         # 07_METADATA
         z.writestr("07_METADATA/master_metadata.json", json.dumps(meta, indent=2, default=str))
         # 09_RIGHTS_AND_GOVERNANCE
@@ -511,7 +764,7 @@ async def assemble_master_package(book_id, actor):
         included = [n for n in z.namelist()]
         z.writestr("00_MANIFEST.json", json.dumps({
             "included": included,
-            "pending": {"audio": "Guided package (Button 4) — not yet rendered",
+            "pending": {**({"audio": "Guided package (Button 4) — prototype only, full narration pending"} if not proto else {}),
                         "video": "Guided package (Button 5) — not yet rendered",
                         "marketing": "Prepared at Design/Publish",
                         "monitoring": "Activates post-publication"},
