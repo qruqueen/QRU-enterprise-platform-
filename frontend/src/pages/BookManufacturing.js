@@ -849,7 +849,7 @@ function PricingAdvisorPanel({ book, busy, doPricing }) {
 function PublicationDetailsPanel({ book, busy, doDraftBlurb, doSavePublication }) {
   const [blurb, setBlurb] = useState("");
   const [include, setInclude] = useState(true);
-  useEffect(() => { if (book) { setBlurb(book.description || ""); setInclude(book.include_blurb !== false); } }, [book?.id, book?.description, book?.include_blurb]);
+  useEffect(() => { if (book) { setBlurb(book.description || ""); setInclude(book.include_blurb !== false); } }, [book?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!book) return null;
   return (
     <Panel title="Back-Cover Blurb & Publication Details" icon={FileText} accent="royal" testid="publication-details">
@@ -946,7 +946,7 @@ function PublishPanel({ data, kdp, book, busy, doPricing, doAuthorize, doSanitiz
         <div className="space-y-1.5" data-testid="gate-items">
           {Object.entries(g).map(([k, v]) => (
             <div key={k} className="flex items-center justify-between gap-2 text-sm">
-              <span className="text-navy capitalize">{k.replace(/_/g, " ").replace(/\bai\b/gi, "AI")}</span>
+              <span className="text-navy capitalize">{k.replace(/_/g, " ").replace(/\btitle author\b/i, "Title & Author").replace(/\bai\b/gi, "AI")}</span>
               {v ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <StatusChip status="Pending" tone="amber" />}
             </div>
           ))}
@@ -969,7 +969,7 @@ function PublishPanel({ data, kdp, book, busy, doPricing, doAuthorize, doSanitiz
           {book?.founder_authorization?.authorized ? (
             <StatusChip status={`Authorized by ${book.founder_authorization.by}`} tone="emerald" testid="authorized-chip" />
           ) : (
-            <button data-testid="authorize-btn" onClick={doAuthorize} disabled={busy}
+            <button data-testid="authorize-btn" onClick={doAuthorize} disabled={busy || !data.gate_ready}
               className="w-full inline-flex items-center justify-center gap-1.5 bg-gold text-navy px-4 py-2.5 rounded-md text-sm font-bold disabled:opacity-50">
               <ShieldCheck className="w-4 h-4" /> Authorize Release (Founder)
             </button>
