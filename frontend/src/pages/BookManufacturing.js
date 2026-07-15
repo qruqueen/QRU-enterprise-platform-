@@ -40,6 +40,7 @@ export default function BookManufacturing() {
   const [monitor, setMonitor] = useState(null);
   const [shareInfo, setShareInfo] = useState(null);
   const [allBooks, setAllBooks] = useState([]);
+  const [systemTitle, setSystemTitle] = useState("QRU Product Manufacturing System™");
 
   const loadBooks = async () => {
     const { data } = await api.get("/book-mfg/books");
@@ -54,7 +55,7 @@ export default function BookManufacturing() {
   };
   const selectBook = async (id) => { setTab("upload"); await reload(id); };
   useEffect(() => {
-    api.get("/book-mfg/config").then((r) => setButtons(r.data.buttons)).catch(() => {});
+    api.get("/book-mfg/config").then((r) => { setButtons(r.data.buttons); if (r.data.system_title) setSystemTitle(r.data.system_title); }).catch(() => {});
     loadBooks().then((books) => { if (books[0]) reload(books[0].id); }).catch(() => {});
   }, []);
 
@@ -126,9 +127,9 @@ export default function BookManufacturing() {
   return (
     <div data-testid="book-mfg-page">
       <PageHeader
-        overline="QRU Book Manufacturing System™ v1.0"
-        title="One Manuscript In · One Publication Package Out"
-        description="A governed seven-button workflow. The Factory does the work; you make the decisions that require judgment. Honest states only — nothing is ever marked done, uploaded, or published unless it truly is."
+        overline={`${systemTitle} · Book Recipe`}
+        title="One Product In · One Publication Package Out"
+        description="A governed seven-button workflow that manufactures any product type. Each product supplies its own recipe behind the same interface — the Factory does the work; you make the decisions that require judgment. Honest states only — nothing is ever marked done, uploaded, or published unless it truly is."
         actions={<VerifiedBadge label="Treasure Standard™" testid="book-mfg-badge" />}
       />
 

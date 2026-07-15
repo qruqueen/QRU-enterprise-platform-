@@ -51,7 +51,16 @@ def build_inheritance(kr):
     key_points = re.split(r"(?<=[.!?])\s+", (explanation or definition).strip())
     key_points = [k.strip() for k in key_points if len(k.strip()) > 8][:5]
     verif = kr.get("verification") or {}
-    verified = bool(verif.get("evidence_sufficient_for_external_publication") or kr.get("verified_external"))
+    # A KR is verified if ANY of the governed verification conventions say so:
+    #  - top-level verification_status ("Verified" / "Treasure Standard Approved") set by the KR engine,
+    #  - verification.decision == "approve" from the Verification Lion™ review,
+    #  - explicit external-publication evidence flag, or legacy verified_external.
+    verified = bool(
+        kr.get("verification_status") in ("Verified", "Treasure Standard Approved")
+        or verif.get("decision") == "approve"
+        or verif.get("evidence_sufficient_for_external_publication")
+        or kr.get("verified_external")
+    )
     # Derived tags from topic words (deterministic, not invented facts)
     words = [w.strip(",.").capitalize() for w in re.findall(r"[A-Za-z]{4,}", term)][:4]
     tags = list(dict.fromkeys([term.replace(" ", "")] + words + ["QRU", "Verified" if verified else "Draft"]))[:8]

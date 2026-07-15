@@ -19,6 +19,7 @@ from models import gen_id, now_iso, clean
 from org_activity import log_org
 import book_structure as bs
 import product_governance as pg
+import manufacturing_recipes as recipes
 
 COLL = "book_records"
 
@@ -88,6 +89,7 @@ async def create_book_record(payload, actor):
     record = {
         "id": gen_id(),
         "book_code": f"BOOK-{await db[COLL].count_documents({}) + 1:04d}",
+        "product_type": meta.get("product_type", "Book"),  # QRU Product Manufacturing System™ — recipe selector
         "title": title,  # human-readable title ALWAYS before the Book Record ID in UI
         "subtitle": meta.get("subtitle", ""),
         "author": meta.get("author", ""),
@@ -468,8 +470,10 @@ async def design(book_id, actor, base_url=""):
     product = {"title": b["title"], "family": b.get("genre") or b.get("imprint", ""),
                "product_type": "Book", "content": content, "audience": b.get("audience", ""),
                "high_stakes": b.get("high_stakes"), "governance_package": gp, "imprint": b.get("imprint")}
-    # Cover Design Recipe™ — governed AI art direction → publication-quality concepts.
-    concepts = await _cover_design_recipe(b, re_engine)
+    # Design stage dispatches to the product's manufacturing recipe (QRU Product Manufacturing System™).
+    # For Book this is the Cover Design Recipe™ — governed AI art direction → publication-quality concepts.
+    recipe = recipes.get(b.get("product_type", "Book"))
+    concepts = await recipe["design_recipe"](b, re_engine)
     # Embed the first SUCCESSFUL cover in the interior proof (never a failed placeholder if real art exists).
     embed = next((c for c in concepts if c["status"] == "success"), concepts[0])
     cover_bytes = None
@@ -1192,3 +1196,20 @@ async def seed_pilot(actor="Founder"):
                         "ai_disclosure": "Human-authored manuscript; AI-assisted manufacturing (typesetting, packaging)."}}
     rec = await create_book_record(payload, actor)
     return rec["id"]
+
+
+
+# ---------------- QRU Product Manufacturing System™ — recipe registration ----------------
+# The Book recipe specializes the product-specific stages behind the universal 7-button workflow.
+# Future product types register their own recipe here; the shared engine/gates/packaging are inherited.
+recipes.register({
+    "product_type": "Book",
+    "label": recipes.label_for("Book"),
+    "description": "Long-form manuscript → publication-ready book: proofed edition, print interior, "
+                   "EPUB, AI cover concepts, audiobook prototype, review-video plan, and retail distribution.",
+    "intake": {"accepts": [".docx", ".pdf", ".txt", ".md"], "structure": "chapters",
+               "structure_label": "Chapters & sections"},
+    "design_recipe": _cover_design_recipe,
+    "metadata_defaults": {"imprint": "QRU Press™", "edition": "First Edition"},
+    "publish_destinations": PUBLISH_DESTINATIONS,
+})

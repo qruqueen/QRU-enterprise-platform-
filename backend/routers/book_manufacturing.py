@@ -5,6 +5,7 @@ from typing import Optional, Dict, Any
 
 from auth import get_current_user, require_super_admin
 import book_manufacturing as bm
+import manufacturing_recipes as recipes
 
 router = APIRouter(prefix="/api/book-mfg", tags=["book-manufacturing"])
 
@@ -17,7 +18,13 @@ class UploadPayload(BaseModel):
 
 @router.get("/config")
 async def config(user=Depends(get_current_user)):
-    return {"buttons": bm.SEVEN_BUTTONS, "publish_destinations": bm.PUBLISH_DESTINATIONS}
+    return {"system_title": recipes.SYSTEM_TITLE, "buttons": bm.SEVEN_BUTTONS,
+            "publish_destinations": bm.PUBLISH_DESTINATIONS, "recipes": recipes.list_recipes()}
+
+
+@router.get("/recipes")
+async def recipes_list(user=Depends(get_current_user)):
+    return {"system_title": recipes.SYSTEM_TITLE, "recipes": recipes.list_recipes()}
 
 
 @router.get("/books")
