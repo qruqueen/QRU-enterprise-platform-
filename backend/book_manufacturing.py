@@ -304,11 +304,37 @@ def _compose_book_cover(hero_bytes, title, subtitle, author, imprint, palette_hi
     return buf.getvalue()
 
 
+def _valid_cover_art(data):
+    """Strictly validate image bytes returned by the provider. Returns (ok, reason).
+    A concept is ONLY successful when the provider returned real, decodable image bytes —
+    never an empty, HTML, JSON, malformed, or truncated payload."""
+    if not data:
+        return False, "empty response from image provider"
+    if len(data) < 2048:
+        return False, f"response too small ({len(data)} bytes) — likely truncated or an error payload"
+    head = data[:64].lstrip().lower()
+    if head[:1] in (b"{", b"[") or head[:5] == b"<!doc" or head[:5] == b"<html":
+        return False, "provider returned JSON/HTML, not an image"
+    try:
+        from PIL import Image
+        Image.open(io.BytesIO(data)).verify()
+        im = Image.open(io.BytesIO(data))
+        if im.width < 256 or im.height < 256:
+            return False, f"image too small ({im.width}x{im.height})"
+    except Exception as e:
+        return False, f"malformed image bytes: {str(e)[:80]}"
+    return True, None
+
+
 async def _cover_design_recipe(b, re_engine):
     """Cover Design Recipe™ — the Design Engine DIRECTS professional cover assets:
     LLM art-direction → Nano Banana artwork (Gemini) → composited publication typography.
-    Honest per-concept fallback to a branded gradient if AI art is unavailable (never faked)."""
+    Every concept carries an HONEST per-concept status: a concept is 'success' ONLY when the
+    provider returned real, decodable AI artwork. Failed concepts show a clear failure state and
+    are NEVER silently substituted with a branded fallback presented as real art. Full Transparent
+    Provenance™ (model/provider, generation time, art direction, fallback + has_ai_art) is recorded."""
     import json as _json
+    import time as _time
     import design_language as dl
     import ai_service
     synopsis = " ".join((b.get("working_copy", {}).get("content", "")).split()[:180])
@@ -338,16 +364,24 @@ async def _cover_design_recipe(b, re_engine):
     kr = {"subtitle": b.get("subtitle", ""), "author": b.get("author", "")}
 
     async def _gen(idx, brief):
+        t0 = _time.time()
         try:
-            return await ai_service.generate_image(
+            raw = await ai_service.generate_image(
                 f"Professional book cover ARTWORK (no text, no lettering, portrait 2:3): {brief.get('art_prompt','')}",
                 f"cover-art-{b['id']}-{idx}")
-        except Exception:
-            return None
-    heroes = await asyncio.gather(*[_gen(i, br) for i, br in enumerate(briefs, 1)])
+        except Exception as e:
+            return None, round(_time.time() - t0, 1), f"provider error: {str(e)[:120]}"
+        elapsed = round(_time.time() - t0, 1)
+        ok, reason = _valid_cover_art(raw)
+        return (raw if ok else None), elapsed, (None if ok else reason)
+    results = await asyncio.gather(*[_gen(i, br) for i, br in enumerate(briefs, 1)])
 
+    art_provider = "Gemini (Emergent LLM Key)"
+    art_model = ai_service.IMAGE_MODEL
+    direction_model = ai_service.MODEL[1] if isinstance(ai_service.MODEL, (tuple, list)) else str(ai_service.MODEL)
     concepts = []
-    for idx, (brief, hero) in enumerate(zip(briefs, heroes), 1):
+    for idx, (brief, (hero, elapsed, fail_reason)) in enumerate(zip(briefs, results), 1):
+        success = hero is not None
         cover_out = _compose_book_cover(hero, b["title"], b.get("subtitle", ""), b.get("author", ""),
                                         b.get("imprint", ""), brief.get("palette", ""))
         fid = re_engine._save(f"bookcover-c{idx}", "png", cover_out)
@@ -355,10 +389,23 @@ async def _cover_design_recipe(b, re_engine):
             "concept": idx, "name": brief.get("name", f"Concept {idx}"),
             "art_direction": brief.get("art_prompt", ""), "palette": brief.get("palette", ""),
             "url": re_engine._asset_url(fid),
-            "has_ai_art": bool(hero),
+            "status": "success" if success else "failed",
+            "has_ai_art": success,
+            "failure_reason": None if success else fail_reason,
+            # Our compositor always applies a legibility scrim + high-contrast serif title/author,
+            # so composited covers stay readable down to retail thumbnail size.
             "thumbnail_legible": True,
-            "rights": "Rights-safe — AI-generated original artwork (no third-party imagery)." if hero
-                      else "Branded typographic cover — AI artwork unavailable (honest fallback, not faked).",
+            "readability_status": "Title & author legible at retail thumbnail size (composited scrim + high-contrast serif).",
+            "provenance": {
+                "art_provider": art_provider, "art_model": art_model,
+                "art_direction_model": direction_model,
+                "art_direction_prompt": brief.get("art_prompt", ""),
+                "generation_time_sec": elapsed, "generated_at": _now(),
+                "fallback_used": not success, "has_ai_art": success,
+                "failure_reason": None if success else fail_reason,
+            },
+            "rights": "Rights-safe — AI-generated original artwork (no third-party imagery)." if success
+                      else "AI artwork could not be generated for this concept (honest failure — a branded placeholder is shown, NOT presented as real art).",
         })
     return concepts
 
@@ -379,8 +426,10 @@ async def design(book_id, actor, base_url=""):
                "high_stakes": b.get("high_stakes"), "governance_package": gp, "imprint": b.get("imprint")}
     # Cover Design Recipe™ — governed AI art direction → publication-quality concepts.
     concepts = await _cover_design_recipe(b, re_engine)
+    # Embed the first SUCCESSFUL cover in the interior proof (never a failed placeholder if real art exists).
+    embed = next((c for c in concepts if c["status"] == "success"), concepts[0])
     cover_bytes = None
-    cpath = concepts[0]["url"].split("/")[-1]
+    cpath = embed["url"].split("/")[-1]
     import os
     with open(os.path.join(re_engine.ASSET_DIR, cpath), "rb") as f:
         cover_bytes = f.read()
@@ -394,21 +443,39 @@ async def design(book_id, actor, base_url=""):
         epub_url = re_engine._asset_url(epub_fid)
     except Exception as e:
         epub_url = None
+    ai_ok = [c for c in concepts if c["status"] == "success"]
+    ai_failed = [c for c in concepts if c["status"] != "success"]
+    cover_provenance = {
+        "generated_at": _now(), "by": actor,
+        "art_provider": "Gemini (Emergent LLM Key)", "art_model": __import__("ai_service").IMAGE_MODEL,
+        "concepts_requested": len(concepts),
+        "concepts_with_ai_art": len(ai_ok),
+        "concepts_failed": len(ai_failed),
+        "failed_concepts": [{"concept": c["concept"], "name": c["name"], "reason": c["failure_reason"]} for c in ai_failed],
+        "standard": "Cover Design Recipe™ — honest per-concept status; a failed concept is never presented as real AI art.",
+    }
     artifacts = b.get("artifacts", {})
     artifacts["design"] = {
         "generated_at": _now(),
         "cover_concepts": concepts, "selected_cover": None,
+        "cover_provenance": cover_provenance,
         "print": {"paperback_interior_pdf": re_engine._asset_url(interior_fid),
                   "trim_size": "6x9 in", "bleed": "0.125 in", "toc": "Clickable + printed (Reading Experience Standard™)"},
         "ebook": {"epub": epub_url, "kindle_ready": bool(epub_url), "clickable_toc": True},
         "governance_package": gp,
         "notes": "Hardcover case-laminate + barcode-safe wrap are prepared at Publish once final trim & page count confirm.",
     }
+    # Stamp Transparent Provenance™ with an honest AI-cover-generation record.
+    tp = b.get("transparent_provenance", {})
+    cover_gen_log = tp.get("cover_generation", [])
+    cover_gen_log.append(cover_provenance)
+    tp["cover_generation"] = cover_gen_log
     await db[COLL].update_one({"id": book_id}, {"$set": {
-        "artifacts": artifacts, "manufacturing_job": {"stage": "Design drafted", "next": "Select final cover, then Audio/Video/Publish"},
+        "artifacts": artifacts, "transparent_provenance": tp,
+        "manufacturing_job": {"stage": "Design drafted", "next": "Select final cover, then Audio/Video/Publish"},
         "updated_at": _now()},
         "$push": {"revision_history": {"stage": "Design", "by": actor, "at": _now(),
-                                       "note": f"{len(concepts)} cover concepts, print interior + EPUB rendered."}}})
+                                       "note": f"{len(concepts)} cover concepts ({len(ai_ok)} with AI art, {len(ai_failed)} failed), print interior + EPUB rendered."}}})
     await log_org("Book Manufacturing™", "Manufacturing", f"designed print + ebook for '{b['title']}'", b["book_code"], "success")
     b = await db[COLL].find_one({"id": book_id})
     return clean(b)

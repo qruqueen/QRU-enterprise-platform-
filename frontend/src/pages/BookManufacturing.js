@@ -290,8 +290,50 @@ function ProofPanel({ book, proof, busy, doProof, doApprove }) {
   );
 }
 
+function LegibilityPreview({ concepts }) {
+  // Inherited part of the Cover Design Recipe™ — proves each concept stays legible at retail sizes.
+  // Retail contexts (approx pixel widths at which shoppers actually see a cover):
+  const sizes = [
+    { key: "full", label: "Full cover", w: 96 },
+    { key: "amazon", label: "Amazon thumb", w: 60 },
+    { key: "mobile", label: "Mobile search", w: 40 },
+  ];
+  return (
+    <div data-testid="legibility-preview" className="rounded-md border border-border p-3 bg-muted/30">
+      <p className="text-xs font-bold text-navy uppercase tracking-wide mb-1">Thumbnail Legibility Preview</p>
+      <p className="text-[11px] text-muted-foreground mb-3">Every concept shown at the sizes shoppers actually see it — plus a grayscale check for contrast. Prove the title & author read before you choose.</p>
+      <div className="space-y-4">
+        {concepts.map((c) => (
+          <div key={c.concept} data-testid={`legibility-concept-${c.concept}`} className="flex flex-wrap items-end gap-4 pb-3 border-b border-border/60 last:border-0 last:pb-0">
+            <div className="min-w-[120px]">
+              <p className="text-[11px] font-bold text-navy">{c.name}</p>
+              {c.status === "success"
+                ? <StatusChip status="AI art ✓" tone="emerald" />
+                : <StatusChip status="AI art failed" tone="amber" />}
+              <p className="text-[10px] text-muted-foreground mt-1 max-w-[160px] leading-tight">{c.readability_status}</p>
+            </div>
+            {sizes.map((s) => (
+              <div key={s.key} className="text-center">
+                <img src={abs(c.url)} alt={`${c.name} ${s.label}`} style={{ width: s.w }}
+                  className="aspect-[2/3] object-cover rounded-sm border border-border shadow-sm" />
+                <p className="text-[9px] text-muted-foreground mt-1">{s.label}</p>
+              </div>
+            ))}
+            <div className="text-center">
+              <img src={abs(c.url)} alt={`${c.name} grayscale`} style={{ width: 60, filter: "grayscale(1) contrast(1.15)" }}
+                className="aspect-[2/3] object-cover rounded-sm border border-border shadow-sm" />
+              <p className="text-[9px] text-muted-foreground mt-1">Grayscale</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function DesignPanel({ book, busy, doDesign, doSelectCover }) {
   const d = book.artifacts?.design;
+  const prov = d?.cover_provenance;
   return (
     <div data-testid="panel-design">
       <Panel title="Design" icon={Palette} accent="gold"
@@ -308,21 +350,41 @@ function DesignPanel({ book, busy, doDesign, doSelectCover }) {
         ) : (
           <div className="space-y-5">
             <div>
-              <p className="text-xs font-bold text-navy uppercase tracking-wide mb-2">Cover Concepts (choose one)</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-bold text-navy uppercase tracking-wide">Cover Concepts (choose one)</p>
+                {prov && <span data-testid="cover-provenance" className="text-[10px] text-muted-foreground">
+                  {prov.concepts_with_ai_art}/{prov.concepts_requested} with AI art · {prov.art_model}
+                </span>}
+              </div>
               <div className="grid grid-cols-3 gap-3" data-testid="cover-concepts">
                 {d.cover_concepts.map((c) => {
                   const sel = d.selected_cover?.concept === c.concept;
+                  const ok = c.status === "success";
                   return (
-                    <button key={c.concept} data-testid={`cover-${c.concept}`} onClick={() => doSelectCover(c.concept)}
-                      className={`text-left rounded-md overflow-hidden border-2 transition-colors ${sel ? "border-gold" : "border-border hover:border-navy"}`}>
-                      <img src={abs(c.url)} alt={c.name} className="w-full aspect-[2/3] object-cover" />
-                      <div className="p-1.5"><p className="text-[11px] font-bold text-navy">{c.name}</p>
-                        {sel && <StatusChip status="Selected" tone="gold" />}</div>
+                    <button key={c.concept} data-testid={`cover-${c.concept}`} onClick={() => ok && doSelectCover(c.concept)}
+                      disabled={!ok}
+                      title={ok ? "" : (c.failure_reason || "AI art could not be generated for this concept")}
+                      className={`text-left rounded-md overflow-hidden border-2 transition-colors ${sel ? "border-gold" : ok ? "border-border hover:border-navy" : "border-amber-300 cursor-not-allowed opacity-90"}`}>
+                      <div className="relative">
+                        <img src={abs(c.url)} alt={c.name} className="w-full aspect-[2/3] object-cover" />
+                        {!ok && <span data-testid={`cover-failed-${c.concept}`}
+                          className="absolute top-1 left-1 right-1 text-[9px] font-bold text-white bg-amber-600/90 rounded px-1 py-0.5 text-center">
+                          AI art failed — not real art
+                        </span>}
+                      </div>
+                      <div className="p-1.5">
+                        <p className="text-[11px] font-bold text-navy">{c.name}</p>
+                        {sel ? <StatusChip status="Selected" tone="gold" />
+                          : ok ? <StatusChip status="AI art ✓" tone="emerald" />
+                          : <StatusChip status="Failed" tone="amber" />}
+                        {!ok && c.failure_reason && <p className="text-[9px] text-amber-700 mt-1 leading-tight">{c.failure_reason}</p>}
+                      </div>
                     </button>
                   );
                 })}
               </div>
             </div>
+            <LegibilityPreview concepts={d.cover_concepts} />
             <div className="flex flex-wrap gap-3" data-testid="design-files">
               {d.print?.paperback_interior_pdf && (
                 <a href={abs(d.print.paperback_interior_pdf)} target="_blank" rel="noreferrer"
