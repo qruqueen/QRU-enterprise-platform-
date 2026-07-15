@@ -76,7 +76,7 @@ export default function BookManufacturing() {
   const doProof = () => run(async () => { const { data } = await api.post(`/book-mfg/books/${book.id}/proof`); setProof(data.report); }, "Proof & Polish complete.");
   const doApprove = () => run(() => api.post(`/book-mfg/books/${book.id}/approve-edition`), "Editorial edition locked.");
   const doDesign = () => run(() => api.post(`/book-mfg/books/${book.id}/design`, { base_url: A }), "Design drafted.");
-  const doSelectCover = (concept) => run(() => api.post(`/book-mfg/books/${book.id}/select-cover`, { concept }), `Cover concept ${concept} selected.`);
+  const doSelectCover = (concept) => run(() => api.post(`/book-mfg/books/${book.id}/select-cover`, { concept, base_url: A }), `Cover ${concept} selected — clean retail edition prepared.`).then(() => reload(book.id));
   const doAssemble = async () => {
     setBusy(true);
     try {
@@ -183,7 +183,7 @@ export default function BookManufacturing() {
             <a data-testid="share-open-btn" href={shareInfo.url} target="_blank" rel="noreferrer"
               className="border border-navy/30 text-navy px-3 py-1.5 rounded-md text-sm font-bold">Open</a>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-2">Expires {new Date(shareInfo.expires_at).toLocaleString()} · read-only · streams the Master Package. Anyone with the link can download the review package (no login).</p>
+          <p className="text-[11px] text-muted-foreground mt-2">Expires {new Date(shareInfo.expires_at).toLocaleString()} · read-only · this is the <b>clean reading copy</b> (finished book only — no manufacturing internals). Anyone with the link can open it (no login).</p>
         </div>
       )}
 

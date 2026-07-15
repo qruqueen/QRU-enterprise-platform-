@@ -86,11 +86,12 @@ async def design(book_id: str, req: DesignReq = DesignReq(), user=Depends(requir
 
 class CoverReq(BaseModel):
     concept: int
+    base_url: Optional[str] = ""
 
 
 @router.post("/books/{book_id}/select-cover")
 async def select_cover(book_id: str, req: CoverReq, user=Depends(require_super_admin)):
-    r = await bm.select_cover(book_id, req.concept, user.get("name", "Founder"))
+    r = await bm.select_cover(book_id, req.concept, user.get("name", "Founder"), req.base_url or "")
     if isinstance(r, dict) and r.get("error"):
         raise HTTPException(400, r["error"])
     return r
@@ -203,7 +204,7 @@ async def resolve_share(token: str):
     if not os.path.exists(path):
         return JSONResponse(status_code=404, content={"error": "Package file no longer available."})
     fname = "".join(c for c in s["book_title"] if c.isalnum() or c in " -_").strip().replace(" ", "_")
-    return FileResponse(path, media_type="application/zip", filename=f"{fname}_Master_Package.zip")
+    return FileResponse(path, media_type="application/zip", filename=f"{fname}_Review_Copy.zip")
 
 
 @router.post("/books/{book_id}/assemble-package")

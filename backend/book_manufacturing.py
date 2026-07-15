@@ -525,7 +525,7 @@ async def design(book_id, actor, base_url=""):
     return clean(b)
 
 
-async def select_cover(book_id, concept_no, actor):
+async def select_cover(book_id, concept_no, actor, base_url=""):
     b = await db[COLL].find_one({"id": book_id})
     if not b or not b.get("artifacts", {}).get("design"):
         return {"error": "Run Design first."}
@@ -533,9 +533,16 @@ async def select_cover(book_id, concept_no, actor):
     match = next((c for c in design_art["cover_concepts"] if c["concept"] == concept_no), None)
     if not match:
         return {"error": "Cover concept not found."}
+    if match.get("status") == "failed":
+        return {"error": "That concept's AI art failed — choose a successful concept."}
     design_art["selected_cover"] = match
     await db[COLL].update_one({"id": book_id}, {"$set": {"artifacts.design": design_art, "updated_at": _now()}})
     await log_org("Book Manufacturing™", "Manufacturing", f"selected cover concept {concept_no} for '{b['title']}'", b["book_code"])
+    # Quiet Factory™: selecting the cover auto-runs the Publication Sanitization Pass™ so the clean
+    # retail edition (with the chosen cover) is always the one that ships — the Founder never has to
+    # remember a separate step, and share/review copies are never the raw manuscript.
+    if b.get("editorial_locked"):
+        await sanitization_pass(book_id, actor, base_url)
     return clean(await db[COLL].find_one({"id": book_id}))
 
 
@@ -662,17 +669,66 @@ async def authorize_release(book_id, actor):
 SHARES = "book_shares"
 
 
+async def build_review_package(book_id, actor, base_url=""):
+    """Clean READER review copy for sharing — sanitized retail interior PDF + EPUB + cover + readme ONLY.
+    NEVER includes the sealed immutable original or any manufacturing metadata, so a reviewer never sees
+    internal placeholders like '(working title)'."""
+    import zipfile
+    import io as _io
+    import os
+    import rendering_engine as re_engine
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return None
+    sel = (b.get("artifacts", {}).get("design") or {}).get("selected_cover")
+    if not sel:
+        return {"error": "Select the final cover first — the review copy is built from your chosen cover."}
+    sanit = b.get("artifacts", {}).get("sanitization")
+    if not sanit:
+        res = await sanitization_pass(book_id, actor, base_url)
+        if isinstance(res, dict) and res.get("error"):
+            return res
+        b = await db[COLL].find_one({"id": book_id})
+        sanit = b.get("artifacts", {}).get("sanitization")
+    retail = (sanit or {}).get("retail_edition", {})
+    pm = (sanit or {}).get("publication_metadata", {})
+
+    def _read(u):
+        if not u:
+            return None
+        p = os.path.join(re_engine.ASSET_DIR, u.rstrip("/").split("/")[-1])
+        return open(p, "rb").read() if os.path.exists(p) else None
+
+    buf = _io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("README.txt", (
+            f"{pm.get('title', b.get('title',''))}\nby {pm.get('author', b.get('author',''))}\n"
+            f"{pm.get('imprint', b.get('imprint',''))}\n\n"
+            "REVIEW COPY — this is the finished, reader-facing book.\n"
+            "Open 'Book (reading edition).pdf' to read, or 'Book.epub' on an e-reader.\n"))
+        pdf = _read(retail.get("paperback_interior_pdf"))
+        if pdf:
+            z.writestr("Book (reading edition).pdf", pdf)
+        ep = _read(retail.get("epub"))
+        if ep:
+            z.writestr("Book.epub", ep)
+        cov = _read(sel.get("url"))
+        if cov:
+            z.writestr("Cover.png", cov)
+    data = buf.getvalue()
+    fid = re_engine._save("book-review-copy", "zip", data)
+    return {"url": re_engine._asset_url(fid), "size_kb": len(data) // 1024}
+
+
 async def create_share(book_id, hours, actor, base_url=""):
     b = await db[COLL].find_one({"id": book_id})
     if not b:
         return None
-    if not b.get("master_package_url"):
-        r = await assemble_master_package(book_id, actor)
-        pkg_url = r["url"] if r else None
-    else:
-        pkg_url = b["master_package_url"]
-    if not pkg_url:
-        return {"error": "No package to share yet."}
+    # A review link shares the CLEAN reader edition — never the manufacturing package.
+    review = await build_review_package(book_id, actor, base_url)
+    if isinstance(review, dict) and review.get("error"):
+        return review
+    pkg_url = review["url"]
     from datetime import timedelta
     token = gen_id().replace("-", "")[:24]
     expires = (datetime.now(timezone.utc) + timedelta(hours=int(hours or 72))).isoformat()
@@ -685,8 +741,8 @@ async def create_share(book_id, hours, actor, base_url=""):
     # re-copy it any time (never rely on a one-shot clipboard write).
     await db[COLL].update_one({"id": book_id}, {"$push": {"share_links": {
         "token": token, "share_url": share_url, "created_by": actor, "created_at": _now(),
-        "expires_at": expires, "read_only": True}}})
-    return {"ok": True, "token": token, "share_url": share_url, "expires_at": expires, "read_only": True}
+        "expires_at": expires, "read_only": True, "kind": "Review copy"}}})
+    return {"ok": True, "token": token, "share_url": share_url, "expires_at": expires, "read_only": True, "kind": "Review copy"}
 
 
 async def resolve_share(token):
