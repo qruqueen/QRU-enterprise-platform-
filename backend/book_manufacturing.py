@@ -426,7 +426,7 @@ async def design(book_id, actor, base_url=""):
                   "trim_size": "6x9 in", "bleed": "0.125 in", "toc": "Clickable + printed (Reading Experience Standard™)"},
         "ebook": {"epub": epub_url, "kindle_ready": bool(epub_url), "clickable_toc": True},
         "governance_package": gp,
-        "notes": "Hardcover case-laminate + barcode-safe wrap are prepared at Publish once final trim & page count confirm.",
+        "notes": "Front cover + eBook cover are print-ready. A full paperback wrap (back cover + spine + front, sized from final page count, trim, paper type & bleed) is NOT yet generated — front cover only.",
     }
     # Stamp Transparent Provenance™ with an honest AI-cover-generation record.
     tp = b.get("transparent_provenance", {})
