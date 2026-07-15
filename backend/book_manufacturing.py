@@ -552,15 +552,25 @@ async def render_audio_prototype(book_id, actor):
     return clean(await db[COLL].find_one({"id": book_id}))
 
 
-async def set_pricing(book_id, list_price, currency, actor):
+async def set_pricing(book_id, list_price, currency, actor, ebook_price=None, paperback_price=None):
     b = await db[COLL].find_one({"id": book_id})
     if not b:
         return None
     pricing = {"list_price": list_price, "currency": currency or "USD", "approved": True,
                "approved_by": actor, "approved_at": _now()}
+    if ebook_price is not None:
+        pricing["ebook_price"] = ebook_price
+    if paperback_price is not None:
+        pricing["paperback_price"] = paperback_price
+    detail = []
+    if ebook_price is not None:
+        detail.append(f"eBook {currency or 'USD'} {ebook_price}")
+    if paperback_price is not None:
+        detail.append(f"paperback {currency or 'USD'} {paperback_price}")
+    note = "; ".join(detail) if detail else f"{currency or 'USD'} {list_price}"
     await db[COLL].update_one({"id": book_id}, {"$set": {"pricing": pricing, "updated_at": _now()},
         "$push": {"revision_history": {"stage": "Pricing", "by": actor, "at": _now(),
-                                       "note": f"Pricing approved: {currency or 'USD'} {list_price}."}}})
+                                       "note": f"Pricing approved: {note}."}}})
     await log_org("Book Manufacturing™", "Manufacturing", f"approved pricing for '{b['title']}'", b["book_code"])
     return clean(await db[COLL].find_one({"id": book_id}))
 
@@ -894,6 +904,7 @@ async def publish_center(book_id):
     return {"book_title": b["title"], "book_code": b["book_code"], "destinations": destinations,
             "final_release_gate": gate,
             "gate_ready": all(gate.values()),
+            "gate_ready_for_authorization": all(v for k, v in gate.items() if k != "founder_authorization_received"),
             "honesty": "No publication, sale, or irreversible external action occurs without explicit Founder authorization. The Factory never reports a platform action succeeded unless it truly did."}
 
 
@@ -962,11 +973,11 @@ async def build_kdp_checklist(book_id):
         {"field": "Edition", "value": pm.get("edition") or b.get("edition") or "First Edition", "status": "confirmed"},
         {"field": "Rights holder", "value": b.get("rights_holder"), "status": "confirmed"},
         {"field": "Copyright", "value": f"© {pm.get('copyright_year','')} {pm.get('copyright_holder', b.get('rights_holder',''))}".strip(), "status": "confirmed"},
-        {"field": "ISBN", "value": pm.get("isbn") or "Use a free KDP ISBN or supply your own", "status": "needs_founder"},
+        {"field": "ISBN", "value": (pm.get("isbn") or b.get("isbn") or ("Free KDP-assigned ISBN (assigned by Amazon at upload)" if b.get("isbn_source") == "kdp_free" else "Use a free KDP ISBN or supply your own")), "status": ("confirmed" if (pm.get("isbn") or b.get("isbn") or b.get("isbn_source")) else "needs_founder")},
         {"field": "Trim size (paperback)", "value": design.get("print", {}).get("trim_size", "6 x 9 in"), "status": "confirmed"},
         {"field": "Page count", "value": pages if pages else "Confirm from print interior PDF", "status": "confirmed" if pages else "needs_founder"},
         {"field": "Word count", "value": words, "status": "confirmed"},
-        {"field": "List price", "value": (f"{pricing.get('list_price')} {pricing.get('currency','USD')}" if pricing.get("list_price") else "Not set"), "status": "confirmed" if price_ok else "needs_founder"},
+        {"field": "List price", "value": ((f"eBook {pricing.get('currency','USD')} {pricing['ebook_price']} · Paperback {pricing.get('currency','USD')} {pricing['paperback_price']}" if pricing.get("ebook_price") and pricing.get("paperback_price") else f"{pricing.get('list_price')} {pricing.get('currency','USD')}") if pricing.get("list_price") or pricing.get("ebook_price") else "Not set"), "status": "confirmed" if price_ok else "needs_founder"},
         {"field": "Categories (BISAC)", "value": f"Suggested from genre '{genre}' — confirm 2 on KDP", "status": "suggested"},
         {"field": "Keywords (up to 7)", "value": ", ".join(kw) if kw else "Add up to 7", "status": "suggested"},
         {"field": "Book description / blurb", "value": b.get("description") or "DRAFT NEEDED — add a 150–200 word back-cover blurb", "status": "confirmed" if b.get("description") else "needs_founder"},
@@ -1016,6 +1027,10 @@ async def set_publication_details(book_id, fields, actor):
         upd["include_blurb"] = bool(fields.get("include_blurb"))
     if "blurb_status" in fields:
         upd["blurb_status"] = fields.get("blurb_status")
+    if "isbn" in fields:
+        upd["isbn"] = (fields.get("isbn") or "").strip()
+    if "isbn_source" in fields:
+        upd["isbn_source"] = fields.get("isbn_source")
     await db[COLL].update_one({"id": book_id}, {"$set": upd})
     return clean(await db[COLL].find_one({"id": book_id}))
 

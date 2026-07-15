@@ -163,11 +163,14 @@ async def audio_prototype(book_id: str, user=Depends(require_super_admin)):
 class PricingReq(BaseModel):
     list_price: float
     currency: Optional[str] = "USD"
+    ebook_price: Optional[float] = None
+    paperback_price: Optional[float] = None
 
 
 @router.post("/books/{book_id}/pricing")
 async def pricing(book_id: str, req: PricingReq, user=Depends(require_super_admin)):
-    r = await bm.set_pricing(book_id, req.list_price, req.currency, user.get("name", "Founder"))
+    r = await bm.set_pricing(book_id, req.list_price, req.currency, user.get("name", "Founder"),
+                             ebook_price=req.ebook_price, paperback_price=req.paperback_price)
     if r is None:
         raise HTTPException(404, "Book Record not found.")
     return r

@@ -952,6 +952,68 @@ function PrintWrapPanel({ book, busy, doPrintWrap }) {
   );
 }
 
+function FounderReleaseReview({ book, data, busy, doAuthorize }) {
+  const CHECKS = [
+    { key: "manuscript", label: "I have reviewed the manuscript." },
+    { key: "cover", label: "I have reviewed the cover." },
+    { key: "blurb", label: "I have reviewed the blurb." },
+    { key: "price", label: "I approve the price." },
+    { key: "public", label: "I understand publication creates a public edition." },
+  ];
+  const [checked, setChecked] = useState({});
+  if (!book) return null;
+  const authorized = book?.founder_authorization?.authorized;
+  const allChecked = CHECKS.every((c) => checked[c.key]);
+  const gateReady = data?.gate_ready_for_authorization ?? data?.gate_ready;
+  const canAuthorize = gateReady && allChecked && !busy;
+  const price = book?.pricing?.ebook_price && book?.pricing?.paperback_price
+    ? `eBook ${book.pricing.currency} ${book.pricing.ebook_price} · Paperback ${book.pricing.currency} ${book.pricing.paperback_price}`
+    : (book?.pricing?.list_price ? `${book.pricing.currency} ${book.pricing.list_price}` : "Not set");
+
+  return (
+    <div className="qru-card qru-goldline p-6 border-2 border-gold/40 bg-gradient-to-b from-navy to-[#141026] text-white" data-testid="founder-release-review">
+      <div className="flex items-center gap-2 mb-4">
+        <BookOpen className="w-5 h-5 text-gold" />
+        <h3 className="font-heading text-lg font-bold text-gold">Founder Release Review™</h3>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-x-8 gap-y-1.5 mb-5 text-sm">
+        <p><span className="text-gold/70">Title:</span> <b className="text-white" data-testid="review-title">{book.title}</b></p>
+        <p><span className="text-gold/70">Author:</span> <b className="text-white" data-testid="review-author">{book.author || "—"}</b></p>
+        <p><span className="text-gold/70">Edition:</span> <b className="text-white">{book.edition || "First Edition"}</b></p>
+        <p><span className="text-gold/70">Price:</span> <b className="text-white" data-testid="review-price">{price}</b></p>
+        <p className="sm:col-span-2"><span className="text-gold/70">Status:</span> <b className="text-emerald-300" data-testid="review-status">{authorized ? "Authorized — Ready for KDP Submission" : (gateReady ? "Ready for KDP Submission" : "Preparing…")}</b></p>
+      </div>
+
+      <p className="text-[13px] text-white/85 mb-3">You are about to publish the first QRU Press™ title. Please confirm that:</p>
+      <div className="space-y-2 mb-5" data-testid="review-checkboxes">
+        {CHECKS.map((c) => (
+          <label key={c.key} className="flex items-center gap-3 text-sm text-white/90 cursor-pointer select-none">
+            <input type="checkbox" data-testid={`review-check-${c.key}`} checked={!!checked[c.key]} disabled={authorized}
+              onChange={(e) => setChecked((p) => ({ ...p, [c.key]: e.target.checked }))}
+              className="w-4 h-4 accent-gold" />
+            {c.label}
+          </label>
+        ))}
+      </div>
+
+      {authorized ? (
+        <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm" data-testid="release-authorized-chip">
+          <CheckCircle2 className="w-5 h-5" /> Release authorized by {book.founder_authorization.by} · {new Date(book.founder_authorization.at).toLocaleString()}
+        </div>
+      ) : (
+        <>
+          <button data-testid="authorize-btn" onClick={doAuthorize} disabled={!canAuthorize}
+            className="w-full inline-flex items-center justify-center gap-2 bg-gold text-navy px-4 py-3.5 rounded-md text-base font-bold transition-opacity disabled:opacity-40 hover:opacity-90">
+            <ShieldCheck className="w-5 h-5" /> Authorize Release
+          </button>
+          {!gateReady && <p className="text-[11px] text-amber-300 mt-2 text-center">The Final Release Gate is not yet complete — resolve pending items above first.</p>}
+          {gateReady && !allChecked && <p className="text-[11px] text-white/60 mt-2 text-center">Confirm all five statements to enable authorization.</p>}
+        </>
+      )}
+    </div>
+  );
+}
+
 function PublishPanel({ data, kdp, book, busy, doPricing, doAuthorize, doSanitize, doDraftBlurb, doSavePublication, doPrintWrap }) {
   const [price, setPrice] = useState("");
   if (!data) return <Panel title="Publish" icon={Send}><p className="text-sm text-muted-foreground py-4">Loading…</p></Panel>;
@@ -995,25 +1057,24 @@ function PublishPanel({ data, kdp, book, busy, doPricing, doAuthorize, doSanitiz
               className="bg-navy text-white px-3 py-1.5 rounded-md text-sm font-bold disabled:opacity-40">Approve Price</button>
           </div>
         )}
-        {book?.pricing?.approved && <p className="text-[12px] text-emerald-700 mt-2">Pricing approved: {book.pricing.currency} {book.pricing.list_price}</p>}
+        {book?.pricing?.approved && (
+          <p className="text-[12px] text-emerald-700 mt-2" data-testid="pricing-approved-text">
+            Pricing approved: {book.pricing.ebook_price && book.pricing.paperback_price
+              ? `eBook ${book.pricing.currency} ${book.pricing.ebook_price} · Paperback ${book.pricing.currency} ${book.pricing.paperback_price}`
+              : `${book.pricing.currency} ${book.pricing.list_price}`}
+          </p>
+        )}
 
-        {/* Founder authorization — human final judgment for irreversible action */}
         <div className="mt-4">
-          {book?.founder_authorization?.authorized ? (
-            <StatusChip status={`Authorized by ${book.founder_authorization.by}`} tone="emerald" testid="authorized-chip" />
-          ) : (
-            <button data-testid="authorize-btn" onClick={doAuthorize} disabled={busy || !data.gate_ready}
-              className="w-full inline-flex items-center justify-center gap-1.5 bg-gold text-navy px-4 py-2.5 rounded-md text-sm font-bold disabled:opacity-50">
-              <ShieldCheck className="w-4 h-4" /> Authorize Release (Founder)
-            </button>
-          )}
-        </div>
-        <div className="mt-3">
-          <StatusChip status={data.gate_ready ? "Gate ready for Founder authorization" : "Gate not yet ready"} tone={data.gate_ready ? "emerald" : "amber"} testid="gate-ready" />
+          {book?.founder_authorization?.authorized
+            ? <StatusChip status={`Authorized by ${book.founder_authorization.by}`} tone="emerald" testid="authorized-chip" />
+            : <StatusChip status={(data.gate_ready_for_authorization ?? data.gate_ready) ? "Gate ready — complete the Founder Release Review™ below to authorize" : "Gate not yet ready"} tone={(data.gate_ready_for_authorization ?? data.gate_ready) ? "emerald" : "amber"} testid="gate-ready" />}
         </div>
         <p className="text-[11px] text-amber-700 mt-2">{data.honesty}</p>
       </Panel>
       </div>
+
+      <FounderReleaseReview book={book} data={data} busy={busy} doAuthorize={doAuthorize} />
     </div>
   );
 }

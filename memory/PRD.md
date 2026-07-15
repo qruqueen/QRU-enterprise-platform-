@@ -607,3 +607,31 @@ NOTE: There is NO Amazon KDP publishing API integration — the Factory produces
 ### HOLD
 - Decoder Engine™ Stone 3 is ON HOLD until the first publication cycle completes (Founder's 3 decisions + KDP upload), per Founder instruction.
 
+
+---
+
+## CHANGELOG — 2026-06-15 (Founder decisions + Release Review)
+
+### The Understanding Tree — Founder decisions recorded
+- **Pricing approved:** eBook USD 4.99 · Paperback USD 12.99 (both stored on pricing record; `set_pricing` extended with `ebook_price`/`paperback_price`; `/pricing` route + PricingReq extended).
+- **ISBN:** Free KDP-assigned (recorded; checklist ISBN field now resolves to "assigned by Amazon KDP at publication"). `set_publication_details` extended with `isbn`/`isbn_source`.
+- **Ready-for-KDP checklist: READY ✅** (no pending Founder items).
+- **Blurb: NOT approved** — held as draft for the Founder's final review per instruction. `blurb_status` remains "draft — Founder to approve".
+
+### New: Founder Release Review™ card
+- `FounderReleaseReview` component renders as the final moment before authorization (replaces the plain button-in-gate). Shows Title / Author / Edition / Price / Status, five confirmation checkboxes (manuscript, cover, blurb, price, public edition), then ONE `Authorize Release` button.
+- Button enables only when `gate_ready_for_authorization` AND all five boxes are checked.
+- **Gate fix:** `publish_center` now returns `gate_ready_for_authorization` = all gate items EXCEPT `founder_authorization_received`. (Previously `gate_ready` included the auth item itself, which would have made the authorize button impossible to enable — fixed.)
+
+### Verification
+- All backend flows curl-verified (pricing eBook+PB, ISBN, checklist READY, gate_ready_for_authorization=True).
+- Frontend compiles cleanly (webpack). Live screenshot still blocked by platform idle resting page (infra).
+
+### Still pending (Founder's own actions — Factory will not do these)
+1. Review & approve the back-cover blurb (draft presented).
+2. Tick the five Founder Release Review™ confirmations and click Authorize Release.
+3. Perform the manual Amazon KDP upload using the assembled package + checklist (no KDP publishing API exists — honest).
+
+### HOLD
+- Decoder Engine™ Stone 3 remains ON HOLD until the first publication cycle completes.
+
