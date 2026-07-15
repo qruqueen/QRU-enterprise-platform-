@@ -141,6 +141,8 @@ export default function BookManufacturing() {
         actions={<VerifiedBadge label="Treasure Standard™" testid="book-mfg-badge" />}
       />
 
+      <ActivePublicationBanner book={book} tab={tab} buttons={buttons} />
+
       {/* Book identity — title ALWAYS before Book Record ID */}
       <div className="qru-card qru-goldline p-4 mb-5" data-testid="book-identity">
         <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -241,6 +243,37 @@ function NavCard({ label, value, tone, icon: Icon }) {
     </div>
   );
 }
+
+function ActivePublicationBanner({ book, tab, buttons }) {
+  if (!book) return null;
+  const stage = (buttons.find((b) => b.key === tab)?.label) || "Upload";
+  const status = book.founder_authorization?.authorized
+    ? "Authorized for Release"
+    : (book.publication_status || book.editorial_status || "In Manufacturing");
+  const Field = ({ label, value, testid, mono }) => (
+    <div className="min-w-0">
+      <p className="text-[9px] font-bold uppercase tracking-wider text-gold/80">{label}</p>
+      <p className={`text-[13px] font-semibold text-white truncate ${mono ? "font-mono text-[11px]" : ""}`} data-testid={testid} title={value}>{value}</p>
+    </div>
+  );
+  return (
+    <div className="sticky top-0 z-30 mb-4 rounded-lg border border-gold/40 bg-navy shadow-lg" data-testid="active-publication-banner">
+      <div className="flex items-center gap-3 px-4 py-2.5 flex-wrap">
+        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-navy bg-gold px-2 py-1 rounded-full shrink-0">
+          <BookOpen className="w-3 h-3" /> Active Publication™
+        </span>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-1.5 flex-1 min-w-0">
+          <Field label="Book Title" value={book.title || "—"} testid="banner-book-title" />
+          <Field label="Book ID" value={`${book.book_code || "—"} · ${book.id}`} testid="banner-book-id" mono />
+          <Field label="Author" value={book.author || "—"} testid="banner-author" />
+          <Field label="Current Stage" value={stage} testid="banner-current-stage" />
+          <Field label="Current Status" value={status} testid="banner-current-status" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 function founderNav(b, tab) {
   const design = b.artifacts?.design;

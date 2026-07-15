@@ -578,3 +578,32 @@ Five Responsibilities (Universe · Characters · Stories · Production · Govern
 - P2: Pluggable AI image-to-video provider for the Video button (on hold per Founder).
 - Future: Pricing Advisor scenario persistence / save comparison to record (currently ephemeral).
 
+
+---
+
+## CHANGELOG — 2026-06-15 (continued)
+
+### Publish Standard — FROZEN ✅
+- Publish workflow passed full end-to-end UI validation (iteration_77): 9/9 Founder-journey steps PASS.
+- Post-validation polish applied: authorize-btn now disabled until gate is ready (Treasure Standard, proactive); gate label "Title & Author"; blurb panel no longer discards in-flight Founder edits (resets only on book switch).
+- **Active Publication™ banner** added — a sticky banner (`data-testid=active-publication-banner`) rendered above all tab content in BookManufacturing.js, always showing Book Title, Book ID (code · uuid), Author, Current Stage (active button), Current Status. Visible on every screen. Compiles clean; live screenshot blocked by platform idle resting page (infra).
+- **Publish standard is now frozen.** No further Publish changes without explicit Founder request.
+
+### First Real Publication Cycle — The Understanding Tree (BOOK-0001, id 8469bcc5-…, author E.Q. Rothwell)
+Factory-manufactured (all verified via API):
+- Retail edition sanitized ✅ · Front cover selected ✅
+- Back-cover blurb drafted (AI, "draft — Founder to approve") ✅
+- KDP print-ready cover wrap (White B&W): 47pp → spine 0.1058" → 12.356 × 9.25 in @ 300 DPI, **blank spine** (correct, <79pp), blurb included ✅
+- Master Output Package assembled: ~11.2 MB zip ✅
+- Pricing Advisor recommendation: eBook $5.99 / Paperback $15.99, Standard, **High** confidence ✅
+- Ready-for-KDP checklist: NOT yet ready — pending Founder: **List price**, **ISBN**
+
+### Remaining (Founder-only decisions — Factory will NOT auto-do these)
+1. Approve a list price (recommendation ready).
+2. Provide/confirm ISBN (free KDP ISBN or own).
+3. Authorize Release.
+NOTE: There is NO Amazon KDP publishing API integration — the Factory produces a Ready-for-KDP package + checklist; the final upload to Amazon KDP is a manual Founder action. This is stated honestly (Treasure Standard) — the book is NOT auto-published to any retailer.
+
+### HOLD
+- Decoder Engine™ Stone 3 is ON HOLD until the first publication cycle completes (Founder's 3 decisions + KDP upload), per Founder instruction.
+
