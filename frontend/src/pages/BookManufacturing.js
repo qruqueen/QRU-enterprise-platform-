@@ -246,10 +246,21 @@ function NavCard({ label, value, tone, icon: Icon }) {
 
 function ActivePublicationBanner({ book, tab, buttons }) {
   if (!book) return null;
-  const stage = (buttons.find((b) => b.key === tab)?.label) || "Upload";
-  const status = book.founder_authorization?.authorized
-    ? "Authorized for Release"
-    : (book.publication_status || book.editorial_status || "In Manufacturing");
+  const auth = book.founder_authorization?.authorized;
+  const cover = !!book.artifacts?.design?.selected_cover;
+  const sanitized = !!book.artifacts?.sanitization;
+  const priced = !!book.pricing?.approved;
+  const locked = !!book.editorial_locked;
+  const stage = book.manufacturing_job?.stage || (buttons.find((b) => b.key === tab)?.label) || "Upload";
+  let status;
+  if (auth) status = "Authorized — ready for KDP upload";
+  else if (locked && cover && sanitized && priced) status = "Ready for Founder Release Review™ — approve blurb & authorize (Publish tab)";
+  else if (locked && cover && sanitized) status = "Next: approve pricing (Publish tab)";
+  else if (locked && cover) status = "Next: run Publication Sanitization (Publish tab)";
+  else if (locked) status = "Next: choose the final cover (Design tab)";
+  else if (book.proofing_report) status = "Next: approve & lock the editorial edition (Proof tab)";
+  else if (book.source_status) status = "Next: Proof & Polish";
+  else status = "Awaiting manuscript upload";
   const Field = ({ label, value, testid, mono }) => (
     <div className="min-w-0">
       <p className="text-[9px] font-bold uppercase tracking-wider text-gold/80">{label}</p>
