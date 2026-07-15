@@ -52,9 +52,9 @@ export default function BookManufacturing() {
     const { data } = await api.get(`/book-mfg/books/${id}`);
     setBook(data);
     setProof(data.proofing_report || null);
-    setPublish(null); setAudio(null); setVideo(null); setMonitor(null); setShareInfo(null);
+    setPublish(null); setAudio(null); setVideo(null); setMonitor(null);
   };
-  const selectBook = async (id) => { setTab("upload"); await reload(id); };
+  const selectBook = async (id) => { setTab("upload"); setShareInfo(null); await reload(id); };
   useEffect(() => {
     api.get("/book-mfg/config").then((r) => { setButtons(r.data.buttons); if (r.data.system_title) setSystemTitle(r.data.system_title); }).catch(() => {});
     loadBooks().then((books) => { if (books[0]) reload(books[0].id); }).catch(() => {});
@@ -753,7 +753,7 @@ function PublishPanel({ data, kdp, book, busy, doPricing, doAuthorize, doSanitiz
         <div className="space-y-1.5" data-testid="gate-items">
           {Object.entries(g).map(([k, v]) => (
             <div key={k} className="flex items-center justify-between gap-2 text-sm">
-              <span className="text-navy capitalize">{k.replace(/_/g, " ")}</span>
+              <span className="text-navy capitalize">{k.replace(/_/g, " ").replace(/\bai\b/gi, "AI")}</span>
               {v ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <StatusChip status="Pending" tone="amber" />}
             </div>
           ))}
