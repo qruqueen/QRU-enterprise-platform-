@@ -96,6 +96,9 @@ export default function BookManufacturing() {
   const doPricing = (price, currency) => run(() => api.post(`/book-mfg/books/${book.id}/pricing`, { list_price: parseFloat(price), currency }), "Pricing approved.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
   const doAuthorize = () => run(() => api.post(`/book-mfg/books/${book.id}/authorize`), "Release authorized.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
   const doSanitize = () => run(() => api.post(`/book-mfg/books/${book.id}/sanitize`, { base_url: A }), "Publication Sanitization Pass™ complete — clean retail edition prepared.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
+  const doDraftBlurb = () => run(async () => { const { data } = await api.post(`/book-mfg/books/${book.id}/draft-blurb`); toast.message("Blurb drafted — review & approve.", { description: data.status }); });
+  const doSavePublication = (fields, ok) => run(() => api.post(`/book-mfg/books/${book.id}/publication-details`, fields), ok || "Publication details saved.");
+  const doPrintWrap = (paperType) => run(() => api.post(`/book-mfg/books/${book.id}/print-wrap`, { paper_type: paperType }), "Print-ready cover wrap built.");
   const doUploadFile = async (file, meta) => {
     if (!file) return;
     setBusy(true);
@@ -224,7 +227,7 @@ export default function BookManufacturing() {
       {tab === "design" && <DesignPanel book={book} busy={busy} doDesign={doDesign} doSelectCover={doSelectCover} />}
       {tab === "audio" && <AudioPanel book={book} audio={audio} busy={busy} onRender={doRenderAudio} />}
       {tab === "video" && <PlanPanel title="Video" icon={Video} data={video} render={renderVideo} />}
-      {tab === "publish" && <PublishPanel data={publish} kdp={kdp} book={book} busy={busy} doPricing={doPricing} doAuthorize={doAuthorize} doSanitize={doSanitize} />}
+      {tab === "publish" && <PublishPanel data={publish} kdp={kdp} book={book} busy={busy} doPricing={doPricing} doAuthorize={doAuthorize} doSanitize={doSanitize} doDraftBlurb={doDraftBlurb} doSavePublication={doSavePublication} doPrintWrap={doPrintWrap} />}
       {tab === "monitor" && <PlanPanel title="Monitor" icon={Activity} data={monitor} render={renderMonitor} />}
     </div>
   );
@@ -733,13 +736,199 @@ function KdpChecklist({ kdp }) {
   );
 }
 
-function PublishPanel({ data, kdp, book, busy, doPricing, doAuthorize, doSanitize }) {
+function PricingAdvisorPanel({ book, busy, doPricing }) {
+  const [adv, setAdv] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [paper, setPaper] = useState("white");
+  const [scenIn, setScenIn] = useState("9.99, 12.99, 14.99");
+  const [scen, setScen] = useState(null);
+  if (!book) return null;
+
+  const getAdvice = async () => {
+    setLoading(true);
+    try { const { data } = await api.get(`/book-mfg/books/${book.id}/pricing-advisor?paper_type=${paper}`); setAdv(data); }
+    catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
+    finally { setLoading(false); }
+  };
+  const runScenarios = async () => {
+    const prices = scenIn.split(",").map((s) => parseFloat(s.trim())).filter((n) => !isNaN(n));
+    if (!prices.length) return;
+    setLoading(true);
+    try { const { data } = await api.post(`/book-mfg/books/${book.id}/pricing-scenarios`, { prices, paper_type: paper }); setScen(data.scenarios || []); }
+    catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
+    finally { setLoading(false); }
+  };
+  const r = adv?.recommendation;
+  const posTone = (p) => (p === "Premium" ? "gold" : p === "Budget" ? "slate" : "royal");
+  const confTone = (c) => (c === "High" ? "emerald" : c === "Medium" ? "amber" : "slate");
+
+  return (
+    <Panel title="QRU Pricing Advisor™" icon={DollarSign} accent="gold" testid="pricing-advisor">
+      <p className="text-[11px] text-muted-foreground mb-3">Evidence-based recommendation. Recommends, never sets — you always make the final call.</p>
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <select value={paper} onChange={(e) => setPaper(e.target.value)} data-testid="advisor-paper-select"
+          className="px-2 py-1.5 text-sm border border-border rounded-md bg-card outline-none">
+          <option value="white">White paper (B&W)</option>
+          <option value="cream">Cream paper (B&W)</option>
+          <option value="color">Premium color</option>
+        </select>
+        <button data-testid="get-pricing-advice-btn" onClick={getAdvice} disabled={loading}
+          className="inline-flex items-center gap-1.5 bg-navy text-white px-3 py-1.5 rounded-md text-sm font-bold disabled:opacity-40">
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />} Get Recommendation
+        </button>
+      </div>
+
+      {r && (
+        <div className="space-y-3" data-testid="advisor-result">
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="rounded-lg border border-border/60 p-3 bg-card">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Recommended eBook</p>
+              <p className="text-2xl font-bold text-navy" data-testid="rec-ebook-price">${r.ebook_price}</p>
+              <p className="text-[11px] text-muted-foreground">Est. royalty ${r.estimated_royalty.ebook.amount} ({r.estimated_royalty.ebook.rate})</p>
+            </div>
+            <div className="rounded-lg border border-border/60 p-3 bg-card">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Recommended Paperback</p>
+              <p className="text-2xl font-bold text-navy" data-testid="rec-paperback-price">${r.paperback_price}</p>
+              <p className="text-[11px] text-muted-foreground">Est. royalty ${r.estimated_royalty.paperback.amount} · print ${adv.inputs.print_cost}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <StatusChip status={`Position: ${r.price_position}`} tone={posTone(r.price_position)} testid="price-position" />
+            <StatusChip status={`Confidence: ${r.confidence_level}`} tone={confTone(r.confidence_level)} testid="confidence-level" />
+            <StatusChip status={`${adv.inputs.page_count}${adv.inputs.page_count_exact ? "" : "~"} pp · ${adv.inputs.genre_bucket}`} tone="slate" />
+          </div>
+          <div className="text-[12px] text-navy/90">
+            <span className="font-semibold">Comparable market range:</span> eBook {r.comparable_market_range.ebook} · Paperback {r.comparable_market_range.paperback}
+            <p className="text-[11px] text-muted-foreground mt-0.5">{r.comparable_market_range.basis}</p>
+          </div>
+          <div className="rounded-lg bg-muted/40 border border-border/50 p-3" data-testid="founder-notes">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Founder Notes</p>
+            <p className="text-sm text-navy/90">{r.founder_notes}</p>
+          </div>
+          <button data-testid="approve-recommended-price-btn" onClick={() => doPricing(r.paperback_price, "USD")} disabled={busy}
+            className="inline-flex items-center gap-1.5 bg-gold text-navy px-3 py-1.5 rounded-md text-sm font-bold disabled:opacity-40">
+            <CheckCircle2 className="w-4 h-4" /> Approve ${r.paperback_price} paperback (Founder)
+          </button>
+          <p className="text-[10px] text-amber-700">{adv.provenance.disclaimer} · Notes by {adv.provenance.founder_notes_model}.</p>
+
+          {/* Scenario comparison */}
+          <div className="pt-3 border-t border-border/50">
+            <p className="text-[11px] font-semibold text-navy mb-1.5">Compare pricing scenarios</p>
+            <div className="flex items-center gap-2 mb-2">
+              <input value={scenIn} onChange={(e) => setScenIn(e.target.value)} data-testid="scenario-input"
+                placeholder="e.g. 9.99, 12.99, 14.99" className="flex-1 px-2 py-1.5 text-sm border border-border rounded-md bg-card outline-none" />
+              <button data-testid="run-scenarios-btn" onClick={runScenarios} disabled={loading}
+                className="bg-navy text-white px-3 py-1.5 rounded-md text-sm font-bold disabled:opacity-40">Compare</button>
+            </div>
+            {scen && scen.length > 0 && (
+              <div className="overflow-x-auto" data-testid="scenario-table">
+                <table className="w-full text-[12px]">
+                  <thead><tr className="text-left text-muted-foreground border-b border-border/50">
+                    <th className="py-1 pr-2">Price</th><th className="py-1 pr-2">PB royalty</th><th className="py-1 pr-2">Margin</th><th className="py-1 pr-2">eBook royalty</th><th className="py-1">Position</th></tr></thead>
+                  <tbody>
+                    {scen.map((s, i) => (
+                      <tr key={i} className="border-b border-border/30" data-testid={`scenario-row-${i}`}>
+                        <td className="py-1 pr-2 font-semibold text-navy">${s.price}</td>
+                        <td className={`py-1 pr-2 ${s.paperback_royalty < 0 ? "text-red-600" : "text-emerald-700"}`}>${s.paperback_royalty}</td>
+                        <td className="py-1 pr-2">{s.paperback_margin_pct}%</td>
+                        <td className="py-1 pr-2">${s.ebook_royalty} ({s.ebook_rate})</td>
+                        <td className="py-1"><StatusChip status={s.position} tone={posTone(s.position)} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function PublicationDetailsPanel({ book, busy, doDraftBlurb, doSavePublication }) {
+  const [blurb, setBlurb] = useState("");
+  const [include, setInclude] = useState(true);
+  useEffect(() => { if (book) { setBlurb(book.description || ""); setInclude(book.include_blurb !== false); } }, [book?.id, book?.description, book?.include_blurb]);
+  if (!book) return null;
+  return (
+    <Panel title="Back-Cover Blurb & Publication Details" icon={FileText} accent="royal" testid="publication-details">
+      <p className="text-[11px] text-muted-foreground mb-3">The blurb prints on the back cover. Draft it with AI, then edit & approve — nothing is published without your review.</p>
+      <div className="flex items-center gap-2 mb-2">
+        <button data-testid="draft-blurb-btn" onClick={doDraftBlurb} disabled={busy}
+          className="inline-flex items-center gap-1.5 bg-navy text-white px-3 py-1.5 rounded-md text-sm font-bold disabled:opacity-40">
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <SpellCheck className="w-4 h-4" />} Draft with AI
+        </button>
+        {book.blurb_status && <StatusChip status={book.blurb_status} tone="amber" testid="blurb-status" />}
+      </div>
+      <textarea data-testid="blurb-textarea" value={blurb} onChange={(e) => setBlurb(e.target.value)} rows={5}
+        placeholder="120–170 word back-cover blurb…" className="w-full px-3 py-2 text-sm border border-border rounded-md bg-card outline-none resize-y" />
+      <label className="flex items-center gap-2 mt-2 text-sm text-navy">
+        <input type="checkbox" checked={include} onChange={(e) => setInclude(e.target.checked)} data-testid="include-blurb-toggle" />
+        Include blurb on back cover (uncheck for an intentionally minimal back cover)
+      </label>
+      <button data-testid="save-blurb-btn" onClick={() => doSavePublication({ description: blurb, include_blurb: include, blurb_status: "approved by Founder" }, "Blurb saved & approved.")} disabled={busy}
+        className="mt-2 inline-flex items-center gap-1.5 bg-gold text-navy px-3 py-1.5 rounded-md text-sm font-bold disabled:opacity-40">
+        <CheckCircle2 className="w-4 h-4" /> Save & Approve
+      </button>
+    </Panel>
+  );
+}
+
+function PrintWrapPanel({ book, busy, doPrintWrap }) {
+  const [paper, setPaper] = useState("white");
+  const wrap = book?.artifacts?.design?.print?.paperback_cover_wrap;
+  if (!book) return null;
+  return (
+    <Panel title="KDP Print-Ready Cover Wrap" icon={BookOpen} accent="royal" testid="print-wrap">
+      <p className="text-[11px] text-muted-foreground mb-3">Complete paperback wrap — back cover + spine + front — sized from the final page count, trim, paper & bleed at 300 DPI. Run Sanitize + select a cover first.</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <select value={paper} onChange={(e) => setPaper(e.target.value)} data-testid="wrap-paper-select"
+          className="px-2 py-1.5 text-sm border border-border rounded-md bg-card outline-none">
+          <option value="white">White paper (B&W)</option>
+          <option value="cream">Cream paper (B&W)</option>
+          <option value="color">Premium color</option>
+        </select>
+        <button data-testid="build-print-wrap-btn" onClick={() => doPrintWrap(paper)} disabled={busy}
+          className="inline-flex items-center gap-1.5 bg-navy text-white px-3 py-1.5 rounded-md text-sm font-bold disabled:opacity-40">
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4" />} Build Print-Ready Wrap
+        </button>
+      </div>
+      {wrap && (
+        <div className="mt-3 space-y-2" data-testid="wrap-result">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[12px]">
+            <div><span className="text-muted-foreground">Pages:</span> <b>{wrap.page_count}</b></div>
+            <div><span className="text-muted-foreground">Paper:</span> <b>{wrap.paper_type}</b></div>
+            <div><span className="text-muted-foreground">Spine:</span> <b>{wrap.spine_in}"</b></div>
+            <div><span className="text-muted-foreground">Trim:</span> <b>{wrap.trim}</b></div>
+            <div><span className="text-muted-foreground">Full size:</span> <b>{wrap.full_size_in}</b></div>
+            <div><span className="text-muted-foreground">DPI:</span> <b>{wrap.dpi}</b></div>
+          </div>
+          <StatusChip status={wrap.spine_note} tone={wrap.spine_text ? "emerald" : "amber"} testid="spine-note" />
+          {wrap.paperback_cover_wrap_png && <img src={abs(wrap.paperback_cover_wrap_png)} alt="Cover wrap" className="w-full rounded-md border border-border/60" data-testid="wrap-preview" />}
+          <div className="flex gap-2">
+            <a href={abs(wrap.paperback_cover_wrap_pdf)} target="_blank" rel="noreferrer" data-testid="download-wrap-pdf"
+              className="inline-flex items-center gap-1.5 bg-gold text-navy px-3 py-1.5 rounded-md text-sm font-bold">
+              <Download className="w-4 h-4" /> Download Print PDF
+            </a>
+          </div>
+          <p className="text-[10px] text-muted-foreground">{wrap.components}</p>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function PublishPanel({ data, kdp, book, busy, doPricing, doAuthorize, doSanitize, doDraftBlurb, doSavePublication, doPrintWrap }) {
   const [price, setPrice] = useState("");
   if (!data) return <Panel title="Publish" icon={Send}><p className="text-sm text-muted-foreground py-4">Loading…</p></Panel>;
   const g = data.final_release_gate;
   return (
     <div className="space-y-5" data-testid="panel-publish">
       <SanitizationPanel book={book} busy={busy} doSanitize={doSanitize} />
+      <PricingAdvisorPanel book={book} busy={busy} doPricing={doPricing} />
+      <PublicationDetailsPanel book={book} busy={busy} doDraftBlurb={doDraftBlurb} doSavePublication={doSavePublication} />
+      <PrintWrapPanel book={book} busy={busy} doPrintWrap={doPrintWrap} />
       <KdpChecklist kdp={kdp} />
       <div className="grid lg:grid-cols-2 gap-5">
       <Panel title="Publication Control Center" icon={Send} accent="royal" testid="publish-destinations">

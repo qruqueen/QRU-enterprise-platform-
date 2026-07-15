@@ -558,3 +558,23 @@ Five Responsibilities (Universe · Characters · Stories · Production · Govern
 - Universal "Publish Everywhere" — adapt Gold Master for TikTok/Reels/LinkedIn (9:16, platform metadata) with per-target failure isolation.
 - MO-023 QRU Audio Intelligence & Licensed Sound Library™ · MO-024 Mind & Renewal University™ · MO-020 FOREX FOUNDATIONS™ Gold Standard Workbook · YouTube E2E real upload.
 - Wire MO-012 produce completion + Gold Master into continuity project stage completion (auto-link).
+
+---
+
+## CHANGELOG — 2026-06-15 (fork resume)
+
+### Completed & verified (backend curl-tested against pilot BOOK-0001)
+1. **KDP Print-Ready Cover Wrap — wired & shipped.** The `_build_print_wrap` / `compose_print_wrap` logic (already written but never connected) is now exposed via `POST /api/book-mfg/books/{id}/print-wrap` and driven by a new Publish-tab panel (`PrintWrapPanel`). Produces a real back+spine+front 300 DPI PDF sized from final page count, trim, paper type & bleed. Verified on BOOK-0001: 48pp → spine 0.1081" → full 12.358 × 9.25 in, **spine left blank** (correct: <79pp KDP rule). Paper type default = White (B&W), switchable to Cream/Color.
+2. **Back-cover Blurb** — `POST /draft-blurb` (AI draft, marked "draft — Founder to approve") + `POST /publication-details` (edit/approve, include_blurb toggle). New `PublicationDetailsPanel`. Verified.
+3. **Bug fix:** `ai_service` was never imported at module level in `book_manufacturing.py` — `draft_blurb` would have thrown `NameError`. Added `import ai_service`.
+4. **QRU Pricing Advisor™ (NEW inherited capability).** `GET /pricing-advisor` + `POST /pricing-scenarios`. Recommends (never sets). Returns Recommended eBook/Paperback price, Estimated Royalty, Price Position (Budget/Standard/Premium), Comparable Market Range, Confidence Level, Founder Notes, full Transparent Provenance™. Deterministic KDP economics (US 6×9 print-cost formula, 70/35% eBook & 60%−print paperback royalty) + QRU Press™ house genre standards; LLM only writes qualitative Founder Notes. Scenario comparison table (e.g. $9.99/$12.99/$14.99) implemented. New `PricingAdvisorPanel`. All verified via curl.
+
+### Note
+- Frontend compiled successfully (webpack clean); live preview screenshot was blocked by the platform's idle "Preview Unavailable" resting page (infra, not code). Backend fully curl-verified through the same domain.
+
+### Next / Backlog
+- P1: Decoder Engine™ Stone 3 — canonical audience variants (adult vs child) + media fan-out.
+- P2: Generalize "Create Product" bridge beyond Books (Workbooks, Posters).
+- P2: Pluggable AI image-to-video provider for the Video button (on hold per Founder).
+- Future: Pricing Advisor scenario persistence / save comparison to record (currently ephemeral).
+

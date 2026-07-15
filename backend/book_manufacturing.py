@@ -20,6 +20,7 @@ from org_activity import log_org
 import book_structure as bs
 import product_governance as pg
 import manufacturing_recipes as recipes
+import ai_service
 
 COLL = "book_records"
 
@@ -1102,6 +1103,203 @@ async def build_print_cover_wrap(book_id, paper_type, actor):
         "$push": {"revision_history": {"stage": "Print Cover Wrap", "by": actor, "at": _now(),
                   "note": f"Full paperback wrap: {pages}pp, {paper_type} paper, spine {spine_in}in, {full_w_in}x{full_h_in}in @ {dpi}dpi."}}})
     return wrap
+
+# ------------------------- QRU PRICING ADVISOR™ -------------------------
+# Inherited Factory capability. ONE responsibility: recommend. ONE owner.
+# It NEVER changes a price — the Founder always makes the final decision.
+# Transparent Provenance™ applies to every recommendation.
+QRU_PRESS_STANDARDS = {
+    # genre bucket -> {ebook:(lo,hi), paperback:(lo,hi)}  (USD, QRU Press™ house standard)
+    "children":   {"ebook": (2.99, 4.99),  "paperback": (8.99, 12.99)},
+    "poetry":     {"ebook": (3.99, 6.99),  "paperback": (10.99, 14.99)},
+    "fiction":    {"ebook": (4.99, 7.99),  "paperback": (13.99, 17.99)},
+    "nonfiction": {"ebook": (6.99, 9.99),  "paperback": (15.99, 21.99)},
+    "reference":  {"ebook": (7.99, 12.99), "paperback": (18.99, 26.99)},
+    "standard":   {"ebook": (4.99, 7.99),  "paperback": (12.99, 16.99)},
+}
+
+
+def _genre_bucket(genre, audience):
+    ga = f"{(genre or '').lower()} {(audience or '').lower()}"
+    if any(k in ga for k in ["child", "kid", "juvenile", "picture book", "middle grade", "early reader"]):
+        return "children"
+    if "poet" in ga:
+        return "poetry"
+    if any(k in ga for k in ["reference", "textbook", "manual", "handbook", "academic", "curriculum"]):
+        return "reference"
+    if any(k in ga for k in ["nonfiction", "non-fiction", "business", "self-help", "self help", "memoir",
+                             "biography", "history", "science", "essay", "guide", "spiritual", "wellness"]):
+        return "nonfiction"
+    if any(k in ga for k in ["fiction", "novel", "fantasy", "romance", "thriller", "mystery", "literary",
+                             "story", "sci-fi", "science fiction"]):
+        return "fiction"
+    return "standard"
+
+
+def kdp_paperback_print_cost(pages, paper_type="white"):
+    """Amazon KDP US-marketplace paperback print cost (6x9, black ink on white/cream)."""
+    pages = max(int(pages or 24), 24)
+    if paper_type == "color":
+        return round(0.065 * pages, 2)          # premium color, per-page
+    if pages <= 108:
+        return 2.30                              # fixed charge, 24–108 pp
+    return round(1.00 + 0.012 * pages, 2)        # fixed + per-page, 110+ pp
+
+
+def _psych(price):
+    """Charm pricing — snap to the nearest sensible $X.99 (min $0.99)."""
+    base = round(float(price))
+    return round(base - 0.01, 2) if base >= 1 else 0.99
+
+
+def _ebook_royalty(p):
+    if 2.99 <= p <= 9.99:
+        return round(0.70 * p, 2), "70%"
+    return round(0.35 * p, 2), "35%"
+
+
+def _paperback_royalty(list_price, print_cost):
+    # KDP pays 60% of list price minus print cost (US expanded excluded for simplicity).
+    return round(0.60 * list_price - print_cost, 2)
+
+
+def _position(price, lo, hi):
+    if price < lo + (hi - lo) / 3:
+        return "Budget"
+    if price > hi - (hi - lo) / 3:
+        return "Premium"
+    return "Standard"
+
+
+async def _book_pages(b):
+    import os
+    import rendering_engine as re_engine
+    sanit = b.get("artifacts", {}).get("sanitization", {}) or {}
+    design = b.get("artifacts", {}).get("design", {}) or {}
+    interior_url = (sanit.get("retail_edition", {}) or {}).get("paperback_interior_pdf") or design.get("print", {}).get("paperback_interior_pdf")
+    if not interior_url:
+        return None
+    p = os.path.join(re_engine.ASSET_DIR, interior_url.split("/")[-1])
+    if not os.path.exists(p):
+        return None
+    try:
+        import pypdf
+        return len(pypdf.PdfReader(p).pages)
+    except Exception:
+        return None
+
+
+async def pricing_advisor(book_id, scenarios=None, paper_type="white"):
+    """Evidence-based pricing RECOMMENDATION for the Founder. Recommends, never sets."""
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return None
+    genre = b.get("genre") or (b.get("artifacts", {}).get("sanitization", {}).get("publication_metadata", {}) or {}).get("genre") or "Fiction"
+    audience = b.get("audience", "General")
+    bucket = _genre_bucket(genre, audience)
+    std = QRU_PRESS_STANDARDS[bucket]
+    pages = await _book_pages(b)
+    words = len((b.get("editorial_edition") or b.get("working_copy") or {}).get("content", "").split())
+    est_pages = pages or max(24, round(words / 250)) if words else pages
+    paper_type = (paper_type or "white").lower()
+    print_cost = kdp_paperback_print_cost(est_pages or 24, paper_type)
+
+    eb_lo, eb_hi = std["ebook"]
+    pb_lo, pb_hi = std["paperback"]
+    rec_ebook = min(max(_psych((eb_lo + eb_hi) / 2), 2.99), 9.99)
+    # Paperback must comfortably clear print cost (target ≥ 50% margin over print) yet stay on-brand.
+    min_viable = _psych(print_cost / 0.60 * 1.5)
+    rec_pb = _psych(min(max((pb_lo + pb_hi) / 2, min_viable), pb_hi + 3))
+
+    eb_amt, eb_rate = _ebook_royalty(rec_ebook)
+    pb_amt = _paperback_royalty(rec_pb, print_cost)
+    position = _position(rec_pb, pb_lo, pb_hi)
+
+    completeness = []
+    completeness.append("page count" if pages else "page count (estimated from word count — run Sanitize for exact)")
+    completeness.append("genre" if b.get("genre") else "genre (defaulted)")
+    confidence = "High" if (pages and b.get("genre")) else ("Medium" if (pages or b.get("genre")) else "Low")
+
+    comparable = {
+        "ebook": f"${eb_lo:.2f}–${eb_hi:.2f}",
+        "paperback": f"${pb_lo:.2f}–${pb_hi:.2f}",
+        "basis": f"QRU Press™ house standard for the '{bucket}' category (genre: {genre}, audience: {audience}).",
+    }
+
+    # Founder Notes — LLM strategic guidance grounded ONLY in the computed evidence above.
+    notes_model = ai_service.MODEL[1] if isinstance(ai_service.MODEL, (tuple, list)) else str(ai_service.MODEL)
+    facts = (f"Genre bucket: {bucket} (genre '{genre}', audience '{audience}'). Page count: {est_pages}"
+             f"{' (estimated)' if not pages else ''}. KDP print cost: ${print_cost:.2f} ({paper_type} paper). "
+             f"Recommended eBook ${rec_ebook:.2f} → royalty ${eb_amt:.2f} ({eb_rate}). "
+             f"Recommended paperback ${rec_pb:.2f} → royalty ${pb_amt:.2f}. Position: {position}. "
+             f"Comparable range eBook {comparable['ebook']}, paperback {comparable['paperback']}.")
+    sys_p = ("You are the QRU Pricing Advisor™. Using ONLY the evidence provided, write 2–4 sentences of "
+             "concise, honest pricing guidance for the Founder. Explain the trade-offs (royalty vs. reach, "
+             "positioning). Do NOT invent sales figures, competitor titles, or guarantees. End by reminding "
+             "the Founder they make the final decision. Plain prose only.")
+    try:
+        founder_notes = (await ai_service.llm_generate(sys_p, facts, f"pricing-{book_id}")).strip()
+    except Exception:
+        founder_notes = ""
+    if len(founder_notes) < 30:
+        founder_notes = (f"At ${rec_pb:.2f} the paperback earns roughly ${pb_amt:.2f} per copy after the "
+                         f"${print_cost:.2f} KDP print cost, positioning it as '{position}' for the {bucket} "
+                         f"category. The ${rec_ebook:.2f} eBook stays inside the {eb_rate} royalty band for "
+                         f"maximum earnings. You make the final decision — adjust to match your goals.")
+
+    result = {
+        "book_title": b.get("title"), "book_code": b.get("book_code"), "generated_at": _now(),
+        "inputs": {
+            "genre": genre, "genre_bucket": bucket, "audience": audience,
+            "page_count": est_pages, "page_count_exact": bool(pages), "word_count": words,
+            "paper_type": paper_type, "print_cost": print_cost, "trim": "6 x 9 in",
+        },
+        "recommendation": {
+            "ebook_price": rec_ebook, "paperback_price": rec_pb, "currency": "USD",
+            "estimated_royalty": {
+                "ebook": {"amount": eb_amt, "rate": eb_rate},
+                "paperback": {"amount": pb_amt, "note": "60% of list − KDP print cost"},
+            },
+            "price_position": position,
+            "comparable_market_range": comparable,
+            "confidence_level": confidence,
+            "founder_notes": founder_notes,
+        },
+        "current_price": b.get("pricing", {}) or {},
+        "provenance": {
+            "engine": "QRU Pricing Advisor™",
+            "pricing_model": "Deterministic KDP economics + QRU Press™ house standards",
+            "founder_notes_model": notes_model,
+            "print_cost_basis": "Amazon KDP US marketplace, 6x9, black ink (Sept-2024 rates).",
+            "royalty_basis": "eBook 70% ($2.99–$9.99) else 35%; paperback 60% of list − print cost.",
+            "disclaimer": "Estimates based on published KDP formulas & category norms — NOT verified live sales data.",
+            "generated_at": _now(),
+        },
+        "honesty": "Recommendation only. The QRU Pricing Advisor™ never changes a price — the Founder always sets the final price.",
+    }
+
+    if scenarios:
+        rows = []
+        for raw in scenarios:
+            try:
+                p = round(float(raw), 2)
+            except Exception:
+                continue
+            e_amt, e_rate = _ebook_royalty(p)
+            pb_r = _paperback_royalty(p, print_cost)
+            margin = round((pb_r / p * 100), 1) if p else 0.0
+            rows.append({
+                "price": p,
+                "ebook_royalty": e_amt, "ebook_rate": e_rate,
+                "paperback_royalty": pb_r, "paperback_margin_pct": margin,
+                "print_cost": print_cost,
+                "position": _position(p, pb_lo, pb_hi),
+            })
+        result["scenarios"] = rows
+
+    return result
+
+
 
 # ------------------------- MASTER PACKAGE + READ MODELS -------------------------
 async def master_package(book_id):

@@ -183,6 +183,67 @@ async def authorize(book_id: str, user=Depends(require_super_admin)):
     return r
 
 
+class PublicationDetailsReq(BaseModel):
+    description: Optional[str] = None
+    author_bio: Optional[str] = None
+    include_blurb: Optional[bool] = None
+    blurb_status: Optional[str] = None
+
+
+@router.post("/books/{book_id}/publication-details")
+async def publication_details(book_id: str, req: PublicationDetailsReq, user=Depends(require_super_admin)):
+    fields = {k: v for k, v in req.dict().items() if v is not None}
+    r = await bm.set_publication_details(book_id, fields, user.get("name", "Founder"))
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    return r
+
+
+@router.post("/books/{book_id}/draft-blurb")
+async def draft_blurb(book_id: str, user=Depends(require_super_admin)):
+    r = await bm.draft_blurb(book_id, user.get("name", "Founder"))
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    if isinstance(r, dict) and r.get("error"):
+        raise HTTPException(400, r["error"])
+    return r
+
+
+class PrintWrapReq(BaseModel):
+    paper_type: Optional[str] = "white"
+
+
+@router.post("/books/{book_id}/print-wrap")
+async def print_wrap(book_id: str, req: PrintWrapReq = PrintWrapReq(), user=Depends(require_super_admin)):
+    r = await bm.build_print_cover_wrap(book_id, req.paper_type, user.get("name", "Founder"))
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    if isinstance(r, dict) and r.get("error"):
+        raise HTTPException(400, r["error"])
+    return r
+
+
+@router.get("/books/{book_id}/pricing-advisor")
+async def pricing_advisor(book_id: str, paper_type: str = "white", user=Depends(get_current_user)):
+    r = await bm.pricing_advisor(book_id, paper_type=paper_type)
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    return r
+
+
+class PricingScenariosReq(BaseModel):
+    prices: list
+    paper_type: Optional[str] = "white"
+
+
+@router.post("/books/{book_id}/pricing-scenarios")
+async def pricing_scenarios(book_id: str, req: PricingScenariosReq, user=Depends(get_current_user)):
+    r = await bm.pricing_advisor(book_id, scenarios=req.prices, paper_type=req.paper_type)
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    return r
+
+
 class ShareReq(BaseModel):
     hours: Optional[int] = 72
     base_url: Optional[str] = ""
