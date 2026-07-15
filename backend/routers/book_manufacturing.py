@@ -228,3 +228,11 @@ async def master_package(book_id: str, user=Depends(get_current_user)):
     if r is None:
         raise HTTPException(404, "Book Record not found.")
     return r
+
+
+@router.get("/books/{book_id}/kdp-checklist")
+async def kdp_checklist(book_id: str, user=Depends(get_current_user)):
+    r = await bm.build_kdp_checklist(book_id)
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    return r

@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge, MetricCard } from "@/components/qru";
 import {
   Upload, SpellCheck, Palette, Mic, Video, Send, Activity, Loader2, CheckCircle2,
-  Lock, FileText, ShieldCheck, ChevronRight, BookOpen, AlertTriangle, Download, MapPin, Share2, Play, DollarSign,
+  Lock, FileText, ShieldCheck, ChevronRight, BookOpen, AlertTriangle, Download, MapPin, Share2, Play, DollarSign, ClipboardCheck,
 } from "lucide-react";
 
 const ICONS = { upload: Upload, "spell-check": SpellCheck, palette: Palette, mic: Mic, video: Video, send: Send, activity: Activity };
@@ -37,6 +37,7 @@ export default function BookManufacturing() {
   const [audio, setAudio] = useState(null);
   const [video, setVideo] = useState(null);
   const [publish, setPublish] = useState(null);
+  const [kdp, setKdp] = useState(null);
   const [monitor, setMonitor] = useState(null);
   const [shareInfo, setShareInfo] = useState(null);
   const [allBooks, setAllBooks] = useState([]);
@@ -63,7 +64,7 @@ export default function BookManufacturing() {
     if (!book) return;
     if (tab === "audio" && !audio) api.get(`/book-mfg/books/${book.id}/audio`).then((r) => setAudio(r.data));
     if (tab === "video" && !video) api.get(`/book-mfg/books/${book.id}/video`).then((r) => setVideo(r.data));
-    if (tab === "publish") api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data));
+    if (tab === "publish") { api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)); api.get(`/book-mfg/books/${book.id}/kdp-checklist`).then((r) => setKdp(r.data)).catch(() => {}); }
     if (tab === "monitor" && !monitor) api.get(`/book-mfg/books/${book.id}/monitor`).then((r) => setMonitor(r.data));
   }, [tab, book]); // eslint-disable-line
 
@@ -219,7 +220,7 @@ export default function BookManufacturing() {
       {tab === "design" && <DesignPanel book={book} busy={busy} doDesign={doDesign} doSelectCover={doSelectCover} />}
       {tab === "audio" && <AudioPanel book={book} audio={audio} busy={busy} onRender={doRenderAudio} />}
       {tab === "video" && <PlanPanel title="Video" icon={Video} data={video} render={renderVideo} />}
-      {tab === "publish" && <PublishPanel data={publish} book={book} busy={busy} doPricing={doPricing} doAuthorize={doAuthorize} doSanitize={doSanitize} />}
+      {tab === "publish" && <PublishPanel data={publish} kdp={kdp} book={book} busy={busy} doPricing={doPricing} doAuthorize={doAuthorize} doSanitize={doSanitize} />}
       {tab === "monitor" && <PlanPanel title="Monitor" icon={Activity} data={monitor} render={renderMonitor} />}
     </div>
   );
@@ -704,13 +705,38 @@ function SanitizationPanel({ book, busy, doSanitize }) {
   );
 }
 
-function PublishPanel({ data, book, busy, doPricing, doAuthorize, doSanitize }) {
+function KdpChecklist({ kdp }) {
+  if (!kdp) return null;
+  const icon = { confirmed: "✓", suggested: "~", needs_founder: "○" };
+  const tone = { confirmed: "text-emerald-600", suggested: "text-amber-600", needs_founder: "text-rose-600" };
+  return (
+    <Panel title="Ready-for-KDP™ Checklist" icon={ClipboardCheck} accent="gold" testid="kdp-panel">
+      <div className="flex items-center gap-2 mb-2">
+        <StatusChip status={kdp.ready ? "All fields ready" : `${kdp.pending_founder.length} field(s) need you`} tone={kdp.ready ? "emerald" : "amber"} />
+        <span className="text-[11px] text-muted-foreground">Also saved in your Master Package → 07_METADATA</span>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1" data-testid="kdp-fields">
+        {kdp.fields.map((f, i) => (
+          <div key={i} className="flex items-start gap-1.5 text-[12px] border-b border-border/40 py-1">
+            <span className={`font-bold ${tone[f.status]}`}>{icon[f.status]}</span>
+            <span className="font-medium text-navy min-w-[120px]">{f.field}:</span>
+            <span className="text-muted-foreground break-words">{String(f.value)}</span>
+          </div>
+        ))}
+      </div>
+      <p className="text-[10px] text-muted-foreground mt-2">✓ confirmed · ~ suggested (confirm on KDP) · ○ needs your input. {kdp.note}</p>
+    </Panel>
+  );
+}
+
+function PublishPanel({ data, kdp, book, busy, doPricing, doAuthorize, doSanitize }) {
   const [price, setPrice] = useState("");
   if (!data) return <Panel title="Publish" icon={Send}><p className="text-sm text-muted-foreground py-4">Loading…</p></Panel>;
   const g = data.final_release_gate;
   return (
     <div className="space-y-5" data-testid="panel-publish">
       <SanitizationPanel book={book} busy={busy} doSanitize={doSanitize} />
+      <KdpChecklist kdp={kdp} />
       <div className="grid lg:grid-cols-2 gap-5">
       <Panel title="Publication Control Center" icon={Send} accent="royal" testid="publish-destinations">
         <div className="space-y-2" data-testid="destinations-list">

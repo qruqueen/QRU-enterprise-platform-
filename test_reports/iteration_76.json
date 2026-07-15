@@ -1,0 +1,54 @@
+{
+  "summary": "QRU Product Manufacturing System™ QA — all 13 backend acceptance tests PASS in 44s and every requested UI element is present. Founder login OK; /book-manufacturing header 'QRU PRODUCT MANUFACTURING SYSTEM™ · BOOK RECIPE' + exactly 7 workflow buttons render; book-switcher shows both pilot BOOK-0001 and my throwaway BOOK-0002; manuscript-file-input + upload-manuscript-btn are functional (verified end-to-end by uploading a .txt manuscript → new BOOK-0002 created); sanitization-panel, run-sanitize-btn, kdp-panel, kdp-fields, release-gate, gate-ready, clean-pages, retail-files all render on the Publish tab; Factory Library™ shows Master Output Packages + Review Share Links (multi-copy inputs) on the pilot. Release-gate honesty is now correct: gate_ready == all(gate.values()) and stays FALSE while pricing_approved/founder_authorization_received are Pending (last iteration's dishonesty bug is FIXED). Publication Sanitization Pass™ removed 1+ placeholders on TEST_QA book and produced clean Title/Copyright/Colophon + retail interior PDF + EPUB. Ready-for-KDP checklist returns 20 fields with honest confirmed/suggested/needs_founder statuses. Cover Studio POST /api/publishing/cover/generate returned 2 concepts each with provenance.design_engine=='QRU Design Studio™' and a downloadable file_url. Little Legacy: POST /api/little-legacy/episodes with KR bfbcbe07 + nova-sparkle returned verification_status='Verified' and status='Draft' (previous 'Knowledge Required' rejection FIXED). One UI regression found in the Share flow (share-box unmounts immediately) — details below.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "BookManufacturing.js doShare() → reload()",
+        "issue": "After clicking the top-right 'Share Link' button the copyable share-box appears for one render then immediately disappears. Root cause: doShare() calls setShareInfo({url,...}) at line 117 THEN calls await reload(book.id) at line 119, and reload() unconditionally calls setShareInfo(null) at line 55. Result: data-testid='share-box', 'share-link-input', 'share-copy-btn', 'share-open-btn' are unreachable in the running app — the promised persistent copyable input never sticks. The clipboard copy still fires (from doShare) and the link IS saved to the Factory Library™, so functionality degrades gracefully, but the review spec's 'shown in a selectable input' contract is not met. FIX: either remove setShareInfo(null) from reload() (it belongs in selectBook only), OR call reload() BEFORE setShareInfo(), OR pass a flag to reload() to preserve shareInfo.",
+        "selector": "[data-testid=\"share-box\"]",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "BookManufacturing (Publish tab, pilot BOOK-0001)",
+        "issues": [
+          "Cosmetic: gate items shown as raw snake_case labels converted to Title Case ('Ai Disclosures Completed' instead of 'AI Disclosures Completed'). Very minor."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration76_qru_pms.py",
+    "/app/test_reports/pytest/iteration76.xml"
+  ],
+  "action_items": [
+    "Fix share-box unmount race in /app/frontend/src/pages/BookManufacturing.js: either drop the setShareInfo(null) from reload() (line 55) so it only clears on selectBook, OR reorder doShare() to reload BEFORE setShareInfo, OR pass a keepShare flag. Recommended: move setShareInfo(null) out of reload() and into selectBook() only (line 57).",
+    "OPTIONAL cosmetic: capitalize 'AI' in final-release-gate labels ('AI Disclosures Completed' instead of 'Ai …')."
+  ],
+  "critical_code_review_comments": [
+    "BookManufacturing.js:55 — reload() clears shareInfo on every book refetch. This is over-aggressive; the share modal should survive an in-place reload after a successful share. Same over-aggressiveness would also clear a proof toast state on any concurrent poll. Consider making reload() a pure data-refresh that never mutates ephemeral UI state.",
+    "book_manufacturing.py:311 — design() embeds the FIRST successful cover in the interior PDF regardless of which concept the Founder later selects. select_cover auto-runs sanitization_pass() which re-renders retail interior with the chosen cover — good — but the DESIGN artifact's paperback_interior_pdf still shows concept-1's cover on its label, which can confuse (design.print vs sanitization.retail_edition). Consider re-rendering the design.print PDF at select_cover time too, or removing design.print in favor of the sanitized retail edition.",
+    "book_manufacturing.py:325 — EPUB rendering exception is silently swallowed (except Exception: epub_url = None). Should log at minimum and surface a warning field in the design artifact so the Founder knows the EPUB was skipped.",
+    "book_manufacturing.py:145 — TYPO/SHADOW: `for pg in reader.pages` shadows the `pg` module import (product_governance imported as `pg` at line 22). Locally scoped so it works today, but a maintenance hazard. Rename the loop var.",
+    "kr_inheritance.py:59-63 — the OR chain now honors 'Verified' / 'Treasure Standard Approved' / verification.decision=='approve' / evidence_sufficient_for_external_publication / verified_external. Good, but the 'Verified' string is now case-sensitive; if a KR was ever stored with lowercased status it would be rejected. Consider .lower() comparison.",
+    "little_legacy.py:253-255 — an episode created from an unverified KR is stored to db.ll_episodes with status='Knowledge Required'. That's honest, but there's no delete/tombstone endpoint — over time db.ll_episodes will accumulate rejected drafts. Consider a purge or an ephemeral rejection response that doesn't insert.",
+    "routers/book_manufacturing.py — no rate limit on POST /upload-file. base64-encoded manuscripts of unlimited size are accepted; add a size cap (e.g. 10 MB) to avoid DoS from very large PDFs.",
+    "routers/book_manufacturing.py — GET /share/{token} correctly returns a FileResponse zip; the zip stream is served under the CLEAN reader edition contract. Confirmed via test — no 'working title' bytes in the response body for the pilot's sanitized share."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration76_qru_pms.py"
+  ],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "92% — 12 of 13 requested data-testids reachable; share-box family unmounts prematurely"},
+  "test_credentials": "Founder: 22j2rsdzb8@privaterelay.appleid.com / QruFounder2026! (never changed the password). Login field returned as access_token in JSON body.",
+  "seed_data_creation": "Created ONE throwaway book 'TEST_QA Throwaway' (BOOK-0002) via /api/book-mfg/upload-file, then proofed + editorial-approved + designed + cover-selected + sanitized it. Also created 3 fresh share links on pilot BOOK-0001 (all resolve to the sanitized clean review copy). Also created ONE Little Legacy episode 'TEST_QA — How does the brain work?' from KR bfbcbe07 (Verified/Draft). Nothing on BOOK-0001 was re-proofed/re-designed/re-sanitized. Founder password unchanged.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "TEST_QA Throwaway (BOOK-0002) is now fully proofed + designed + cover-selected + sanitized — usable as a pre-baked fixture for any downstream test. Pilot BOOK-0001 retains its cover-selected + sanitized state from iteration 75. Backend now correctly enforces gate_ready = all(gate.values()) (last iteration's dishonest gate bug is FIXED and covered by test_release_gate_includes_publication_sanitized_and_honest). The only failing UX is the share-box unmount race (frontend-only, low-effort fix). LL episode 'TEST_QA — How does the brain work?' lives in db.ll_episodes and can be deleted at will. AI/Design calls take ~15-40s; keep TIMEOUT_LONG=120.",
+  "rca of the issue": "Share-box regression RCA: setShareInfo(null) is called inside reload() at BookManufacturing.js:55. doShare() sets shareInfo THEN awaits reload(), which nulls it out again. The Founder sees a 1-frame flash of the modal. Reproduction: log in as Founder → /book-manufacturing → select any book with a selected cover → click 'Share Link' → observe: (a) toast fires 'Share link created & copied', (b) Factory Library gains a new row, (c) the promised standalone share-box never sticks. Fix priority is HIGH because the review spec explicitly promises 'copyable share_url shown in a selectable input' — the Factory Library rows do provide that fallback but the primary UX contract is broken."
+}

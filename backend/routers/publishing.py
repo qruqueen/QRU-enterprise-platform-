@@ -164,26 +164,38 @@ async def cover_generate(data: CoverGenInput, user=Depends(get_current_user)):
         return {"ok": True, "mode": "spec_only", "concepts": [rec],
                 "note": "Spec-only concept recorded. Attach a manually produced or licensed asset to proceed."}
 
-    # AI mode — governed tool; provider failure must not break the workflow.
+    # AI mode — now powered by the shared QRU Design Studio™ engine (art-direction → Gemini artwork →
+    # QRU typography composite). Same superb, on-brand quality as the Book system. Provider failure
+    # must not break the workflow (Treasure Standard™).
     import ai_service as ai
-    concepts, errors = [], []
+    import design_studio
+    wh = _size_for(data.trim)
+    size = tuple(int(x) for x in wh.split("x"))
+    kind = "poster_landscape" if wh == "1536x1024" else "cover"
     n = max(1, min(3, data.concepts or 2))
-    for i in range(n):
-        try:
-            png = await ai.generate_image(prompt, session_id=f"cover-{gen_id()[:8]}")
-        except Exception as e:
-            png = None
-            errors.append(str(e)[:120])
-        if not png:
-            errors.append("generation returned no image (provider unavailable or spend cap)")
+    context = {"title": data.title, "subtitle": data.subtitle or "",
+               "byline": data.series or data.edition or "", "imprint": "QRU Press™",
+               "genre": data.series or "QRU Editorial", "synopsis": data.concept_notes or "",
+               "slug": f"cover-{gen_id()[:8]}"}
+    concepts, errors = [], []
+    try:
+        items = await design_studio.manufacture_bytes(context, kind=kind, size=size, n=n, slug=context["slug"])
+    except Exception as e:
+        items = []
+        errors.append(str(e)[:140])
+    for it in items:
+        if it["status"] != "success":
+            errors.append(f"{it['name']}: {it.get('failure_reason')}")
             continue
         cid = gen_id()
         fpath = COVER_DIR / f"{cid}.png"
-        fpath.write_bytes(png)
+        fpath.write_bytes(it["png"])
         rec = {**base, "id": cid, "state": "DRAFT_CONCEPT", "spec_only": False,
-               "file": str(fpath), "size": len(png),
+               "file": str(fpath), "size": len(it["png"]), "concept_name": it["name"],
                "provenance": {**base["provenance"], "provider": "Emergent/Gemini", "model": ai.IMAGE_MODEL,
-                              "generated_at": now_iso(), "version": ps.VERSION, "governing_standard": ps.DOC_ID},
+                              "design_engine": "QRU Design Studio™", "art_direction": it["art_direction"],
+                              "palette": it["palette"], "generated_at": now_iso(),
+                              "version": ps.VERSION, "governing_standard": ps.DOC_ID},
                "by": user.get("name", "Founder"), "created_at": now_iso(),
                "history": [{"state": "DRAFT_CONCEPT", "at": now_iso(), "by": user.get("name", "Founder")}]}
         await db.cover_assets.insert_one(dict(rec))
@@ -194,7 +206,7 @@ async def cover_generate(data: CoverGenInput, user=Depends(get_current_user)):
         return {"ok": False, "mode": "ai", "concepts": [], "errors": errors,
                 "fallback": "spec_only", "note": "Cover generation unavailable — use spec-only or upload a manual asset. Publishing is not blocked."}
     return {"ok": True, "mode": "ai", "concepts": concepts, "errors": errors,
-            "note": "DRAFT CONCEPTS only — human approval required before any becomes an Approved Design or Gold Master."}
+            "note": "DRAFT CONCEPTS only (QRU Design Studio™) — human approval required before any becomes an Approved Design or Gold Master."}
 
 
 @router.get("/covers")

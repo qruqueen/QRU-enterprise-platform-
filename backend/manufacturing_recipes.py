@@ -36,3 +36,20 @@ def list_recipes():
 
 def label_for(product_type):
     return catalog.get_recipe(product_type).get("label", "QRU Product Recipe™")
+
+
+async def default_design_recipe(b, re_engine):
+    """Inherited design step for ANY product recipe that doesn't supply its own — routes through the
+    shared QRU Design Studio™ engine so every product gets the same publication-quality, on-brand
+    concepts (art-direction → Gemini artwork → QRU typography composite)."""
+    import design_studio
+    pt = b.get("product_type", "Book")
+    kind = "poster" if pt.lower() == "poster" else ("workbook" if "workbook" in pt.lower() else "cover")
+    context = {
+        "title": b.get("title", ""), "subtitle": b.get("subtitle", ""),
+        "byline": b.get("author", ""), "imprint": b.get("imprint", "") or "QRU Press™",
+        "genre": b.get("genre") or label_for(pt), "audience": b.get("audience", ""),
+        "synopsis": (b.get("working_copy") or {}).get("content", "") or (b.get("editorial_edition") or {}).get("content", ""),
+    }
+    return await design_studio.manufacture_design_concepts(
+        context, kind=kind, n=3, slug=f"design-{b.get('id','x')}")

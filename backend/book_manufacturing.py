@@ -273,187 +273,19 @@ async def approve_edition(book_id, actor):
 
 
 # ----------------------------- BUTTON 3 — DESIGN -----------------------------
-def _compose_book_cover(hero_bytes, title, subtitle, author, imprint, palette_hint=""):
-    """Publication-quality trade cover: full-bleed art + legibility scrim + clean serif typography.
-    No learning-product chrome — this is a real book cover."""
-    from PIL import Image, ImageDraw, ImageFont, ImageFilter
-    import design_language as dl
-    W, H = 1024, 1536
-    if hero_bytes:
-        art = Image.open(io.BytesIO(hero_bytes)).convert("RGB")
-        # cover-fill crop to 2:3
-        ar = art.width / art.height
-        if ar > W / H:
-            nh = H; nw = int(H * ar)
-        else:
-            nw = W; nh = int(W / ar)
-        art = art.resize((nw, nh)).crop(((nw - W) // 2, (nh - H) // 2, (nw - W) // 2 + W, (nh - H) // 2 + H))
-    else:
-        base = (34, 26, 66) if "amber" not in palette_hint else (60, 32, 20)
-        art = Image.new("RGB", (W, H), base)
-        d0 = ImageDraw.Draw(art)
-        for y in range(H):
-            t = y / H
-            d0.line([(0, y), (W, y)], fill=tuple(int(base[i] * (1 - 0.55 * t)) for i in range(3)))
-    img = art.copy()
-    # top + bottom scrims for text legibility
-    scrim = Image.new("L", (W, H), 0)
-    sd = ImageDraw.Draw(scrim)
-    for y in range(H):
-        a = 0
-        if y < H * 0.34:
-            a = int(150 * (1 - y / (H * 0.34)))
-        if y > H * 0.5:
-            a = max(a, int(205 * ((y - H * 0.5) / (H * 0.5))))
-        sd.line([(0, y), (W, y)], fill=a)
-    black = Image.new("RGB", (W, H), (8, 6, 18))
-    img = Image.composite(black, img, scrim)
-    d = ImageDraw.Draw(img)
-    gold = (243, 200, 90)
-
-    def font(path, size):
-        try: return ImageFont.truetype(path, size)
-        except Exception: return ImageFont.load_default()
-
-    def wrap(text, fnt, maxw):
-        words, lines, cur = text.split(), [], ""
-        for w in words:
-            t = (cur + " " + w).strip()
-            if d.textlength(t, font=fnt) <= maxw: cur = t
-            else: lines.append(cur); cur = w
-        if cur: lines.append(cur)
-        return lines
-
-    # imprint eyebrow (top)
-    ef = font(dl.SANS_BOLD, 30)
-    d.text((W / 2, 70), (imprint or "").upper(), font=ef, fill=gold, anchor="mm")
-    # title (upper-middle)
-    size = 118 if len(title) <= 18 else (92 if len(title) <= 30 else 70)
-    tf = font(dl.SERIF_BOLD, size)
-    lines = wrap(title.upper(), tf, W - 150)
-    y = H * 0.60 - (len(lines) * size * 0.6)
-    for ln in lines:
-        d.text((W / 2, y), ln, font=tf, fill=(255, 255, 255), anchor="mm")
-        y += size * 1.08
-    # gold rule
-    d.line([(W / 2 - 90, y + 14), (W / 2 + 90, y + 14)], fill=gold, width=4)
-    y += 46
-    if subtitle:
-        sf = font(dl.SERIF, 40)
-        for ln in wrap(subtitle, sf, W - 200):
-            d.text((W / 2, y), ln, font=sf, fill=(232, 226, 240), anchor="mm"); y += 50
-    # author (bottom)
-    if author:
-        af = font(dl.SANS_BOLD, 46)
-        d.text((W / 2, H - 96), author.upper(), font=af, fill=gold, anchor="mm")
-    buf = io.BytesIO(); img.save(buf, "PNG")
-    return buf.getvalue()
-
-
-def _valid_cover_art(data):
-    """Strictly validate image bytes returned by the provider. Returns (ok, reason).
-    A concept is ONLY successful when the provider returned real, decodable image bytes —
-    never an empty, HTML, JSON, malformed, or truncated payload."""
-    if not data:
-        return False, "empty response from image provider"
-    if len(data) < 2048:
-        return False, f"response too small ({len(data)} bytes) — likely truncated or an error payload"
-    head = data[:64].lstrip().lower()
-    if head[:1] in (b"{", b"[") or head[:5] == b"<!doc" or head[:5] == b"<html":
-        return False, "provider returned JSON/HTML, not an image"
-    try:
-        from PIL import Image
-        Image.open(io.BytesIO(data)).verify()
-        im = Image.open(io.BytesIO(data))
-        if im.width < 256 or im.height < 256:
-            return False, f"image too small ({im.width}x{im.height})"
-    except Exception as e:
-        return False, f"malformed image bytes: {str(e)[:80]}"
-    return True, None
-
-
 async def _cover_design_recipe(b, re_engine):
-    """Cover Design Recipe™ — the Design Engine DIRECTS professional cover assets:
-    LLM art-direction → Nano Banana artwork (Gemini) → composited publication typography.
-    Every concept carries an HONEST per-concept status: a concept is 'success' ONLY when the
-    provider returned real, decodable AI artwork. Failed concepts show a clear failure state and
-    are NEVER silently substituted with a branded fallback presented as real art. Full Transparent
-    Provenance™ (model/provider, generation time, art direction, fallback + has_ai_art) is recorded."""
-    import json as _json
-    import time as _time
-    import design_language as dl
-    import ai_service
-    synopsis = " ".join((b.get("working_copy", {}).get("content", "")).split()[:180])
-    brief_sys = ("You are QRU Cover Art Director for a professional publishing imprint. Given a book, "
-                 "produce EXACTLY 3 strategically DIFFERENT cover art directions. Return strict JSON: "
-                 '{"concepts":[{"name":"short concept name","palette":"comma colors","art_prompt":'
-                 '"a vivid, specific image-generation prompt for the ARTWORK ONLY — evocative scene/subject/mood/lighting, '
-                 'portrait orientation, NO text, NO words, NO lettering, no title on the image"}]}. '
-                 "Make the three genuinely distinct (e.g. symbolic, atmospheric, character/object-focused).")
-    brief_prompt = (f"Title: {b['title']}\nSubtitle: {b.get('subtitle','')}\nGenre: {b.get('genre','')}\n"
-                    f"Audience: {b.get('audience','')}\nSynopsis: {synopsis}")
-    briefs = []
-    try:
-        raw = await ai_service.llm_generate(brief_sys, brief_prompt, f"cover-brief-{b['id']}")
-        raw = raw.strip().replace("```json", "").replace("```", "")
-        briefs = _json.loads(raw).get("concepts", [])[:3]
-    except Exception:
-        briefs = []
-    if len(briefs) < 3:
-        defaults = [{"name": "Symbolic", "palette": "deep navy, gold", "art_prompt": f"A symbolic, atmospheric illustration evoking '{b['title']}', a {b.get('genre','literary')} book; rich lighting, portrait, no text."},
-                    {"name": "Atmospheric", "palette": "twilight blues", "art_prompt": f"A moody atmospheric scene evoking the themes of '{b['title']}'; cinematic, portrait, no text."},
-                    {"name": "Object Focus", "palette": "warm amber", "art_prompt": f"A single meaningful object central to '{b['title']}' on an elegant textured background; portrait, no text."}]
-        briefs = (briefs + defaults)[:3]
-
-    product = {"title": b["title"], "family": b.get("genre") or "Literary", "product_type": "Novel",
-               "audience": b.get("audience", ""), "imprint": b.get("imprint")}
-    kr = {"subtitle": b.get("subtitle", ""), "author": b.get("author", "")}
-
-    async def _gen(idx, brief):
-        t0 = _time.time()
-        try:
-            raw = await ai_service.generate_image(
-                f"Professional book cover ARTWORK (no text, no lettering, portrait 2:3): {brief.get('art_prompt','')}",
-                f"cover-art-{b['id']}-{idx}")
-        except Exception as e:
-            return None, round(_time.time() - t0, 1), f"provider error: {str(e)[:120]}"
-        elapsed = round(_time.time() - t0, 1)
-        ok, reason = _valid_cover_art(raw)
-        return (raw if ok else None), elapsed, (None if ok else reason)
-    results = await asyncio.gather(*[_gen(i, br) for i, br in enumerate(briefs, 1)])
-
-    art_provider = "Gemini (Emergent LLM Key)"
-    art_model = ai_service.IMAGE_MODEL
-    direction_model = ai_service.MODEL[1] if isinstance(ai_service.MODEL, (tuple, list)) else str(ai_service.MODEL)
-    concepts = []
-    for idx, (brief, (hero, elapsed, fail_reason)) in enumerate(zip(briefs, results), 1):
-        success = hero is not None
-        cover_out = _compose_book_cover(hero, b["title"], b.get("subtitle", ""), b.get("author", ""),
-                                        b.get("imprint", ""), brief.get("palette", ""))
-        fid = re_engine._save(f"bookcover-c{idx}", "png", cover_out)
-        concepts.append({
-            "concept": idx, "name": brief.get("name", f"Concept {idx}"),
-            "art_direction": brief.get("art_prompt", ""), "palette": brief.get("palette", ""),
-            "url": re_engine._asset_url(fid),
-            "status": "success" if success else "failed",
-            "has_ai_art": success,
-            "failure_reason": None if success else fail_reason,
-            # Our compositor always applies a legibility scrim + high-contrast serif title/author,
-            # so composited covers stay readable down to retail thumbnail size.
-            "thumbnail_legible": True,
-            "readability_status": "Title & author legible at retail thumbnail size (composited scrim + high-contrast serif).",
-            "provenance": {
-                "art_provider": art_provider, "art_model": art_model,
-                "art_direction_model": direction_model,
-                "art_direction_prompt": brief.get("art_prompt", ""),
-                "generation_time_sec": elapsed, "generated_at": _now(),
-                "fallback_used": not success, "has_ai_art": success,
-                "failure_reason": None if success else fail_reason,
-            },
-            "rights": "Rights-safe — AI-generated original artwork (no third-party imagery)." if success
-                      else "AI artwork could not be generated for this concept (honest failure — a branded placeholder is shown, NOT presented as real art).",
-        })
-    return concepts
+    """Book Cover Design Recipe™ — delegates to the shared QRU Design Studio™ engine so the Book
+    system, Cover Studio, Poster Studio, workbooks and every product recipe share ONE publication-
+    quality design pipeline (art-direction → Gemini artwork → QRU typography composite)."""
+    import design_studio
+    context = {
+        "title": b["title"], "subtitle": b.get("subtitle", ""),
+        "byline": b.get("author", ""), "imprint": b.get("imprint", ""),
+        "genre": b.get("genre") or "Literary", "audience": b.get("audience", ""),
+        "synopsis": b.get("working_copy", {}).get("content", ""),
+    }
+    return await design_studio.manufacture_design_concepts(
+        context, kind="cover", n=3, slug=f"bookcover-{b['id']}")
 
 
 async def design(book_id, actor, base_url=""):
@@ -473,7 +305,8 @@ async def design(book_id, actor, base_url=""):
     # Design stage dispatches to the product's manufacturing recipe (QRU Product Manufacturing System™).
     # For Book this is the Cover Design Recipe™ — governed AI art direction → publication-quality concepts.
     recipe = recipes.get(b.get("product_type", "Book"))
-    concepts = await recipe["design_recipe"](b, re_engine)
+    design_fn = recipe.get("design_recipe") or recipes.default_design_recipe
+    concepts = await design_fn(b, re_engine)
     # Embed the first SUCCESSFUL cover in the interior proof (never a failed placeholder if real art exists).
     embed = next((c for c in concepts if c["status"] == "success"), concepts[0])
     cover_bytes = None
@@ -998,6 +831,86 @@ async def monitor(book_id):
     }
 
 
+
+# ------------------------- READY-FOR-KDP CHECKLIST -------------------------
+async def build_kdp_checklist(book_id):
+    """Ready-for-KDP™ — a one-page fill-in sheet so manual Amazon KDP upload takes ~2 minutes.
+    Known facts are stated as facts; fields the Founder must confirm are clearly marked SUGGESTED /
+    NEEDS FOUNDER — never fabricated as final (Treasure Standard™)."""
+    import os
+    import re
+    import rendering_engine as re_engine
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return None
+    sanit = b.get("artifacts", {}).get("sanitization", {}) or {}
+    pm = sanit.get("publication_metadata", {}) or {}
+    design = b.get("artifacts", {}).get("design", {}) or {}
+    sel = design.get("selected_cover") or {}
+    retail = sanit.get("retail_edition", {}) or {}
+    pricing = b.get("pricing", {}) or {}
+
+    interior_url = retail.get("paperback_interior_pdf") or design.get("print", {}).get("paperback_interior_pdf")
+    epub_url = retail.get("epub") or design.get("ebook", {}).get("epub")
+    pages = None
+    if interior_url:
+        p = os.path.join(re_engine.ASSET_DIR, interior_url.split("/")[-1])
+        if os.path.exists(p):
+            try:
+                import pypdf
+                pages = len(pypdf.PdfReader(p).pages)
+            except Exception:
+                pages = None
+    words = len((b.get("editorial_edition") or {}).get("content", "").split())
+    genre = b.get("genre") or pm.get("genre") or "Fiction"
+    title_words = [w for w in re.findall(r"[A-Za-z]{4,}", (b.get("title") or "")) ]
+    kw = list(dict.fromkeys([genre] + title_words + [b.get("audience", "")]))
+    kw = [k for k in kw if k][:7]
+    price_ok = bool(pricing.get("approved"))
+
+    fields = [
+        {"field": "Book title", "value": b.get("title"), "status": "confirmed"},
+        {"field": "Subtitle", "value": pm.get("subtitle") or b.get("subtitle") or "—", "status": "confirmed"},
+        {"field": "Author / contributor", "value": b.get("author"), "status": "confirmed"},
+        {"field": "Publisher / imprint", "value": b.get("imprint"), "status": "confirmed"},
+        {"field": "Language", "value": pm.get("language") or b.get("language") or "English", "status": "confirmed"},
+        {"field": "Edition", "value": pm.get("edition") or b.get("edition") or "First Edition", "status": "confirmed"},
+        {"field": "Rights holder", "value": b.get("rights_holder"), "status": "confirmed"},
+        {"field": "Copyright", "value": f"© {pm.get('copyright_year','')} {pm.get('copyright_holder', b.get('rights_holder',''))}".strip(), "status": "confirmed"},
+        {"field": "ISBN", "value": pm.get("isbn") or "Use a free KDP ISBN or supply your own", "status": "needs_founder"},
+        {"field": "Trim size (paperback)", "value": design.get("print", {}).get("trim_size", "6 x 9 in"), "status": "confirmed"},
+        {"field": "Page count", "value": pages if pages else "Confirm from print interior PDF", "status": "confirmed" if pages else "needs_founder"},
+        {"field": "Word count", "value": words, "status": "confirmed"},
+        {"field": "List price", "value": (f"{pricing.get('list_price')} {pricing.get('currency','USD')}" if pricing.get("list_price") else "Not set"), "status": "confirmed" if price_ok else "needs_founder"},
+        {"field": "Categories (BISAC)", "value": f"Suggested from genre '{genre}' — confirm 2 on KDP", "status": "suggested"},
+        {"field": "Keywords (up to 7)", "value": ", ".join(kw) if kw else "Add up to 7", "status": "suggested"},
+        {"field": "Book description / blurb", "value": b.get("description") or "DRAFT NEEDED — add a 150–200 word back-cover blurb", "status": "confirmed" if b.get("description") else "needs_founder"},
+        {"field": "AI content disclosure", "value": b.get("ai_disclosure"), "status": "confirmed"},
+        {"field": "Cover file (front)", "value": sel.get("url") or "Select a cover first", "status": "confirmed" if sel.get("url") else "needs_founder"},
+        {"field": "Print interior (PDF)", "value": interior_url or "Run Design/Sanitize", "status": "confirmed" if interior_url else "needs_founder"},
+        {"field": "eBook (EPUB)", "value": epub_url or "Run Design/Sanitize", "status": "confirmed" if epub_url else "needs_founder"},
+    ]
+    pending = [f["field"] for f in fields if f["status"] == "needs_founder"]
+    return {
+        "book_title": b.get("title"), "book_code": b.get("book_code"),
+        "generated_at": _now(),
+        "fields": fields,
+        "pending_founder": pending,
+        "ready": len(pending) == 0,
+        "note": "Facts are pulled from the Canonical Book Record. SUGGESTED = confirm on KDP; NEEDS FOUNDER = supply before upload. Nothing is fabricated as final.",
+    }
+
+
+def _kdp_markdown(chk):
+    lines = [f"# Ready-for-KDP™ — {chk['book_title']} ({chk['book_code']})",
+             f"_Generated {chk['generated_at']}_", "",
+             "Paste these into Amazon KDP. ✅ confirmed · 🟡 suggested (confirm on KDP) · ⬜ needs founder input.", ""]
+    icon = {"confirmed": "✅", "suggested": "🟡", "needs_founder": "⬜"}
+    for f in chk["fields"]:
+        lines.append(f"- {icon.get(f['status'],'•')} **{f['field']}:** {f['value']}")
+    lines += ["", chk["note"]]
+    return "\n".join(lines)
+
 # ------------------------- MASTER PACKAGE + READ MODELS -------------------------
 async def master_package(book_id):
     b = await db[COLL].find_one({"id": book_id}, {"_id": 0})
@@ -1093,6 +1006,13 @@ async def assemble_master_package(book_id, actor):
                        f"Full-book estimate: {audio_art.get('full_book_estimate_min')} min (est. @150 wpm)\n")
         # 07_METADATA — publication metadata (reader-facing) kept SEPARATE from manufacturing metadata.
         z.writestr("07_METADATA/master_metadata.json", json.dumps(meta, indent=2, default=str))
+        try:
+            chk = await build_kdp_checklist(book_id)
+            if chk:
+                z.writestr("07_METADATA/Ready_for_KDP.md", _kdp_markdown(chk))
+                z.writestr("07_METADATA/Ready_for_KDP.json", json.dumps(chk, indent=2, default=str))
+        except Exception:
+            pass
         if sanit.get("publication_metadata"):
             z.writestr("07_METADATA/publication_metadata.json",
                        json.dumps(sanit["publication_metadata"], indent=2, default=str))
