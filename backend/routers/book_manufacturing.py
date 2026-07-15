@@ -38,6 +38,20 @@ async def upload(payload: UploadPayload, user=Depends(require_super_admin)):
     return await bm.create_book_record(payload.dict(), user.get("name", "Founder"))
 
 
+class UploadFileReq(BaseModel):
+    filename: str
+    file_base64: str
+    meta: Optional[Dict[str, Any]] = None
+
+
+@router.post("/upload-file")
+async def upload_file(req: UploadFileReq, user=Depends(require_super_admin)):
+    r = await bm.upload_manuscript_file(req.filename, req.file_base64, req.meta or {}, user.get("name", "Founder"))
+    if isinstance(r, dict) and r.get("error"):
+        raise HTTPException(400, r["error"])
+    return r
+
+
 @router.post("/books/{book_id}/proof")
 async def proof(book_id: str, user=Depends(require_super_admin)):
     r = await bm.proof_polish(book_id, user.get("name", "Founder"))
@@ -77,6 +91,20 @@ class CoverReq(BaseModel):
 @router.post("/books/{book_id}/select-cover")
 async def select_cover(book_id: str, req: CoverReq, user=Depends(require_super_admin)):
     r = await bm.select_cover(book_id, req.concept, user.get("name", "Founder"))
+    if isinstance(r, dict) and r.get("error"):
+        raise HTTPException(400, r["error"])
+    return r
+
+
+class SanitizeReq(BaseModel):
+    base_url: Optional[str] = ""
+
+
+@router.post("/books/{book_id}/sanitize")
+async def sanitize(book_id: str, req: SanitizeReq = SanitizeReq(), user=Depends(require_super_admin)):
+    r = await bm.sanitization_pass(book_id, user.get("name", "Founder"), req.base_url or "")
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
     if isinstance(r, dict) and r.get("error"):
         raise HTTPException(400, r["error"])
     return r

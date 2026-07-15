@@ -132,6 +132,50 @@ async def create_book_record(payload, actor):
     return clean(record)
 
 
+def _extract_manuscript(filename, raw):
+    """Turn an uploaded manuscript file into markdown text. Supports DOCX, PDF, TXT, MD."""
+    name = (filename or "").lower()
+    if name.endswith(".docx"):
+        return _docx_to_markdown(raw)
+    if name.endswith(".pdf"):
+        import pypdf
+        reader = pypdf.PdfReader(io.BytesIO(raw))
+        return "\n\n".join((pg.extract_text() or "") for pg in reader.pages).strip()
+    if name.endswith((".txt", ".md", ".markdown", ".text")):
+        return raw.decode("utf-8", errors="replace")
+    # Best-effort: treat as UTF-8 text.
+    return raw.decode("utf-8", errors="replace")
+
+
+async def upload_manuscript_file(filename, file_base64, meta, actor):
+    """Bring any manuscript FILE (DOCX/PDF/TXT/MD) into the Factory as a Canonical Book Record.
+    The immutable original is sealed automatically + a separate working copy is created — the
+    Founder never hand-assembles governance; uploading the file is enough."""
+    import base64
+    try:
+        raw = base64.b64decode(file_base64)
+    except Exception:
+        return {"error": "Could not decode the uploaded file."}
+    if not raw:
+        return {"error": "The uploaded file is empty."}
+    try:
+        content = (_extract_manuscript(filename, raw) or "").strip()
+    except Exception as e:
+        return {"error": f"Could not read this file. Supported types: .docx, .pdf, .txt, .md. ({str(e)[:80]})"}
+    if len(content) < 20:
+        return {"error": "No readable manuscript text was found in the file (is it a scanned image PDF?)."}
+    meta = dict(meta or {})
+    meta.setdefault("source_filename", filename or "manuscript")
+    title = (meta.get("title") or "").strip()
+    if not title:
+        import os as _os
+        import re as _re
+        base = _os.path.splitext(_os.path.basename(filename or "Untitled Manuscript"))[0]
+        title = _re.sub(r"[_\-]+", " ", base).strip() or "Untitled Manuscript"
+    return await create_book_record({"title": title, "content": content, "meta": meta}, actor)
+
+
+
 # -------------------------- BUTTON 2 — PROOF & POLISH --------------------------
 def _proof_checks(content):
     """Deterministic proofing — NEVER rewrites voice. Only reports classified findings."""
@@ -637,6 +681,11 @@ async def create_share(book_id, hours, actor, base_url=""):
                                  "expires_at": expires, "read_only": True})
     await log_org("Book Manufacturing™", "Manufacturing", f"created share link for '{b['title']}' (expires {expires[:10]})", b["book_code"])
     share_url = f"{base_url}/api/book-mfg/share/{token}" if base_url else f"/api/book-mfg/share/{token}"
+    # Factory Library™ — keep the share link resident in the Canonical Book Record so the Founder can
+    # re-copy it any time (never rely on a one-shot clipboard write).
+    await db[COLL].update_one({"id": book_id}, {"$push": {"share_links": {
+        "token": token, "share_url": share_url, "created_by": actor, "created_at": _now(),
+        "expires_at": expires, "read_only": True}}})
     return {"ok": True, "token": token, "share_url": share_url, "expires_at": expires, "read_only": True}
 
 
@@ -670,6 +719,164 @@ async def video_plan(book_id):
     }
 
 
+# ----------------- PUBLICATION SANITIZATION PASS™ (pre-Final-Release) -----------------
+# Internal markers that must NEVER reach a reader-facing (retail) page.
+_PLACEHOLDER_PATTERNS = [
+    (r"\(?\s*working title\s*\)?", "working-title placeholder"),
+    (r"\[[^\]]*?\b(TK|TBD|TODO|PLACEHOLDER|DRAFT|FIXME|XXX)\b[^\]]*?\]", "bracketed editorial marker"),
+    (r"\bTKTK\b|\bTK\b(?=\s|$)", "TK marker"),
+    (r"\[\s*insert[^\]]*?\]", "insert-note marker"),
+    (r"\(draft\)|\bDRAFT ONLY\b|\bDO NOT DISTRIBUTE\b|\bCONFIDENTIAL\b|\bINTERNAL USE ONLY\b", "internal-status marker"),
+    (r"\b(TODO|FIXME|XXX|TBD)\b\s*:?[^\n]*", "editorial note"),
+]
+
+
+def _detect_placeholders(text):
+    import re
+    findings = []
+    for pat, label in _PLACEHOLDER_PATTERNS:
+        for m in re.finditer(pat, text, re.I):
+            s = max(0, m.start() - 30)
+            findings.append({"marker": label, "text": m.group(0).strip(),
+                             "context": " ".join(text[s:m.end() + 30].split())})
+    return findings
+
+
+def _split_front_matter(content):
+    """Separate the manuscript-embedded front-matter block (title/byline/publisher line) from the
+    reader body. The reader body begins at the first chapter heading. The embedded block is NOT
+    reader prose — it is regenerated cleanly as a Title Page — so it is dropped from the body."""
+    import re
+    lines = content.split("\n")
+    for i, ln in enumerate(lines):
+        st = ln.strip()
+        if st.startswith("## ") or re.match(r"^#{1,6}\s*chapter\b", st, re.I):
+            return "\n".join(lines[:i]), "\n".join(lines[i:])
+    return "", content
+
+
+def _build_publication(b):
+    year = datetime.now(timezone.utc).year
+    title = b.get("title") or "Untitled"
+    author = b.get("author") or "Author"
+    publisher = b.get("rights_holder") or b.get("imprint") or "QRU Press"
+    imprint = b.get("imprint") or publisher
+    edition = b.get("edition") or "First Edition"
+    lang = b.get("language") or "English"
+    isbn = b.get("isbn") or "ISBN: assignment pending"
+    genre = b.get("genre") or "Fiction"
+    ai_disc = b.get("ai_disclosure") or "AI-assisted manufacturing; human-authored and human-approved."
+    pub_meta = {
+        "title": title, "subtitle": b.get("subtitle") or "", "author": author, "imprint": imprint,
+        "publisher": publisher, "edition": edition, "language": lang, "isbn": isbn,
+        "copyright_year": year, "copyright_holder": publisher, "rights_statement": "All rights reserved.",
+        "publication_date": None, "genre": genre, "ai_content_disclosure": ai_disc,
+    }
+    title_page = {"title": title, "subtitle": b.get("subtitle") or "A Novel", "author": author, "imprint": imprint}
+    copyright_page = [
+        title,
+        f"Copyright © {year} {publisher}",
+        "All rights reserved.",
+        ("No part of this book may be reproduced in any form or by any electronic or mechanical means, "
+         "including information storage and retrieval systems, without written permission from the publisher, "
+         "except by a reviewer who may quote brief passages in a review."),
+        ("This is a work of fiction. Names, characters, places, and incidents are the product of the author's "
+         "imagination or are used fictitiously. Any resemblance to actual persons, living or dead, events, or "
+         "locales is entirely coincidental."),
+        edition,
+        isbn,
+        f"Published by {imprint}.",
+        f"AI content disclosure: {ai_disc}",
+    ]
+    colophon = [
+        "Colophon",
+        (f"{title} was set in a classic serif text face chosen for comfortable long-form reading, with "
+         "display typography in a complementary sans-serif."),
+        f"Interior design and typesetting by {imprint}.",
+        "Produced with the QRU Book Manufacturing System™ under the QRU Reading Experience Standard™.",
+    ]
+    return pub_meta, title_page, copyright_page, colophon
+
+
+async def sanitization_pass(book_id, actor, base_url=""):
+    """Publication Sanitization Pass™ — prepares the clean RETAIL edition before Final Release.
+    Removes internal placeholders (e.g. "(working title)") and manufacturing metadata from reader-facing
+    pages; generates a clean Title Page, Copyright Page, and Colophon per publishing convention; and
+    SEPARATES publication metadata from manufacturing metadata. All manufacturing metadata is preserved
+    in the Canonical Book Record + Master Output Package and is NEVER printed in the retail edition."""
+    import re
+    import os
+    import rendering_engine as re_engine
+    import deliverable_renderer as dr
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return None
+    if not b.get("editorial_locked"):
+        return {"error": "Approve & lock the editorial edition first."}
+    design_art = b.get("artifacts", {}).get("design")
+    if not design_art:
+        return {"error": "Run Design first."}
+    sel = design_art.get("selected_cover")
+    if not sel:
+        return {"error": "Select the final cover before the Publication Sanitization Pass™."}
+
+    content = b["editorial_edition"]["content"]
+    findings = _detect_placeholders(content)
+    front_block, body = _split_front_matter(content)
+    body_clean = body
+    for pat, _ in _PLACEHOLDER_PATTERNS:
+        body_clean = re.sub(pat, "", body_clean, flags=re.I)
+    body_clean = re.sub(r"\(\s*\)", "", body_clean)
+    body_clean = re.sub(r"\n{3,}", "\n\n", body_clean).strip()
+
+    pub_meta, title_page, copyright_page, colophon = _build_publication(b)
+
+    cover_bytes = open(os.path.join(re_engine.ASSET_DIR, sel["url"].split("/")[-1]), "rb").read()
+    qr = re_engine._make_qr(f"{base_url}/book/{book_id}")
+    retail_product = {
+        "title": pub_meta["title"], "subtitle": pub_meta["subtitle"], "family": pub_meta["genre"],
+        "product_type": "Book", "content": body_clean, "audience": b.get("audience", ""),
+        "imprint": pub_meta["imprint"], "high_stakes": b.get("high_stakes"),
+        "retail_publication": {"metadata": pub_meta, "title_page": title_page,
+                               "copyright_page": copyright_page, "colophon": colophon},
+    }
+    interior_pdf = re_engine._make_pdf(retail_product, {}, cover_bytes, qr)
+    interior_fid = re_engine._save("book-retail-interior", "pdf", interior_pdf)
+    try:
+        epub_bytes = dr._render_epub(retail_product, cover_bytes)
+        epub_fid = re_engine._save("book-retail-ebook", "epub", epub_bytes)
+        epub_url = re_engine._asset_url(epub_fid)
+    except Exception:
+        epub_url = None
+
+    sanitization = {
+        "generated_at": _now(), "by": actor,
+        "status": "Clean retail edition prepared",
+        "placeholders_found": findings,
+        "placeholders_removed": len(findings),
+        "front_matter_block_removed": bool(front_block.strip()),
+        "publication_metadata": pub_meta,
+        "title_page": title_page, "copyright_page": copyright_page, "colophon": colophon,
+        "retail_edition": {"paperback_interior_pdf": re_engine._asset_url(interior_fid),
+                           "epub": epub_url, "content_checksum": _checksum(body_clean)},
+        "separation_note": ("Publication metadata is reader-facing. Manufacturing metadata (Book Record ID, "
+                            "checksums, provenance, AI-contribution audit, revision history, intake scan) is preserved "
+                            "in the Canonical Book Record and Master Output Package — never printed in the retail "
+                            "edition unless explicitly requested."),
+    }
+    artifacts = b.get("artifacts", {})
+    artifacts["sanitization"] = sanitization
+    await db[COLL].update_one({"id": book_id}, {"$set": {
+        "artifacts": artifacts,
+        "publication_metadata": pub_meta,
+        "manufacturing_job": {"stage": "Publication sanitized", "next": "Final Release Gate → Founder authorization"},
+        "updated_at": _now()},
+        "$push": {"revision_history": {"stage": "Publication Sanitization Pass", "by": actor, "at": _now(),
+                  "note": f"Retail edition sanitized: {len(findings)} internal marker(s) removed; clean Title/Copyright/Colophon generated."}}})
+    await log_org("Book Manufacturing™", "Manufacturing", f"publication sanitization pass for '{b['title']}'", b["book_code"], "success")
+    return clean(await db[COLL].find_one({"id": book_id}))
+
+
 # ----------------------------- BUTTON 6 — PUBLISH -----------------------------
 async def publish_center(book_id):
     b = await db[COLL].find_one({"id": book_id})
@@ -701,6 +908,7 @@ async def publish_center(book_id):
         "cover_approved": cover_selected,
         "metadata_approved": design_done,
         "ai_disclosures_completed": bool(b.get("ai_disclosure")),
+        "publication_sanitized": bool(b.get("artifacts", {}).get("sanitization")),
         "pricing_approved": bool((b.get("pricing") or {}).get("approved")),
         "platform_files_passed": design_done,
         "founder_authorization_received": bool((b.get("founder_authorization") or {}).get("authorized")),
@@ -798,11 +1006,15 @@ async def assemble_master_package(book_id, actor):
             z.writestr("02_EDITORIAL/proofing_report.json", json.dumps(b["proofing_report"], indent=2, default=str))
         if b.get("editorial_edition"):
             z.writestr("02_EDITORIAL/approved_editorial_master.md", b["editorial_edition"]["content"])
-        # 03_PRINT / 04_EBOOK
-        pdf = _read_asset(design_art.get("print", {}).get("paperback_interior_pdf"))
+        # 03_PRINT / 04_EBOOK — prefer the sanitized RETAIL edition when the Publication Sanitization Pass™ has run.
+        sanit = b.get("artifacts", {}).get("sanitization", {})
+        retail = sanit.get("retail_edition", {}) if sanit else {}
+        print_url = retail.get("paperback_interior_pdf") or design_art.get("print", {}).get("paperback_interior_pdf")
+        ebook_url = retail.get("epub") or design_art.get("ebook", {}).get("epub")
+        pdf = _read_asset(print_url)
         if pdf:
             z.writestr("03_PRINT/paperback_interior.pdf", pdf)
-        epub = _read_asset(design_art.get("ebook", {}).get("epub"))
+        epub = _read_asset(ebook_url)
         if epub:
             z.writestr("04_EBOOK/book.epub", epub)
         sel = design_art.get("selected_cover")
@@ -819,8 +1031,14 @@ async def assemble_master_package(book_id, actor):
             z.writestr("05_AUDIO/audio_readme.txt", proto.get("label", "") +
                        f"\nDuration: {proto.get('duration_sec')}s | Voice: {proto.get('voice')}\n" +
                        f"Full-book estimate: {audio_art.get('full_book_estimate_min')} min (est. @150 wpm)\n")
-        # 07_METADATA
+        # 07_METADATA — publication metadata (reader-facing) kept SEPARATE from manufacturing metadata.
         z.writestr("07_METADATA/master_metadata.json", json.dumps(meta, indent=2, default=str))
+        if sanit.get("publication_metadata"):
+            z.writestr("07_METADATA/publication_metadata.json",
+                       json.dumps(sanit["publication_metadata"], indent=2, default=str))
+            z.writestr("07_METADATA/title_copyright_colophon.json", json.dumps({
+                "title_page": sanit.get("title_page"), "copyright_page": sanit.get("copyright_page"),
+                "colophon": sanit.get("colophon")}, indent=2, default=str))
         # 09_RIGHTS_AND_GOVERNANCE
         if design_art.get("governance_package"):
             z.writestr("09_RIGHTS_AND_GOVERNANCE/product_governance_package.json",
@@ -840,9 +1058,12 @@ async def assemble_master_package(book_id, actor):
     safe = "".join(c for c in b["title"] if c.isalnum() or c in " -_").strip().replace(" ", "_")
     fid = re_engine._save(f"master-package-{safe}", "zip", data)
     url = re_engine._asset_url(fid)
+    deliverable = {"type": "Master Output Package", "url": url, "filename": fid,
+                   "size_kb": len(data) // 1024, "assembled_at": _now(), "by": actor}
     await db[COLL].update_one({"id": book_id}, {"$set": {
         "master_package_url": url, "master_package_at": _now(), "updated_at": _now()},
-        "$push": {"revision_history": {"stage": "Master Package", "by": actor, "at": _now(),
+        "$push": {"deliverables": deliverable,
+                  "revision_history": {"stage": "Master Package", "by": actor, "at": _now(),
                                        "note": f"Assembled Master Output Package ({len(data)//1024} KB)."}}})
     await log_org("Book Manufacturing™", "Manufacturing", f"assembled Master Output Package for '{b['title']}'", b["book_code"], "success")
     return {"ok": True, "url": url, "size_kb": len(data) // 1024, "sections": len(buf.getvalue()) and True}

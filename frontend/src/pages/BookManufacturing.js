@@ -15,6 +15,19 @@ const A = process.env.REACT_APP_BACKEND_URL;
 
 function abs(u) { return u && u.startsWith("/") ? `${A}${u}` : u; }
 
+async function copyText(text) {
+  // Robust copy: clipboard API where available, otherwise a hidden-textarea execCommand fallback.
+  try {
+    if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
+  } catch (e) { /* fall through */ }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    const ok = document.execCommand("copy"); document.body.removeChild(ta); return ok;
+  } catch (e) { return false; }
+}
+
 export default function BookManufacturing() {
   const [buttons, setButtons] = useState([]);
   const [book, setBook] = useState(null);
@@ -25,18 +38,24 @@ export default function BookManufacturing() {
   const [video, setVideo] = useState(null);
   const [publish, setPublish] = useState(null);
   const [monitor, setMonitor] = useState(null);
+  const [shareInfo, setShareInfo] = useState(null);
+  const [allBooks, setAllBooks] = useState([]);
 
+  const loadBooks = async () => {
+    const { data } = await api.get("/book-mfg/books");
+    setAllBooks(data.books || []);
+    return data.books || [];
+  };
   const reload = async (id) => {
     const { data } = await api.get(`/book-mfg/books/${id}`);
     setBook(data);
     setProof(data.proofing_report || null);
+    setPublish(null); setAudio(null); setVideo(null); setMonitor(null); setShareInfo(null);
   };
+  const selectBook = async (id) => { setTab("upload"); await reload(id); };
   useEffect(() => {
     api.get("/book-mfg/config").then((r) => setButtons(r.data.buttons)).catch(() => {});
-    api.get("/book-mfg/books").then((r) => {
-      const b = r.data.books[0];
-      if (b) reload(b.id);
-    }).catch(() => {});
+    loadBooks().then((books) => { if (books[0]) reload(books[0].id); }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -62,8 +81,7 @@ export default function BookManufacturing() {
     setBusy(true);
     try {
       const { data } = await api.post(`/book-mfg/books/${book.id}/assemble-package`);
-      toast.success(`Master Output Package assembled (${data.size_kb} KB).`);
-      window.open(abs(data.url), "_blank");
+      toast.success(`Master Output Package assembled (${data.size_kb} KB). Saved to your Factory Library™ below.`);
       await reload(book.id);
     } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
     finally { setBusy(false); }
@@ -71,13 +89,32 @@ export default function BookManufacturing() {
   const doRenderAudio = () => run(async () => { await api.post(`/book-mfg/books/${book.id}/audio-prototype`); const { data } = await api.get(`/book-mfg/books/${book.id}/audio`); setAudio(data); }, "Narration prototype rendered.");
   const doPricing = (price, currency) => run(() => api.post(`/book-mfg/books/${book.id}/pricing`, { list_price: parseFloat(price), currency }), "Pricing approved.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
   const doAuthorize = () => run(() => api.post(`/book-mfg/books/${book.id}/authorize`), "Release authorized.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
+  const doSanitize = () => run(() => api.post(`/book-mfg/books/${book.id}/sanitize`, { base_url: A }), "Publication Sanitization Pass™ complete — clean retail edition prepared.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
+  const doUploadFile = async (file, meta) => {
+    if (!file) return;
+    setBusy(true);
+    try {
+      const b64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(String(r.result).split(",")[1]);
+        r.onerror = rej; r.readAsDataURL(file);
+      });
+      const { data } = await api.post(`/book-mfg/upload-file`, { filename: file.name, file_base64: b64, meta });
+      toast.success(`“${data.title}” uploaded — immutable original sealed. Working copy ready for Proof & Polish.`);
+      await loadBooks();
+      await reload(data.id);
+    } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
+    finally { setBusy(false); }
+  };
   const doShare = async () => {
     setBusy(true);
     try {
       const { data } = await api.post(`/book-mfg/books/${book.id}/share`, { hours: 72, base_url: A });
-      await navigator.clipboard?.writeText(abs(data.share_url)).catch(() => {});
-      toast.success(`Share link created (expires ${new Date(data.expires_at).toLocaleDateString()}). Copied to clipboard.`);
-      window.open(abs(data.share_url), "_blank");
+      const url = abs(data.share_url);
+      const copied = await copyText(url);
+      setShareInfo({ url, expires_at: data.expires_at, copied });
+      toast.success(copied ? "Share link created & copied. Also saved to your Factory Library™." : "Share link created & saved to your Factory Library™ — copy it from the box.");
+      await reload(book.id);
     } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
     finally { setBusy(false); }
   };
@@ -105,6 +142,12 @@ export default function BookManufacturing() {
               <span className="font-mono text-[10px] text-muted-foreground">{book.book_code}</span>
               <StatusChip status={book.imprint} tone="royal" />
             </div>
+            {allBooks.length > 1 && (
+              <select data-testid="book-switcher" value={book.id} onChange={(e) => selectBook(e.target.value)}
+                className="mt-2 text-[12px] border border-border rounded-md bg-card px-2 py-1 text-navy outline-none max-w-full">
+                {allBooks.map((bk) => <option key={bk.id} value={bk.id}>{bk.title} · {bk.book_code}</option>)}
+              </select>
+            )}
           </div>
           <div className="flex flex-col items-end gap-1">
             <StatusChip status={`Source: ${book.source_status}`} tone="amber" testid="source-status" />
@@ -124,6 +167,27 @@ export default function BookManufacturing() {
           </button>
         </div>
       </div>
+
+      {/* Share link box — always copyable (never a one-shot clipboard write) */}
+      {shareInfo && (
+        <div className="qru-card p-4 mb-5 border-l-4 border-royal" data-testid="share-box">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-sm font-bold text-navy flex items-center gap-1.5"><Share2 className="w-4 h-4" /> Read-only review link</p>
+            <button data-testid="share-box-close" onClick={() => setShareInfo(null)} className="text-xs text-muted-foreground hover:text-navy">Dismiss</button>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <input data-testid="share-link-input" readOnly value={shareInfo.url} onFocus={(e) => e.target.select()}
+              className="flex-1 min-w-[220px] px-2 py-1.5 text-sm border border-border rounded-md bg-muted/40 font-mono text-navy outline-none" />
+            <button data-testid="share-copy-btn" onClick={async () => { const ok = await copyText(shareInfo.url); toast[ok ? "success" : "error"](ok ? "Link copied — paste it into Messenger." : "Copy failed — select the text and copy manually."); }}
+              className="bg-navy text-white px-3 py-1.5 rounded-md text-sm font-bold">Copy</button>
+            <a data-testid="share-open-btn" href={shareInfo.url} target="_blank" rel="noreferrer"
+              className="border border-navy/30 text-navy px-3 py-1.5 rounded-md text-sm font-bold">Open</a>
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-2">Expires {new Date(shareInfo.expires_at).toLocaleString()} · read-only · streams the Master Package. Anyone with the link can download the review package (no login).</p>
+        </div>
+      )}
+
+      <FactoryLibrary book={book} />
 
       {/* Founder navigation — always answers the five questions */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6" data-testid="founder-nav">
@@ -149,12 +213,12 @@ export default function BookManufacturing() {
       </div>
 
       {/* Panels */}
-      {tab === "upload" && <UploadPanel book={book} />}
+      {tab === "upload" && <UploadPanel book={book} busy={busy} doUploadFile={doUploadFile} />}
       {tab === "proof" && <ProofPanel book={book} proof={proof} busy={busy} doProof={doProof} doApprove={doApprove} />}
       {tab === "design" && <DesignPanel book={book} busy={busy} doDesign={doDesign} doSelectCover={doSelectCover} />}
       {tab === "audio" && <AudioPanel book={book} audio={audio} busy={busy} onRender={doRenderAudio} />}
       {tab === "video" && <PlanPanel title="Video" icon={Video} data={video} render={renderVideo} />}
-      {tab === "publish" && <PublishPanel data={publish} book={book} busy={busy} doPricing={doPricing} doAuthorize={doAuthorize} />}
+      {tab === "publish" && <PublishPanel data={publish} book={book} busy={busy} doPricing={doPricing} doAuthorize={doAuthorize} doSanitize={doSanitize} />}
       {tab === "monitor" && <PlanPanel title="Monitor" icon={Activity} data={monitor} render={renderMonitor} />}
     </div>
   );
@@ -197,11 +261,44 @@ function founderNav(b, tab) {
   };
 }
 
-function UploadPanel({ book }) {
+function UploadManuscript({ busy, doUploadFile }) {
+  const [file, setFile] = useState(null);
+  const [author, setAuthor] = useState("");
+  const [genre, setGenre] = useState("");
+  return (
+    <Panel title="Upload a New Manuscript" icon={Upload} accent="gold" testid="upload-manuscript">
+      <p className="text-[12px] text-muted-foreground mb-3">
+        Bring any manuscript into the Factory — <b>.docx, .pdf, .txt or .md</b>. The Factory automatically seals an
+        immutable original and creates a separate working copy for you. You never assemble governance by hand — uploading the file is enough.
+      </p>
+      <div className="space-y-3" data-testid="upload-form">
+        <input data-testid="manuscript-file-input" type="file" accept=".docx,.pdf,.txt,.md,.markdown,.text"
+          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          className="block w-full text-sm text-navy file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-navy file:text-white file:font-bold file:cursor-pointer" />
+        <div className="grid sm:grid-cols-2 gap-3">
+          <input data-testid="manuscript-author" value={author} onChange={(e) => setAuthor(e.target.value)}
+            placeholder="Author (optional)" className="px-2 py-1.5 text-sm border border-border rounded-md bg-card outline-none" />
+          <input data-testid="manuscript-genre" value={genre} onChange={(e) => setGenre(e.target.value)}
+            placeholder="Genre (optional)" className="px-2 py-1.5 text-sm border border-border rounded-md bg-card outline-none" />
+        </div>
+        <button data-testid="upload-manuscript-btn" disabled={busy || !file}
+          onClick={() => doUploadFile(file, { author, genre, source_filename: file?.name })}
+          className="inline-flex items-center gap-1.5 bg-gold text-navy px-4 py-2 rounded-md text-sm font-bold disabled:opacity-40">
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Upload Manuscript
+        </button>
+        {file && <p className="text-[11px] text-muted-foreground">Selected: {file.name} ({Math.round(file.size / 1024)} KB)</p>}
+      </div>
+    </Panel>
+  );
+}
+
+function UploadPanel({ book, busy, doUploadFile }) {
   const p = book.transparent_provenance || {};
   const ds = book.intake_scan?.detected_structure || {};
   return (
-    <div className="grid lg:grid-cols-2 gap-5" data-testid="panel-upload">
+    <div className="space-y-5" data-testid="panel-upload">
+      <UploadManuscript busy={busy} doUploadFile={doUploadFile} />
+      <div className="grid lg:grid-cols-2 gap-5">
       <Panel title="Canonical Book Record" icon={BookOpen} accent="gold" testid="canonical-record">
         <dl className="text-sm space-y-1.5">
           {[["Title", book.title], ["Subtitle", book.subtitle], ["Author", book.author], ["Imprint", book.imprint],
@@ -240,6 +337,61 @@ function UploadPanel({ book }) {
           </dl>
         </Panel>
       </div>
+      </div>
+    </div>
+  );
+}
+
+function FactoryLibrary({ book }) {
+  const pkgs = [...(book.deliverables || [])].reverse();
+  const now = Date.now();
+  const shares = [...(book.share_links || [])].reverse();
+  if (!pkgs.length && !shares.length) return null;
+  return (
+    <div className="qru-card p-4 mb-5" data-testid="factory-library">
+      <p className="text-sm font-bold text-navy flex items-center gap-1.5 mb-1"><BookOpen className="w-4 h-4" /> Factory Library™</p>
+      <p className="text-[11px] text-muted-foreground mb-3">Every rendering the Factory produces is kept here, inside the Factory — download or re-copy any time. Nothing depends on your browser's Downloads folder.</p>
+      {pkgs.length > 0 && (
+        <div className="mb-3" data-testid="library-packages">
+          <p className="text-[10px] font-bold text-royal uppercase tracking-wide mb-1">Master Output Packages</p>
+          <div className="space-y-1.5">
+            {pkgs.map((d, i) => (
+              <div key={i} className="flex items-center justify-between gap-2 border-b border-border/50 pb-1.5 text-[12px]">
+                <div className="min-w-0">
+                  <p className="text-navy font-medium truncate">{d.type} · {d.size_kb} KB</p>
+                  <p className="text-[10px] text-muted-foreground">{new Date(d.assembled_at).toLocaleString()} · by {d.by}</p>
+                </div>
+                <a data-testid={`library-download-${i}`} href={abs(d.url)} target="_blank" rel="noreferrer" download
+                  className="shrink-0 inline-flex items-center gap-1 bg-navy text-white px-3 py-1.5 rounded-md font-bold">
+                  <Download className="w-3.5 h-3.5" /> Download
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {shares.length > 0 && (
+        <div data-testid="library-shares">
+          <p className="text-[10px] font-bold text-royal uppercase tracking-wide mb-1">Review Share Links</p>
+          <div className="space-y-1.5">
+            {shares.map((s, i) => {
+              const expired = new Date(s.expires_at).getTime() < now;
+              return (
+                <div key={i} className="flex items-center justify-between gap-2 border-b border-border/50 pb-1.5 text-[12px]">
+                  <div className="min-w-0">
+                    <p className="font-mono text-navy truncate">{abs(s.share_url)}</p>
+                    <p className="text-[10px] text-muted-foreground">{expired ? "Expired" : "Active"} · expires {new Date(s.expires_at).toLocaleString()}</p>
+                  </div>
+                  {!expired && (
+                    <button data-testid={`library-copy-share-${i}`} onClick={async () => { const ok = await copyText(abs(s.share_url)); toast[ok ? "success" : "error"](ok ? "Link copied." : "Copy failed — select manually."); }}
+                      className="shrink-0 bg-navy text-white px-3 py-1.5 rounded-md font-bold">Copy</button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -485,12 +637,80 @@ function renderMonitor(d) {
   );
 }
 
-function PublishPanel({ data, book, busy, doPricing, doAuthorize }) {
+function SanitizationPanel({ book, busy, doSanitize }) {
+  const s = book?.artifacts?.sanitization;
+  return (
+    <Panel title="Publication Sanitization Pass™" icon={ShieldCheck} accent="royal" testid="sanitization-panel"
+      right={
+        <button data-testid="run-sanitize-btn" onClick={doSanitize} disabled={busy}
+          className="inline-flex items-center gap-1.5 bg-navy text-white px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50">
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <SpellCheck className="w-4 h-4" />} {s ? "Re-run" : "Run"} Sanitization
+        </button>
+      }>
+      <p className="text-[12px] text-muted-foreground mb-3">
+        Prepares the clean <b>retail edition</b> before Final Release: removes internal placeholders (e.g. "(working title)"),
+        strips manufacturing metadata from reader-facing pages, and generates a proper Title Page, Copyright Page & Colophon.
+        Manufacturing metadata stays in the Canonical Book Record & Master Package — never printed in the retail edition.
+      </p>
+      {!s ? (
+        <p className="text-sm text-amber-700 py-2" data-testid="sanitize-not-run">Not yet run — the Final Release Gate stays closed until the retail edition is sanitized.</p>
+      ) : (
+        <div className="space-y-3" data-testid="sanitize-result">
+          <div className="flex flex-wrap gap-3 text-[12px]">
+            <StatusChip status={`${s.placeholders_removed} internal marker(s) removed`} tone={s.placeholders_removed ? "gold" : "emerald"} />
+            {s.front_matter_block_removed && <StatusChip status="Embedded title block removed" tone="royal" />}
+            <StatusChip status="Clean retail edition prepared" tone="emerald" />
+          </div>
+          {s.placeholders_found?.length > 0 && (
+            <div data-testid="sanitize-findings" className="text-[11px] text-muted-foreground border border-border rounded-md p-2 max-h-28 overflow-y-auto">
+              {s.placeholders_found.map((f, i) => (
+                <div key={i} className="border-b border-border/50 py-1 last:border-0">
+                  <span className="font-bold text-navy">{f.marker}</span> — “{f.text}” <span className="opacity-70">… {f.context}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="grid sm:grid-cols-3 gap-3" data-testid="clean-pages">
+            {[["Title Page", [s.title_page?.title, s.title_page?.subtitle, s.title_page?.author, s.title_page?.imprint]],
+              ["Copyright Page", s.copyright_page],
+              ["Colophon", s.colophon?.slice(1)]].map(([label, lines], i) => (
+              <div key={i} className="rounded-md border border-border p-2 bg-card">
+                <p className="text-[10px] font-bold text-royal uppercase tracking-wide mb-1">{label}</p>
+                <div className="text-[10px] text-navy space-y-1 max-h-32 overflow-y-auto">
+                  {(lines || []).filter(Boolean).map((ln, j) => <p key={j}>{ln}</p>)}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-3" data-testid="retail-files">
+            {s.retail_edition?.paperback_interior_pdf && (
+              <a href={abs(s.retail_edition.paperback_interior_pdf)} target="_blank" rel="noreferrer"
+                className="inline-flex items-center gap-1.5 border border-navy/20 text-navy px-3 py-1.5 rounded-md text-[12px] font-medium">
+                <Download className="w-4 h-4" /> Retail Interior (PDF)
+              </a>
+            )}
+            {s.retail_edition?.epub && (
+              <a href={abs(s.retail_edition.epub)} target="_blank" rel="noreferrer"
+                className="inline-flex items-center gap-1.5 border border-navy/20 text-navy px-3 py-1.5 rounded-md text-[12px] font-medium">
+                <Download className="w-4 h-4" /> Retail EPUB
+              </a>
+            )}
+          </div>
+          <p className="text-[10px] text-muted-foreground">{s.separation_note}</p>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function PublishPanel({ data, book, busy, doPricing, doAuthorize, doSanitize }) {
   const [price, setPrice] = useState("");
   if (!data) return <Panel title="Publish" icon={Send}><p className="text-sm text-muted-foreground py-4">Loading…</p></Panel>;
   const g = data.final_release_gate;
   return (
-    <div className="grid lg:grid-cols-2 gap-5" data-testid="panel-publish">
+    <div className="space-y-5" data-testid="panel-publish">
+      <SanitizationPanel book={book} busy={busy} doSanitize={doSanitize} />
+      <div className="grid lg:grid-cols-2 gap-5">
       <Panel title="Publication Control Center" icon={Send} accent="royal" testid="publish-destinations">
         <div className="space-y-2" data-testid="destinations-list">
           {data.destinations.map((d, i) => (
@@ -540,6 +760,7 @@ function PublishPanel({ data, book, busy, doPricing, doAuthorize }) {
         </div>
         <p className="text-[11px] text-amber-700 mt-2">{data.honesty}</p>
       </Panel>
+      </div>
     </div>
   );
 }

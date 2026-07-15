@@ -126,6 +126,9 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
     ptype_txt = _strip_md(product.get("product_type", ""))
 
     class QRUPDF(FPDF):
+        retail_mode = False
+        retail_title = ""
+
         def footer(self):
             # Skip footer on the cover page.
             if self.page_no() == 1:
@@ -135,11 +138,15 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
             self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
             self.ln(2)
             self.set_font("Times", "I", 8); self.set_text_color(120, 120, 130)
-            self.cell(0, 6, _strip_md("QRU PRESS(TM) - Quest for Real Understanding"), align="L")
+            # Retail editions show only the book title as a running foot — no manufacturing branding.
+            self.cell(0, 6, _strip_md(self.retail_title if self.retail_mode else "QRU PRESS(TM) - Quest for Real Understanding"), align="L")
             self.set_font("Helvetica", "", 8)
             self.cell(0, 6, str(self.page_no() - 1), align="R")
 
     pdf = QRUPDF(format="A4")
+    if product.get("retail_publication"):
+        pdf.retail_mode = True
+        pdf.retail_title = title_txt
     pdf.set_margins(22, 22, 22)
     pdf.set_auto_page_break(True, margin=20)
 
@@ -152,18 +159,38 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
     os.remove(cover_path)
 
     # --- Title / colophon page ---
+    # Retail publication mode (Publication Sanitization Pass™): clean Title Page + Copyright Page
+    # per publishing convention — NO manufacturing metadata on reader-facing pages.
+    rp = product.get("retail_publication")
     pdf.add_page()
-    pdf.set_text_color(*ROYAL); pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 6, _strip_md(f"QRU PRESS(TM)   -   {family_txt.upper()}"))
-    pdf.ln(16)
-    pdf.set_text_color(*NAVY); pdf.set_font("Times", "B", 26)
-    pdf.multi_cell(0, 12, title_txt)
-    pdf.ln(2)
-    pdf.set_font("Times", "I", 12); pdf.set_text_color(90, 84, 110)
-    pdf.multi_cell(0, 7, _strip_md("Manufactured by QRU Factory(TM). QRU simplifies the path to understanding the truth."))
-    pdf.ln(6)
-    pdf.set_draw_color(*GOLD); pdf.set_line_width(0.5)
-    pdf.line(pdf.l_margin, pdf.get_y(), pdf.l_margin + 55, pdf.get_y())
+    if rp:
+        tp = rp.get("title_page", {})
+        pdf.ln(46)
+        pdf.set_text_color(*NAVY); pdf.set_font("Times", "B", 30)
+        pdf.multi_cell(0, 14, _strip_md(tp.get("title", title_txt)), align="C")
+        if tp.get("subtitle"):
+            pdf.ln(2); pdf.set_font("Times", "I", 15); pdf.set_text_color(90, 84, 110)
+            pdf.multi_cell(0, 8, _strip_md(tp["subtitle"]), align="C")
+        pdf.ln(24); pdf.set_font("Times", "", 15); pdf.set_text_color(*NAVY)
+        pdf.multi_cell(0, 8, _strip_md(tp.get("author", "")), align="C")
+        pdf.ln(40); pdf.set_font("Helvetica", "B", 10); pdf.set_text_color(*ROYAL)
+        pdf.multi_cell(0, 6, _strip_md(tp.get("imprint", "")), align="C")
+        # Copyright page
+        pdf.add_page(); pdf.ln(8); pdf.set_text_color(80, 78, 92); pdf.set_font("Times", "", 9.5)
+        for para in rp.get("copyright_page", []):
+            pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.2, _strip_md(para)); pdf.ln(1.6)
+    else:
+        pdf.set_text_color(*ROYAL); pdf.set_font("Helvetica", "B", 9)
+        pdf.cell(0, 6, _strip_md(f"QRU PRESS(TM)   -   {family_txt.upper()}"))
+        pdf.ln(16)
+        pdf.set_text_color(*NAVY); pdf.set_font("Times", "B", 26)
+        pdf.multi_cell(0, 12, title_txt)
+        pdf.ln(2)
+        pdf.set_font("Times", "I", 12); pdf.set_text_color(90, 84, 110)
+        pdf.multi_cell(0, 7, _strip_md("Manufactured by QRU Factory(TM). QRU simplifies the path to understanding the truth."))
+        pdf.ln(6)
+        pdf.set_draw_color(*GOLD); pdf.set_line_width(0.5)
+        pdf.line(pdf.l_margin, pdf.get_y(), pdf.l_margin + 55, pdf.get_y())
 
     # --- Reading Experience Standard™ (STD-READ-0001): the Recipe owns the reading journey ---
     import book_structure as bs
@@ -175,26 +202,30 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
     # Front Matter — Copyright & inherited Product Governance Package™ (never manual per-book).
     front_items = []
     if is_book:
-        gp = product.get("governance_package") or pg.build_package(
-            "Book", title=product.get("title", ""), version=product.get("kr_version", 1),
-            domain=product.get("family", ""), audience=product.get("audience", ""),
-            high_stakes=bool(product.get("high_stakes")))
-        front_items = ["Copyright", "Product Governance Package(TM)", "Transparency & Disclaimer", "Table of Contents"]
-        pdf.add_page(); pdf.set_text_color(*ROYAL); pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(0, 7, _strip_md("FRONT MATTER")); pdf.ln(10)
-        pdf.set_text_color(*NAVY); pdf.set_font("Times", "", 11)
-        pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md(gp.get("copyright", "")))
-        pdf.ln(1); pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md(gp.get("licensing", "")))
-        pdf.ln(4); pdf.set_font("Helvetica", "B", 11); pdf.set_text_color(*ROYAL)
-        pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md("Product Governance Package(TM)")); pdf.set_text_color(*NAVY)
-        pdf.set_font("Times", "", 10.5)
-        for dstmt in gp.get("disclaimers", []):
-            pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md("- " + dstmt))
-        cg = gp.get("category_governance")
-        if cg:
-            pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md(f"- {cg['domain']}: {cg['statement']}"))
-        pdf.ln(2); pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md(gp.get("transparency", "")))
-        pdf.ln(1); pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md("Accessibility: " + gp.get("accessibility", "")))
+        if rp:
+            # Retail edition: reader-facing front matter only (Title Page + Copyright already rendered).
+            front_items = ["Title Page", "Copyright", "Table of Contents"]
+        else:
+            gp = product.get("governance_package") or pg.build_package(
+                "Book", title=product.get("title", ""), version=product.get("kr_version", 1),
+                domain=product.get("family", ""), audience=product.get("audience", ""),
+                high_stakes=bool(product.get("high_stakes")))
+            front_items = ["Copyright", "Product Governance Package(TM)", "Transparency & Disclaimer", "Table of Contents"]
+            pdf.add_page(); pdf.set_text_color(*ROYAL); pdf.set_font("Helvetica", "B", 10)
+            pdf.cell(0, 7, _strip_md("FRONT MATTER")); pdf.ln(10)
+            pdf.set_text_color(*NAVY); pdf.set_font("Times", "", 11)
+            pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md(gp.get("copyright", "")))
+            pdf.ln(1); pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md(gp.get("licensing", "")))
+            pdf.ln(4); pdf.set_font("Helvetica", "B", 11); pdf.set_text_color(*ROYAL)
+            pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md("Product Governance Package(TM)")); pdf.set_text_color(*NAVY)
+            pdf.set_font("Times", "", 10.5)
+            for dstmt in gp.get("disclaimers", []):
+                pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md("- " + dstmt))
+            cg = gp.get("category_governance")
+            if cg:
+                pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md(f"- {cg['domain']}: {cg['statement']}"))
+            pdf.ln(2); pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md(gp.get("transparency", "")))
+            pdf.ln(1); pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md("Accessibility: " + gp.get("accessibility", "")))
 
         # Table of Contents — a learning journey, not a heading dump.
         pdf.add_page(); pdf.set_text_color(*NAVY); pdf.set_font("Times", "B", 22)
@@ -265,7 +296,19 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
             pdf.set_font("Times", "", 12)
             pdf.multi_cell(0, 6.5, b)
 
-    # --- Continue-learning QR ---
+    # --- Retail Colophon page (Publication Sanitization Pass™) — no continue-learning QR on a retail novel ---
+    if rp:
+        colo = rp.get("colophon", [])
+        if colo:
+            pdf.add_page(); pdf.set_text_color(*ROYAL); pdf.set_font("Helvetica", "B", 10)
+            pdf.cell(0, 7, _strip_md((colo[0] or "COLOPHON").upper())); pdf.ln(12)
+            pdf.set_text_color(*NAVY); pdf.set_font("Times", "", 10.5)
+            for para in colo[1:]:
+                pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.8, _strip_md(para)); pdf.ln(2.5)
+        out = pdf.output()
+        return bytes(out)
+
+    # --- Continue-learning QR (learning products only) ---
     qr_path = os.path.join(ASSET_DIR, _save("tmp-qr", "png", qr_bytes))
     pdf.ln(8); pdf.set_x(pdf.l_margin); pdf.set_font("Helvetica", "B", 12); pdf.set_text_color(*ROYAL)
     pdf.multi_cell(0, 7, _strip_md("Continue your understanding at QRU:"))
