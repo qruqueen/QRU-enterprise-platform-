@@ -142,7 +142,90 @@ def compose(hero_bytes, spec):
     return buf.getvalue()
 
 
+def compose_print_wrap(front_bytes, spec):
+    """Compose a COMPLETE print-ready paperback cover wrap (back + spine + front) as a single flat
+    image at print DPI. Dimensions are computed by the caller from final page count, trim, paper
+    type & bleed. `spec` = {trim_w_in, trim_h_in, spine_in, bleed_in, dpi, title, subtitle, author,
+    imprint, blurb, spine_text(bool)}."""
+    from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageFilter
+    dpi = spec.get("dpi", 300)
+    bleed, tw, th, sp = spec["bleed_in"], spec["trim_w_in"], spec["trim_h_in"], spec["spine_in"]
+    W = int(round((bleed + tw + sp + tw + bleed) * dpi))
+    H = int(round((bleed + th + bleed) * dpi))
+    front_x = int(round((bleed + tw + sp) * dpi))   # left edge of front panel (incl. front's inner start)
+    spine_x = int(round((bleed + tw) * dpi))
+    canvas = Image.new("RGB", (W, H), (18, 14, 34))
+
+    front = Image.open(io.BytesIO(front_bytes)).convert("RGB")
+    # FRONT panel (right): trim width + right & top/bottom bleed
+    fpw = W - front_x
+    fr = front.resize((fpw, H))
+    canvas.paste(fr, (front_x, 0))
+    # BACK panel (left): darkened, blurred art as an on-brand background
+    bpw = spine_x
+    back_bg = ImageEnhance.Brightness(front.resize((bpw, H)).filter(ImageFilter.GaussianBlur(8))).enhance(0.30)
+    canvas.paste(back_bg, (0, 0))
+    # SPINE: solid deep brand panel
+    ImageDraw.Draw(canvas).rectangle([spine_x, 0, front_x, H], fill=(24, 18, 44))
+    d = ImageDraw.Draw(canvas)
+
+    def font(path, size):
+        try:
+            return ImageFont.truetype(path, size)
+        except Exception:
+            return ImageFont.load_default()
+
+    def wrap(text, fnt, maxw):
+        out, cur = [], ""
+        for word in text.split():
+            t = (cur + " " + word).strip()
+            if d.textlength(t, font=fnt) <= maxw:
+                cur = t
+            else:
+                out.append(cur); cur = word
+        if cur:
+            out.append(cur)
+        return out
+
+    m = int(0.5 * dpi)            # 0.5in safe margin
+    safe_l = int(bleed * dpi) + m
+    safe_r = spine_x - m
+    # Back header
+    hf = font(dl.SERIF_BOLD, int(0.30 * dpi))
+    d.text((safe_l, int(bleed * dpi) + m), (spec.get("title") or "").upper(), font=hf, fill=(255, 255, 255))
+    y = int(bleed * dpi) + m + int(0.5 * dpi)
+    # Blurb
+    bf = font(dl.SERIF, int(0.17 * dpi))
+    blurb = spec.get("blurb") or ""
+    for para in blurb.split("\n"):
+        for ln in wrap(para, bf, safe_r - safe_l):
+            d.text((safe_l, y), ln, font=bf, fill=(232, 228, 240)); y += int(0.26 * dpi)
+        y += int(0.12 * dpi)
+    # Imprint at back bottom-left
+    imf = font(dl.SANS_BOLD, int(0.15 * dpi))
+    d.text((safe_l, H - int(bleed * dpi) - m - int(0.2 * dpi)), (spec.get("imprint") or "").upper(), font=imf, fill=_GOLD)
+    # Barcode clear zone — KDP prints the barcode here (bottom-right of BACK cover): ~2.0 x 1.2 in
+    bc_w, bc_h = int(2.0 * dpi), int(1.2 * dpi)
+    bc_x = safe_r - bc_w
+    bc_y = H - int(bleed * dpi) - m - bc_h
+    d.rectangle([bc_x, bc_y, bc_x + bc_w, bc_y + bc_h], fill=(255, 255, 255))
+    d.text((bc_x + bc_w / 2, bc_y + bc_h / 2), "BARCODE\n(added by KDP)", font=font(dl.SANS_BOLD, int(0.11 * dpi)),
+           fill=(120, 120, 130), anchor="mm", align="center")
+    # SPINE text only if allowed (>=79 pages)
+    if spec.get("spine_text") and sp * dpi > int(0.2 * dpi):
+        spine_img = Image.new("RGBA", (H, int(sp * dpi)), (0, 0, 0, 0))
+        sd = ImageDraw.Draw(spine_img)
+        stf = font(dl.SERIF_BOLD, int(min(sp * dpi * 0.5, 0.18 * dpi)))
+        label = f"{spec.get('title','')}    {spec.get('author','')}"
+        sd.text((H / 2, int(sp * dpi) / 2), label, font=stf, fill=(255, 255, 255), anchor="mm")
+        canvas.paste(spine_img.rotate(90, expand=True), (spine_x, 0), spine_img.rotate(90, expand=True))
+
+    buf = io.BytesIO(); canvas.save(buf, "PNG")
+    return buf.getvalue(), (W, H)
+
+
 async def art_direction(context, n=3):
+
     """LLM art-direction → n strategically distinct art briefs (art_prompt = ARTWORK only, no text)."""
     kind = context.get("kind", "cover")
     title = context.get("title", "")

@@ -995,6 +995,114 @@ def _kdp_markdown(chk):
     lines += ["", chk["note"]]
     return "\n".join(lines)
 
+
+# ------------------------- PUBLICATION DETAILS (blurb) + PRINT COVER WRAP -------------------------
+PAPER_THICKNESS_IN = {"white": 0.002252, "cream": 0.0025, "color": 0.002347}
+
+
+async def set_publication_details(book_id, fields, actor):
+    """Per-book publication details. Each book may have a different purpose — the back-cover blurb is
+    OPTIONAL (include_blurb=False means an intentionally minimal back cover)."""
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return None
+    upd = {"updated_at": _now()}
+    if "description" in fields:
+        upd["description"] = (fields.get("description") or "").strip()
+    if "author_bio" in fields:
+        upd["author_bio"] = (fields.get("author_bio") or "").strip()
+    if "include_blurb" in fields:
+        upd["include_blurb"] = bool(fields.get("include_blurb"))
+    if "blurb_status" in fields:
+        upd["blurb_status"] = fields.get("blurb_status")
+    await db[COLL].update_one({"id": book_id}, {"$set": upd})
+    return clean(await db[COLL].find_one({"id": book_id}))
+
+
+async def draft_blurb(book_id, actor):
+    """Draft a back-cover blurb from the manuscript (marked DRAFT — Founder approves before it's final)."""
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return None
+    content = (b.get("editorial_edition") or b.get("working_copy") or {}).get("content", "")
+    synopsis = " ".join(content.split()[:1200])
+    sys_p = ("You are a QRU jacket copywriter. Write ONE compelling back-cover blurb (120–170 words) for the "
+             "book below. Voice-appropriate, evocative, no spoilers, no invented facts, no quotes/reviews. "
+             "Return plain prose only — no headings.")
+    try:
+        text = await ai_service.llm_generate(sys_p, f"Title: {b.get('title')}\nBy: {b.get('author')}\n\n{synopsis}",
+                                             f"blurb-{book_id}")
+        text = (text or "").strip()
+    except Exception as e:
+        return {"error": f"Blurb draft unavailable right now ({str(e)[:80]})."}
+    if len(text) < 40:
+        return {"error": "Could not draft a blurb from this manuscript."}
+    await db[COLL].update_one({"id": book_id}, {"$set": {
+        "description": text, "include_blurb": True, "blurb_status": "draft — Founder to approve", "updated_at": _now()}})
+    return {"ok": True, "blurb": text, "status": "draft — Founder to approve"}
+
+
+async def build_print_cover_wrap(book_id, paper_type, actor):
+    """Complete print-ready paperback cover wrap (back + spine + front) computed from FINAL page count,
+    trim size, paper type & bleed. NOT just the front cover (Treasure Standard™ — honest states only)."""
+    import os
+    import rendering_engine as re_engine
+    import design_studio
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return None
+    design = b.get("artifacts", {}).get("design", {}) or {}
+    sel = design.get("selected_cover") or {}
+    if not sel.get("url"):
+        return {"error": "Select the final cover first."}
+    sanit = b.get("artifacts", {}).get("sanitization", {}) or {}
+    interior_url = (sanit.get("retail_edition", {}) or {}).get("paperback_interior_pdf") or design.get("print", {}).get("paperback_interior_pdf")
+    if not interior_url:
+        return {"error": "Run the Publication Sanitization Pass™ first (need the final interior for page count)."}
+    ipath = os.path.join(re_engine.ASSET_DIR, interior_url.split("/")[-1])
+    try:
+        import pypdf
+        pages = len(pypdf.PdfReader(ipath).pages)
+    except Exception:
+        return {"error": "Could not read the final interior PDF for page count."}
+    paper_type = (paper_type or "white").lower()
+    thickness = PAPER_THICKNESS_IN.get(paper_type, PAPER_THICKNESS_IN["white"])
+    spine_in = round(pages * thickness, 4)
+    trim_w, trim_h, bleed, dpi = 6.0, 9.0, 0.125, 300
+    front_bytes = open(os.path.join(re_engine.ASSET_DIR, sel["url"].split("/")[-1]), "rb").read()
+    include_blurb = b.get("include_blurb", True)
+    blurb = (b.get("description") or "") if include_blurb else ""
+    spine_text = pages >= 79
+    png, (W, H) = design_studio.compose_print_wrap(front_bytes, {
+        "trim_w_in": trim_w, "trim_h_in": trim_h, "spine_in": spine_in, "bleed_in": bleed, "dpi": dpi,
+        "title": b.get("title", ""), "subtitle": b.get("subtitle", ""), "author": b.get("author", ""),
+        "imprint": b.get("imprint", ""), "blurb": blurb, "spine_text": spine_text})
+    # Save print-ready PDF at correct physical size.
+    from PIL import Image
+    pbuf = __import__("io").BytesIO()
+    Image.open(__import__("io").BytesIO(png)).save(pbuf, "PDF", resolution=dpi)
+    pdf_fid = re_engine._save("book-cover-wrap", "pdf", pbuf.getvalue())
+    png_fid = re_engine._save("book-cover-wrap", "png", png)
+    full_w_in = round(bleed + trim_w + spine_in + trim_w + bleed, 3)
+    full_h_in = round(bleed + trim_h + bleed, 3)
+    wrap = {
+        "generated_at": _now(), "by": actor,
+        "paperback_cover_wrap_pdf": re_engine._asset_url(pdf_fid),
+        "paperback_cover_wrap_png": re_engine._asset_url(png_fid),
+        "page_count": pages, "paper_type": paper_type, "spine_in": spine_in,
+        "trim": f"{trim_w:g} x {trim_h:g} in", "bleed_in": bleed, "dpi": dpi,
+        "full_size_in": f"{full_w_in} x {full_h_in} in", "pixels": f"{W} x {H}",
+        "spine_text": spine_text,
+        "spine_note": "Spine text included." if spine_text else "Spine left blank (KDP requires ≥ 79 pages for spine text).",
+        "blurb_included": bool(blurb),
+        "components": "Back cover + spine + front cover (complete wrap).",
+    }
+    design["print"] = {**design.get("print", {}), "paperback_cover_wrap": wrap}
+    await db[COLL].update_one({"id": book_id}, {"$set": {"artifacts.design": design, "updated_at": _now()},
+        "$push": {"revision_history": {"stage": "Print Cover Wrap", "by": actor, "at": _now(),
+                  "note": f"Full paperback wrap: {pages}pp, {paper_type} paper, spine {spine_in}in, {full_w_in}x{full_h_in}in @ {dpi}dpi."}}})
+    return wrap
+
 # ------------------------- MASTER PACKAGE + READ MODELS -------------------------
 async def master_package(book_id):
     b = await db[COLL].find_one({"id": book_id}, {"_id": 0})
