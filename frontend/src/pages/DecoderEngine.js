@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api, { formatApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
@@ -7,7 +8,7 @@ import { Panel, StatusChip, VerifiedBadge, MetricCard } from "@/components/qru";
 import {
   Loader2, Sparkles, ShieldCheck, ThumbsUp, RotateCcw, Archive, Award, ArrowLeft,
   Brain, BookOpen, Layers, ChevronDown, ChevronRight, Download, Lightbulb,
-  GitBranch, ScrollText, ListChecks, CheckCircle2, Clock, FlaskConical, Factory, AlertTriangle, ShieldQuestion,
+  GitBranch, ScrollText, ListChecks, CheckCircle2, Clock, FlaskConical, Factory, AlertTriangle, ShieldQuestion, PackagePlus,
 } from "lucide-react";
 
 const SUPER = ["Founder & CEO", "Administrator"];
@@ -92,6 +93,18 @@ export default function DecoderEngine() {
   const [attention, setAttention] = useState([]);
   const [selected, setSelected] = useState(null);
   const [acting, setActing] = useState(false);
+  const navigate = useNavigate();
+
+  const createProduct = async () => {
+    if (!selected) return;
+    setActing(true);
+    try {
+      const { data } = await api.post(`/decoder/${selected.id}/create-product`, { product_type: "Book" });
+      toast.success(`“${data.title}” created — opening the Book Manufacturing System™.`);
+      navigate(`${data.route || "/book-manufacturing"}?book=${data.book_id}`);
+    } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
+    finally { setActing(false); }
+  };
 
   const load = () => {
     api.get("/decoder/stats").then((r) => setStats(r.data)).catch(() => {});
@@ -163,7 +176,7 @@ export default function DecoderEngine() {
 
       {selected ? (
         <DecoderDetail d={selected} isSuper={isSuper} acting={acting} act={act} exportJson={exportJson}
-          onBack={() => { setSelected(null); load(); }} />
+          onCreateProduct={createProduct} onBack={() => { setSelected(null); load(); }} />
       ) : (
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-6">
@@ -267,7 +280,7 @@ export default function DecoderEngine() {
   );
 }
 
-function DecoderDetail({ d, isSuper, acting, act, exportJson, onBack }) {
+function DecoderDetail({ d, isSuper, acting, act, exportJson, onCreateProduct, onBack }) {
   const uc = d.understanding_checks || {};
   const vs = d.visual_spec || {};
   const rows = (d.scorecard || {}).rows || [];
@@ -306,6 +319,21 @@ function DecoderDetail({ d, isSuper, acting, act, exportJson, onBack }) {
         {d.safety_notes && (
           <div className="mt-2 text-[12px] bg-amber-50 border border-amber-200 text-amber-800 rounded-md px-3 py-2" data-testid="detail-safety">
             <b>Safety:</b> {d.safety_notes}
+          </div>
+        )}
+
+        {d.review_state === "Manufacturing Ready" && (
+          <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50/60 p-4" data-testid="create-product-cta">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-navy">This understanding is ready to become a product.</p>
+                <p className="text-[12px] text-muted-foreground">The Factory has finished its work. Build a finished Book from this — the manuscript, metadata and governance are carried over for you.</p>
+              </div>
+              <button data-testid="create-product-btn" onClick={onCreateProduct} disabled={acting || !isSuper}
+                className="inline-flex items-center gap-2 bg-navy text-white px-5 py-2.5 rounded-md text-sm font-bold disabled:opacity-40 shrink-0">
+                {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackagePlus className="w-4 h-4" />} Create Product · Book
+              </button>
+            </div>
           </div>
         )}
 

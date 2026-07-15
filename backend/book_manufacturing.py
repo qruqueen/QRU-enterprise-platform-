@@ -134,6 +134,88 @@ async def create_book_record(payload, actor):
     return clean(record)
 
 
+# ---------- DECODER → BOOK BRIDGE (QRU Decoder Engine™ Stone 2 · Books only) ----------
+# The reference "Create Product" pattern: a Manufacturing Ready™ Decoder Record flows directly into
+# the existing seven-button Book Manufacturing System™, pre-filled from the decoder's contract.
+# Reuses create_book_record (one owner for Canonical Book Records) — no duplicate capability.
+def _decoder_to_manuscript(d):
+    """Assemble a book manuscript (markdown) from a Decoder Record's verified understanding.
+    No knowledge is invented here — every section is the decoded understanding already verified."""
+    parts = [f"# {d.get('title','Untitled')}", ""]
+
+    def _flatten(val):
+        if isinstance(val, str):
+            return val
+        if isinstance(val, dict):
+            label = val.get("term") or val.get("misconception") or val.get("name") or val.get("title") or ""
+            body = val.get("definition") or val.get("correction") or val.get("truth") or val.get("detail") or val.get("text") or val.get("description") or ""
+            return f"**{label}** — {body}" if label else (body or "")
+        return str(val)
+
+    def sec(heading, val):
+        if not val:
+            return
+        parts.append(f"## {heading}")
+        if isinstance(val, list):
+            for it in val:
+                line = _flatten(it)
+                if line:
+                    parts.append(f"- {line}" if not str(line).startswith("**") else line)
+        else:
+            parts.append(_flatten(val))
+        parts.append("")
+
+    sec("Introduction", d.get("definition"))
+    sec("Why It Matters", d.get("why_it_matters"))
+    sec("How It Works", d.get("how_it_works"))
+    sec("The Core Idea", d.get("core_mental_model"))
+    sec("An Analogy", d.get("analogy"))
+    sec("A Story", d.get("story"))
+    sec("Key Terms", d.get("vocabulary"))
+    sec("Common Misconceptions", d.get("misconceptions"))
+    sec("Putting It Into Practice", d.get("applications"))
+    sec("A Worked Example", d.get("guided_example"))
+    sec("Practice", d.get("practice"))
+    sec("Reflection", d.get("reflection"))
+    sec("Remember This", d.get("memory_anchor"))
+    return "\n".join(str(p) for p in parts)
+
+
+async def create_book_from_decoder(d, actor):
+    """Create a Canonical Book Record from a Manufacturing Ready™ Decoder Record (Stone 2)."""
+    if not d:
+        return {"error": "Decoder Record not found."}
+    if d.get("review_state") != "Manufacturing Ready":
+        return {"error": "This understanding is not Manufacturing Ready™ yet — the Factory is still finishing it."}
+    content = _decoder_to_manuscript(d)
+    gp = d.get("governance_package") or {}
+    rights = gp.get("rights_holder") or d.get("created_by") or "Ascend Development Group LLC"
+    meta = {
+        "product_type": "Book",
+        "author": gp.get("author") or "QRU Editorial",
+        "subtitle": d.get("learning_objective") or "",
+        "genre": d.get("domain") or "Nonfiction",
+        "audience": d.get("audience") or "General",
+        "imprint": "QRU Press™",
+        "rights_holder": rights,
+        "ai_disclosure": "Built from a verified QRU Decoder Record™; human-verified knowledge, AI-assisted manufacturing.",
+        "source_filename": f"{d.get('decoder_id','decoder')}.decoder",
+    }
+    rec = await create_book_record({"title": d.get("title", "Untitled"), "content": content, "meta": meta}, actor)
+    # Link the product back to its source understanding (Transparent Provenance™).
+    await db[COLL].update_one({"id": rec["id"]}, {"$set": {
+        "source_decoder": {"decoder_id": d.get("decoder_id"), "source_kr_ids": d.get("source_kr_ids", []),
+                            "created_at": _now(), "by": actor}}})
+    try:
+        await db["decoder_records"].update_one({"id": d.get("id")}, {"$push": {"manufactured_products": {
+            "product_type": "Book", "book_id": rec["id"], "book_code": rec.get("book_code"),
+            "title": rec.get("title"), "created_at": _now(), "by": actor}}})
+    except Exception:
+        pass
+    return rec
+
+
+
 def _extract_manuscript(filename, raw):
     """Turn an uploaded manuscript file into markdown text. Supports DOCX, PDF, TXT, MD."""
     name = (filename or "").lower()
@@ -621,6 +703,8 @@ _PLACEHOLDER_PATTERNS = [
     (r"\[\s*insert[^\]]*?\]", "insert-note marker"),
     (r"\(draft\)|\bDRAFT ONLY\b|\bDO NOT DISTRIBUTE\b|\bCONFIDENTIAL\b|\bINTERNAL USE ONLY\b", "internal-status marker"),
     (r"\b(TODO|FIXME|XXX|TBD)\b\s*:?[^\n]*", "editorial note"),
+    (r"\bfull manuscript\b", "full-manuscript label"),
+    (r"ISBN:?\s*assignment pending", "placeholder ISBN"),
 ]
 
 
@@ -656,7 +740,7 @@ def _build_publication(b):
     imprint = b.get("imprint") or publisher
     edition = b.get("edition") or "First Edition"
     lang = b.get("language") or "English"
-    isbn = b.get("isbn") or "ISBN: assignment pending"
+    isbn = b.get("isbn") or "ISBN: __________________________  (assigned by Amazon KDP at publication)"
     genre = b.get("genre") or "Fiction"
     ai_disc = b.get("ai_disclosure") or "AI-assisted manufacturing; human-authored and human-approved."
     pub_meta = {
@@ -681,12 +765,12 @@ def _build_publication(b):
         f"Published by {imprint}.",
         f"AI content disclosure: {ai_disc}",
     ]
+    # Retail colophon — typographic note only; NO internal manufacturing-system language.
     colophon = [
         "Colophon",
         (f"{title} was set in a classic serif text face chosen for comfortable long-form reading, with "
          "display typography in a complementary sans-serif."),
         f"Interior design and typesetting by {imprint}.",
-        "Produced with the QRU Book Manufacturing System™ under the QRU Reading Experience Standard™.",
     ]
     return pub_meta, title_page, copyright_page, colophon
 

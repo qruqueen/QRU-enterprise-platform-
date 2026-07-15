@@ -93,3 +93,25 @@ async def certify_treasure(did: str, user=Depends(require_super_admin)):
     if isinstance(r, dict) and r.get("error"):
         raise HTTPException(400, r["error"])
     return r
+
+
+
+class CreateProductInput(BaseModel):
+    product_type: Optional[str] = "Book"
+
+
+@router.post("/{did}/create-product")
+async def create_product(did: str, data: CreateProductInput = CreateProductInput(), user=Depends(require_super_admin)):
+    """Create Product — the single bridge from a Manufacturing Ready™ understanding into the
+    seven-button Book Manufacturing System™ (Stone 2, Books only). Reuses the existing engine."""
+    d = await de.get_decoder(did)
+    if not d:
+        raise HTTPException(404, "Understanding record not found.")
+    if (data.product_type or "Book") != "Book":
+        raise HTTPException(400, "Only Book is available today — more product types are coming.")
+    import book_manufacturing as bm
+    rec = await bm.create_book_from_decoder(d, user.get("name", "Founder"))
+    if isinstance(rec, dict) and rec.get("error"):
+        raise HTTPException(400, rec["error"])
+    return {"ok": True, "product_type": "Book", "book_id": rec["id"], "book_code": rec.get("book_code"),
+            "title": rec.get("title"), "route": "/book-manufacturing"}

@@ -57,7 +57,11 @@ export default function BookManufacturing() {
   const selectBook = async (id) => { setTab("upload"); setShareInfo(null); await reload(id); };
   useEffect(() => {
     api.get("/book-mfg/config").then((r) => { setButtons(r.data.buttons); if (r.data.system_title) setSystemTitle(r.data.system_title); }).catch(() => {});
-    loadBooks().then((books) => { if (books[0]) reload(books[0].id); }).catch(() => {});
+    loadBooks().then((books) => {
+      const wanted = new URLSearchParams(window.location.search).get("book");
+      const target = (wanted && books.find((b) => b.id === wanted)) ? wanted : books[0]?.id;
+      if (target) reload(target);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
