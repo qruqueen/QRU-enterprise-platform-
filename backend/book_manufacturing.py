@@ -1490,6 +1490,14 @@ async def assemble_master_package(book_id, actor):
         pdf = _read_asset(print_url)
         if pdf:
             z.writestr("03_PRINT/paperback_interior.pdf", pdf)
+        # Print-ready KDP cover wrap (back cover + spine + front) — locate the already-built asset.
+        wrap = design_art.get("print", {}).get("paperback_cover_wrap") or {}
+        wrap_pdf = _read_asset(wrap.get("paperback_cover_wrap_pdf"))
+        if wrap_pdf:
+            z.writestr("03_PRINT/paperback_cover_wrap.pdf", wrap_pdf)
+        wrap_png = _read_asset(wrap.get("paperback_cover_wrap_png"))
+        if wrap_png:
+            z.writestr("03_PRINT/paperback_cover_wrap.png", wrap_png)
         epub = _read_asset(ebook_url)
         if epub:
             z.writestr("04_EBOOK/book.epub", epub)
