@@ -502,7 +502,7 @@ function ProofPanel({ book, proof, busy, doProof, doApprove, doOpenRevision, doR
                 proof.findings.map((f, i) => {
                   const kept = f.status === "kept";
                   return (
-                    <div key={i} data-testid={`finding-${i}`} className="flex items-start justify-between gap-2 border-b border-border/50 pb-2.5">
+                    <div key={f.id || i} data-testid={`finding-${i}`} className="flex items-start justify-between gap-2 border-b border-border/50 pb-2.5">
                       <div className="flex items-start gap-2 min-w-0">
                         <StatusChip status={f.type} tone={FINDING_TONE[f.type]} />
                         <div className="min-w-0">

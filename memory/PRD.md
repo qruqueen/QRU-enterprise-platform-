@@ -635,3 +635,35 @@ NOTE: There is NO Amazon KDP publishing API integration — the Factory produces
 ### HOLD
 - Decoder Engine™ Stone 3 remains ON HOLD until the first publication cycle completes.
 
+
+---
+
+## CHANGELOG — 2026-06-16
+
+### 🎉 First QRU Press™ title AUTHORIZED
+- **The Understanding Tree (BOOK-0001) is AUTHORIZED for release** by the Founder (Erica Talbert). The Founder Release Review™ card now shows the release-authorized chip. Next step is the Founder's manual Amazon KDP upload (no KDP publishing API exists — honest).
+
+### Bug fix — Founder Release Review™ visibility (was white-on-white)
+- The card used a broken `bg-gradient-to-b from-navy to-[#141026]` over `.qru-card` (white bg), making white text invisible. Fixed to solid `bg-navy text-white` with gold border. Verified by testing agent (iteration_78): computed BG rgb(15,23,41), FG white — all fields + 5 checkbox labels readable.
+- Authorize button correctly gated: `canAuthorize = gateReady && allChecked && !busy`.
+
+### Active Publication™ banner — accurate status
+- Banner now derives Current Stage from `manufacturing_job.stage` and shows an ACTIONABLE Current Status (e.g. "Next: approve pricing (Publish tab)", "Ready for Founder Release Review™…", "Authorized — ready for KDP upload") instead of the raw internal `publication_status: "Not ready"`.
+
+### NEW — Founder Finding Resolution + Governed Revision (Proof & Polish)
+Founder chose 1c / 2a / 3b. Implemented (backend curl-verified + frontend testing-agent verified 6/7, 1 test-data gap only):
+- Findings now carry stable `id`, `span`, `snippet`, `correctable`, `suggested_fix`. Report counts open findings only + a `kept` count.
+- **Keep as written** (`resolve_finding action=keep`): records the intentional finding in `kept_findings`, no text change, re-proofs. (Handles the Founder's "four four" / "ha ha" intentional repeats.)
+- **Correct it** (`action=correct`): applies a surgical span fix (or global double-space collapse) and re-proofs. Verified via curl (word count 17576→17575, required→0).
+- **Open a Governed Revision** (`open_revision`): unlocks a locked master, archives the prior locked edition into `editorial_versions` (never overwritten), brings content into working copy for editing.
+- **Manuscript Editor** (`update_manuscript`): full working-copy edit while unlocked, tracked as a revision, auto re-proofs. Blocked (400) while locked — must open a revision first.
+- Re-lock via existing Approve & Lock.
+- New routes: POST `/open-revision`, `/manuscript`, `/resolve-finding`.
+
+### Outstanding (non-blocking)
+- LOW: UI demo of "Correct it" button needs a seeded correctable finding (backend already verified). 
+- LOW: cosmetic `<span>`-in-`<option>` hydration warning reported by testing agent at book-switcher; source line has no span — appears misattributed; left as-is.
+
+### HOLD
+- Decoder Engine™ Stone 3 still ON HOLD until Founder completes the KDP upload of The Understanding Tree.
+
