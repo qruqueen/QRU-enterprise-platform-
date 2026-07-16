@@ -64,6 +64,16 @@ def _now():
     return now_iso()
 
 
+def _s(v):
+    """Coerce any LLM-returned field to a string so downstream string ops never raise on an
+    unexpected list/dict shape from the model (root cause of CHG decode TypeError)."""
+    if isinstance(v, (list, tuple)):
+        return " ".join(_s(x) for x in v)
+    if isinstance(v, dict):
+        return " ".join(f"{k}: {_s(x)}" for k, x in v.items())
+    return str(v) if v is not None else ""
+
+
 def _classify(kr, gen):
     text = f"{kr.get('title','')} {kr.get('category','')} {gen.get('domain','')}".lower()
     domain = next((d for d in DOMAINS if d.lower() in text), None) or (kr.get("category") if kr.get("category") in DOMAINS else "General")
@@ -71,15 +81,15 @@ def _classify(kr, gen):
 
 
 def _deterministic_checks(kr, gen, audience, level):
-    title = (gen.get("title") or "").lower()
-    words = len((gen.get("how_it_works", "") + " " + gen.get("definition", "")).split())
+    title = _s(gen.get("title")).lower()
+    words = len((_s(gen.get("how_it_works")) + " " + _s(gen.get("definition"))).split())
     has_all = all(gen.get(k) for k in ["definition", "why_it_matters", "how_it_works", "core_mental_model",
                                        "analogy", "story", "memory_anchor", "understanding_checks"])
     uc = gen.get("understanding_checks") or {}
     five = all(uc.get(k) for k in ["explain", "recognize", "apply", "correct", "teach"])
     overpromise = any(k in title for k in OVERPROMISE) and len(kr_ids_of(kr)) <= 1
-    high_stakes = any(k in f"{kr.get('title','')} {kr.get('category','')}".lower() for k in HIGH_STAKES)
-    mem = str(gen.get("memory_anchor", "")).strip()
+    high_stakes = any(k in f"{_s(kr.get('title'))} {_s(kr.get('category'))}".lower() for k in HIGH_STAKES)
+    mem = _s(gen.get("memory_anchor")).strip()
     return {
         "checks": [
             {"item": "All required Decoder components present", "pass": has_all, "type": "deterministic"},
