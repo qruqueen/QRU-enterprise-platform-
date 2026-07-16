@@ -410,7 +410,7 @@ function FactoryLibrary({ book }) {
       <p className="text-[11px] text-muted-foreground mb-3">Every rendering the Factory produces is kept here, inside the Factory — download or re-copy any time. Nothing depends on your browser's Downloads folder.</p>
       {pkgs.length > 0 && (
         <div className="mb-3" data-testid="library-packages">
-          <p className="text-[10px] font-bold text-royal uppercase tracking-wide mb-1">Master Output Packages</p>
+          <p className="text-[10px] font-bold text-royal uppercase tracking-wide mb-1">Packages & Deliverables</p>
           <div className="space-y-1.5">
             {pkgs.map((d, i) => (
               <div key={i} className="flex items-center justify-between gap-2 border-b border-border/50 pb-1.5 text-[12px]">

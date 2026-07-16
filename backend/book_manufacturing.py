@@ -867,7 +867,25 @@ async def run_post_publish_recipe(book_id, actor):
                     "runs automatically on Authorize Release, so the Founder answers zero extra questions.",
         },
     }
-    await db[COLL].update_one({"id": book_id}, {"$set": {"post_publish": post, "updated_at": _now()},
+    # Treasure Standard: the Publication Assets bundle is a real Factory rendering — persist it in the
+    # Deliverables/Factory Library alongside the Master Output Package (replace, never append; delete the
+    # prior file so the Library never shows a stale/broken link). Post-Publish panel + Library stay in sync.
+    import os as _os2
+    zip_bytes = buf.getvalue()
+    pub_deliverable = {"type": "Publication Assets Package", "label": "Publication Assets Package",
+                       "url": assets_url, "filename": zid, "size_kb": len(zip_bytes) // 1024,
+                       "assembled_at": _now(), "by": actor}
+    existing = b.get("deliverables", []) or []
+    for d in existing:
+        if d.get("type") == "Publication Assets Package" and d.get("url"):
+            old_path = _os2.path.join(re_engine.ASSET_DIR, d["url"].split("/")[-1])
+            if _os2.path.exists(old_path):
+                try:
+                    _os2.remove(old_path)
+                except OSError:
+                    pass
+    deliverables = [d for d in existing if d.get("type") != "Publication Assets Package"] + [pub_deliverable]
+    await db[COLL].update_one({"id": book_id}, {"$set": {"post_publish": post, "deliverables": deliverables, "updated_at": _now()},
         "$push": {"revision_history": {"stage": "Post-Publish Recipe", "by": actor, "at": _now(),
                   "note": f"Auto-manufactured publication assets: {counts['Ready']} Ready, {counts['Planned']} Planned."}}})
     await log_org("Book Manufacturing™", "Manufacturing", f"post-publish recipe manufactured {counts['Ready']} assets for '{title}'", b["book_code"], "success")
