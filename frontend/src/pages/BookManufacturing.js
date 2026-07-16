@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge, MetricCard } from "@/components/qru";
 import {
   Upload, SpellCheck, Palette, Mic, Video, Send, Activity, Loader2, CheckCircle2,
-  Lock, FileText, ShieldCheck, ChevronRight, BookOpen, AlertTriangle, Download, MapPin, Share2, Play, DollarSign, ClipboardCheck,
+  Lock, FileText, ShieldCheck, ChevronRight, BookOpen, AlertTriangle, Download, MapPin, Share2, Play, DollarSign, ClipboardCheck, Sparkles,
 } from "lucide-react";
 
 const ICONS = { upload: Upload, "spell-check": SpellCheck, palette: Palette, mic: Mic, video: Video, send: Send, activity: Activity };
@@ -38,6 +38,7 @@ export default function BookManufacturing() {
   const [video, setVideo] = useState(null);
   const [publish, setPublish] = useState(null);
   const [kdp, setKdp] = useState(null);
+  const [postPub, setPostPub] = useState(null);
   const [monitor, setMonitor] = useState(null);
   const [shareInfo, setShareInfo] = useState(null);
   const [allBooks, setAllBooks] = useState([]);
@@ -68,7 +69,7 @@ export default function BookManufacturing() {
     if (!book) return;
     if (tab === "audio" && !audio) api.get(`/book-mfg/books/${book.id}/audio`).then((r) => setAudio(r.data));
     if (tab === "video" && !video) api.get(`/book-mfg/books/${book.id}/video`).then((r) => setVideo(r.data));
-    if (tab === "publish") { api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)); api.get(`/book-mfg/books/${book.id}/kdp-checklist`).then((r) => setKdp(r.data)).catch(() => {}); }
+    if (tab === "publish") { api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)); api.get(`/book-mfg/books/${book.id}/kdp-checklist`).then((r) => setKdp(r.data)).catch(() => {}); api.get(`/book-mfg/books/${book.id}/post-publish`).then((r) => setPostPub(r.data)).catch(() => {}); }
     if (tab === "monitor" && !monitor) api.get(`/book-mfg/books/${book.id}/monitor`).then((r) => setMonitor(r.data));
   }, [tab, book]); // eslint-disable-line
 
@@ -97,7 +98,7 @@ export default function BookManufacturing() {
   };
   const doRenderAudio = () => run(async () => { await api.post(`/book-mfg/books/${book.id}/audio-prototype`); const { data } = await api.get(`/book-mfg/books/${book.id}/audio`); setAudio(data); }, "Narration prototype rendered.");
   const doPricing = (price, currency) => run(() => api.post(`/book-mfg/books/${book.id}/pricing`, { list_price: parseFloat(price), currency }), "Pricing approved.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
-  const doAuthorize = () => run(() => api.post(`/book-mfg/books/${book.id}/authorize`), "Release authorized.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
+  const doAuthorize = () => run(() => api.post(`/book-mfg/books/${book.id}/authorize`), "Release authorized — the Factory is manufacturing your publication assets.").then(() => { api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)); api.get(`/book-mfg/books/${book.id}/post-publish`).then((r) => setPostPub(r.data)).catch(() => {}); });
   const doSanitize = () => run(() => api.post(`/book-mfg/books/${book.id}/sanitize`, { base_url: A }), "Publication Sanitization Pass™ complete — clean retail edition prepared.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
   const doDraftBlurb = () => run(async () => { const { data } = await api.post(`/book-mfg/books/${book.id}/draft-blurb`); toast.message("Blurb drafted — review & approve.", { description: data.status }); });
   const doSavePublication = (fields, ok) => run(() => api.post(`/book-mfg/books/${book.id}/publication-details`, fields), ok || "Publication details saved.");
@@ -232,7 +233,7 @@ export default function BookManufacturing() {
       {tab === "design" && <DesignPanel book={book} busy={busy} doDesign={doDesign} doSelectCover={doSelectCover} />}
       {tab === "audio" && <AudioPanel book={book} audio={audio} busy={busy} onRender={doRenderAudio} />}
       {tab === "video" && <PlanPanel title="Video" icon={Video} data={video} render={renderVideo} />}
-      {tab === "publish" && <PublishPanel data={publish} kdp={kdp} book={book} busy={busy} doPricing={doPricing} doAuthorize={doAuthorize} doSanitize={doSanitize} doDraftBlurb={doDraftBlurb} doSavePublication={doSavePublication} doPrintWrap={doPrintWrap} />}
+      {tab === "publish" && <PublishPanel data={publish} kdp={kdp} postPub={postPub} book={book} busy={busy} doPricing={doPricing} doAuthorize={doAuthorize} doSanitize={doSanitize} doDraftBlurb={doDraftBlurb} doSavePublication={doSavePublication} doPrintWrap={doPrintWrap} />}
       {tab === "monitor" && <PlanPanel title="Monitor" icon={Activity} data={monitor} render={renderMonitor} />}
     </div>
   );
@@ -1034,6 +1035,51 @@ function PrintWrapPanel({ book, busy, doPrintWrap }) {
   );
 }
 
+const PP_TONE = { "Ready": "emerald", "Prototype": "amber", "Planned": "slate", "Not Implemented": "red" };
+
+function PostPublishPanel({ postPub, book }) {
+  if (!book) return null;
+  if (!postPub || postPub.not_run || !postPub.sections?.length) {
+    return (
+      <Panel title="Post-Publish Manufacturing™" icon={Sparkles} accent="royal" testid="post-publish">
+        <p className="text-[12px] text-muted-foreground">Publishing isn't the end of manufacturing. When you <b>Authorize Release</b>, the Factory automatically manufactures every inherited publication asset — Marketplace, Marketing, Website, Media scripts, Distribution prep, and your Founder package. You won't need to trigger anything.</p>
+      </Panel>
+    );
+  }
+  const c = postPub.counts || {};
+  return (
+    <Panel title="Post-Publish Manufacturing™" icon={Sparkles} accent="royal" testid="post-publish">
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <StatusChip status={`${c.Ready || 0} Ready`} tone="emerald" testid="pp-ready" />
+        {c.Planned ? <StatusChip status={`${c.Planned} Planned`} tone="slate" /> : null}
+        {c["Not Implemented"] ? <StatusChip status={`${c["Not Implemented"]} Not Implemented`} tone="rose" /> : null}
+        {postPub.assets_zip && (
+          <a href={abs(postPub.assets_zip)} target="_blank" rel="noreferrer" data-testid="download-publication-assets"
+            className="ml-auto inline-flex items-center gap-1.5 bg-gold text-navy px-3 py-1.5 rounded-md text-sm font-bold">
+            <Download className="w-4 h-4" /> Download Publication Assets
+          </a>
+        )}
+      </div>
+      <div className="grid sm:grid-cols-2 gap-3" data-testid="pp-sections">
+        {postPub.sections.map((s, i) => (
+          <div key={i} className="rounded-lg border border-border/60 p-3 bg-card">
+            <p className="text-[13px] font-bold text-navy mb-1.5">{s.name}</p>
+            <div className="space-y-1">
+              {s.items.map((it, j) => (
+                <div key={j} className="flex items-center justify-between gap-2" data-testid={`pp-item-${i}-${j}`}>
+                  <span className={`text-[12px] ${it.status === "Ready" ? "text-navy" : "text-muted-foreground"}`}>{it.name}</span>
+                  <StatusChip status={it.status} tone={PP_TONE[it.status] || "slate"} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="text-[11px] text-muted-foreground italic mt-3">{postPub.honesty}</p>
+    </Panel>
+  );
+}
+
 function FounderReleaseReview({ book, data, busy, doAuthorize }) {
   const CHECKS = [
     { key: "manuscript", label: "I have reviewed the manuscript." },
@@ -1096,7 +1142,7 @@ function FounderReleaseReview({ book, data, busy, doAuthorize }) {
   );
 }
 
-function PublishPanel({ data, kdp, book, busy, doPricing, doAuthorize, doSanitize, doDraftBlurb, doSavePublication, doPrintWrap }) {
+function PublishPanel({ data, kdp, postPub, book, busy, doPricing, doAuthorize, doSanitize, doDraftBlurb, doSavePublication, doPrintWrap }) {
   const [price, setPrice] = useState("");
   if (!data) return <Panel title="Publish" icon={Send}><p className="text-sm text-muted-foreground py-4">Loading…</p></Panel>;
   const g = data.final_release_gate;
@@ -1157,6 +1203,7 @@ function PublishPanel({ data, kdp, book, busy, doPricing, doAuthorize, doSanitiz
       </div>
 
       <FounderReleaseReview book={book} data={data} busy={busy} doAuthorize={doAuthorize} />
+      <PostPublishPanel postPub={postPub} book={book} />
     </div>
   );
 }

@@ -203,6 +203,22 @@ async def audio_prototype(book_id: str, user=Depends(require_super_admin)):
     return r
 
 
+@router.get("/books/{book_id}/post-publish")
+async def get_post_publish(book_id: str, user=Depends(get_current_user)):
+    b = await bm.db[bm.COLL].find_one({"id": book_id})
+    if not b:
+        raise HTTPException(404, "Book Record not found.")
+    return bm.clean(b).get("post_publish") or {"sections": [], "counts": {}, "not_run": True}
+
+
+@router.post("/books/{book_id}/post-publish/run")
+async def run_post_publish(book_id: str, user=Depends(require_super_admin)):
+    r = await bm.run_post_publish_recipe(book_id, user.get("name", "Founder"))
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    return r
+
+
 class PricingReq(BaseModel):
     list_price: float
     currency: Optional[str] = "USD"

@@ -132,3 +132,27 @@ Findings: unnecessary re-gen (no pre-validation), missing automation (post-publi
 
 ### Final Question — if rebuilt today (for simplification only, NOT a redesign)
 One manufacturing recipe engine + one design engine + one media engine + one distribution layer, all inherited by product lines; a single Founder surface of ~8 capabilities; and publishing as an event that fans out the full asset set automatically. Everything the current Factory proved valuable (Book System, Design Studio, gates, Decoder) stays; the periphery collapses into these owners.
+
+
+## OPERATIONAL BASELINE — Founder Effort Units (FEU)
+Date: 2026-07-16 · Measured while building (post-publish recipe + honest deliverables) on *The Understanding Tree*.
+
+**Definition (Founder-refined):** FEU counts *questions the Founder should never have had to answer* / separate manufacture actions — NOT essential intent questions ("Is this KR ready?", "Does this reflect my intent?").
+
+### Publish -> Publication Assets
+| | BEFORE | AFTER |
+|---|---|---|
+| Separate manufacture actions to produce all publication assets | 16 (marketplace text, 3 marketing graphics, book page, 3 media scripts, distribution prep, 3 founder docs, metadata, etc.) | 0 |
+| Founder trigger | manual, per-asset, across multiple pages | 1 (Authorize Release, which they already press) |
+| Placeholder/broken links shown | yes (marketing placeholders, 11 stale package links) | 0 (only Ready items get files) |
+
+**Result: 16 architecture-leak actions -> 0.** The Founder now answers only essential questions; the Post-Publish Recipe fans out automatically on Authorize Release.
+
+### Eliminated "questions that should never have been asked" (this build)
+- "Why did publishing not trigger?" -> publish now triggers the recipe.
+- "Where are my marketing/website/media assets?" -> one Publication Assets download.
+- "Which module owns marketing?" -> inherited from existing owners; Founder never chooses.
+- "Why do I have to run this again?" -> automatic; re-run available but not required.
+
+### Method note
+Measured during implementation, not before (QRU-consistent: "measure while walking"). This is the official FEU baseline for future modernization deltas.

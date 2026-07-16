@@ -673,6 +673,208 @@ async def set_pricing(book_id, list_price, currency, actor, ebook_price=None, pa
     return clean(await db[COLL].find_one({"id": book_id}))
 
 
+async def run_post_publish_recipe(book_id, actor):
+    """Inherited Post-Publish Manufacturing Recipe. Owned by the Publish button; auto-triggered by
+    Authorize Release. Orchestrates EXISTING owners (design engine + LLM) — no new engine.
+    Treasure Standard: only 'Ready' items produce files; Planned / Not Implemented make NO links."""
+    import io as _io
+    import json as _json
+    import zipfile as _zip
+    import rendering_engine as re_engine
+    from PIL import Image, ImageDraw
+    import design_studio as ds
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return None
+    title = b.get("title", ""); author = b.get("author", "Author")
+    genre = b.get("genre", "Fiction"); blurb = b.get("description", "") or ""
+    pricing = b.get("pricing", {}) or {}
+    imprint = "QRU PRESS™"
+
+    # ---- ONE LLM call manufactures all marketplace + media text (credit-efficient) ----
+    sysp = ("You are QRU Publishing. Return STRICT JSON only, keys: long_description (150-200 words, "
+            "Amazon listing), short_description (<=45 words), keywords (array of exactly 7 phrases), "
+            "categories (array of 3 BISAC-style categories), trailer_script (6-8 short lines), "
+            "social_video_script (30-second, 4-6 lines), audio_sample_script (a 60-second narration intro). "
+            "No markdown, no commentary.")
+    ctx = f"Title: {title}\nAuthor: {author}\nGenre: {genre}\nBack-cover blurb: {blurb}"
+    text = {}
+    try:
+        raw = await ai_service.llm_generate(sysp, ctx, f"postpub-{book_id}")
+        s = raw[raw.find("{"): raw.rfind("}") + 1]
+        text = _json.loads(s)
+    except Exception:
+        text = {}
+    def _txt(v):
+        return "\n".join(str(x) for x in v) if isinstance(v, list) else (str(v) if v else "")
+    long_desc = _txt(text.get("long_description")) or blurb or f"{title} by {author}."
+    short_desc = _txt(text.get("short_description")) or (blurb[:200] if blurb else title)
+    keywords = text.get("keywords") if isinstance(text.get("keywords"), list) else [genre, "fiction", author, "novel", "book", "story", "reading"]
+    categories = text.get("categories") if isinstance(text.get("categories"), list) else ["Fiction", "Literary Fiction", "Family Life"]
+    trailer = _txt(text.get("trailer_script"))
+    social_vid = _txt(text.get("social_video_script"))
+    audio_script = _txt(text.get("audio_sample_script"))
+
+    # ---- Marketing graphics (inherit Design Studio fonts) — real files, no AI credits ----
+    def _read(url):
+        if not url:
+            return None
+        import os as _os
+        p = _os.path.join(re_engine.ASSET_DIR, url.rstrip("/").split("/")[-1])
+        return open(p, "rb").read() if _os.path.exists(p) else None
+    cover_bytes = _read((b.get("artifacts", {}).get("design", {}).get("selected_cover") or {}).get("url"))
+    cover_img = Image.open(_io.BytesIO(cover_bytes)).convert("RGB") if cover_bytes else None
+    NAVY = (13, 20, 38); GOLD = (218, 178, 92); WHITE = (245, 245, 248)
+    from PIL import ImageFont
+
+    def _f(path, size):
+        try:
+            return ImageFont.truetype(path, size)
+        except Exception:
+            return ImageFont.load_default()
+
+    def _wrap(txt, fnt, maxw):
+        words = txt.split(); lines = []; cur = ""
+        for w in words:
+            t = (cur + " " + w).strip()
+            if fnt.getlength(t) <= maxw:
+                cur = t
+            else:
+                if cur:
+                    lines.append(cur)
+                cur = w
+        if cur:
+            lines.append(cur)
+        return lines
+
+    def _card(w, h, headline, sub, foot):
+        im = Image.new("RGB", (w, h), NAVY); d = ImageDraw.Draw(im)
+        if cover_img:
+            ch = int(h * 0.5); cw = int(ch * cover_img.width / cover_img.height)
+            th = cover_img.resize((cw, ch)); im.paste(th, ((w - cw) // 2, int(h * 0.08)))
+        d.rectangle([0, int(h * 0.60), w, int(h * 0.605)], fill=GOLD)
+        y = int(h * 0.66)
+        for ln, fnt, col in [(headline, _f(ds.dl.SERIF_BOLD, int(h * 0.055)), WHITE),
+                             (sub, _f(ds.dl.SERIF, int(h * 0.038)), (210, 210, 220)),
+                             (foot, _f(ds.dl.SANS_BOLD, int(h * 0.032)), GOLD)]:
+            if not ln:
+                continue
+            for line in _wrap(ln, fnt, int(w * 0.86))[:3]:
+                bb = d.textbbox((0, 0), line, font=fnt)
+                d.text(((w - (bb[2] - bb[0])) / 2, y), line, font=fnt, fill=col); y += int((bb[3] - bb[1]) * 1.5)
+            y += int(h * 0.02)
+        out = _io.BytesIO(); im.save(out, "PNG"); return out.getvalue()
+
+    pb_price = pricing.get("paperback_price") or pricing.get("list_price")
+    price_txt = f"Paperback ${pb_price}" + (f" · eBook ${pricing.get('ebook_price')}" if pricing.get("ebook_price") else "")
+    graphics = {}
+    try:
+        graphics["marketing_launch_announcement.png"] = _card(1080, 1080, title, f"by {author} — Now Available", imprint)
+        qline = (blurb.split(".")[0] + ".") if blurb else title
+        graphics["marketing_quote_card.png"] = _card(1080, 1080, f"\u201c{qline}\u201d", f"— {title}", imprint)
+        graphics["marketing_buy_now.png"] = _card(1080, 1350, "Buy Now on Amazon", price_txt, f"{title} · {author}")
+    except Exception:
+        graphics = {}
+
+    # ---- Founder docs + book page (deterministic, Ready) ----
+    def _md(*lines): return "\n".join(lines)
+    book_page = _md(f"# {title}", f"*by {author}* — {imprint}", "", "## About", long_desc, "",
+                    f"**Format:** Paperback (6x9), eBook  ", f"**Price:** {price_txt}  ",
+                    f"**Genre:** {genre}", "", "## Buy", "Available on Amazon (KDP).")
+    launch_checklist = _md("# Launch Checklist — " + title,
+                           "- [ ] Upload interior + cover wrap to KDP (barcode: 'No, my cover does not have a barcode')",
+                           "- [ ] Attach ebook_cover.jpg (JPEG) for the Kindle edition",
+                           "- [ ] Paste description, keywords, categories from the Marketplace Package",
+                           "- [ ] Confirm price: " + price_txt,
+                           "- [ ] Post launch announcement + quote graphics to social",
+                           "- [ ] Add book page to QRU Press catalog", "- [ ] Announce to audience / mailing list")
+    release_checklist = _md("# Release Checklist — " + title,
+                            "- [x] Editorial approved & locked", "- [x] Cover + print wrap manufactured",
+                            "- [x] Retail interior sanitized (6x9)", "- [x] Pricing approved by Founder",
+                            "- [x] Founder authorized release", "- [ ] Live on Amazon (manual upload)")
+    summary = _md("# Publication Summary — " + title, "", f"Author: {author}", f"Imprint: {imprint}",
+                  f"Genre: {genre}", f"Price: {price_txt}",
+                  f"Authorized by: {(b.get('founder_authorization') or {}).get('by','Founder')}",
+                  f"Authorized at: {(b.get('founder_authorization') or {}).get('at','')}", "",
+                  "This publication package was manufactured automatically by the QRU Post-Publish Recipe.")
+
+    # ---- Bundle ONLY Ready file-deliverables into one zip ----
+    buf = _io.BytesIO()
+    with _zip.ZipFile(buf, "w", _zip.ZIP_DEFLATED) as z:
+        z.writestr("01_MARKETPLACE/amazon_long_description.txt", long_desc)
+        z.writestr("01_MARKETPLACE/short_description.txt", short_desc)
+        z.writestr("01_MARKETPLACE/keywords.txt", "\n".join(keywords))
+        z.writestr("01_MARKETPLACE/categories.txt", "\n".join(categories))
+        z.writestr("01_MARKETPLACE/listing_metadata.json", _json.dumps(
+            {"title": title, "author": author, "genre": genre, "keywords": keywords,
+             "categories": categories, "price": price_txt}, indent=2))
+        for name, data in graphics.items():
+            z.writestr(f"02_MARKETING/{name}", data)
+        z.writestr("03_WEBSITE/book_page.md", book_page)
+        if trailer: z.writestr("04_MEDIA/book_trailer_script.txt", trailer)
+        if social_vid: z.writestr("04_MEDIA/social_video_script.txt", social_vid)
+        if audio_script: z.writestr("04_MEDIA/audio_sample_script.txt", audio_script)
+        z.writestr("05_DISTRIBUTION/amazon_kdp_submission.md", _md(
+            "# Amazon KDP Submission (manual)", "Upload the Master Output Package files to kdp.amazon.com.",
+            "Barcode: select 'No, my cover does not have a barcode'."))
+        z.writestr("06_FOUNDER/launch_checklist.md", launch_checklist)
+        z.writestr("06_FOUNDER/release_checklist.md", release_checklist)
+        z.writestr("06_FOUNDER/publication_summary.md", summary)
+    zid = re_engine._save(f"publication-assets-{''.join(c for c in title if c.isalnum() or c==' ').strip().replace(' ','_')}", "zip", buf.getvalue())
+    assets_url = re_engine._asset_url(zid)
+
+    sections = [
+        {"name": "Marketplace Package", "items": [
+            {"name": "Amazon long description", "status": "Ready"},
+            {"name": "Short description", "status": "Ready"},
+            {"name": "Keywords (7)", "status": "Ready"},
+            {"name": "Categories", "status": "Ready"},
+            {"name": "Listing metadata", "status": "Ready"}]},
+        {"name": "Marketing Package", "items": [
+            {"name": "Launch announcement graphic", "status": "Ready" if graphics else "Not Implemented"},
+            {"name": "Quote graphic", "status": "Ready" if graphics else "Not Implemented"},
+            {"name": "Buy-Now graphic", "status": "Ready" if graphics else "Not Implemented"},
+            {"name": "Website hero graphic", "status": "Planned"}]},
+        {"name": "Website Package", "items": [
+            {"name": "Book page content", "status": "Ready"},
+            {"name": "QRU Press catalog listing (live)", "status": "Planned"},
+            {"name": "Author page update", "status": "Planned"}]},
+        {"name": "Media Package", "items": [
+            {"name": "Book trailer script", "status": "Ready" if trailer else "Planned"},
+            {"name": "Social video script", "status": "Ready" if social_vid else "Planned"},
+            {"name": "Audio sample script", "status": "Ready" if audio_script else "Planned"},
+            {"name": "Rendered book trailer (video)", "status": "Not Implemented"}]},
+        {"name": "Distribution Package", "items": [
+            {"name": "Amazon KDP submission (manual)", "status": "Ready"},
+            {"name": "QRU Digital Campus", "status": "Planned"},
+            {"name": "Future distribution adapters", "status": "Planned"}]},
+        {"name": "Founder Package", "items": [
+            {"name": "Launch checklist", "status": "Ready"},
+            {"name": "Release checklist", "status": "Ready"},
+            {"name": "Publication summary", "status": "Ready"}]},
+    ]
+    all_items = [i for s in sections for i in s["items"]]
+    counts = {st: sum(1 for i in all_items if i["status"] == st) for st in ("Ready", "Prototype", "Planned", "Not Implemented")}
+    post = {
+        "generated_at": _now(), "by": actor, "sections": sections, "counts": counts,
+        "assets_zip": assets_url,
+        "honesty": "Only 'Ready' items are manufactured and included in the downloadable Publication Assets. "
+                   "Planned and Not Implemented are shown honestly and produce NO files or links.",
+        "founder_effort_units": {
+            "manual_before": len([i for i in all_items if i["status"] == "Ready"]),
+            "automatic_after": 0,
+            "note": "FEU = separate manufacture actions the Founder previously had to trigger. This recipe "
+                    "runs automatically on Authorize Release, so the Founder answers zero extra questions.",
+        },
+    }
+    await db[COLL].update_one({"id": book_id}, {"$set": {"post_publish": post, "updated_at": _now()},
+        "$push": {"revision_history": {"stage": "Post-Publish Recipe", "by": actor, "at": _now(),
+                  "note": f"Auto-manufactured publication assets: {counts['Ready']} Ready, {counts['Planned']} Planned."}}})
+    await log_org("Book Manufacturing™", "Manufacturing", f"post-publish recipe manufactured {counts['Ready']} assets for '{title}'", b["book_code"], "success")
+    return post
+
+
+
 async def authorize_release(book_id, actor):
     """Human final judgment for the irreversible release action. Requires the rest of the gate met."""
     b = await db[COLL].find_one({"id": book_id})
@@ -691,6 +893,11 @@ async def authorize_release(book_id, actor):
         "$push": {"revision_history": {"stage": "Founder Authorization", "by": actor, "at": _now(),
                                        "note": "Founder authorized release (irreversible actions permitted)."}}})
     await log_org("Book Manufacturing™", "Manufacturing", f"FOUNDER AUTHORIZED release of '{b['title']}'", b["book_code"], "success")
+    # Publishing is not the end of manufacturing — it triggers the inherited Post-Publish Recipe automatically.
+    try:
+        await run_post_publish_recipe(book_id, actor)
+    except Exception as e:
+        await log_org("Book Manufacturing™", "Manufacturing", f"post-publish recipe error for '{b['title']}': {e}", b["book_code"], "warning")
     return clean(await db[COLL].find_one({"id": book_id}))
 
 

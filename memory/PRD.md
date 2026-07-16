@@ -667,3 +667,39 @@ Founder chose 1c / 2a / 3b. Implemented (backend curl-verified + frontend testin
 ### HOLD
 - Decoder Engine™ Stone 3 still ON HOLD until Founder completes the KDP upload of The Understanding Tree.
 
+
+---
+
+## CHANGELOG — 2026-07-16 (Post-Publish Recipe + Honest Deliverables + FEU baseline)
+
+### Context
+Founder froze new-feature dev; directed modernization by *wiring existing capabilities*, not building new ones. Governing objective: "Every founder action should either create knowledge, manufacture value, or improve the standard; everything else disappears behind inherited automation." Metric: **Founder Effort Units (FEU)** = questions the Founder should never have had to answer.
+
+### Shipped (backend curl/direct-verified; frontend compiles clean)
+1. **Post-Publish Manufacturing Recipe** — `run_post_publish_recipe()` in `book_manufacturing.py`, **auto-triggered by `authorize_release()`** (Publish owns it). Orchestrates EXISTING owners (no new engine): `ai_service` (marketplace text + media scripts), Design-Studio fonts (marketing graphics via PIL), deterministic Founder docs. Manufactures 6 packages: Marketplace, Marketing, Website, Media, Distribution, Founder.
+2. **Honest deliverables** — every item labeled **Ready / Prototype / Planned / Not Implemented**. Only *Ready* items are manufactured into one downloadable **Publication Assets** zip; Planned/Not-Implemented produce NO files/links. Verified on The Understanding Tree: 16 Ready, 5 Planned, 1 Not Implemented.
+3. Routes: `GET /books/{id}/post-publish`, `POST /books/{id}/post-publish/run`.
+4. Frontend: `PostPublishPanel` on the Publish tab (status badges + single assets download); auto-refreshes after Authorize Release.
+5. **FEU operational baseline recorded** in `/app/memory/FACTORY_AUDIT.md`: Publish→assets went from **16 manual actions → 0** (one click).
+
+### Also this session (KDP compliance fixes, all verified)
+- Interior A4 → true **6×9** (removed full-bleed cover page from interior).
+- Cover wrap: clean solid **2.0×1.2 barcode clear-zone** (0 non-white px), dark contrast panel behind back-cover text, imprint moved clear of barcode.
+- eBook cover: added KDP-compliant **JPEG 1600×2560** (PNG isn't accepted by KDP).
+- Master package: now includes the cover wrap; deliverables de-duplicated (was 11 stale/broken links → 1 current); superseded files deleted from disk.
+- Infra: cleared 2.9 GB orphaned `media_masters` (had filled the /app volume → MongoDB ENOSPC crash); capped-storage recommended in audit.
+
+### Governance / architecture baseline
+- `/app/memory/FACTORY_AUDIT.md` = official modernization baseline (6 reports + FEU).
+- Architecture review answered: **Website Publishing owner = QRU Storefront/Consumer Campus** (`commerce.py` + `routers/consumer.py`), NOT Distribution Center (external) or Partner Integration Layer.
+
+### Known / honest status
+- Founder set a permanent password; temp `QruFounder2026!` no longer works (see test_credentials.md). Founder-only (super_admin) artifacts are regenerated via direct backend calls.
+- Post-Publish "Planned" items: live catalog listing, author page, QRU Digital Campus, future distribution adapters, rendered video (Not Implemented).
+
+### Next (ranked, from audit — awaiting Founder go)
+- Complete Website Publishing (book+author page from Book Record) in Storefront/Campus.
+- Inheritance-over-merge pass on manufacturing engines (classify by responsibility, not file count).
+- Founder cockpit: thin nav (~8) while keeping internals behind it.
+- Remove dead code: `_run_proof.py`, `backfill_marketing.py`, `qru_governance.py`, `constitution_v1.py`.
+
