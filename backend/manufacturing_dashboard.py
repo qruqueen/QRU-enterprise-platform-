@@ -205,6 +205,7 @@ async def all_products():
             "status": p.get("status") or "Draft", "tone": _tone_for(p.get("status")),
             "updated_at": p.get("updated_at") or p.get("created_at"),
             "download": (pdf or {}).get("url"), "badges": badges, "publishable": publishable,
+            "has_manifest": mf.has_deliverable("publication", p),
             "route": "/cover-studio" if not published else "/store",
             "audiobook_url": (p.get("audiobook") or {}).get("url") if (p.get("audiobook") or {}).get("status") == "READY" else None,
         })
@@ -224,6 +225,7 @@ async def all_products():
             "tone": _tone_for(rs or m.get("status")),
             "updated_at": m.get("created_at"), "download": None, "badges": badges,
             "publishable": mf.is_sellable("media", m) and not m.get("store_published"),
+            "has_manifest": mf.has_deliverable("media", m),
             "route": "/storyboard-studio", "audiobook_url": None,
         })
 
@@ -237,6 +239,7 @@ async def all_products():
             "updated_at": a.get("created_at"),
             "download": f"/api/publishing/poster/{a['id']}/file?format=png", "badges": badges,
             "publishable": mf.is_sellable("poster", a) and not a.get("store_published"),
+            "has_manifest": mf.has_deliverable("poster", a),
             "route": "/poster-studio", "audiobook_url": None,
         })
 
@@ -250,6 +253,7 @@ async def all_products():
             "tone": _tone_for(i.get("status")),
             "updated_at": i.get("created_at"), "download": f.get("url"), "badges": badges,
             "publishable": mf.is_sellable("recipe", i) and not i.get("store_published"),
+            "has_manifest": mf.has_deliverable("recipe", i),
             "route": "/knowledge-manufacturing", "audiobook_url": None,
         })
 

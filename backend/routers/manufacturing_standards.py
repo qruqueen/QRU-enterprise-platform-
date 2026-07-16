@@ -79,3 +79,12 @@ async def publish(data: PublishInput, user=Depends(get_current_user)):
     if res.get("error"):
         raise HTTPException(400, res["error"])
     return res
+
+
+@router.get("/manifest/{engine}/{product_id}")
+async def product_manifest(engine: str, product_id: str, user=Depends(get_current_user)):
+    """Surface a product's Product Manifest™ (PMF™ = EVIDENCE)."""
+    res = await mf.get_or_build_manifest(engine, product_id, user.get("name", "Founder"))
+    if res.get("error"):
+        raise HTTPException(404, res["error"])
+    return res

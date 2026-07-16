@@ -12,6 +12,15 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## PMF™ (Evidence) Surfaced in the Founder UI ✅ (2026-07-16, deterministic/$0, screenshot-verified)
+Adopted the Founder's decision filter ("make every future product family INHERIT the reference implementation"). Highest-leverage item done: provenance is now visible for every product.
+- **`manufacturing_foundation.get_or_build_manifest(engine, id)`** — returns the stored PMF or builds one ON DEMAND (deterministic, $0) for ANY manufactured product with a real deliverable (published or not). `has_deliverable()` helper added. Endpoint `GET /api/manufacturing/manifest/{engine}/{id}`.
+- **`all_products()`** now returns `has_manifest` per product (has manifest OR a real deliverable → buildable).
+- **Reusable `ManifestDialog` component** (`/app/frontend/src/components/ManifestDialog.js`) renders the PMF sections: Source Intelligence (UKR™=Truth: Knowledge Record ID, Knowledge Title, Published Title, UKR/PMS versions) · Inherited Standards (7 chips) · Assets & Production · Quality (Treasure Standard) · Distribution · Governance · Enterprise Memory. Loads via useEffect on open.
+- **Wired into 2 surfaces:** My Products / ProductShelf ("Manifest™" button on every product with a deliverable) + Book Manufacturing PostPublishPanel ("View Product Manifest™" button, uses `/book-mfg/books/{id}/manifest`).
+- **Bonus:** publication products published BEFORE the PMF system existed now get their PMF built on-demand, correctly referencing their source UKR (verified live: a forex Book → KR-00074, 7 inherited standards).
+
+
 ## Universal Cover-Legibility Fix + BOOK-0011 Full-Cycle Capstone ✅ (2026-07-16)
 Founder flagged the print cover wrap: title unreadable over busy art + weird/ghosted back cover. Fixed in the SHARED composer so it applies to EVERY product (one design owner — no per-product rework):
 - **`design_studio.compose()` (front/all covers):** title+subtitle now drawn inside a SOLID rounded legibility panel (rgba 10,8,22,210) so text is readable over ANY artwork; subtitle capped to 2 lines (+ ellipsis) so a long description never crowds the cover. Used by `manufacture_bytes` → every product kind (cover, poster, workbook, card, deck). Verified on bright/busy worst-case image.

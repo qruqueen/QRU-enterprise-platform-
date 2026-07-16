@@ -3,9 +3,10 @@ import api, { formatApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge, MetricCard } from "@/components/qru";
+import { ManifestDialog } from "@/components/ManifestDialog";
 import {
   Upload, SpellCheck, Palette, Mic, Video, Send, Activity, Loader2, CheckCircle2,
-  Lock, FileText, ShieldCheck, ChevronRight, BookOpen, AlertTriangle, Download, MapPin, Share2, Play, DollarSign, ClipboardCheck, Sparkles,
+  Lock, FileText, ShieldCheck, ChevronRight, BookOpen, AlertTriangle, Download, MapPin, Share2, Play, DollarSign, ClipboardCheck, Sparkles, FileCheck2,
 } from "lucide-react";
 
 const ICONS = { upload: Upload, "spell-check": SpellCheck, palette: Palette, mic: Mic, video: Video, send: Send, activity: Activity };
@@ -1038,6 +1039,7 @@ function PrintWrapPanel({ book, busy, doPrintWrap }) {
 const PP_TONE = { "Ready": "emerald", "Prototype": "amber", "Planned": "slate", "Not Implemented": "red" };
 
 function PostPublishPanel({ postPub, book }) {
+  const [showManifest, setShowManifest] = useState(false);
   if (!book) return null;
   if (!postPub || postPub.not_run || !postPub.sections?.length) {
     return (
@@ -1059,7 +1061,12 @@ function PostPublishPanel({ postPub, book }) {
             <Download className="w-4 h-4" /> Download Publication Assets
           </a>
         )}
+        <button onClick={() => setShowManifest(true)} data-testid="view-manifest-btn"
+          className={`${postPub.assets_zip ? "" : "ml-auto "}inline-flex items-center gap-1.5 border border-royal/40 text-royal px-3 py-1.5 rounded-md text-sm font-bold hover:bg-royal/5`}>
+          <FileCheck2 className="w-4 h-4" /> View Product Manifest™
+        </button>
       </div>
+      <ManifestDialog bookId={book.id} name={book.title} open={showManifest} onOpenChange={setShowManifest} />
       <div className="grid sm:grid-cols-2 gap-3" data-testid="pp-sections">
         {postPub.sections.map((s, i) => (
           <div key={i} className="rounded-lg border border-border/60 p-3 bg-card">

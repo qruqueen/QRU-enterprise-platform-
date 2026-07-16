@@ -4,7 +4,8 @@ import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge } from "@/components/qru";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Search, Download, Headphones, ArrowRight, PackageOpen, BookText, Clapperboard, LayoutTemplate, FileText, Rocket } from "lucide-react";
+import { Loader2, Search, Download, Headphones, ArrowRight, PackageOpen, BookText, Clapperboard, LayoutTemplate, FileText, Rocket, FileCheck2 } from "lucide-react";
+import { ManifestDialog } from "@/components/ManifestDialog";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
 const ENGINES = [
@@ -22,6 +23,7 @@ export default function ProductShelf() {
   const [q, setQ] = useState("");
   const [engine, setEngine] = useState("all");
   const [publishing, setPublishing] = useState(null);
+  const [manifestFor, setManifestFor] = useState(null);
 
   const publish = async (p) => {
     setPublishing(p.id);
@@ -118,6 +120,12 @@ export default function ProductShelf() {
                       {publishing === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Rocket className="w-3 h-3" />} Publish for Distribution
                     </button>
                   )}
+                  {p.has_manifest && (
+                    <button onClick={() => setManifestFor(p)} data-testid={`shelf-manifest-${p.id}`}
+                      className="text-[10px] text-navy/70 inline-flex items-center gap-1 hover:text-royal font-semibold">
+                      <FileCheck2 className="w-3 h-3" /> Manifest™
+                    </button>
+                  )}
                   <button onClick={() => nav(p.kr_id ? `${p.route}?kr=${p.kr_id}` : p.route)} data-testid={`shelf-open-${p.id}`} className="text-[10px] text-navy inline-flex items-center gap-0.5 hover:text-royal font-semibold">Open <ArrowRight className="w-3 h-3" /></button>
                 </div>
               </div>
@@ -125,6 +133,10 @@ export default function ProductShelf() {
           </div>
         )}
       </Panel>
+      {manifestFor && (
+        <ManifestDialog engine={manifestFor.engine} productId={manifestFor.id} name={manifestFor.name}
+          open={!!manifestFor} onOpenChange={(o) => !o && setManifestFor(null)} />
+      )}
     </div>
   );
 }

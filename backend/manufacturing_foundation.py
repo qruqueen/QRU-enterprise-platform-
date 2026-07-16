@@ -311,6 +311,14 @@ def is_sellable(engine, d):
     return sellable
 
 
+def has_deliverable(engine, d):
+    """Does this product have a real rendered deliverable (so a PMF™ can be built)?"""
+    if d.get("product_manifest"):
+        return True
+    _, file_url, _, _ = _resolve_listing(engine, d)
+    return bool(file_url)
+
+
 async def publish_product(engine, source_id, actor):
     """SHARED Foundation publish. Returns {ok, listing, manifest} or {error}."""
     coll = _ENGINE_COLL.get(engine)
@@ -378,3 +386,45 @@ async def publish_product(engine, source_id, actor):
     if engine != "publication":
         await db[coll].update_one({"id": source_id}, {"$set": {"product_manifest": manifest}})
     return {"ok": True, "listing_id": listing_id, "price": listing.get("price"), "manifest": manifest}
+
+
+
+async def get_or_build_manifest(engine, source_id, actor="Founder"):
+    """Surface a product's PMF™ (EVIDENCE). Returns the stored manifest, or builds one on demand
+    (deterministic, $0) for any manufactured product that has a real deliverable — so every product
+    can show 'exactly what happened during manufacturing', published or not."""
+    coll = _ENGINE_COLL.get(engine)
+    if not coll:
+        return {"error": f"Unknown engine '{engine}'."}
+    d = await db[coll].find_one({"id": source_id}, {"_id": 0})
+    if not d:
+        return {"error": "Product not found."}
+    if d.get("product_manifest"):
+        return d["product_manifest"]
+    fields, file_url, _sellable, reason = _resolve_listing(engine, d)
+    if not file_url:
+        return {"not_generated": True,
+                "note": "No manufacturing evidence yet — this product has no rendered deliverable. " + (reason or "")}
+    source_ukr = None
+    krid = fields.get("knowledge_record_id")
+    if krid:
+        source_ukr = await db[ukr.CANONICAL_COLLECTION].find_one({"id": krid}, {"_id": 0}) \
+            or await db[ukr.CANONICAL_COLLECTION].find_one({"kr_code": krid}, {"_id": 0})
+    published = bool(d.get("store_published") or d.get("status") == "Published")
+    product = {"product_type": fields["product_type"],
+               "product_family": (get_pms(fields["product_type"]) or {}).get("product_family", fields["product_type"]),
+               "title": fields["title"], "published_title": fields["title"],
+               "book_code": d.get("product_code") or d.get("id"), "id": source_id}
+    manifest = build_manifest(
+        product=product, source_ukr=source_ukr,
+        quality={"validation_status": "PASS", "verification_status": (source_ukr or {}).get("verification_status", "Manufactured"),
+                 "treasure_standard": "Honest states only — real deliverable verified"},
+        distribution={"publishing_targets": ["QRU Store™"], "product_status": "Published" if published else "Manufactured (not yet published)",
+                      "channels": ["QRU Store™", "Public Consumer Catalog"] if published else [],
+                      "launch_status": "Live" if published else "Not published"},
+        governance={"source_engine": engine, "provenance": d.get("provenance", {})},
+        assets={"primary_deliverable": file_url, "cover": fields.get("cover_url")},
+        production={"files_produced": [file_url], "export_formats": [fields["product_type"]]},
+        actor=actor)
+    await db[coll].update_one({"id": source_id}, {"$set": {"product_manifest": manifest}})
+    return manifest
