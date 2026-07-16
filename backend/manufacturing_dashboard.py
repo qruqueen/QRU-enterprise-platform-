@@ -189,6 +189,8 @@ async def all_products():
         cd = p.get("customer_deliverable") or {}
         pdf = next((f for f in cd.get("files", []) if f.get("format") == "pdf"), None)
         published = (p.get("status") == "Published")
+        publishable = (not published and bool(p.get("creative_brief"))
+                       and p.get("creative_status") == "Reviewed" and bool(p.get("verified")))
         badges = []
         if published:
             badges.append("In QRU Store")
@@ -199,7 +201,7 @@ async def all_products():
             "engine": "publication", "kr_id": p.get("knowledge_record_id"), "topic": topics.get(p.get("knowledge_record_id")) or p.get("topic"),
             "status": p.get("status") or "Draft", "tone": _tone_for(p.get("status")),
             "updated_at": p.get("updated_at") or p.get("created_at"),
-            "download": (pdf or {}).get("url"), "badges": badges,
+            "download": (pdf or {}).get("url"), "badges": badges, "publishable": publishable,
             "route": "/cover-studio" if not published else "/store",
             "audiobook_url": (p.get("audiobook") or {}).get("url") if (p.get("audiobook") or {}).get("status") == "READY" else None,
         })

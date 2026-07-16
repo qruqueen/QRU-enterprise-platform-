@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge } from "@/components/qru";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Search, Download, Headphones, ArrowRight, PackageOpen, BookText, Clapperboard, LayoutTemplate, FileText } from "lucide-react";
+import { Loader2, Search, Download, Headphones, ArrowRight, PackageOpen, BookText, Clapperboard, LayoutTemplate, FileText, Rocket } from "lucide-react";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
 const ENGINES = [
@@ -20,6 +21,28 @@ export default function ProductShelf() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [engine, setEngine] = useState("all");
+  const [publishing, setPublishing] = useState(null);
+
+  const publish = async (p) => {
+    setPublishing(p.id);
+    try {
+      await api.patch(`/products/${p.id}/status`, { status: "Published" });
+      setData((d) => ({
+        ...d,
+        products: d.products.map((x) =>
+          x.id === p.id && x.engine === "publication"
+            ? { ...x, status: "Published", tone: "green", route: "/store", badges: [...(x.badges || []).filter((b) => b !== "In QRU Store"), "In QRU Store"] }
+            : x
+        ),
+      }));
+      toast.success("Published for distribution", { description: `${p.name} is now live in the QRU Store™.` });
+    } catch (e) {
+      const msg = e?.response?.data?.detail || "Publishing is blocked — the product must pass its review gate first.";
+      toast.error("Not published", { description: msg });
+    } finally {
+      setPublishing(null);
+    }
+  };
 
   useEffect(() => {
     api.get("/media-studio/products-shelf")
@@ -88,6 +111,12 @@ export default function ProductShelf() {
                   )}
                   {p.download && (
                     <a href={`${BACKEND}${p.download}`} target="_blank" rel="noreferrer" data-testid={`shelf-download-${p.id}`} className="text-[10px] text-royal inline-flex items-center gap-1 hover:underline"><Download className="w-3 h-3" /> Download</a>
+                  )}
+                  {p.engine === "publication" && p.status !== "Published" && p.publishable && (
+                    <button onClick={() => publish(p)} disabled={publishing === p.id} data-testid={`shelf-publish-${p.id}`}
+                      className="text-[10px] font-semibold text-white bg-royal hover:bg-navy disabled:opacity-50 rounded-full px-2.5 py-1 inline-flex items-center gap-1 transition-colors">
+                      {publishing === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Rocket className="w-3 h-3" />} Publish for Distribution
+                    </button>
                   )}
                   <button onClick={() => nav(p.kr_id ? `${p.route}?kr=${p.kr_id}` : p.route)} data-testid={`shelf-open-${p.id}`} className="text-[10px] text-navy inline-flex items-center gap-0.5 hover:text-royal font-semibold">Open <ArrowRight className="w-3 h-3" /></button>
                 </div>

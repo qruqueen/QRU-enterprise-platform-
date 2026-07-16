@@ -12,6 +12,14 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## End-to-End Proof + One-Tap Distribution ✅ (2026-07-16, zero new AI credits — all deterministic)
+Founder ask: "make sure it all works with ease — Generate UKR → Manufacture → Publish for distribution — without adding credit." PROVEN end-to-end:
+- **UKR** KR-00078 "Finance — Saving early matters" (verified, v1.1) → **Manufactured** Workbook (real files, review-passed) → **Published** → now LIVE in the QRU Store storefront AND the public consumer catalog (`/api/consumer/catalog`), price auto-set $9.99, purchasable via Stripe (test). Storefront grew 69 → 71.
+- **Publish gate (deterministic, no AI):** `PATCH /api/products/{id}/status → Published` requires `creative_brief` + `creative_status="Reviewed"` + `verified`. `manufacturing_dashboard.all_products()` now returns a `publishable` flag computed from that gate.
+- **NEW one-tap "Publish for Distribution"** on My Products / Product Shelf (`ProductShelf.js`): shows ONLY on `engine=="publication"` rows that are genuinely `publishable` (honest — no fake buttons on media/poster rows that aren't store-wired, and none on Drafts that would 400). Click → PATCH → success toast → row flips to "Published · In QRU Store". UI-verified E2E (111→110 eligible after one publish). 111 products currently one-tap eligible; 71 live in store.
+- **Honest gap noted:** media/poster/recipe-engine products are NOT yet store-publishable (not in `db.products` with the review gate). Book line remains the fullest path. As each product family re-bases on the Manufacturing Foundation™/PMS™, it will inherit this publish path.
+
+
 ## Constitutional Manufacturing Spine — UKR™ → PMS™ → PMF™ ✅ (2026-07-16, testing_agent iteration_79: 16/16 backend PASS, 0 issues)
 Founder constitutional architecture — three artifacts, three owners, zero overlap:
 **UKR™ = TRUTH · PMS™ = INSTRUCTIONS · PMF™ = EVIDENCE.** "No product may manufacture without an approved PMS™."
