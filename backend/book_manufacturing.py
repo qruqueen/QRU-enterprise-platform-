@@ -20,6 +20,8 @@ from org_activity import log_org
 import book_structure as bs
 import product_governance as pg
 import manufacturing_recipes as recipes
+import manufacturing_foundation as mf
+import ukr_standard as ukr
 import ai_service
 
 COLL = "book_records"
@@ -1670,6 +1672,91 @@ async def master_package(book_id):
     }
 
 
+async def _resolve_source_ukr(b):
+    """Resolve the canonical UKR™ that a book inherited from (via the Decoder bridge), if any.
+    Manuscript-originated books honestly have no UKR — the PMF records that truthfully."""
+    sd = b.get("source_decoder") or {}
+    kr_ids = sd.get("source_kr_ids") or []
+    for k in kr_ids:
+        kr_code = (k.get("kr_code") if isinstance(k, dict) else None)
+        kr_id = (k.get("kr_id") if isinstance(k, dict) else k)
+        doc = None
+        if kr_code:
+            doc = await db[ukr.CANONICAL_COLLECTION].find_one({"kr_code": kr_code}, {"_id": 0})
+        if not doc and kr_id:
+            doc = await db[ukr.CANONICAL_COLLECTION].find_one({"id": kr_id}, {"_id": 0})
+        if doc:
+            return doc
+    return None
+
+
+async def build_product_manifest(book_id, actor):
+    """Generate the Product Manifest™ (PMF™ = EVIDENCE) for a manufactured book and persist it.
+    Constitutional gate: no product manufactures without an approved PMS™."""
+    b = await db[COLL].find_one({"id": book_id}, {"_id": 0})
+    if not b:
+        return None
+    product_type = b.get("product_type", "Book")
+    ok, pms = mf.require_pms(product_type)
+    if not ok:
+        return {"error": pms.get("error")}
+
+    source_ukr = await _resolve_source_ukr(b)
+    design_art = b.get("artifacts", {}).get("design", {}) or {}
+    sanit = b.get("artifacts", {}).get("sanitization", {}) or {}
+    audio_art = b.get("artifacts", {}).get("audio", {}) or {}
+    pc = await publish_center(book_id)
+    gate = pc.get("final_release_gate", {}) if pc else {}
+    post = b.get("post_publish") or {}
+    deliverables = b.get("deliverables", []) or []
+
+    product = {
+        "product_type": product_type, "product_family": pms["product_family"],
+        "title": b.get("title"), "published_title": (sanit.get("publication_metadata", {}) or {}).get("title") or b.get("title"),
+        "book_code": b.get("book_code"), "id": b.get("id"), "edition": b.get("edition", "First Edition"),
+        "related_products": [{"product_type": p.get("product_type"), "book_code": p.get("book_code")}
+                             for p in b.get("related_products", [])],
+    }
+    assets = {
+        "cover": bool(design_art.get("selected_cover")),
+        "print_cover_wrap": bool((design_art.get("print", {}) or {}).get("paperback_cover_wrap")),
+        "ebook_cover_jpeg": bool(design_art.get("selected_cover")),
+        "narration_prototype": bool(audio_art.get("prototype")),
+        "templates": ["QRU Design Studio™", "Reading Experience Standard™"],
+        "brand_assets": ["QRU Press™ imprint"],
+    }
+    production = {
+        "files_produced": [d.get("type") for d in deliverables],
+        "export_formats": pms["manufacturing_specifications"]["output_formats"],
+        "master_package": next((d.get("url") for d in deliverables if d.get("type") == "Master Output Package"), None),
+        "publication_assets": post.get("assets_zip"),
+        "editable_source": bool(b.get("editorial_edition")),
+    }
+    quality = {
+        "validation_status": "PASS" if all(gate.values()) else "INCOMPLETE",
+        "release_gate": gate,
+        "kdp_acceptance": pms["quality_gates"]["acceptance_criteria"],
+        "verification_status": "Verified (source UKR™)" if source_ukr else "Manuscript-originated (no source UKR™)",
+        "treasure_standard": "Honest states only — no fake publishing",
+    }
+    distribution = {
+        "publishing_targets": pms["manufacturing_specifications"]["export_targets"],
+        "product_status": b.get("publication_status", "Draft"),
+        "post_publish_counts": post.get("counts", {}),
+        "launch_status": "Authorized" if (b.get("founder_authorization") or {}).get("authorized") else "Not authorized",
+    }
+    governance = {
+        "review_history": [r for r in b.get("revision_history", []) if r.get("stage") in ("Editorial Lock", "Design", "Founder Authorization", "Post-Publish Recipe")],
+        "approval_history": [{"by": (b.get("founder_authorization") or {}).get("by"), "at": (b.get("founder_authorization") or {}).get("at")}] if (b.get("founder_authorization") or {}).get("authorized") else [],
+        "provenance": b.get("transparent_provenance", {}),
+    }
+    manifest = mf.build_manifest(product=product, source_ukr=source_ukr, quality=quality,
+                                 distribution=distribution, governance=governance, assets=assets,
+                                 production=production, actor=actor)
+    await db[COLL].update_one({"id": book_id}, {"$set": {"product_manifest": manifest, "updated_at": _now()}})
+    return manifest
+
+
 async def assemble_master_package(book_id, actor):
     """ONE click → ONE complete, provenance-stamped publication ZIP (the 10 governed sections)."""
     import json
@@ -1777,6 +1864,13 @@ async def assemble_master_package(book_id, actor):
                        json.dumps(design_art["governance_package"], indent=2, default=str))
         z.writestr("09_RIGHTS_AND_GOVERNANCE/transparent_provenance.json",
                    json.dumps(b.get("transparent_provenance", {}), indent=2, default=str))
+        # 07_METADATA — Product Manifest™ (PMF™ = EVIDENCE of exactly what happened during manufacturing)
+        try:
+            pmf = await build_product_manifest(book_id, actor)
+            if pmf and not pmf.get("error"):
+                z.writestr("07_METADATA/product_manifest.json", json.dumps(pmf, indent=2, default=str))
+        except Exception:
+            pmf = None
         # manifest of what's included vs pending (honest)
         included = [n for n in z.namelist()]
         z.writestr("00_MANIFEST.json", json.dumps({

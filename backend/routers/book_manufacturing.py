@@ -359,3 +359,23 @@ async def kdp_checklist(book_id: str, user=Depends(get_current_user)):
     if r is None:
         raise HTTPException(404, "Book Record not found.")
     return r
+
+
+@router.get("/books/{book_id}/manifest")
+async def get_manifest(book_id: str, user=Depends(get_current_user)):
+    b = await bm.db[bm.COLL].find_one({"id": book_id}, {"_id": 0, "product_manifest": 1})
+    if b is None:
+        raise HTTPException(404, "Book Record not found.")
+    return b.get("product_manifest") or {"not_generated": True,
+        "note": "Product Manifest™ (PMF™) is generated automatically when the Master Output Package is assembled."}
+
+
+@router.post("/books/{book_id}/manifest/build")
+async def build_manifest(book_id: str, user=Depends(require_super_admin)):
+    r = await bm.build_product_manifest(book_id, user.get("name", "Founder"))
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    if r.get("error"):
+        raise HTTPException(400, r["error"])
+    return r
+
