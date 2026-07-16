@@ -277,9 +277,11 @@ import product_publishing as ppub
 
 @router.post("/product/{pid}/publish-store")
 async def publish_to_store(pid: str, user=Depends(get_current_user)):
-    res = await ppub.publish_to_store(pid, user.get("name", "Founder"))
-    if res is None:
-        raise HTTPException(404, "Product not found.")
+    # Delegate to the shared Manufacturing Foundation™ (single publish owner — no duplicate logic).
+    import manufacturing_foundation as mf
+    res = await mf.publish_product("publication", pid, user.get("name", "Founder"))
+    if res.get("error"):
+        raise HTTPException(400, res["error"])
     return res
 
 

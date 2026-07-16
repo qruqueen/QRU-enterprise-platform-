@@ -83,6 +83,7 @@ import FlagshipShowcase from "@/pages/FlagshipShowcase";
 import CreateExperience from "@/pages/CreateExperience";
 import FactoryConcierge from "@/pages/FactoryConcierge";
 import PublishingStandard from "@/pages/PublishingStandard";
+import FoundationMap from "@/pages/FoundationMap";
 import CoverStudio from "@/pages/CoverStudio";
 import PosterStudio from "@/pages/PosterStudio";
 import StoryboardStudio from "@/pages/StoryboardStudio";
@@ -196,6 +197,7 @@ function EnterpriseRoutes() {
         <Route path="create" element={<CreateExperience />} />
         <Route path="concierge" element={<FactoryConcierge />} />
         <Route path="publishing" element={<PublishingStandard />} />
+        <Route path="manufacturing-foundation" element={<FoundationMap />} />
         <Route path="cover-studio" element={<CoverStudio />} />
         <Route path="poster-studio" element={<PosterStudio />} />
         <Route path="storyboard-studio" element={<StoryboardStudio />} />

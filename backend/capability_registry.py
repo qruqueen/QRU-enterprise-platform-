@@ -205,6 +205,8 @@ DEFINITIONS = [
        "Polish every product before the Founder sees it.", "Design QC gate."),
     _c("design-intelligence", "Design Intelligence™", "governance", "active", "design_intelligence.py", "/design-intelligence",
        "Repeat great QRU design.", "Design language & pattern library."),
+    _c("manufacturing-foundation", "Manufacturing Foundation™", "governance", "active", "manufacturing_foundation.py", "/manufacturing-foundation",
+       "See how every engine inherits one shared standard.", "Foundation → PMS™ inheritance map (publish, PMF™ & packaging inherited, not recreated)."),
 
     # ---------- ENTERPRISE & MISSION CONTROL ----------
     _c("factory-map", "Factory Map™", "enterprise", "active", "capability_registry.py", "/factory-map",

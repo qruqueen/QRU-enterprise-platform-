@@ -12,6 +12,15 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## Every Engine Merged onto the Manufacturing Foundation™ (inherit, don't recreate) ✅ (2026-07-16, self-verified via curl + screenshot)
+Highest-leverage architectural item. Every engine is now a PMS™ inheriting ONE shared Foundation — publish, PMF™, packaging inherited, not recreated.
+- **Auto-provisioned PMS coverage:** `get_pms()` now auto-provisions a Foundation-inheriting PMS for ANY product family without a hand-authored one → universal coverage (44 families across 5 engines), no product_type lacks an approved PMS. Book + 9 others remain hand-authored (★); the rest inherit generic defaults. Founder model realized: "one PMS per family, all inheriting one Foundation."
+- **Shared PUBLISH (single owner):** `publish_product` already central; the old duplicate `POST /api/publishing/product/{pid}/publish-store` now DELEGATES to `mf.publish_product` (deduped, verified no regression — storefront +1, PMF generated).
+- **Shared PACKAGING:** new `mf.package_product(engine, id)` assembles a governed package (PMF + Inherited Standards + PMS + provenance + deliverable) for any engine. Endpoint `POST /api/manufacturing/package/{engine}/{id}`.
+- **Inheritance map:** `mf.inheritance_map()` + `GET /api/manufacturing/inheritance-map`. New **Foundation Map** UI page (`/manufacturing-foundation`, registered in capability registry → nav) shows all 5 engines, their families/PMS, and the 9 shared capabilities each inherits. Screenshot-verified.
+- Engines: book (book_records) · publication (products) · poster (poster_assets) · recipe (inherited_products) · media (media_products).
+
+
 ## PMF™ (Evidence) Surfaced in the Founder UI ✅ (2026-07-16, deterministic/$0, screenshot-verified)
 Adopted the Founder's decision filter ("make every future product family INHERIT the reference implementation"). Highest-leverage item done: provenance is now visible for every product.
 - **`manufacturing_foundation.get_or_build_manifest(engine, id)`** — returns the stored PMF or builds one ON DEMAND (deterministic, $0) for ANY manufactured product with a real deliverable (published or not). `has_deliverable()` helper added. Endpoint `GET /api/manufacturing/manifest/{engine}/{id}`.

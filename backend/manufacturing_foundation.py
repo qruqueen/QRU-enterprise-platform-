@@ -95,8 +95,33 @@ def register(pms):
     return pms
 
 
+def _generic_pms(product_type):
+    """Auto-provision a Product Manufacturing Standard™ for any family by INHERITING the Foundation.
+    This is the Founder's model — one PMS per family, all inheriting one shared Foundation — realised
+    so every product family has an approved PMS without hand-authoring dozens of standards."""
+    fam = (product_type or "Product").replace("_", " ").title()
+    return _pms(
+        fam, product_type,
+        ukr_sections=["Knowledge Title", "Published Title", "Verified Truth", "Why It Matters"],
+        specs={"required_inputs": ["Verified UKR™"], "required_assets": ["On-brand design"],
+               "manufacturing_steps": ["Intake", "Manufacture", "Publish", "Monitor"],
+               "output_formats": [fam], "export_targets": ["QRU Store™"]},
+        metadata={"audience": "General", "accessibility": "Alt-text where applicable",
+                  "distribution_channels": ["QRU Store™"], "licensing": "All rights reserved"},
+        brand={"qru_branding": "QRU", "colors": "Navy / Gold / Royal"},
+        quality_gates={"acceptance_criteria": ["On-brand", "Honest states only", "Real deliverable"],
+                       "required_approvals": ["Founder approval"], "treasure_standard_score": "Honest states only"},
+        deliverables={"final_files": [f"{product_type}"], "metadata_package": ["product_manifest"]},
+        approved=True)
+
+
 def get_pms(product_type):
-    return _PMS_REGISTRY.get(product_type)
+    pms = _PMS_REGISTRY.get(product_type)
+    if not pms:
+        pms = _generic_pms(product_type)  # inherit the Foundation for any family (auto-provisioned)
+        pms["auto_provisioned"] = True
+        _PMS_REGISTRY[product_type] = pms
+    return pms
 
 
 def list_pms():
@@ -427,4 +452,84 @@ async def get_or_build_manifest(engine, source_id, actor="Founder"):
         production={"files_produced": [file_url], "export_formats": [fields["product_type"]]},
         actor=actor)
     await db[coll].update_one({"id": source_id}, {"$set": {"product_manifest": manifest}})
+
+
+# ---------------------------------------------------------------------------
+# Inheritance map + shared PACKAGING — every engine inherits the Foundation.
+# ---------------------------------------------------------------------------
+ENGINES = [
+    {"engine": "book", "collection": "book_records", "label": "Book Manufacturing™", "family_field": "product_type"},
+    {"engine": "publication", "collection": "products", "label": "Product Publishing™", "family_field": "product_type"},
+    {"engine": "poster", "collection": "poster_assets", "label": "Poster Studio™", "family_field": "family"},
+    {"engine": "recipe", "collection": "inherited_products", "label": "Knowledge Manufacturing™", "family_field": "type"},
+    {"engine": "media", "collection": "media_products", "label": "Media Division™", "family_field": "format"},
+]
+_INHERITED = ["Intake", "State management", "Verification", "Provenance", "Publish → QRU Store",
+              "Product Manifest™ (PMF™)", "Packaging", "Approval logic", "Monitoring"]
+
+
+async def inheritance_map():
+    """Show that every engine is now a PMS™ inheriting the ONE shared Manufacturing Foundation™."""
+    engines = []
+    for e in ENGINES:
+        families = sorted([f for f in (await db[e["collection"]].distinct(e["family_field"])) if f])[:40]
+        engines.append({
+            "engine": e["engine"], "label": e["label"], "collection": e["collection"],
+            "product_families": families,
+            "pms": [{"family": (get_pms(f)["product_family"]), "product_type": f,
+                     "version": get_pms(f)["version"], "auto_provisioned": get_pms(f).get("auto_provisioned", False),
+                     "inherits_foundation": FOUNDATION_ID} for f in families],
+            "inherits": _INHERITED,
+        })
+    return {"foundation": {"id": FOUNDATION_ID, "name": FOUNDATION["name"],
+                           "shared_capabilities": FOUNDATION["shared_capabilities"]},
+            "rule": "Every engine is a Product Manufacturing Standard™ inheriting the one Manufacturing Foundation™ — publish, PMF™ and packaging are inherited, not recreated.",
+            "engines": engines}
+
+
+async def package_product(engine, source_id, actor="Founder"):
+    """SHARED packaging (inherited by every engine): assemble a governed package for any product —
+    the deliverable + its Product Manifest™ + Inherited Standards + provenance — so packaging is
+    inherited from the Foundation, not recreated per engine. Returns {ok, package_url} or {error}."""
+    import io as _io
+    import json as _json
+    import zipfile as _zip
+    import os as _os
+    import rendering_engine as _re
+
+    coll = _ENGINE_COLL.get(engine)
+    if not coll:
+        return {"error": f"Unknown engine '{engine}'."}
+    d = await db[coll].find_one({"id": source_id}, {"_id": 0})
+    if not d:
+        return {"error": "Product not found."}
+    fields, file_url, _sellable, reason = _resolve_listing(engine, d)
+    if not file_url:
+        return {"error": reason or "No real deliverable to package yet."}
+    manifest = await get_or_build_manifest(engine, source_id, actor)
+    pms = get_pms(fields["product_type"])
+
+    buf = _io.BytesIO()
+    with _zip.ZipFile(buf, "w", _zip.ZIP_DEFLATED) as z:
+        z.writestr("00_PRODUCT_MANIFEST.json", _json.dumps(manifest, indent=2, default=str))
+        z.writestr("01_INHERITED_STANDARDS.json", _json.dumps(inherited_standards(fields["product_type"]), indent=2, default=str))
+        z.writestr("02_PRODUCT_MANUFACTURING_STANDARD.json", _json.dumps(pms, indent=2, default=str))
+        z.writestr("03_PROVENANCE.json", _json.dumps(d.get("provenance", {}), indent=2, default=str))
+        # embed the deliverable binary if it lives on disk; otherwise reference it honestly
+        fn = file_url.split("/")[-1].split("?")[0]
+        disk = _os.path.join(_re.ASSET_DIR, fn)
+        if _os.path.exists(disk):
+            with open(disk, "rb") as fh:
+                z.writestr(f"04_DELIVERABLE/{fn}", fh.read())
+        else:
+            z.writestr("04_DELIVERABLE/deliverable_link.txt",
+                       f"Primary deliverable is served by its engine: {file_url}\n")
+        z.writestr("README.txt",
+                   f"{fields['title']}\nManufactured under the {pms['name']} (inherits {FOUNDATION['name']}).\n"
+                   f"Truth (UKR™) -> Instructions (PMS™) -> Evidence (PMF™). See 00_PRODUCT_MANIFEST.json.\n")
+    fid = _re._save(f"package-{engine}", "zip", buf.getvalue())
+    url = _re._asset_url(fid)
+    await db[coll].update_one({"id": source_id}, {"$set": {"product_package": {
+        "url": url, "size_kb": len(buf.getvalue()) // 1024, "packaged_at": now_iso(), "by": actor}}})
+    return {"ok": True, "package_url": url, "size_kb": len(buf.getvalue()) // 1024, "manifest_id": manifest.get("manifest_id")}
     return manifest

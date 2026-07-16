@@ -88,3 +88,18 @@ async def product_manifest(engine: str, product_id: str, user=Depends(get_curren
     if res.get("error"):
         raise HTTPException(404, res["error"])
     return res
+
+
+@router.get("/inheritance-map")
+async def inheritance_map(user=Depends(get_current_user)):
+    """Every engine as a PMS™ inheriting the one Manufacturing Foundation™."""
+    return await mf.inheritance_map()
+
+
+@router.post("/package/{engine}/{product_id}")
+async def package(engine: str, product_id: str, user=Depends(get_current_user)):
+    """Shared packaging inherited from the Foundation — deliverable + PMF™ + standards + provenance."""
+    res = await mf.package_product(engine, product_id, user.get("name", "Founder"))
+    if res.get("error"):
+        raise HTTPException(400, res["error"])
+    return res
