@@ -12,6 +12,29 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## Post-Publish Verification + Founder Navigation Collapse ✅ (2026-07-16, self-verified via founder JWT + screenshots)
+- **Post-Publish Panel — VERIFIED (BOOK-0001 "The Understanding Tree"):** 16 Ready assets all have real files
+  in the 1.28MB Publication Assets ZIP (marketplace text ×5, marketing graphics ×3, book page, media scripts ×3,
+  KDP submission, founder docs ×3); 5 Planned + 1 Not Implemented produce NO files (honest). ZIP + Master Package
+  both serve HTTP 200 externally. **Defect fixed:** the Publication Assets ZIP was reachable only from the
+  Post-Publish panel, not the Deliverables/Factory Library. `run_post_publish_recipe()` now persists it as a
+  "Publication Assets Package" deliverable (replace-not-append, deletes prior file) so the Library and panel show
+  the SAME current assets. FactoryLibrary header relabeled "Packages & Deliverables". BOOK-0001 backfilled.
+- **Founder Navigation Collapsed 88 → 8 CORE (fewer choices, not less capability):** Full mapping in
+  `/app/memory/NAV_COLLAPSE_MAP.md`. New backend `capability_registry.NAV_CORE` (8 curated core capabilities);
+  `navigation()` now returns `core` (8) + `sections` (70 remaining Active/Inherited, grouped by division) +
+  `legacy` (10 Merged/Deprecated). Frontend `Layout.js` renders the 8 core as the primary sidebar; everything else
+  lives in a collapsed **"All Capabilities" (70)** drawer + the existing **"Legacy — Under Review" (10)** drawer.
+  The 8 CORE: Founder Console `/` · Create `/create` · Knowledge & Decoder™ `/knowledge` · Book Manufacturing™
+  `/book-manufacturing` · Media & Design Studio `/media-division` · Publishing & Distribution `/distribution` ·
+  Governance & Trust `/governance` · All Capabilities (Factory Map™) `/factory-map`. NO routes removed, NO pages
+  deleted — presentation layer over the same Registry; fully reversible. Verified: core + drawer items navigate.
+- **Recipes location (Founder Q):** recipes stay in backend `manufacturing_recipes.py` (one owner, inherited by
+  product_type behind the same 7-button workflow). Founder never picks a recipe — Create selects it by outcome.
+- **KNOWN PRE-EXISTING (out of scope, flagged):** `decoder_engine._deterministic_checks` (line ~75) raised
+  `TypeError: can only concatenate list (not "str") to list` once on a decode call — unrelated to these two tasks.
+
+
 ## Architecture
 - Backend: FastAPI + MongoDB (`/app/backend`, routers in `/app/backend/routers`).
 - Frontend: React + Tailwind + Shadcn (`/app/frontend/src`, pages + components).

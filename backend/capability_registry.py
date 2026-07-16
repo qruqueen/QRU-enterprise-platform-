@@ -398,6 +398,29 @@ async def set_status(cap_id, status, founder_name):
     return await db[COLLECTION].find_one({"id": cap_id}, {"_id": 0})
 
 
+# --- Founder Cockpit: 8 CORE capabilities (primary sidebar) ---
+# Fewer Founder CHOICES, not reduced CAPABILITY. Every other page stays routed and reachable via the
+# "All Capabilities" drawer + Factory Map™. See /app/memory/NAV_COLLAPSE_MAP.md for the full mapping.
+NAV_CORE = [
+    {"id": "dashboard", "label": "Founder Console", "route": "/",
+     "hint": "Home cockpit — status, alerts, what needs you now."},
+    {"id": "create", "label": "Create", "route": "/create",
+     "hint": "Start any new product from an outcome. The Factory picks the recipe."},
+    {"id": "knowledge-records", "label": "Knowledge & Decoder™", "route": "/knowledge",
+     "hint": "Capture, verify, and decode the single source of truth."},
+    {"id": "book-mfg", "label": "Book Manufacturing™", "route": "/book-manufacturing",
+     "hint": "The flagship 7-button product line."},
+    {"id": "media-division", "label": "Media & Design Studio", "route": "/media-division",
+     "hint": "Covers, posters, audio/video, and other product formats."},
+    {"id": "distribution", "label": "Publishing & Distribution", "route": "/distribution",
+     "hint": "Store, Amazon KDP, YouTube, and connectors."},
+    {"id": "governance", "label": "Governance & Trust", "route": "/governance",
+     "hint": "Constitution, quality gates, verification, authenticity."},
+    {"id": "factory-map", "label": "All Capabilities", "route": "/factory-map",
+     "hint": "The full registry and every internal page."},
+]
+NAV_CORE_IDS = [c["id"] for c in NAV_CORE]
+
 # --- Self-cleaning sidebar (driven by the Registry) ---
 # Layers pinned to the top "Start Here" section (by capability id).
 NAV_PINNED = ["factory-map", "dashboard", "create", "concierge", "projects"]
@@ -420,24 +443,26 @@ NAV_SECTION = {
 
 
 async def navigation():
-    """The sidebar, generated from the Registry. Active/Inherited routed capabilities
-    are grouped by division; Merged/Deprecated collapse into 'Legacy — Under Review'."""
+    """The Founder Cockpit sidebar, generated from the Registry.
+    Returns 8 CORE capabilities (primary surface) + every other Active/Inherited capability grouped by
+    division inside a collapsed 'All Capabilities' drawer + Merged/Deprecated in the 'Legacy' drawer.
+    Nothing is removed — fewer Founder choices, not reduced capability."""
     docs = await db[COLLECTION].find({}, {"_id": 0}).to_list(1000)
     by_id = {d["id"]: d for d in docs}
 
-    pinned = []
-    for cid in NAV_PINNED:
-        d = by_id.get(cid)
-        if d and d.get("route"):
-            pinned.append({"id": d["id"], "label": d["name"], "route": d["route"],
-                           "hint": d.get("current_purpose", ""), "moat": d.get("moat", False)})
+    # 8 CORE capabilities (primary sidebar). Use curated labels; verify the backing capability exists.
+    core = []
+    for c in NAV_CORE:
+        d = by_id.get(c["id"])
+        core.append({"id": c["id"], "label": c["label"], "route": c["route"],
+                     "hint": c["hint"], "moat": bool(d and d.get("moat"))})
 
     order = {k: i for i, (k, _, _) in enumerate(LAYERS)}
     sections, legacy = [], []
     grouped = {}
     for d in docs:
-        if d["id"] in NAV_PINNED:
-            continue
+        if d["id"] in NAV_CORE_IDS:
+            continue  # already shown as a core capability
         route = d.get("route")
         if not route:
             continue
@@ -455,5 +480,6 @@ async def navigation():
         sections.append({"layer": layer_key, "label": NAV_SECTION.get(layer_key, layer_key), "items": items})
 
     legacy.sort(key=lambda x: x["label"])
-    return {"pinned": pinned, "sections": sections, "legacy": legacy}
+    # `pinned` retained for backward compatibility; the frontend now renders `core`.
+    return {"core": core, "pinned": [], "sections": sections, "legacy": legacy}
 

@@ -43,16 +43,18 @@ const iconFor = (route) => ICON[route] || Boxes;
 
 // Minimal fallback if the Registry is briefly unavailable.
 const FALLBACK = {
-  pinned: [
-    { id: "factory-map", label: "Factory Map™", route: "/factory-map" },
+  core: [
     { id: "dashboard", label: "Founder Console", route: "/" },
     { id: "create", label: "Create", route: "/create" },
+    { id: "knowledge-records", label: "Knowledge & Decoder™", route: "/knowledge" },
+    { id: "book-mfg", label: "Book Manufacturing™", route: "/book-manufacturing" },
+    { id: "media-division", label: "Media & Design Studio", route: "/media-division" },
+    { id: "distribution", label: "Publishing & Distribution", route: "/distribution" },
+    { id: "governance", label: "Governance & Trust", route: "/governance" },
+    { id: "factory-map", label: "All Capabilities", route: "/factory-map" },
   ],
-  sections: [
-    { label: "Knowledge", items: [{ id: "knowledge", label: "Knowledge Records", route: "/knowledge" }] },
-    { label: "Publishing", items: [{ id: "products", label: "My Products", route: "/products" }] },
-    { label: "Administration", items: [{ id: "settings", label: "Settings", route: "/settings" }] },
-  ],
+  pinned: [],
+  sections: [],
   legacy: [],
 };
 
@@ -86,6 +88,7 @@ export default function Layout() {
   const [q, setQ] = useState("");
   const [nav, setNav] = useState(null);
   const [legacyOpen, setLegacyOpen] = useState(false);
+  const [allOpen, setAllOpen] = useState(false);
 
   useEffect(() => {
     api.get("/capability-registry/navigation")
@@ -117,17 +120,37 @@ export default function Layout() {
           </div>
         </div>
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5" data-testid="sidebar-nav">
-          {/* Start Here (pinned) */}
-          <p className="overline text-white/40 px-3 pt-2 pb-1">Start Here</p>
-          {model.pinned.map((item) => <NavItem key={item.id} item={item} onNavigate={close} />)}
+          {/* Core capabilities — the Founder Cockpit (8 items) */}
+          <p className="overline text-white/40 px-3 pt-2 pb-1">Core Capabilities</p>
+          {(model.core || []).map((item) => <NavItem key={item.id} item={item} onNavigate={close} />)}
 
-          {/* Divisions (generated from the Capability Registry) */}
-          {model.sections.map((s) => (
-            <div key={s.label}>
-              <p className="overline text-white/40 px-3 pt-4 pb-1">{s.label}</p>
-              {s.items.map((item) => <NavItem key={item.id} item={item} onNavigate={close} />)}
+          {/* All Capabilities — every other working page, one click away (collapsed) */}
+          {model.sections && model.sections.length > 0 && (
+            <div className="pt-4">
+              <button
+                data-testid="all-capabilities-toggle"
+                onClick={() => setAllOpen((v) => !v)}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-sm text-xs font-semibold text-white/50 hover:bg-white/5 hover:text-white/80 transition-colors"
+              >
+                <Boxes className="w-3.5 h-3.5 shrink-0" />
+                <span className="flex-1 text-left tracking-wide uppercase">All Capabilities</span>
+                <span className="text-[10px] bg-white/10 rounded-full px-1.5 py-0.5">
+                  {model.sections.reduce((n, s) => n + s.items.length, 0)}
+                </span>
+                {allOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+              </button>
+              {allOpen && (
+                <div data-testid="all-capabilities-drawer" className="mt-1 pl-1 border-l border-white/10 ml-3">
+                  {model.sections.map((s) => (
+                    <div key={s.label}>
+                      <p className="overline text-white/35 px-3 pt-3 pb-1">{s.label}</p>
+                      {s.items.map((item) => <NavItem key={item.id} item={item} onNavigate={close} />)}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          ))}
+          )}
 
           {/* Legacy — Under Review (Merged/Deprecated), collapsed */}
           {model.legacy && model.legacy.length > 0 && (
