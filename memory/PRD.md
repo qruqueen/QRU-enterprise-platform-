@@ -12,6 +12,13 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## Universal Cover-Legibility Fix + BOOK-0011 Full-Cycle Capstone ✅ (2026-07-16)
+Founder flagged the print cover wrap: title unreadable over busy art + weird/ghosted back cover. Fixed in the SHARED composer so it applies to EVERY product (one design owner — no per-product rework):
+- **`design_studio.compose()` (front/all covers):** title+subtitle now drawn inside a SOLID rounded legibility panel (rgba 10,8,22,210) so text is readable over ANY artwork; subtitle capped to 2 lines (+ ellipsis) so a long description never crowds the cover. Used by `manufacture_bytes` → every product kind (cover, poster, workbook, card, deck). Verified on bright/busy worst-case image.
+- **`design_studio.compose_print_wrap()` (back cover):** replaced the darkened/blurred FRONT-cover background (which ghosted the front title onto the back) with a clean on-brand navy gradient. Back now: clean gradient + readable blurb + barcode clear zone + imprint.
+- **BOOK-0011 CAPSTONE (full 7-button cycle, live):** UKR **KR-00001** → editorial locked → back-cover blurb drafted → **3 AI cover concepts (all success)** → cover selected → **clean print wrap** (6×9, 300 DPI, spine blank <79pp) → retail sanitized → priced ($4.99 eBook / $12.99 paperback) → **Founder authorized** → **16 post-publish assets Ready** → Master Package + **PMF PMF-BOOK-0011 referencing KR-00001**. One UKR-sourced book completed the ENTIRE cycle end-to-end. Wrap PNG/PDF on disk, blurb included.
+
+
 ## Every Product Family Wired onto the Manufacturing Foundation™ — one-tap Publish + PMF™ ✅ (2026-07-16, deterministic/zero-credit, self-verified)
 Delivered the "merge engines" audit item as the proven Foundation pattern: any engine publishes the SAME way.
 - **Shared `manufacturing_foundation.publish_product(engine, id, actor)`** — engines: publication, poster, recipe, media. Non-publication engines upsert ONE canonical `db.products` **store listing** (source_engine/source_id) so storefront + Stripe checkout + fulfillment are 100% reused (no forked commerce logic). Publication keeps its existing creative-review+verified gate. Idempotent (re-publish returns same listing, no dupes). Every publish emits a **PMF™** (7 Inherited Standards) referencing the source UKR.

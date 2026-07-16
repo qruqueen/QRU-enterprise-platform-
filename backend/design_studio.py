@@ -121,20 +121,41 @@ def compose(hero_bytes, spec):
     if imprint:
         ef = font(dl.SANS_BOLD, int(30 * scale))
         d.text((W / 2, 70 * scale), imprint.upper(), font=ef, fill=_GOLD, anchor="mm")
+    # --- Title / subtitle block: pre-measure, then draw a SOLID legibility panel behind it so text
+    #     is readable over ANY artwork (no more low-contrast text on busy hero art). ---
     size = 118 if len(title) <= 18 else (92 if len(title) <= 30 else 70)
     size = int(size * scale)
     tf = font(dl.SERIF_BOLD, size)
-    lines = wrap(title.upper(), tf, W - int(150 * scale))
-    y = H * 0.60 - (len(lines) * size * 0.6)
-    for ln in lines:
-        d.text((W / 2, y), ln, font=tf, fill=(255, 255, 255), anchor="mm")
-        y += size * 1.08
-    d.line([(W / 2 - 90 * scale, y + 14), (W / 2 + 90 * scale, y + 14)], fill=_GOLD, width=max(3, int(4 * scale)))
-    y += 46 * scale
+    title_lines = wrap(title.upper(), tf, W - int(180 * scale))
+    sub_lines = []
     if subtitle:
         sf = font(dl.SERIF, int(40 * scale))
-        for ln in wrap(subtitle, sf, W - int(200 * scale)):
-            d.text((W / 2, y), ln, font=sf, fill=(232, 226, 240), anchor="mm"); y += 50 * scale
+        # keep the front cover clean — a subtitle, never a full description paragraph (max 2 lines)
+        sub_lines = wrap(subtitle, sf, W - int(220 * scale))
+        if len(sub_lines) > 2:
+            sub_lines = sub_lines[:2]
+            sub_lines[-1] = sub_lines[-1].rstrip(".,;: ") + "…"
+    line_h = size * 1.08
+    sub_h = int(50 * scale)
+    block_h = len(title_lines) * line_h + 46 * scale + len(sub_lines) * sub_h
+    block_top = H * 0.60 - (len(title_lines) * size * 0.6)
+    # solid rounded panel behind the whole title block
+    pad_x, pad_y = int(70 * scale), int(46 * scale)
+    panel = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(panel).rounded_rectangle(
+        [int(90 * scale), int(block_top - pad_y), W - int(90 * scale), int(block_top + block_h + pad_y)],
+        radius=int(24 * scale), fill=(10, 8, 22, 210))
+    img = Image.alpha_composite(img.convert("RGBA"), panel).convert("RGB")
+    d = ImageDraw.Draw(img)
+    y = block_top
+    for ln in title_lines:
+        d.text((W / 2, y), ln, font=tf, fill=(255, 255, 255), anchor="mm")
+        y += line_h
+    d.line([(W / 2 - 90 * scale, y + 14), (W / 2 + 90 * scale, y + 14)], fill=_GOLD, width=max(3, int(4 * scale)))
+    y += 46 * scale
+    for ln in sub_lines:
+        d.text((W / 2, y), ln, font=font(dl.SERIF, int(40 * scale)), fill=(232, 226, 240), anchor="mm")
+        y += sub_h
     if byline:
         af = font(dl.SANS_BOLD, int(46 * scale))
         d.text((W / 2, H - 96 * scale), byline.upper(), font=af, fill=_GOLD, anchor="mm")
@@ -161,9 +182,14 @@ def compose_print_wrap(front_bytes, spec):
     fpw = W - front_x
     fr = front.resize((fpw, H))
     canvas.paste(fr, (front_x, 0))
-    # BACK panel (left): darkened, blurred art as an on-brand background
+    # BACK panel (left): a clean on-brand vertical gradient (no ghosted front-cover text bleeding through).
     bpw = spine_x
-    back_bg = ImageEnhance.Brightness(front.resize((bpw, H)).filter(ImageFilter.GaussianBlur(8))).enhance(0.30)
+    back_bg = Image.new("RGB", (bpw, H), (18, 14, 34))
+    bd = ImageDraw.Draw(back_bg)
+    top_c, bot_c = (26, 20, 52), (12, 9, 24)
+    for yy in range(H):
+        t = yy / max(1, H)
+        bd.line([(0, yy), (bpw, yy)], fill=tuple(int(top_c[i] + (bot_c[i] - top_c[i]) * t) for i in range(3)))
     canvas.paste(back_bg, (0, 0))
     # SPINE: solid deep brand panel
     ImageDraw.Draw(canvas).rectangle([spine_x, 0, front_x, H], fill=(24, 18, 44))
