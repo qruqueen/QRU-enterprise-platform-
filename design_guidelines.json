@@ -1,100 +1,106 @@
 {
-  "theme": "Light (with Dark Structural Navigation)",
-  "archetype": "4 (Swiss & High-Contrast) + 5 (Luxury) Hybrid - 'Old Money Tech'",
-  "brand_motto": "Knowledge First. Excellence Second. Clarity Always. Imagination Where It Matters.",
+  "project_identity": {
+    "brand_name": "QRU Online",
+    "vibe": "Premium Educational Publishing House, University Press meets Modern Digital Bookstore",
+    "theme": "Light theme by default (warm, paper-like) with Dark Mode support (Oxford blue, deep).",
+    "relationship_to_factory": "Factory is the private manufacturing admin (Royal/Gold, strict). QRU Online is the public presentation layer (Warmer, softer, highly curated, discovery-focused, sharing the Treasure Standard trust signal)."
+  },
   "typography": {
-    "heading": {
-      "family": "Playfair Display",
-      "type": "Serif",
-      "weights": ["400", "600", "700", "900"],
-      "usage": "Used for Headings, Titles, Dashboard primary metrics, and Hero sections. Communicates museum-quality authority, permanence, and enterprise trust."
+    "headings": {
+      "font_family": "Cormorant Garamond, serif",
+      "weight": "font-medium to font-bold",
+      "usage": "H1, H2, H3, large display numbers, brand promises",
+      "tracking": "tracking-tight"
     },
     "body": {
-      "family": "Manrope",
-      "type": "Sans-serif",
-      "weights": ["400", "500", "600", "700"],
-      "usage": "Used for UI elements, paragraphs, tables, forms, and dense data displays. Prioritizes maximum readability and clarity."
+      "font_family": "Manrope, sans-serif",
+      "weight": "font-light to font-normal",
+      "usage": "Paragraphs, tags, UI labels, buttons",
+      "tracking": "tracking-normal"
     },
-    "rules": [
-      "H1 (Hero/Main Heading): text-4xl sm:text-5xl lg:text-6xl with tracking-tight. NEVER exceed text-6xl.",
-      "H2 (Section Heading): text-2xl sm:text-3xl lg:text-4xl.",
-      "Never center default headings; prioritize clear left alignment for reading and logical flow.",
-      "CRITICAL: Do NOT use Inter, Roboto, Lato, or Open Sans. They dilute the enterprise museum-quality standard."
-    ]
-  },
-  "colors": {
-    "hierarchy_rules": [
-      "1. PRIMARY (Navy): The foundation. Use for branding, headers, dashboards, sidebar navigation, major backgrounds, and interface structure. Establishes serious enterprise trust.",
-      "2. SECONDARY (Gold): Verified excellence. Use for Treasure Standard™ badges, certifications, verified status, highlights, and progress metrics. Gold should NEVER overpower Navy.",
-      "3. NEUTRAL (White): Clarity and readability. Use for learning pages, documents, cards, and content backgrounds. Creates breathing room and reduces cognitive load.",
-      "4. SIGNATURE ACCENT (Purple): Inspire curiosity. Use SPARINGLY. Apply to key CTAs, interactive elements, learning pathways, and discovery moments. Guide attention rather than dominate."
-    ],
-    "shadcn_css_variables": {
-      "light": {
-        "--background": "0 0% 100%",
-        "--foreground": "222 47% 11%",
-        "--card": "0 0% 100%",
-        "--card-foreground": "222 47% 11%",
-        "--popover": "0 0% 100%",
-        "--popover-foreground": "222 47% 11%",
-        "--primary": "222 47% 11%",
-        "--primary-foreground": "0 0% 100%",
-        "--secondary": "46 65% 52%",
-        "--secondary-foreground": "222 47% 11%",
-        "--muted": "210 40% 96.1%",
-        "--muted-foreground": "215.4 16.3% 46.9%",
-        "--accent": "273 67% 39%",
-        "--accent-foreground": "0 0% 100%",
-        "--destructive": "0 84.2% 60.2%",
-        "--destructive-foreground": "210 40% 98%",
-        "--border": "214.3 31.8% 91.4%",
-        "--input": "214.3 31.8% 91.4%",
-        "--ring": "222 47% 11%",
-        "--radius": "0.25rem"
-      }
+    "scale": {
+      "h1": "text-5xl md:text-6xl leading-none tracking-tighter",
+      "h2": "text-3xl md:text-4xl leading-tight",
+      "h3": "text-xl md:text-2xl",
+      "body": "text-base leading-relaxed",
+      "small_labels": "text-xs uppercase tracking-[0.2em]"
     }
   },
-  "layout_and_spacing": {
-    "philosophy": "Generous Spacing Philosophy. Trust before excitement; Simplicity before clutter; Professionalism before decoration.",
-    "container_padding": "p-8 to p-12 for major section wrappers.",
-    "card_padding": "p-6 internal padding for content blocks.",
-    "grids": "Use Mode B: 'Control Room' grid for dashboards (Manufacturing Command Center, Evidence Metrics). Dense, scanable, structural: grid-cols-1 md:grid-cols-3 lg:grid-cols-4 with gap-6.",
-    "alignment": "Strict left-alignment for dense content, data, and forms to ensure cognitive ease."
+  "colors": {
+    "light_mode": {
+      "background": "#FAFAF8",
+      "surface": "#FFFFFF",
+      "text_primary": "#1C1C1A",
+      "text_secondary": "#575754",
+      "accent_gold": "#C5A059",
+      "border": "#E5E5E0"
+    },
+    "dark_mode": {
+      "background": "#0A1128",
+      "surface": "#121A35",
+      "text_primary": "#FDFBF7",
+      "text_secondary": "#9BA3B5",
+      "accent_gold": "#D4AF37",
+      "border": "#1E2943"
+    }
+  },
+  "spacing_and_layout": {
+    "philosophy": "Generous Spacing (2-3x normal). Use p-12, p-16, p-24 to create an 'art gallery' or 'premium bookstore' feel.",
+    "home_page": "Editorial Bento layout. Large hero text, asymmetric grid for featured books (e.g. col-span-8 for main, col-span-4 for secondary).",
+    "catalog_page": "High density yet breathable. Grid cols-1 md:cols-2 lg:cols-3 or 4. Book covers must dominate the card space with a 2:3 or 3:4 aspect ratio.",
+    "book_page": "Split view: Sticky left column with large book cover, right column scrolling with rich details, 'What You'll Learn', and read/preview affordance."
+  },
+  "visual_enhancers": {
+    "surfaces": "Neumorphic 'Tactile' variants for books. Use 1px delicate borders (border-[#E5E5E0]) with soft ambient drop-shadows (shadow-xl shadow-black/5) on covers to make them look like physical books.",
+    "glassmorphism": "Use for the sticky top navigation (bg-[#FAFAF8]/70 backdrop-blur-xl border-b border-[#E5E5E0]/50) to maintain content visibility while scrolling. Never completely transparent.",
+    "textures": "Subtle paper noise/grain overlay on the body background to break digital flatness.",
+    "shadows": "Concentric, layered shadows for book covers. No harsh dark shadows. Use warm-tinted shadows."
   },
   "components": {
-    "navigation_shell": "Sidebar/Header MUST be Deep Navy (bg-primary) with White text (text-primary-foreground) to anchor the enterprise system.",
-    "cards": "White surface (bg-card), sharp/subtle border-radius (rounded-sm or rounded-md), very subtle 1px border (border-border). Avoid heavy or muddy drop shadows. Museum-quality flat surfaces.",
-    "buttons": {
-      "standard": "Deep Navy (bg-primary text-primary-foreground).",
-      "verified_action": "QRU Gold (bg-secondary text-secondary-foreground).",
-      "discovery_cta": "Royal Purple (bg-accent text-accent-foreground) - Use sparingly for major conversions/publish actions."
+    "buttons": "Pill-shaped (rounded-full). Primary: bg-[#1C1C1A] text-[#FAFAF8] hover:bg-[#C5A059] transition-colors. Secondary: border border-[#C5A059] text-[#C5A059] hover:bg-[#C5A059] hover:text-[#FAFAF8].",
+    "cards": "Cardless or minimal cards. Let the book cover be the hero. Text sits cleanly below or beside the cover with ample padding.",
+    "navigation": "Minimalist header. Left: QRU Online Logo (Serif). Right: Links (Catalog, University, Press) + Search icon. Must be sticky with blur.",
+    "footer": "Massive padding (py-24). Contains 'The Treasure Standard™' trust signal prominently. Dark bg (#0A1128) with Gold text for contrast against light theme pages."
+  },
+  "motion_and_interactions": {
+    "hover_states": "Book covers translate slightly up (-translate-y-2) with increased shadow (shadow-2xl) and a subtle sheen effect.",
+    "page_transitions": "Fade in with a slight vertical slide (framer-motion).",
+    "scroll": "Use Lenis for premium smooth scrolling."
+  },
+  "images": {
+    "hero_background": {
+      "url": "https://images.unsplash.com/photo-1779703056727-3c8b2bd919bc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwxfHxlbGVnYW50JTIwbGlicmFyeSUyMGFyY2hpdGVjdHVyZSUyMG1vZGVybnxlbnwwfHx8fDE3ODQyNDIwNzB8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Elegant warm bookshelf, use for the Home Hero overlay (bg-black/30 or mask-image fade)."
     },
-    "badges_and_chips": "Gold background for 'Verified', 'Treasure Standard', or success. Navy background for 'Draft', 'Architecture', or standard tags.",
-    "tables": "Strict structural lines. Clear padding. Avoid distracting row-striping. Professional and un-cluttered."
+    "book_cover_1": {
+      "url": "https://images.unsplash.com/photo-1526049997133-25caee4c5796?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHwzfHxtaW5pbWFsaXN0JTIwYWJzdHJhY3QlMjBib29rJTIwY292ZXJ8ZW58MHx8fHwxNzg0MjQyMDcwfDA&ixlib=rb-4.1.0&q=85",
+      "description": "Yellow minimalist abstract book cover."
+    },
+    "book_cover_2": {
+      "url": "https://images.unsplash.com/photo-1519764340700-3db40311f21e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwYWJzdHJhY3QlMjBib29rJTIwY292ZXJ8ZW58MHx8fHwxNzg0MjQyMDcwfDA&ixlib=rb-4.1.0&q=85",
+      "description": "White minimalist book cover."
+    }
   },
-  "motion": {
-    "philosophy": "Motion should ONLY signify state changes and guide workflow, never entertain.",
-    "transitions": "Use subtle fade-ins. transition-opacity duration-200 ease-out.",
-    "hover_states": "-translate-y-[1px] on cards with a slight shadow increase. Simple background darkening on buttons. No bouncy effects."
-  },
-  "assets": {
-    "qru_shield_svg": "<svg viewBox='0 0 100 120' fill='none' xmlns='http://www.w3.org/2000/svg' className='w-full h-full'><path d='M50 0C50 0 10 15 10 40C10 75 50 120 50 120C50 120 90 75 90 40C90 15 50 0 50 0Z' fill='currentColor' className='text-primary' stroke='currentColor' strokeWidth='4'/><path d='M25 40L50 60L75 40' stroke='currentColor' className='text-secondary' strokeWidth='4' strokeLinecap='round' strokeLinejoin='round'/><path d='M50 20V60' stroke='currentColor' className='text-secondary' strokeWidth='4' strokeLinecap='round'/></svg>",
-    "treasure_standard_seal_svg": "<svg viewBox='0 0 100 100' fill='none' xmlns='http://www.w3.org/2000/svg' className='w-full h-full'><circle cx='50' cy='50' r='45' fill='currentColor' className='text-secondary'/><circle cx='50' cy='50' r='38' stroke='currentColor' className='text-primary' strokeWidth='1.5' strokeDasharray='4 4'/><text x='50' y='54' fontFamily='Playfair Display, serif' fontSize='16' fontWeight='700' fill='currentColor' className='text-primary' textAnchor='middle'>QRU</text><text x='50' y='72' fontFamily='Manrope, sans-serif' fontSize='8' fontWeight='600' fill='currentColor' className='text-primary' textAnchor='middle' letterSpacing='0.1em'>VERIFIED</text><path d='M30 35L50 20L70 35' stroke='currentColor' className='text-primary' strokeWidth='2' fill='none'/></svg>",
-    "rules": "SVGs must be used purely as code components. No image files or generations should be used. The SVGs dynamically adapt colors using Tailwind's 'text-primary' (Navy) and 'text-secondary' (Gold) utility classes."
-  },
-  "testing_guidelines": {
-    "attributes": "All interactive and key informational elements MUST include a `data-testid` attribute. Crucial for enterprise reliability.",
-    "convention": "Use kebab-case, role-based identifiers. Example: `data-testid='publish-connector-button'`, `data-testid='knowledge-record-editor'`",
-    "scope": "Applies to buttons, links, form inputs, menus, error messages, metric cards, and confirmation text."
+  "accessibility": {
+    "contrast": "Ensure text over any gold accent meets 4.5:1 ratio (usually implies dark text on gold).",
+    "testing": "All interactive elements MUST have data-testid attributes (e.g., data-testid='book-preview-button')."
   },
   "instructions_to_main_agent": [
-    "NOTE: The codebase uses standard Javascript (.js), NOT Typescript (.tsx). Ensure all React component modifications are written in .js.",
-    "Apply the exact HSL token values provided in `colors.shadcn_css_variables` to your globals.css to establish the permanent QRU hierarchy.",
-    "Update tailwind.config.js to import and set the fonts: 'Playfair Display' for serif/headings, 'Manrope' for sans/body.",
-    "Implement the Layout Shell: Ensure the Sidebar Navigation uses the Navy background (`bg-primary`) to ground the application.",
-    "Implement the specific Enterprise features (Manufacturing Command Center, Evidence Metrics, Quality Gates, Knowledge Architecture, Publishing Connectors) using the strict 'Control Room' grid layout and the precise color hierarchy. NO trends, NO clutter.",
-    "Build reusable `QRUShield` and `TreasureStandardSeal` functional components using the provided SVG strings. Ensure they accept className props for sizing.",
-    "For all interactive elements throughout the app, meticulously add the `data-testid` attribute as specified in testing_guidelines.",
-    "Only use Purple (`bg-accent`) for highly specific discovery or major interaction moments (e.g., 'Authorize OAuth', 'Publish Connectors')."
+    "Strictly follow the color hex codes and font families provided.",
+    "Use standard Tailwind classes mapped to these variables.",
+    "Do NOT use HTML standard components for complex interactions; use Shadcn UI (but customize them heavily to remove the 'SaaS' look).",
+    "Install and use `lucide-react` or `@phosphor-icons/react` for icons.",
+    "Ensure generous padding in layout containers (p-8 to p-24).",
+    "Implement the UI with a light mode default, utilizing the Warm Bone/Cream background to simulate a high-end publishing paper feel.",
+    "Follow JS implementation, as it is a JS project, not TSX."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Never use generic centered layouts. Use grid asymmetry.",
+    "Always use modern pill-shaped or elegantly rounded buttons.",
+    "Never use AI assistant emojis.",
+    "Include hover states and micro-animations on interactive elements.",
+    "Prioritize optical alignment over strict geometric alignment.",
+    "Do NOT apply global `transition: all` as it breaks transforms.",
+    "Always add data-testid attributes to interactive and key informational elements."
   ]
 }
