@@ -80,6 +80,9 @@ export default function BookManufacturing() {
   };
 
   const doProof = () => run(async () => { const { data } = await api.post(`/book-mfg/books/${book.id}/proof`); setProof(data.report); }, "Proof & Polish complete.");
+  const doOpenRevision = () => run(async () => { await api.post(`/book-mfg/books/${book.id}/open-revision`); const { data } = await api.post(`/book-mfg/books/${book.id}/proof`); setProof(data.report); }, "Governed revision opened — you can now edit & resolve findings.");
+  const doResolveFinding = (payload) => run(async () => { const { data } = await api.post(`/book-mfg/books/${book.id}/resolve-finding`, payload); setProof(data.report); }, payload.action === "keep" ? "Kept as written (intentional)." : "Correction applied & re-proofed.");
+  const doSaveManuscript = (content) => run(async () => { const { data } = await api.post(`/book-mfg/books/${book.id}/manuscript`, { content }); setProof(data.report); }, "Manuscript saved & re-proofed.");
   const doApprove = () => run(() => api.post(`/book-mfg/books/${book.id}/approve-edition`), "Editorial edition locked.");
   const doDesign = () => run(() => api.post(`/book-mfg/books/${book.id}/design`, { base_url: A }), "Design drafted.");
   const doSelectCover = (concept) => run(() => api.post(`/book-mfg/books/${book.id}/select-cover`, { concept, base_url: A }), `Cover ${concept} selected — clean retail edition prepared.`).then(() => reload(book.id));
@@ -225,7 +228,7 @@ export default function BookManufacturing() {
 
       {/* Panels */}
       {tab === "upload" && <UploadPanel book={book} busy={busy} doUploadFile={doUploadFile} />}
-      {tab === "proof" && <ProofPanel book={book} proof={proof} busy={busy} doProof={doProof} doApprove={doApprove} />}
+      {tab === "proof" && <ProofPanel book={book} proof={proof} busy={busy} doProof={doProof} doApprove={doApprove} doOpenRevision={doOpenRevision} doResolveFinding={doResolveFinding} doSaveManuscript={doSaveManuscript} />}
       {tab === "design" && <DesignPanel book={book} busy={busy} doDesign={doDesign} doSelectCover={doSelectCover} />}
       {tab === "audio" && <AudioPanel book={book} audio={audio} busy={busy} onRender={doRenderAudio} />}
       {tab === "video" && <PlanPanel title="Video" icon={Video} data={video} render={renderVideo} />}
@@ -449,29 +452,45 @@ function FactoryLibrary({ book }) {
   );
 }
 
-function ProofPanel({ book, proof, busy, doProof, doApprove }) {
+function ProofPanel({ book, proof, busy, doProof, doApprove, doOpenRevision, doResolveFinding, doSaveManuscript }) {
+  const locked = book.editorial_locked;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  useEffect(() => { setDraft(book?.working_copy?.content || ""); setEditing(false); }, [book?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <div data-testid="panel-proof">
+    <div data-testid="panel-proof" className="space-y-4">
       <Panel title="Proof & Polish" icon={SpellCheck} accent="royal"
         right={
-          <div className="flex gap-2">
-            <button data-testid="run-proof-btn" onClick={doProof} disabled={busy}
-              className="inline-flex items-center gap-1.5 bg-navy text-white px-4 py-2 rounded-md text-sm font-bold disabled:opacity-60">
+          <div className="flex gap-2 flex-wrap">
+            <button data-testid="run-proof-btn" onClick={doProof} disabled={busy || locked}
+              className="inline-flex items-center gap-1.5 bg-navy text-white px-4 py-2 rounded-md text-sm font-bold disabled:opacity-40">
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <SpellCheck className="w-4 h-4" />} Run Proof
             </button>
-            <button data-testid="approve-edition-btn" onClick={doApprove} disabled={busy || !proof || book.editorial_locked}
-              className="inline-flex items-center gap-1.5 bg-gold text-navy px-4 py-2 rounded-md text-sm font-bold disabled:opacity-40">
-              <Lock className="w-4 h-4" /> {book.editorial_locked ? "Edition Locked" : "Approve & Lock"}
-            </button>
+            {locked ? (
+              <button data-testid="open-revision-btn" onClick={doOpenRevision} disabled={busy}
+                className="inline-flex items-center gap-1.5 border border-navy/30 text-navy px-4 py-2 rounded-md text-sm font-bold disabled:opacity-40">
+                <Lock className="w-4 h-4" /> Open a Governed Revision
+              </button>
+            ) : (
+              <button data-testid="approve-edition-btn" onClick={doApprove} disabled={busy || !proof}
+                className="inline-flex items-center gap-1.5 bg-gold text-navy px-4 py-2 rounded-md text-sm font-bold disabled:opacity-40">
+                <Lock className="w-4 h-4" /> Approve &amp; Lock
+              </button>
+            )}
           </div>
         }>
+        {locked && (
+          <div className="mb-3 rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-[12px] text-emerald-800" data-testid="locked-note">
+            This editorial edition is <b>approved &amp; locked</b> — your immutable master. To fix or keep a flagged word, open a governed revision (the current version is archived, never overwritten).
+          </div>
+        )}
         {!proof ? (
-          <p className="text-sm text-muted-foreground py-4">Run Proof & Polish to generate a proofing report. The Factory reports findings — it never silently rewrites the author's voice.</p>
+          <p className="text-sm text-muted-foreground py-4">Run Proof &amp; Polish to generate a proofing report. The Factory reports findings — it never silently rewrites the author's voice.</p>
         ) : (
           <div>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4" data-testid="proof-counts">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-4" data-testid="proof-counts">
               {[["Words", proof.counts.words], ["Chapters", proof.counts.chapters], ["Required", proof.counts.required],
-                ["Recommended", proof.counts.recommended], ["Decisions", proof.counts.founder_decision]].map(([k, v]) => (
+                ["Recommended", proof.counts.recommended], ["Decisions", proof.counts.founder_decision], ["Kept", proof.counts.kept || 0]].map(([k, v]) => (
                 <div key={k} className="border border-border rounded-md px-2 py-1.5 text-center">
                   <p className="text-lg font-bold text-navy">{v}</p><p className="text-[10px] text-muted-foreground">{k}</p>
                 </div>
@@ -480,17 +499,69 @@ function ProofPanel({ book, proof, busy, doProof, doApprove }) {
             <p className="text-[11px] text-muted-foreground italic mb-2">{proof.voice_note}</p>
             <div className="space-y-2" data-testid="proof-findings">
               {proof.findings.length === 0 ? <p className="text-sm text-emerald-700">No issues found. Clean manuscript.</p> :
-                proof.findings.map((f, i) => (
-                  <div key={i} className="flex items-start gap-2 border-b border-border/50 pb-2">
-                    <StatusChip status={f.type} tone={FINDING_TONE[f.type]} />
-                    <div><p className="text-sm font-medium text-navy">{f.issue}</p>
-                      <p className="text-[12px] text-muted-foreground">{f.detail}</p></div>
-                  </div>
-                ))}
+                proof.findings.map((f, i) => {
+                  const kept = f.status === "kept";
+                  return (
+                    <div key={i} data-testid={`finding-${i}`} className="flex items-start justify-between gap-2 border-b border-border/50 pb-2.5">
+                      <div className="flex items-start gap-2 min-w-0">
+                        <StatusChip status={f.type} tone={FINDING_TONE[f.type]} />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-navy">{f.issue}</p>
+                          <p className="text-[12px] text-muted-foreground">{f.detail}</p>
+                          {f.snippet && <p className="text-[11px] text-muted-foreground mt-0.5 italic truncate">…{f.snippet}…</p>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {kept ? (
+                          <StatusChip status="Kept as written ✓" tone="emerald" testid={`finding-kept-${i}`} />
+                        ) : locked ? (
+                          <span className="text-[10px] text-muted-foreground">Open a revision to resolve</span>
+                        ) : (
+                          <>
+                            <button data-testid={`finding-keep-${i}`} onClick={() => doResolveFinding({ issue: f.issue, action: "keep" })} disabled={busy}
+                              className="text-[11px] font-bold border border-emerald-300 text-emerald-700 px-2 py-1 rounded-md disabled:opacity-40">Keep as written</button>
+                            {f.correctable && (
+                              <button data-testid={`finding-correct-${i}`} onClick={() => doResolveFinding({ issue: f.issue, action: "correct", span: f.span, suggested_fix: f.suggested_fix, fix_kind: f.fix_kind })} disabled={busy}
+                                className="text-[11px] font-bold bg-navy text-white px-2 py-1 rounded-md disabled:opacity-40">Correct it</button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           </div>
         )}
       </Panel>
+
+      {!locked && (
+        <Panel title="Manuscript Editor" icon={FileText} accent="royal" testid="manuscript-editor"
+          right={
+            <button data-testid="toggle-editor-btn" onClick={() => setEditing((e) => !e)}
+              className="text-sm font-bold text-navy border border-navy/30 px-3 py-1.5 rounded-md">
+              {editing ? "Close editor" : "Edit manuscript"}
+            </button>
+          }>
+          {!editing ? (
+            <p className="text-[12px] text-muted-foreground">Make surgical fixes above, or open the full editor to edit anywhere. Every save is a tracked revision and automatically re-proofs — nothing changes silently.</p>
+          ) : (
+            <div className="space-y-2" data-testid="manuscript-edit-area">
+              <textarea data-testid="manuscript-textarea" value={draft} onChange={(e) => setDraft(e.target.value)} rows={16}
+                className="w-full px-3 py-2 text-sm border border-border rounded-md bg-card outline-none font-mono resize-y" />
+              <div className="flex items-center gap-2">
+                <button data-testid="save-manuscript-btn" onClick={() => doSaveManuscript(draft)} disabled={busy || !draft.trim() || draft === (book?.working_copy?.content || "")}
+                  className="inline-flex items-center gap-1.5 bg-gold text-navy px-4 py-2 rounded-md text-sm font-bold disabled:opacity-40">
+                  <CheckCircle2 className="w-4 h-4" /> Save &amp; Re-proof
+                </button>
+                <button onClick={() => setDraft(book?.working_copy?.content || "")} disabled={busy}
+                  className="text-sm text-muted-foreground hover:text-navy">Reset</button>
+                <span className="text-[11px] text-muted-foreground ml-auto">{draft.split(/\s+/).filter(Boolean).length} words</span>
+              </div>
+            </div>
+          )}
+        </Panel>
+      )}
     </div>
   );
 }
@@ -982,27 +1053,27 @@ function FounderReleaseReview({ book, data, busy, doAuthorize }) {
     : (book?.pricing?.list_price ? `${book.pricing.currency} ${book.pricing.list_price}` : "Not set");
 
   return (
-    <div className="qru-card qru-goldline p-6 border-2 border-gold/40 bg-gradient-to-b from-navy to-[#141026] text-white" data-testid="founder-release-review">
+    <div className="p-6 rounded-lg border-2 border-gold/50 bg-navy text-white shadow-xl" data-testid="founder-release-review">
       <div className="flex items-center gap-2 mb-4">
         <BookOpen className="w-5 h-5 text-gold" />
         <h3 className="font-heading text-lg font-bold text-gold">Founder Release Review™</h3>
       </div>
       <div className="grid sm:grid-cols-2 gap-x-8 gap-y-1.5 mb-5 text-sm">
-        <p><span className="text-gold/70">Title:</span> <b className="text-white" data-testid="review-title">{book.title}</b></p>
-        <p><span className="text-gold/70">Author:</span> <b className="text-white" data-testid="review-author">{book.author || "—"}</b></p>
-        <p><span className="text-gold/70">Edition:</span> <b className="text-white">{book.edition || "First Edition"}</b></p>
-        <p><span className="text-gold/70">Price:</span> <b className="text-white" data-testid="review-price">{price}</b></p>
-        <p className="sm:col-span-2"><span className="text-gold/70">Status:</span> <b className="text-emerald-300" data-testid="review-status">{authorized ? "Authorized — Ready for KDP Submission" : (gateReady ? "Ready for KDP Submission" : "Preparing…")}</b></p>
+        <p><span className="text-gold/80">Title:</span> <b className="text-white" data-testid="review-title">{book.title}</b></p>
+        <p><span className="text-gold/80">Author:</span> <b className="text-white" data-testid="review-author">{book.author || "—"}</b></p>
+        <p><span className="text-gold/80">Edition:</span> <b className="text-white">{book.edition || "First Edition"}</b></p>
+        <p><span className="text-gold/80">Price:</span> <b className="text-white" data-testid="review-price">{price}</b></p>
+        <p className="sm:col-span-2"><span className="text-gold/80">Status:</span> <b className="text-emerald-300" data-testid="review-status">{authorized ? "Authorized — Ready for KDP Submission" : (gateReady ? "Ready for KDP Submission" : "Preparing…")}</b></p>
       </div>
 
-      <p className="text-[13px] text-white/85 mb-3">You are about to publish the first QRU Press™ title. Please confirm that:</p>
-      <div className="space-y-2 mb-5" data-testid="review-checkboxes">
+      <p className="text-[13px] text-white/90 mb-3">You are about to publish the first QRU Press™ title. Please confirm that:</p>
+      <div className="space-y-2.5 mb-5" data-testid="review-checkboxes">
         {CHECKS.map((c) => (
-          <label key={c.key} className="flex items-center gap-3 text-sm text-white/90 cursor-pointer select-none">
+          <label key={c.key} className="flex items-center gap-3 text-sm text-white cursor-pointer select-none">
             <input type="checkbox" data-testid={`review-check-${c.key}`} checked={!!checked[c.key]} disabled={authorized}
               onChange={(e) => setChecked((p) => ({ ...p, [c.key]: e.target.checked }))}
-              className="w-4 h-4 accent-gold" />
-            {c.label}
+              className="w-4 h-4 accent-gold shrink-0" />
+            <span>{c.label}</span>
           </label>
         ))}
       </div>

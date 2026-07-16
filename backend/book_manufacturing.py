@@ -263,19 +263,25 @@ async def upload_manuscript_file(filename, file_base64, meta, actor):
 
 # -------------------------- BUTTON 2 — PROOF & POLISH --------------------------
 def _proof_checks(content):
-    """Deterministic proofing — NEVER rewrites voice. Only reports classified findings."""
+    """Deterministic proofing — NEVER rewrites voice. Only reports classified findings.
+    Each finding carries a stable `issue` signature; correctable findings also carry a
+    character `span` + `suggested_fix` so the Founder can apply a surgical correction."""
     import re
     findings = []
     lines = content.split("\n")
     # repeated consecutive words ("the the")
-    for m in re.finditer(r"\b(\w+)\s+\1\b", content, flags=re.IGNORECASE):
+    for m in re.finditer(r"\b(\w+)(\s+)\1\b", content, flags=re.IGNORECASE):
         findings.append({"type": "Required correction", "issue": f"Repeated word: '{m.group(0)}'",
-                         "detail": "Duplicate consecutive word detected."})
+                         "detail": "Duplicate consecutive word detected.",
+                         "span": [m.start(), m.end()], "correctable": True,
+                         "suggested_fix": m.group(1),
+                         "snippet": content[max(0, m.start() - 30):m.end() + 30].replace("\n", " ").strip()})
     # double spaces
     dbl = content.count("  ")
     if dbl:
         findings.append({"type": "Recommended improvement", "issue": f"{dbl} double-space occurrence(s)",
-                         "detail": "Collapse to single spaces for clean typesetting."})
+                         "detail": "Collapse to single spaces for clean typesetting.",
+                         "correctable": True, "fix_kind": "collapse_double_space"})
     # working title flag
     if "working title" in content.lower() or "(working title)" in content.lower():
         findings.append({"type": "Founder decision required", "issue": "'working title' present in manuscript",
@@ -309,30 +315,36 @@ async def proof_polish(book_id, actor):
     if not b:
         return None
     if b.get("editorial_locked"):
-        return {"error": "Editorial edition is locked. Unlock via a governed revision to re-proof."}
+        return {"error": "Editorial edition is locked. Open a governed revision to re-proof and edit."}
     content = b["working_copy"]["content"]
     findings, structure = _proof_checks(content)
-    required = [f for f in findings if f["type"] == "Required correction"]
+    kept = set(b.get("kept_findings", []))
+    for i, f in enumerate(findings):
+        f["id"] = f"{f.get('type','')[:3]}-{i}"
+        f["status"] = "kept" if f["issue"] in kept else "open"
+    open_findings = [f for f in findings if f["status"] == "open"]
+    required = [f for f in open_findings if f["type"] == "Required correction"]
     report = {
         "generated_at": _now(),
         "findings": findings,
         "counts": {
             "required": len(required),
-            "recommended": len([f for f in findings if f["type"] == "Recommended improvement"]),
-            "optional": len([f for f in findings if f["type"] == "Optional stylistic suggestion"]),
-            "founder_decision": len([f for f in findings if f["type"] == "Founder decision required"]),
+            "recommended": len([f for f in open_findings if f["type"] == "Recommended improvement"]),
+            "optional": len([f for f in open_findings if f["type"] == "Optional stylistic suggestion"]),
+            "founder_decision": len([f for f in open_findings if f["type"] == "Founder decision required"]),
+            "kept": len([f for f in findings if f["status"] == "kept"]),
             "words": len(content.split()), "chapters": len(structure["chapters"]),
         },
-        "unresolved_questions": [f["issue"] for f in findings if f["type"] == "Founder decision required"],
-        "voice_note": "The Factory never silently rewrites the author's voice. All items above are reported for your decision.",
+        "unresolved_questions": [f["issue"] for f in open_findings if f["type"] == "Founder decision required"],
+        "voice_note": "The Factory never silently rewrites the author's voice. Every item is reported for YOUR decision — Keep as written (intentional) or Correct it. Nothing changes unless you choose it.",
     }
     await db[COLL].update_one({"id": book_id}, {"$set": {
         "editorial_status": "Proofed — awaiting approval", "proofing_report": report,
-        "manufacturing_job": {"stage": "Proof & Polish complete", "next": "Approve & lock editorial edition, then Design"},
+        "manufacturing_job": {"stage": "Proof & Polish complete", "next": "Resolve findings, then approve & lock editorial edition"},
         "updated_at": _now()},
         "$push": {"revision_history": {"stage": "Proof & Polish", "by": actor, "at": _now(),
-                                       "note": f"{len(findings)} finding(s); {len(required)} required."}}})
-    await log_org("Book Manufacturing™", "Manufacturing", f"proofed '{b['title']}' ({len(findings)} findings)", b["book_code"])
+                                       "note": f"{len(findings)} finding(s); {len(required)} required open; {len(kept)} kept as written."}}})
+    await log_org("Book Manufacturing™", "Manufacturing", f"proofed '{b['title']}' ({len(open_findings)} open findings)", b["book_code"])
     return {"ok": True, "report": report}
 
 
@@ -353,6 +365,92 @@ async def approve_edition(book_id, actor):
     await log_org("Book Manufacturing™", "Manufacturing", f"locked editorial edition for '{b['title']}'", b["book_code"], "success")
     b = await db[COLL].find_one({"id": book_id})
     return clean(b)
+
+
+# -------------------- FOUNDER FINDING RESOLUTION + GOVERNED REVISION --------------------
+async def open_revision(book_id, actor):
+    """Governed unlock: a locked editorial master can be re-opened for a tracked revision.
+    The prior locked edition is preserved in version history — never silently overwritten."""
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return None
+    if not b.get("editorial_locked"):
+        return {"error": "This book is not locked — it is already open for editing."}
+    prior = b.get("editorial_edition") or {}
+    versions = b.get("editorial_versions", [])
+    versions.append({"version": len(versions) + 1, "content": prior.get("content", ""),
+                     "checksum": prior.get("checksum"), "locked_by": prior.get("locked_by"),
+                     "locked_at": prior.get("locked_at"), "archived_at": _now(), "archived_by": actor})
+    # Bring the locked content into the working copy so the Founder edits the true source.
+    await db[COLL].update_one({"id": book_id}, {"$set": {
+        "editorial_locked": False, "editorial_status": f"Revision open (editing v{len(versions) + 1})",
+        "working_copy": {"content": prior.get("content", b.get("working_copy", {}).get("content", "")), "updated_at": _now()},
+        "editorial_versions": versions,
+        "manufacturing_job": {"stage": "Governed revision open", "next": "Edit / resolve findings, re-proof, then re-lock"},
+        "updated_at": _now()},
+        "$push": {"revision_history": {"stage": "Governed Revision Opened", "by": actor, "at": _now(),
+                  "note": f"Locked edition archived as v{len(versions)}; opened for a tracked revision."}}})
+    await log_org("Book Manufacturing™", "Manufacturing", f"opened governed revision for '{b['title']}'", b["book_code"])
+    return clean(await db[COLL].find_one({"id": book_id}))
+
+
+async def update_manuscript(book_id, content, actor):
+    """Full manuscript edit (Founder). Only permitted while NOT locked (open a revision first).
+    Saved as a tracked change; the Founder must re-proof and re-lock."""
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return None
+    if b.get("editorial_locked"):
+        return {"error": "Editorial edition is locked. Open a governed revision before editing."}
+    content = content or ""
+    if not content.strip():
+        return {"error": "Manuscript cannot be empty."}
+    prev_words = len((b.get("working_copy") or {}).get("content", "").split())
+    new_words = len(content.split())
+    await db[COLL].update_one({"id": book_id}, {"$set": {
+        "working_copy": {"content": content, "updated_at": _now()},
+        "editorial_status": "Edited — re-proof required", "updated_at": _now()},
+        "$push": {"revision_history": {"stage": "Manuscript Edited", "by": actor, "at": _now(),
+                  "note": f"Founder edited manuscript ({prev_words} → {new_words} words)."}}})
+    # Re-proof automatically so the report reflects the edit.
+    r = await proof_polish(book_id, actor)
+    return {"ok": True, "report": r.get("report") if isinstance(r, dict) else None,
+            "book": clean(await db[COLL].find_one({"id": book_id}))}
+
+
+async def resolve_finding(book_id, issue, action, actor, span=None, suggested_fix=None, fix_kind=None):
+    """Founder resolves a single proofing finding: 'keep' (intentional — no text change, recorded
+    with provenance) or 'correct' (apply a surgical fix and re-proof)."""
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return None
+    if b.get("editorial_locked"):
+        return {"error": "Editorial edition is locked. Open a governed revision first."}
+    if action == "keep":
+        kept = list(dict.fromkeys((b.get("kept_findings", []) + [issue])))
+        await db[COLL].update_one({"id": book_id}, {"$set": {"kept_findings": kept, "updated_at": _now()},
+            "$push": {"revision_history": {"stage": "Finding Kept As Written", "by": actor, "at": _now(),
+                      "note": f"Founder kept intentional: {issue}"}}})
+        return await proof_polish(book_id, actor)
+    if action == "correct":
+        content = b["working_copy"]["content"]
+        if fix_kind == "collapse_double_space":
+            import re
+            new_content = re.sub(r" {2,}", " ", content)
+        elif span and suggested_fix is not None and isinstance(span, (list, tuple)) and len(span) == 2:
+            s, e = int(span[0]), int(span[1])
+            if s < 0 or e > len(content) or s >= e:
+                return {"error": "This correction no longer matches the manuscript — re-proof and try again."}
+            new_content = content[:s] + suggested_fix + content[e:]
+        else:
+            return {"error": "Nothing to correct for this finding."}
+        await db[COLL].update_one({"id": book_id}, {"$set": {
+            "working_copy": {"content": new_content, "updated_at": _now()},
+            "editorial_status": "Edited — re-proof required", "updated_at": _now()},
+            "$push": {"revision_history": {"stage": "Finding Corrected", "by": actor, "at": _now(),
+                      "note": f"Founder corrected: {issue}"}}})
+        return await proof_polish(book_id, actor)
+    return {"error": "Unknown action — use 'keep' or 'correct'."}
 
 
 # ----------------------------- BUTTON 3 — DESIGN -----------------------------

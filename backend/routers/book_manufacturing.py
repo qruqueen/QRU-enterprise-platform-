@@ -77,6 +77,49 @@ async def approve_edition(book_id: str, user=Depends(require_super_admin)):
     return r
 
 
+@router.post("/books/{book_id}/open-revision")
+async def open_revision(book_id: str, user=Depends(require_super_admin)):
+    r = await bm.open_revision(book_id, user.get("name", "Founder"))
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    if isinstance(r, dict) and r.get("error"):
+        raise HTTPException(400, r["error"])
+    return r
+
+
+class ManuscriptReq(BaseModel):
+    content: str
+
+
+@router.post("/books/{book_id}/manuscript")
+async def update_manuscript(book_id: str, req: ManuscriptReq, user=Depends(require_super_admin)):
+    r = await bm.update_manuscript(book_id, req.content, user.get("name", "Founder"))
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    if isinstance(r, dict) and r.get("error"):
+        raise HTTPException(400, r["error"])
+    return r
+
+
+class ResolveFindingReq(BaseModel):
+    issue: str
+    action: str  # "keep" | "correct"
+    span: Optional[list] = None
+    suggested_fix: Optional[str] = None
+    fix_kind: Optional[str] = None
+
+
+@router.post("/books/{book_id}/resolve-finding")
+async def resolve_finding(book_id: str, req: ResolveFindingReq, user=Depends(require_super_admin)):
+    r = await bm.resolve_finding(book_id, req.issue, req.action, user.get("name", "Founder"),
+                                 span=req.span, suggested_fix=req.suggested_fix, fix_kind=req.fix_kind)
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    if isinstance(r, dict) and r.get("error"):
+        raise HTTPException(400, r["error"])
+    return r
+
+
 class DesignReq(BaseModel):
     base_url: Optional[str] = ""
 
