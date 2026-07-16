@@ -204,13 +204,13 @@ def compose_print_wrap(front_bytes, spec):
     # Imprint at back bottom-left
     imf = font(dl.SANS_BOLD, int(0.15 * dpi))
     d.text((safe_l, H - int(bleed * dpi) - m - int(0.2 * dpi)), (spec.get("imprint") or "").upper(), font=imf, fill=_GOLD)
-    # Barcode clear zone — KDP prints the barcode here (bottom-right of BACK cover): ~2.0 x 1.2 in
+    # Barcode clear zone — KDP prints the retail barcode here (bottom-right of BACK cover): ~2.0 x 1.2 in.
+    # We reserve a clean WHITE area (no text/graphics) so KDP's barcode stays scannable over dark artwork.
+    # The Founder selects "No, my cover does not have a barcode" on KDP so Amazon fills this zone.
     bc_w, bc_h = int(2.0 * dpi), int(1.2 * dpi)
     bc_x = safe_r - bc_w
     bc_y = H - int(bleed * dpi) - m - bc_h
     d.rectangle([bc_x, bc_y, bc_x + bc_w, bc_y + bc_h], fill=(255, 255, 255))
-    d.text((bc_x + bc_w / 2, bc_y + bc_h / 2), "BARCODE\n(added by KDP)", font=font(dl.SANS_BOLD, int(0.11 * dpi)),
-           fill=(120, 120, 130), anchor="mm", align="center")
     # SPINE text only if allowed (>=79 pages)
     if spec.get("spine_text") and sp * dpi > int(0.2 * dpi):
         spine_img = Image.new("RGBA", (H, int(sp * dpi)), (0, 0, 0, 0))
