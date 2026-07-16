@@ -1505,6 +1505,22 @@ async def assemble_master_package(book_id, actor):
         cover = _read_asset(sel.get("url")) if sel else None
         if cover:
             z.writestr("04_EBOOK/cover.png", cover)
+            # KDP eBook covers must be JPEG (PNG is NOT accepted for upload). Provide a compliant
+            # RGB JPEG at 1600 x 2560 (KDP's ideal 1.6:1 ratio) so the file attaches without a builder.
+            try:
+                from PIL import Image
+                im = Image.open(io.BytesIO(cover)).convert("RGB")
+                tw, th = 1600, 2560
+                ar = im.width / im.height
+                if ar > tw / th:
+                    nh = th; nw = int(th * ar)
+                else:
+                    nw = tw; nh = int(tw / ar)
+                im = im.resize((nw, nh)).crop(((nw - tw) // 2, (nh - th) // 2, (nw - tw) // 2 + tw, (nh - th) // 2 + th))
+                jb = io.BytesIO(); im.save(jb, "JPEG", quality=92, dpi=(300, 300))
+                z.writestr("04_EBOOK/ebook_cover.jpg", jb.getvalue())
+            except Exception:
+                pass
         # 05_AUDIO — internal narration prototype (honestly labeled)
         audio_art = b.get("artifacts", {}).get("audio", {})
         proto = (audio_art or {}).get("prototype")
@@ -1549,12 +1565,24 @@ async def assemble_master_package(book_id, actor):
     safe = "".join(c for c in b["title"] if c.isalnum() or c in " -_").strip().replace(" ", "_")
     fid = re_engine._save(f"master-package-{safe}", "zip", data)
     url = re_engine._asset_url(fid)
-    deliverable = {"type": "Master Output Package", "url": url, "filename": fid,
-                   "size_kb": len(data) // 1024, "assembled_at": _now(), "by": actor}
+    deliverable = {"type": "Master Output Package", "label": "Master Output Package", "url": url,
+                   "filename": fid, "size_kb": len(data) // 1024, "assembled_at": _now(), "by": actor}
+    # Treasure Standard: keep only the CURRENT package. Remove prior Master Output Package entries and
+    # delete their files from disk so the Deliverables Library never shows stale/broken download links.
+    import os
+    existing = b.get("deliverables", []) or []
+    for d in existing:
+        if d.get("type") == "Master Output Package" and d.get("url"):
+            old_path = os.path.join(re_engine.ASSET_DIR, d["url"].split("/")[-1])
+            if os.path.exists(old_path):
+                try:
+                    os.remove(old_path)
+                except OSError:
+                    pass
+    deliverables = [d for d in existing if d.get("type") != "Master Output Package"] + [deliverable]
     await db[COLL].update_one({"id": book_id}, {"$set": {
-        "master_package_url": url, "master_package_at": _now(), "updated_at": _now()},
-        "$push": {"deliverables": deliverable,
-                  "revision_history": {"stage": "Master Package", "by": actor, "at": _now(),
+        "master_package_url": url, "master_package_at": _now(), "deliverables": deliverables, "updated_at": _now()},
+        "$push": {"revision_history": {"stage": "Master Package", "by": actor, "at": _now(),
                                        "note": f"Assembled Master Output Package ({len(data)//1024} KB)."}}})
     await log_org("Book Manufacturing™", "Manufacturing", f"assembled Master Output Package for '{b['title']}'", b["book_code"], "success")
     return {"ok": True, "url": url, "size_kb": len(data) // 1024, "sections": len(buf.getvalue()) and True}

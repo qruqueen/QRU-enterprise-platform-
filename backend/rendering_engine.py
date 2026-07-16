@@ -143,20 +143,17 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
             self.set_font("Helvetica", "", 8)
             self.cell(0, 6, str(self.page_no() - 1), align="R")
 
-    pdf = QRUPDF(format="A4")
+    # 6 x 9 in trade paperback (KDP standard) — dimensions in mm: 152.4 x 228.6.
+    pdf = QRUPDF(format=(152.4, 228.6))
     if product.get("retail_publication"):
         pdf.retail_mode = True
         pdf.retail_title = title_txt
-    pdf.set_margins(22, 22, 22)
-    pdf.set_auto_page_break(True, margin=20)
+    pdf.set_margins(18, 18, 18)
+    pdf.set_auto_page_break(True, margin=16)
 
-    # --- Cover page: finished full-bleed cover (AI or deterministic) — no text overlay ---
-    # The cover image is already a complete, branded cover (title, series, seal baked in),
-    # so we embed it edge-to-edge and never paint additional text over it.
-    pdf.add_page()
-    cover_path = os.path.join(ASSET_DIR, _save("tmp-cover", "png", cover_bytes))
-    pdf.image(cover_path, x=0, y=0, w=210, h=297)
-    os.remove(cover_path)
+    # NOTE: The finished cover is a SEPARATE file (the print-ready cover wrap) uploaded to KDP on its
+    # own. A KDP print interior must NOT embed the cover (it triggers "content outside margins" and
+    # duplicates the cover), so the interior begins at the Title Page.
 
     # --- Title / colophon page ---
     # Retail publication mode (Publication Sanitization Pass™): clean Title Page + Copyright Page

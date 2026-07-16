@@ -90,10 +90,10 @@ def compose(hero_bytes, spec):
     sd = ImageDraw.Draw(scrim)
     for y in range(H):
         a = 0
-        if y < H * 0.34:
-            a = int(150 * (1 - y / (H * 0.34)))
-        if y > H * 0.5:
-            a = max(a, int(205 * ((y - H * 0.5) / (H * 0.5))))
+        if y < H * 0.36:
+            a = int(170 * (1 - y / (H * 0.36)))
+        if y > H * 0.46:
+            a = max(a, int(235 * ((y - H * 0.46) / (H * 0.54))))
         sd.line([(0, y), (W, y)], fill=a)
     black = Image.new("RGB", (W, H), (8, 6, 18))
     img = Image.composite(black, img, scrim)
@@ -190,27 +190,38 @@ def compose_print_wrap(front_bytes, spec):
     m = int(0.5 * dpi)            # 0.5in safe margin
     safe_l = int(bleed * dpi) + m
     safe_r = spine_x - m
+    # Reserve a clean bottom band on the BACK cover for the imprint (left) and the barcode zone (right).
+    bc_w, bc_h = int(2.0 * dpi), int(1.2 * dpi)          # KDP required clear zone: 2.0 x 1.2 in
+    pad = int(0.2 * dpi)
+    bc_x = safe_r - bc_w
+    bc_y = H - int(bleed * dpi) - m - bc_h
+    band_top = bc_y - pad - int(0.35 * dpi)              # text must stop above this
+    # Legibility panel: a solid dark scrim behind header + blurb guarantees text contrast on any art.
+    panel = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    pdraw = ImageDraw.Draw(panel)
+    pdraw.rectangle([safe_l - pad, int(bleed * dpi) + m - pad, safe_r + pad, band_top], fill=(10, 8, 22, 205))
+    canvas.paste(Image.alpha_composite(canvas.convert("RGBA"), panel).convert("RGB"), (0, 0))
+    d = ImageDraw.Draw(canvas)
     # Back header
     hf = font(dl.SERIF_BOLD, int(0.30 * dpi))
     d.text((safe_l, int(bleed * dpi) + m), (spec.get("title") or "").upper(), font=hf, fill=(255, 255, 255))
     y = int(bleed * dpi) + m + int(0.5 * dpi)
-    # Blurb
+    # Blurb — capped so it never runs into the bottom band (imprint / barcode clear zone)
     bf = font(dl.SERIF, int(0.17 * dpi))
     blurb = spec.get("blurb") or ""
     for para in blurb.split("\n"):
         for ln in wrap(para, bf, safe_r - safe_l):
-            d.text((safe_l, y), ln, font=bf, fill=(232, 228, 240)); y += int(0.26 * dpi)
+            if y > band_top - int(0.26 * dpi):
+                break
+            d.text((safe_l, y), ln, font=bf, fill=(236, 232, 244)); y += int(0.26 * dpi)
         y += int(0.12 * dpi)
-    # Imprint at back bottom-left
+    # Imprint — bottom-LEFT only, clear of the barcode zone
     imf = font(dl.SANS_BOLD, int(0.15 * dpi))
-    d.text((safe_l, H - int(bleed * dpi) - m - int(0.2 * dpi)), (spec.get("imprint") or "").upper(), font=imf, fill=_GOLD)
-    # Barcode clear zone — KDP prints the retail barcode here (bottom-right of BACK cover): ~2.0 x 1.2 in.
-    # We reserve a clean WHITE area (no text/graphics) so KDP's barcode stays scannable over dark artwork.
-    # The Founder selects "No, my cover does not have a barcode" on KDP so Amazon fills this zone.
-    bc_w, bc_h = int(2.0 * dpi), int(1.2 * dpi)
-    bc_x = safe_r - bc_w
-    bc_y = H - int(bleed * dpi) - m - bc_h
-    d.rectangle([bc_x, bc_y, bc_x + bc_w, bc_y + bc_h], fill=(255, 255, 255))
+    d.text((safe_l, H - int(bleed * dpi) - m - int(0.18 * dpi)), (spec.get("imprint") or "").upper(), font=imf, fill=_GOLD)
+    # Barcode clear zone — KDP prints the retail barcode here (bottom-right of BACK cover).
+    # A solid WHITE rectangle (with padding) guarantees a light, solid, element-free 2.0 x 1.2 in area.
+    # The Founder selects "No, my cover does not have a barcode" so Amazon fills this zone.
+    d.rectangle([bc_x - pad, bc_y - pad, min(bc_x + bc_w + pad, safe_r + pad), bc_y + bc_h + pad], fill=(255, 255, 255))
     # SPINE text only if allowed (>=79 pages)
     if spec.get("spine_text") and sp * dpi > int(0.2 * dpi):
         spine_img = Image.new("RGBA", (H, int(sp * dpi)), (0, 0, 0, 0))

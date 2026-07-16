@@ -1,7 +1,0 @@
-1
-00:00:00,000 --> 00:00:04,000
-Forex is the global market for exchanging currencies.
-
-2
-00:00:04,000 --> 00:00:08,000
-Learn the basics of currency pairs and how spreads work.
