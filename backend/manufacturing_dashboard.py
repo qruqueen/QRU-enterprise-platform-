@@ -3,6 +3,7 @@ of everything manufactured from it (Knowledge-first, not product-first). Honest 
 """
 from database import db
 import project_zero as pz
+import manufacturing_foundation as mf
 
 # Canonical product lifecycle for a Knowledge Record.
 #  - route     → opens the studio that manufactures it (multi-step / approval driven)
@@ -186,6 +187,8 @@ async def all_products():
     items = []
 
     async for p in db.products.find({}, {"_id": 0}).sort("updated_at", -1).limit(400):
+        if p.get("source_engine"):
+            continue  # store-listing mirror of a poster/recipe/media row already shown under its own engine
         cd = p.get("customer_deliverable") or {}
         pdf = next((f for f in cd.get("files", []) if f.get("format") == "pdf"), None)
         published = (p.get("status") == "Published")
@@ -212,31 +215,41 @@ async def all_products():
         badges = []
         if rs == "RENDERED" and fmt in ("youtube_video", "promo_short"):
             badges.append("Ready for YouTube")
+        if m.get("store_published"):
+            badges.append("In QRU Store")
         items.append({
             "id": m["id"], "name": m.get("label"), "kind": (fmt or "media").replace("_", " ").title(),
             "engine": "media", "kr_id": m.get("kr_id"), "topic": topics.get(m.get("kr_id")),
-            "status": rs or m.get("status") or "STORYBOARD_READY", "tone": _tone_for(rs or m.get("status")),
+            "status": "Published" if m.get("store_published") else (rs or m.get("status") or "STORYBOARD_READY"),
+            "tone": _tone_for(rs or m.get("status")),
             "updated_at": m.get("created_at"), "download": None, "badges": badges,
+            "publishable": mf.is_sellable("media", m) and not m.get("store_published"),
             "route": "/storyboard-studio", "audiobook_url": None,
         })
 
     async for a in db.poster_assets.find({}, {"_id": 0}).sort("created_at", -1).limit(400):
+        badges = ["In QRU Store"] if a.get("store_published") else []
         items.append({
             "id": a["id"], "name": a.get("title") or a.get("family"), "kind": "Poster",
             "engine": "poster", "kr_id": a.get("kr_id"), "topic": topics.get(a.get("kr_id")),
-            "status": a.get("status") or "DRAFT", "tone": _tone_for(a.get("status")),
+            "status": "Published" if a.get("store_published") else (a.get("status") or "DRAFT"),
+            "tone": _tone_for(a.get("status")),
             "updated_at": a.get("created_at"),
-            "download": f"/api/publishing/poster/{a['id']}/file?format=png", "badges": [],
+            "download": f"/api/publishing/poster/{a['id']}/file?format=png", "badges": badges,
+            "publishable": mf.is_sellable("poster", a) and not a.get("store_published"),
             "route": "/poster-studio", "audiobook_url": None,
         })
 
     async for i in db.inherited_products.find({}, {"_id": 0}).sort("created_at", -1).limit(400):
         f = (i.get("files") or [{}])[0]
+        badges = ["In QRU Store"] if i.get("store_published") else []
         items.append({
             "id": i["id"], "name": i.get("label"), "kind": (i.get("type") or "recipe").replace("_", " ").title(),
             "engine": "recipe", "kr_id": i.get("kr_id"), "topic": topics.get(i.get("kr_id")),
-            "status": i.get("status") or "DRAFT", "tone": _tone_for(i.get("status")),
-            "updated_at": i.get("created_at"), "download": f.get("url"), "badges": [],
+            "status": "Published" if i.get("store_published") else (i.get("status") or "DRAFT"),
+            "tone": _tone_for(i.get("status")),
+            "updated_at": i.get("created_at"), "download": f.get("url"), "badges": badges,
+            "publishable": mf.is_sellable("recipe", i) and not i.get("store_published"),
             "route": "/knowledge-manufacturing", "audiobook_url": None,
         })
 

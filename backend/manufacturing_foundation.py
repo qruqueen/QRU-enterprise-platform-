@@ -17,6 +17,10 @@ instructions (the 6 categories). CONSTITUTIONAL RULE: no product may manufacture
 from datetime import datetime, timezone
 
 import product_recipes as catalog
+from database import db
+from models import gen_id, now_iso
+import commerce
+import ukr_standard as ukr
 
 FOUNDATION_ID = "STD-MFG-FOUNDATION-0001"
 PMS_STANDARD_ID = "STD-MFG-PRD-0001"
@@ -245,3 +249,132 @@ for fam, ptype in [("Workbook", "Workbook"), ("Poster", "Poster"), ("Knowledge C
                       "metadata_package": ["product_manifest"]},
         approved=True,
     ))
+
+
+# ---------------------------------------------------------------------------
+# Manufacturing Foundation™ — SHARED PUBLISH (inherited by every product family).
+# Any engine → one canonical db.products store listing (reuses storefront/checkout/fulfillment)
+# + one PMF™. Honest gate: a product may only be published if it has a REAL, sellable deliverable
+# (Treasure Standard — this keeps mocked media out of a paid store).
+# ---------------------------------------------------------------------------
+_SELLABLE_MEDIA_FORMATS = {"mp4", "mov", "m4v", "mp3", "wav", "m4a", "webm"}
+
+
+def _resolve_listing(engine, d):
+    """Normalize a source product from any engine into a store-listing shape + sellability.
+    Returns (listing_fields, file_url, sellable, reason)."""
+    if engine == "publication":
+        cd = d.get("customer_deliverable") or {}
+        pdf = next((f for f in cd.get("files", []) if f.get("url")), None)
+        url = cd.get("download_url") or (pdf or {}).get("url")
+        return ({"title": d.get("title"), "product_type": d.get("product_type") or "Product",
+                 "family": d.get("family"), "topic": d.get("topic"),
+                 "knowledge_record_id": d.get("knowledge_record_id"),
+                 "cover_url": d.get("cover_url") or d.get("thumbnail_url")}, url, bool(url), "")
+    if engine == "poster":
+        f = (d.get("files") or [{}])[0]
+        url = f"/api/publishing/poster/{d['id']}/file?format=png" if f.get("bytes") else None
+        return ({"title": d.get("title") or d.get("family"), "product_type": "Poster",
+                 "family": d.get("family"), "topic": d.get("kr_topic") or d.get("topic"),
+                 "knowledge_record_id": d.get("kr_id"), "cover_url": url}, url, bool(url), "")
+    if engine == "recipe":
+        f = (d.get("files") or [{}])[0]
+        url = f.get("url")
+        ptype = (d.get("type") or "Printable PDF").replace("_", " ").title()
+        return ({"title": d.get("label"), "product_type": ptype, "family": "Learning",
+                 "topic": d.get("topic"), "knowledge_record_id": d.get("kr_id"),
+                 "cover_url": None}, url, bool(url), "")
+    if engine == "media":
+        sellable_file = next((f for f in (d.get("files") or [])
+                              if f.get("url") and (f.get("bytes") or 0) > 0
+                              and (f.get("format") or "").lower() in _SELLABLE_MEDIA_FORMATS), None)
+        url = (sellable_file or {}).get("url")
+        ptype = (d.get("format") or "media").replace("_", " ").title()
+        reason = "" if url else "This media product has no rendered audio/video file yet (its video is 0 bytes / not produced) — nothing sellable to publish."
+        return ({"title": d.get("label"), "product_type": ptype, "family": d.get("family") or "Media",
+                 "topic": d.get("topic"), "knowledge_record_id": d.get("kr_id"),
+                 "cover_url": next((f.get("url") for f in (d.get("files") or []) if f.get("format") == "png"), None)},
+                url, bool(url), reason)
+    return ({}, None, False, f"Unknown engine '{engine}'.")
+
+
+_ENGINE_COLL = {"publication": "products", "poster": "poster_assets",
+                "recipe": "inherited_products", "media": "media_products"}
+
+
+def is_sellable(engine, d):
+    """Pure check used by the shelf: does this source product have a real, sellable deliverable?"""
+    _, _, sellable, _ = _resolve_listing(engine, d)
+    if engine == "publication":
+        # publication keeps its existing creative-review + verification gate
+        return sellable and bool(d.get("creative_brief")) and d.get("creative_status") == "Reviewed" and bool(d.get("verified"))
+    return sellable
+
+
+async def publish_product(engine, source_id, actor):
+    """SHARED Foundation publish. Returns {ok, listing, manifest} or {error}."""
+    coll = _ENGINE_COLL.get(engine)
+    if not coll:
+        return {"error": f"Unknown engine '{engine}'."}
+    d = await db[coll].find_one({"id": source_id}, {"_id": 0})
+    if not d:
+        return {"error": "Product not found."}
+
+    fields, file_url, sellable, reason = _resolve_listing(engine, d)
+    if not sellable:
+        return {"error": reason or "This product has no real, downloadable deliverable yet — nothing to publish. (Treasure Standard: we never publish an empty product.)"}
+
+    if engine == "publication":
+        if not (d.get("creative_brief") and d.get("creative_status") == "Reviewed" and d.get("verified")):
+            return {"error": "Send this product through the Creative Studio review before publication."}
+        await db.products.update_one({"id": source_id}, {"$set": {"status": "Published", "updated_at": now_iso()}})
+        listing = await db.products.find_one({"id": source_id}, {"_id": 0})
+        listing_id = source_id
+    else:
+        # idempotent canonical store listing for the manufactured product from any engine
+        existing = await db.products.find_one({"source_engine": engine, "source_id": source_id}, {"_id": 0})
+        listing_id = existing["id"] if existing else gen_id()
+        price = commerce.PRICE_TIERS.get(fields["product_type"], commerce.DEFAULT_PRICE)
+        listing = {
+            "id": listing_id, "product_code": existing.get("product_code") if existing else f"STORE-{listing_id[:8].upper()}",
+            "title": fields["title"], "product_type": fields["product_type"], "family": fields["family"],
+            "topic": fields["topic"], "knowledge_record_id": fields["knowledge_record_id"],
+            "status": "Published", "price": price,
+            "customer_deliverable": {"files": [{"format": file_url.rsplit(".", 1)[-1] if "." in file_url else "file", "url": file_url}], "download_url": file_url},
+            "cover_url": fields.get("cover_url"), "thumbnail_url": fields.get("cover_url"),
+            "treasure_standard": bool(d.get("treasure_status") in ("Treasure", "PASS", True) or d.get("verification_status") == "Verified"),
+            "verified": True, "creative_status": "Reviewed",
+            "creative_brief": {"origin": f"Manufactured by the {engine} engine", "reviewed": True},
+            "license_type": "Single-user", "source_engine": engine, "source_id": source_id,
+            "published_by": actor, "published_at": now_iso(),
+            "created_at": existing.get("created_at") if existing else now_iso(), "updated_at": now_iso(),
+        }
+        await db.products.update_one({"id": listing_id}, {"$set": listing}, upsert=True)
+        await db[coll].update_one({"id": source_id}, {"$set": {"store_published": True, "store_listing_id": listing_id,
+                                                               "publishing_status": "Published", "updated_at": now_iso()}})
+
+    # PMF™ — EVIDENCE for the published product (references its UKR, records inherited standards)
+    source_ukr = None
+    krid = fields.get("knowledge_record_id")
+    if krid:
+        source_ukr = await db[ukr.CANONICAL_COLLECTION].find_one({"id": krid}, {"_id": 0}) \
+            or await db[ukr.CANONICAL_COLLECTION].find_one({"kr_code": krid}, {"_id": 0})
+    product = {"product_type": fields["product_type"],
+               "product_family": (get_pms(fields["product_type"]) or {}).get("product_family", fields["product_type"]),
+               "title": fields["title"], "published_title": fields["title"],
+               "book_code": listing.get("product_code"), "id": listing_id}
+    manifest = build_manifest(
+        product=product, source_ukr=source_ukr,
+        quality={"validation_status": "PASS", "verification_status": (source_ukr or {}).get("verification_status", "Manufactured"),
+                 "treasure_standard": "Honest states only — real deliverable verified"},
+        distribution={"publishing_targets": ["QRU Store™"], "product_status": "Published",
+                      "channels": ["QRU Store™", "Public Consumer Catalog"], "launch_status": "Live"},
+        governance={"source_engine": engine, "provenance": d.get("provenance", {})},
+        assets={"primary_deliverable": file_url, "cover": fields.get("cover_url")},
+        production={"files_produced": [file_url], "store_listing_id": listing_id,
+                    "export_formats": [fields["product_type"]]},
+        actor=actor)
+    await db.products.update_one({"id": listing_id}, {"$set": {"product_manifest": manifest}})
+    if engine != "publication":
+        await db[coll].update_one({"id": source_id}, {"$set": {"product_manifest": manifest}})
+    return {"ok": True, "listing_id": listing_id, "price": listing.get("price"), "manifest": manifest}

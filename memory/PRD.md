@@ -12,6 +12,15 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## Every Product Family Wired onto the Manufacturing Foundation™ — one-tap Publish + PMF™ ✅ (2026-07-16, deterministic/zero-credit, self-verified)
+Delivered the "merge engines" audit item as the proven Foundation pattern: any engine publishes the SAME way.
+- **Shared `manufacturing_foundation.publish_product(engine, id, actor)`** — engines: publication, poster, recipe, media. Non-publication engines upsert ONE canonical `db.products` **store listing** (source_engine/source_id) so storefront + Stripe checkout + fulfillment are 100% reused (no forked commerce logic). Publication keeps its existing creative-review+verified gate. Idempotent (re-publish returns same listing, no dupes). Every publish emits a **PMF™** (7 Inherited Standards) referencing the source UKR.
+- **Honest sellability gate (`is_sellable`/`_resolve_listing`) = Treasure Standard:** a product publishes only if it has a REAL deliverable file. Media requires an audio/video file with **bytes > 0** — this correctly EXCLUDES mocked 0-byte videos (fixed a bug where an empty mp4 got published; bad listing removed). Poster requires rendered bytes; recipe requires a file url.
+- **Endpoint:** `POST /api/manufacturing/publish {engine, id}` (get_current_user). Frontend **My Products / ProductShelf** now shows "Publish for Distribution" on ALL engines when `p.publishable`; store-listing mirrors are suppressed from the shelf (one clean row per product). UI-verified E2E (toast + row → "In QRU Store").
+- **`manufacturing_dashboard.all_products()`** now returns `publishable` + store state per engine. Current: publication 110 publishable / poster 52 / recipe 15 / media 4 (only real renders). Storefront 73 live.
+- **Capstone (BOOK-0011 full 7-button publish) NOT run** — it costs AI credits (cover gen) + disk; awaiting Founder go-ahead given credit sensitivity.
+
+
 ## End-to-End Proof + One-Tap Distribution ✅ (2026-07-16, zero new AI credits — all deterministic)
 Founder ask: "make sure it all works with ease — Generate UKR → Manufacture → Publish for distribution — without adding credit." PROVEN end-to-end:
 - **UKR** KR-00078 "Finance — Saving early matters" (verified, v1.1) → **Manufactured** Workbook (real files, review-passed) → **Published** → now LIVE in the QRU Store storefront AND the public consumer catalog (`/api/consumer/catalog`), price auto-set $9.99, purchasable via Stripe (test). Storefront grew 69 → 71.

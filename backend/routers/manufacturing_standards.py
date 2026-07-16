@@ -1,6 +1,7 @@
 """QRU Manufacturing Standards™ API — the constitutional spine.
 UKR™ (Truth) → PMS™ (Instructions) → PMF™ (Evidence). Deterministic ($0 AI)."""
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 
 from database import db
 from auth import get_current_user, require_super_admin
@@ -64,3 +65,17 @@ async def ukr_validate(user=Depends(get_current_user)):
 @router.post("/ukr/migrate")
 async def ukr_migrate(dry_run: bool = False, user=Depends(require_super_admin)):
     return await ukr.migrate_all(actor=user.get("name", "Founder"), dry_run=dry_run)
+
+
+class PublishInput(BaseModel):
+    engine: str
+    id: str
+
+
+@router.post("/publish")
+async def publish(data: PublishInput, user=Depends(get_current_user)):
+    """SHARED Foundation publish — any product family → QRU Store + PMF™ (one tap)."""
+    res = await mf.publish_product(data.engine, data.id, user.get("name", "Founder"))
+    if res.get("error"):
+        raise HTTPException(400, res["error"])
+    return res
