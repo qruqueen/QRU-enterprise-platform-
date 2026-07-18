@@ -1,6 +1,6 @@
 import { ShieldCheck } from "lucide-react";
 
-const SUPPORT_EMAIL = "privacy@qru-online.com";
+const SUPPORT_EMAIL = "support@qru-online.com";
 
 function Section({ title, children }) {
   return (

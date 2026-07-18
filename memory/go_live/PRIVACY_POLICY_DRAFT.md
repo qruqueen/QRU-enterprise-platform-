@@ -6,7 +6,7 @@
 
 **Effective date:** [TBD]
 **Publisher / Data Controller:** QRU Press™, operated by [Legal entity name, e.g. Ascend Development Group LLC]
-**Contact:** [privacy@qru-online.com]  ·  [Mailing address if required by jurisdiction]
+**Contact:** support@qru-online.com  ·  [Mailing address if required by jurisdiction]
 
 ## 1. Scope
 This policy covers qru-online.com (the public QRU Online bookstore). It does not cover the
@@ -43,7 +43,7 @@ after purchase and allow up to 5 downloads. Server logs retained [X days].
 
 ## 7. Your rights
 Access, correction, deletion (subject to legal retention), and portability. EU/UK/CA residents
-may have additional rights. Requests: [privacy@qru-online.com]. We respond within [30] days.
+may have additional rights. Requests: support@qru-online.com. We respond within [30] days.
 
 ## 8. Security
 Secrets stored only in server environment variables; payment card data never touches QRU

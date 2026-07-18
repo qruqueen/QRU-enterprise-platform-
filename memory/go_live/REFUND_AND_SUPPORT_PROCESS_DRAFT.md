@@ -16,7 +16,7 @@ Because delivery is instant and digital, propose one of:
 **Founder decision required:** choose A / B / C and state it on the site before taking Live payments.
 
 ## 3. How a refund is issued
-1. Customer emails [support@qru-online.com] with their order reference (from receipt / success page).
+1. Customer emails support@qru-online.com with their order reference (from receipt / success page).
 2. Locate the order in **Stripe Dashboard → Payments** (search by email or session id).
 3. Click **Refund** (full or partial). Stripe returns funds to the original method.
 4. Optionally revoke the download link (set order status to refunded). [Future small code hook.]
@@ -31,7 +31,7 @@ Because delivery is instant and digital, propose one of:
   (current) re-share status URL / (future) resend link.
 
 ## 5. Support intake
-- **Channel:** [support@qru-online.com] (single inbox at launch).
+- **Channel:** support@qru-online.com (single inbox at launch).
 - **Target response:** [1 business day].
 - **Common cases + answers:** link expired (72h) → verify paid in Stripe, extend/reissue;
   download limit hit (5) → verify and reissue; wrong book → refund + repurchase; can't open EPUB
