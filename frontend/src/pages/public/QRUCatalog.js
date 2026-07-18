@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { publicApi, assetUrl } from "./publicApi";
 
@@ -29,15 +28,13 @@ export default function QRUCatalog() {
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-14">
-          {books.map((book, i) => (
-            <motion.div key={book.id}
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: (i % 8) * 0.05 }}>
+          {books.map((book) => (
+            <div key={book.id}>
               <Link to={`/book/${book.id}`} data-testid={`catalog-book-${book.id}`} className="group block">
                 <div className="relative overflow-hidden rounded-md border border-[#E5E5E0] bg-[#EDEBE4] shadow-xl shadow-black/5 aspect-[2/3] transition-transform duration-500 group-hover:-translate-y-2 group-hover:shadow-2xl">
                   {book.cover_url ? (
-                    <img src={assetUrl(book.cover_url)} alt={book.title} decoding="async"
-                      className="w-full h-full object-cover" loading="lazy" />
+                    <img src={assetUrl(book.thumb_url || book.cover_url)} alt={book.title} decoding="async"
+                      className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full grid place-items-center text-sm text-[#575754] p-4 text-center">{book.title}</div>
                   )}
@@ -48,7 +45,7 @@ export default function QRUCatalog() {
                   <p className="text-sm text-[#575754] mt-0.5">{book.author}</p>
                 </div>
               </Link>
-            </motion.div>
+            </div>
           ))}
         </div>
       )}

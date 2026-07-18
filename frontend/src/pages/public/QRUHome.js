@@ -1,23 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
 import { ArrowRight, Loader2, ShieldCheck } from "lucide-react";
 import { publicApi, assetUrl } from "./publicApi";
 
 const HERO_IMG = "/qru-hero.png";
 
-function CoverCard({ book, index, large }) {
+function CoverCard({ book, large }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: index * 0.08 }}
-    >
+    <div>
       <Link to={`/book/${book.id}`} data-testid={`featured-book-${book.id}`} className="group block">
         <div className={`relative overflow-hidden rounded-md border border-[#E5E5E0] bg-[#EDEBE4] shadow-xl shadow-black/5 transition-transform duration-500 group-hover:-translate-y-2 group-hover:shadow-2xl ${large ? "aspect-[3/4]" : "aspect-[2/3]"}`}>
           {book.cover_url ? (
-            <img src={assetUrl(book.cover_url)} alt={book.title} decoding="async"
-              className="w-full h-full object-cover" loading="lazy" />
+            <img src={assetUrl(book.thumb_url || book.cover_url)} alt={book.title} decoding="async"
+              className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full grid place-items-center text-[#575754]">{book.title}</div>
           )}
@@ -30,7 +25,7 @@ function CoverCard({ book, index, large }) {
           <p className="text-sm text-[#575754] mt-0.5">{book.author}</p>
         </div>
       </Link>
-    </motion.div>
+    </div>
   );
 }
 
@@ -99,11 +94,11 @@ export default function QRUHome() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
             {hero && (
               <div className="lg:col-span-5">
-                <CoverCard book={hero} index={0} large />
+                <CoverCard book={hero} large />
               </div>
             )}
             <div className="lg:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-8">
-              {rest.map((b, i) => <CoverCard key={b.id} book={b} index={i + 1} />)}
+              {rest.map((b) => <CoverCard key={b.id} book={b} />)}
             </div>
           </div>
         )}
