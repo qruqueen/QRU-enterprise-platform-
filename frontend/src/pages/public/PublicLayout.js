@@ -40,7 +40,7 @@ export default function PublicLayout() {
               <span className="text-xs uppercase tracking-[0.2em]">The Treasure Standard™</span>
             </div>
             <p className="qru-serif text-3xl md:text-4xl leading-tight max-w-xl">
-              Every title is manufactured and verified — no fabrication, no shortcuts.
+              Carefully researched, thoughtfully written, and verified.
             </p>
             <p className="text-[#9BA3B5] mt-4 max-w-lg text-sm leading-relaxed">
               QRU Online presents only what has been authorized for release by QRU Press™.

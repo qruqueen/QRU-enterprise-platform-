@@ -31,9 +31,33 @@ no checkout. 4 authorized books live.
 pass including the security guarantee (Factory routes/APIs unreachable while logged out) and
 public-API field isolation. Regression test: `/app/backend/tests/test_qru_online_public.py`.
 
-**Deferred / notes:**
-- Hero image is a decorative Unsplash asset (not a QRU-owned/authorized asset) — pending a
-  QRU Press™-owned hero.
-- Book covers are large PNGs (1.5–2.2MB) — a thumbnail/optimized-cover path is a future perf win.
-- Not yet built (future iterations): Courses/University, Products catalog, storefront/checkout,
-  custom domain (qru-online.com) at deploy time.
+## 2026-06 — QRU Online bookstore: covers + one end-to-end purchase (Iteration 2)
+
+**Master Asset Principle™ (new standard):** one canonical cover → auto-derived web thumbnail.
+- `/api/public/books/{id}/cover-thumb` derives a cached ~50 KB JPEG (460px) from the canonical
+  print cover (Pillow), generated once. Catalog, home, and book-detail grids use `thumb_url`;
+  no second asset is hand-maintained. Fixed the blank/slow-cover bottleneck (1.5–2.2 MB → ~50 KB).
+
+**Homepage finished:** split-layout hero (crisp text on solid bone + QRU-owned `/qru-hero.png`),
+copy sharpened to pass the Founder's 10-second test (what is QRU / what can I buy / where to click).
+Copy: "Every title is carefully researched, thoughtfully written, and verified to the QRU Treasure Standard™."
+
+**Purchase flow (mission — one complete customer purchase):** `/app/backend/routers/public_commerce.py`
+- POST `/api/public/checkout` — Stripe Checkout (emergentintegrations, Founder's own TEST keys in
+  `STRIPE_API_KEY`). Price resolved SERVER-SIDE (`ebook_price` → `list_price`); client cannot set amount.
+- GET `/api/public/checkout/status/{sid}` — polls Stripe, idempotently flips DB to paid.
+- GET `/api/public/download/{sid}` — releases the authorized EPUB ONLY when paid (else 403).
+- Frontend: `QRUBookPage` "Buy the ebook" → Stripe hosted checkout; `QRUPurchaseSuccess` polls then
+  shows Download EPUB. Guest checkout, no login.
+
+**Verified (iteration_81.json):** 16/16 backend pytest; full E2E with real Stripe test card
+(4242…) → paid → EPUB delivered (2.28 MB, application/epub+zip); unpaid = 403; price tamper-proof;
+Mobile (390) + Tablet (820) pass. Regression: `/app/backend/tests/test_qru_public_commerce.py`.
+
+**Learnings:** hot-reload does NOT reliably regenerate Tailwind CSS / bundle for new files —
+`sudo supervisorctl restart frontend` is required after adding new pages or big class sets.
+Framer-motion entrance opacity animations rendered unreliably here; public pages use static render.
+
+**Backlog (non-blocking, from review):** manual "I paid — check again" button on success page;
+`Intl.NumberFormat` for non-USD currency; publicApi retry/backoff. Domain `qru-online.com` pointing
+is a deploy-time action. Next scope (Founder-gated): complete the bookstore, then Courses/University.

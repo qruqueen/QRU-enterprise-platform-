@@ -52,8 +52,8 @@ export default function QRUHome() {
               Books that make<br />hard ideas easy.
             </h1>
             <p className="text-lg mt-8 leading-relaxed" style={{ color: "#3A3A37" }}>
-              QRU Press is a premium educational publishing house. Every title is manufactured
-              and verified to the Treasure Standard™ — no fabrication, no shortcuts.
+              QRU Press is a premium educational publishing house. Every title is carefully
+              researched, thoughtfully written, and verified to the QRU Treasure Standard™.
             </p>
             <div className="flex flex-wrap items-center gap-4 mt-10">
               <Link to="/catalog" data-testid="hero-browse-catalog"

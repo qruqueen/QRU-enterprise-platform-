@@ -110,8 +110,8 @@ async def home():
         "brand": {
             "name": "QRU Online",
             "tagline": "A premium educational publishing house.",
-            "promise": "Every title is manufactured and verified to the Treasure Standard™ — "
-                       "no fabrication, no shortcuts. Only what has been authorized for release.",
+            "promise": "Every title is carefully researched, thoughtfully written, and verified "
+                       "to the QRU Treasure Standard™.",
         },
         "featured": public[:6],
         "counts": {"books": len(public)},
