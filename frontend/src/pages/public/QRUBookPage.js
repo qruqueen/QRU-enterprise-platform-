@@ -80,6 +80,7 @@ export default function QRUBookPage() {
                   {buying ? "Redirecting to secure checkout…" : "Buy the ebook"}
                 </button>
                 <p className="text-xs mt-2 text-center" style={{ color: "#8A8A85" }}>Secure checkout by Stripe · instant download</p>
+                <p className="text-xs mt-1 text-center" style={{ color: "#8A8A85" }} data-testid="refund-guarantee">14-day satisfaction guarantee · full refund on request</p>
               </div>
             )}
           </div>

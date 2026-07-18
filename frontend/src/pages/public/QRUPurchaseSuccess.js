@@ -56,6 +56,9 @@ export default function QRUPurchaseSuccess() {
           <div className="mt-8">
             <Link to="/catalog" className="text-sm text-[#C5A059] hover:underline">Continue browsing the catalog</Link>
           </div>
+          <p className="mt-6 text-xs" style={{ color: "#8A8A85" }} data-testid="refund-guarantee-success">
+            Not satisfied? Full refund within 14 days — just reply to your receipt.
+          </p>
         </div>
       )}
 

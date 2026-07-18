@@ -89,3 +89,11 @@ Live test purchase before promotion.
 
 **Backlog (advisory, non-blocking):** Pydantic `PublicBookOut` model to hard-whitelist public book
 fields (currently an explicit dict allow-list); "I paid — check again" button on success page.
+
+## 2026-06 — Refund policy wording (Founder decision: Option A)
+
+Added the **14-day satisfaction guarantee** wording at point-of-purchase (book page, under the Buy
+button — data-testid `refund-guarantee`) and on the purchase success page (data-testid
+`refund-guarantee-success`). No refund automation built (handled via Stripe Dashboard per the
+draft process doc). Support/privacy email still placeholder `privacy@qru-online.com` pending the
+Founder's final production address. Live cutover NOT started — operational checklist in progress.
