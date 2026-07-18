@@ -52,11 +52,14 @@ export default function PublicLayout() {
             <Link to="/" className="hover:text-[#D4AF37] transition-colors">Home</Link>
             <Link to="/catalog" className="hover:text-[#D4AF37] transition-colors">Books Catalog</Link>
             <Link to="/privacy" data-testid="footer-privacy" className="hover:text-[#D4AF37] transition-colors">Privacy</Link>
+            <Link to="/terms" data-testid="footer-terms" className="hover:text-[#D4AF37] transition-colors">Terms &amp; Conditions</Link>
+            <Link to="/refunds" data-testid="footer-refunds" className="hover:text-[#D4AF37] transition-colors">Refund Policy</Link>
+            <a href="mailto:support@qru-online.com" data-testid="footer-support" className="hover:text-[#D4AF37] transition-colors">support@qru-online.com</a>
           </div>
         </div>
         <div className="border-t border-[#1E2943]">
           <div className="max-w-7xl mx-auto px-6 md:px-10 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#9BA3B5]">
-            <span>© {new Date().getFullYear()} QRU Press™ · Ascend Development Group LLC</span>
+            <span data-testid="footer-operated-by">© {new Date().getFullYear()} QRU Press™ · QRU Online is operated by Ascend Development Group LLC</span>
             <span className="qru-serif text-base text-[#FDFBF7]">QRU <span className="text-[#D4AF37]">Online</span></span>
           </div>
         </div>
