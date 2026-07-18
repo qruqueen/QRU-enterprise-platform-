@@ -107,6 +107,10 @@ import ConsumerMyLearning from "@/pages/consumer/ConsumerMyLearning";
 import ConsumerFavorites from "@/pages/consumer/ConsumerFavorites";
 import ConsumerCertificates from "@/pages/consumer/ConsumerCertificates";
 import ConsumerPathways from "@/pages/consumer/ConsumerPathways";
+import PublicLayout from "@/pages/public/PublicLayout";
+import QRUHome from "@/pages/public/QRUHome";
+import QRUCatalog from "@/pages/public/QRUCatalog";
+import QRUBookPage from "@/pages/public/QRUBookPage";
 import { Loader2 } from "lucide-react";
 
 function ProtectedRoute({ children }) {
@@ -242,18 +246,25 @@ function ConsumerRoutes() {
   );
 }
 
+function PublicRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<PublicLayout />}>
+        <Route index element={<QRUHome />} />
+        <Route path="catalog" element={<QRUCatalog />} />
+        <Route path="book/:id" element={<QRUBookPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
 function ModeRouter() {
   const { user, loading } = useAuth();
   const { isConsumer } = useMode();
   if (loading)
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
-  if (!user)
-    return (
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    );
+  if (!user) return <PublicRoutes />;
   return isConsumer ? <ConsumerRoutes /> : <EnterpriseRoutes />;
 }
 

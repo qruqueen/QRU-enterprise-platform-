@@ -1,0 +1,39 @@
+{
+  "summary": "QRU Online public presentation layer fully validated. 13/13 backend pytest cases pass; full end-to-end Playwright UI walkthrough passes every acceptance criterion (public home, catalog, book page, invalid-id 404, Factory-route redirect while logged out, /login renders).",
+  "per_feature_verdict": {
+    "public_home_at_root": "PASS — Unauthenticated GET / returns qru-home (no redirect to /login). Treasure Standard signal + Featured Titles visible. No Factory admin UI leaks.",
+    "public_catalog": "PASS — /catalog renders qru-catalog with exactly 4 catalog-book-<id> cards; header states '4 authorized titles'.",
+    "book_detail_page": "PASS — Clicking a catalog card navigates to /book/:id; book-cover, book-title, book-description, book-price ($12.99), and disabled book-availability ('Available soon') all render.",
+    "invalid_book_id_graceful": "PASS — /book/does-not-exist shows book-not-found; backend GET /api/public/books/does-not-exist → 404 with only {detail} (no data leak).",
+    "factory_routes_blocked_when_logged_out": "PASS — /knowledge, /manufacture, /book-manufacturing, /products, /governance all redirect to public qru-home (no Factory content shown).",
+    "public_api_readonly_no_auth": "PASS — /api/public/home, /api/public/books, /api/public/books/{id} all return 200 with NO auth. Forbidden fields (provenance, product_manifest, working_copy, revision_history, publication_status, founder_authorization, manuscript, artifacts, quality_gates) verified NOT present in any response payload.",
+    "factory_apis_still_protected": "PASS — /api/auth/me, /api/book-mfg/books, /api/manufacturing/pms all deny anonymous access (401/403).",
+    "founder_login_render": "PASS — /login renders the Enterprise Access login form with email/password inputs; Founder Access hint (temporary password) visible.",
+    "public_nav_and_footer": "PASS — nav-home, nav-catalog, nav-founder-login, qru-footer all render with Treasure Standard signal in the footer.",
+    "cover_images_reachable": "PASS — All 4 authorized book covers return HTTP 200/206 (bytes range) via the public CDN."
+  },
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_qru_online_public.py",
+    "/app/test_reports/pytest/iteration_80.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "backend/routers/public_site.py — Uses a single _PUBLISHED_QUERY = {founder_authorization.authorized: True}. Clean single gate; correctly excludes MongoDB _id via projection. Draft/unpublished works cannot leak. GOOD.",
+    "_public_book projects an EXPLICIT allow-list of fields (id, title, subtitle, author, genre, imprint, audience, cover_url, list_price, currency + detail extras). No Factory internals can be added accidentally without editing this function. GOOD constitutional pattern.",
+    "book_detail returns 404 with plain {detail} — no revealing of whether an id exists but is unpublished vs simply missing. Correct for a public API.",
+    "frontend App.js ModeRouter — Unauthenticated users → PublicRoutes; PublicRoutes has explicit catch-all <Route path=\"*\" element={<Navigate to=\"/\"/>}> so any Factory-path URL a public visitor tries collapses to public Home. Cleanly enforces the private-Factory boundary at the router layer, not just in individual pages. GOOD.",
+    "publicApi.js — axios instance without any Authorization interceptor. Guarantees no logged-in token accidentally leaks to public endpoints (would still be safe since public endpoints ignore tokens, but the isolation is clean).",
+    "MINOR: QRUHome hero uses a hard-coded Unsplash URL rather than a Founder-authorized asset. Not a security issue but inconsistent with the Treasure Standard promise ('Only what has been authorized for release'). Consider replacing with a QRU Press™-owned hero image or serving from /api/public.",
+    "MINOR: QRUBookPage price display assumes list_price is a number (uses .toFixed(2)). If a future book has list_price null but ebook_price/paperback_price populated, price block silently hides. Consider a fallback to ebook_price/paperback_price so a title with only per-format pricing still shows something to the shopper."
+  ],
+  "updated_files": ["/app/backend/tests/test_qru_online_public.py"],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "100% (all acceptance criteria met)"},
+  "test_credentials": "Did NOT attempt Founder login (per instructions, verified /login RENDER only).",
+  "seed_data_creation": "None. All 4 authorized books were already seeded by main agent.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Public layer regression test at /app/backend/tests/test_qru_online_public.py — run `pytest backend/tests/test_qru_online_public.py -v`. 4 authorized books currently: The Understanding Tree (8469bcc5…), Ordinary Tuesdays (Factory Ready) (ca481a45…), Trading Battlefield Analogy (0dbd2b49…), The Heart as a Daily Circulation Pump (48405e16…). Public router catch-all forces every non-public URL to '/' when logged out; if tests fail after main agent adds new public routes, update PublicRoutes in App.js accordingly.",
+  "rca of the issue": "No defects. All acceptance criteria for QRU Online iteration-1 verified end-to-end."
+}
