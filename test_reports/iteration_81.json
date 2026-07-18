@@ -1,0 +1,39 @@
+{
+  "summary": "QRU Online end-to-end ebook purchase FULLY VERIFIED. Every acceptance criterion of iteration-81 passed: 16/16 backend pytest cases green; complete Playwright E2E flow — Home hero + Featured Titles with rendered covers → Catalog with 4/4 covers → Book Detail (cover + $4.99 price + Buy button) → Stripe hosted checkout at US$4.99 → real Stripe test-card payment (4242 4242 4242 4242, 12/34, 123) → /purchase/success shows purchase-paid → download-ebook-btn → GET /api/public/download/{sid} returns HTTP 200 application/epub+zip 2.28 MB. Server-side price integrity confirmed (client-supplied 'amount' ignored). Unpaid session download properly denied 403. Mobile (390x844) and Tablet (820x1180) layouts render correctly for Home, Catalog, and Book Detail; buy button reachable at every breakpoint.",
+  "per_feature_verdict": {
+    "public_home": "PASS — /qru-home renders. H1 'Books that make hard ideas easy.', gold 'QRU Press™ · The Treasure Standard™' eyebrow, dark 'Browse the Books' CTA, QRU-owned /qru-hero.png (1264×… natural size) on the right, and 4 Featured Titles all render with actual covers (naturalWidth=460 each).",
+    "public_catalog": "PASS — /catalog renders qru-catalog + all 4 catalog-book-<id> cards with cover thumbs (naturalWidth=460 for each of the 4 authorized books).",
+    "book_detail": "PASS — /book/8469bcc5… renders qru-book-page, book-cover (1024w), title 'The Understanding Tree', book-description visible, book-price '$4.99' (ebook price), buy-ebook-btn enabled.",
+    "e2e_purchase_stripe": "PASS — buy-ebook-btn → checkout.stripe.com hosted page shows US$4.99 (server-priced). Completed live Stripe test payment; redirected to /purchase/success?session_id=cs_test_…; purchase-paid state visible with 'Download EPUB' link.",
+    "download_delivery": "PASS — /api/public/download/{paid_sid} returned HTTP 200, Content-Type application/epub+zip, 2,281,676 bytes, PK zip magic. Unpaid/random session id → 403. Freshly-initiated (unpaid) session also → 403.",
+    "server_side_price_integrity": "PASS — POST /api/public/checkout with client-supplied {amount: 0.01} still produced a $4.99 Stripe session (amount comes from book_record.pricing.ebook_price server-side).",
+    "responsive_mobile_390": "PASS — Home hero + Featured Titles single-column, Catalog 2-col grid with 4 covers, Book Detail cover + $4.99 + Buy the ebook all reachable at 390×844. Screenshots confirm no broken layout.",
+    "responsive_tablet_820": "PASS — Home hero stacks cleanly, Catalog 3-col grid with all 4 covers, Book Detail cover + buy reachable at 820×1180."
+  },
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_qru_public_commerce.py",
+    "/app/backend/tests/test_qru_online_public.py",
+    "/app/test_reports/pytest/iteration_81.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "public_commerce.py — Price resolution is server-side only (_price_for reads book.pricing.ebook_price with list_price fallback). Client cannot pass amount. GOOD.",
+    "public_commerce.py — /download/{session_id} rejects with 403 unless payment_status == 'paid' AND the record exists AND the book is still authorized AND the epub file is on disk. Solid defense in depth.",
+    "public_commerce.py — Idempotent DB update uses {payment_status: {$ne: 'paid'}} guard so repeated status polls cannot corrupt the record. GOOD.",
+    "QRUPurchaseSuccess.js — Polls /checkout/status every 2s up to 12 attempts (~24s). Good UX. Consider one final retry after 25s or a manual 'I paid — check again' button in case Stripe webhooks are slower than 24s; not blocking for MVP.",
+    "MINOR — QRUBookPage price display uses `book.currency === 'USD' ? '$' : ''`. If a future non-USD currency is set the price loses its symbol entirely. Consider Intl.NumberFormat with currency for future-proofing (post-MVP).",
+    "MINOR — publicApi.js has no retry/backoff on transient failures; on flaky preview networks the featured grid could show 'no titles' briefly. Small resilience improvement (react-query, or a single retry) would smooth this. Not blocking."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_qru_public_commerce.py"
+  ],
+  "success_rate": {"backend": "100% (16/16 pytest)", "frontend": "100% — every acceptance criterion (Home, Catalog, Book Detail, Stripe redirect, real Stripe payment, /purchase/success paid state, EPUB delivery, unpaid 403, Mobile, Tablet) verified"},
+  "test_credentials": "None required (public + guest checkout). Stripe TEST card 4242 4242 4242 4242, exp 12/34, CVC 123, ZIP 94107, email qru-test@example.com — a real successful test payment was completed via the Stripe hosted checkout with session cs_test_a1N4cOv8dG6VlT0MMy4COTrAOGLdzosQdcWoTo8C7twCIq2fMi8UI9QbXz (paid, epub delivered).",
+  "seed_data_creation": "No new seed data. The 4 authorized books were already present.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Regression test file: /app/backend/tests/test_qru_public_commerce.py (16 cases). Run: `pytest backend/tests/test_qru_public_commerce.py -v`. Full E2E purchase (with Stripe test card automation) was validated once and can be re-verified manually via the UI. Note: Stripe hosted checkout requires phone number in this account's configuration — automation MUST fill input[type='tel'] and uncheck 'Save my information for faster checkout' (name='enableStripePass') before Pay, otherwise Link validation blocks submit.",
+  "rca of the issue": "No defects. First frontend run reported blank featured covers only because the browser had not finished decoding thumbnails at the moment naturalWidth was inspected; re-running with poll-until-loaded showed all covers at naturalWidth=460. Not a product bug — testing artifact only."
+}

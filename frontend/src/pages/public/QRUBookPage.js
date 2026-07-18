@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { motion } from "framer-motion";
+import { toast } from "sonner";
 import { ArrowLeft, BookOpen, Loader2, ShieldCheck } from "lucide-react";
 import { publicApi, assetUrl } from "./publicApi";
 
@@ -18,11 +18,23 @@ export default function QRUBookPage() {
   const { id } = useParams();
   const [book, setBook] = useState(null);
   const [error, setError] = useState(false);
+  const [buying, setBuying] = useState(false);
 
   useEffect(() => {
     setBook(null); setError(false);
     publicApi.get(`/books/${id}`).then((r) => setBook(r.data)).catch(() => setError(true));
   }, [id]);
+
+  const buy = async () => {
+    setBuying(true);
+    try {
+      const { data } = await publicApi.post("/checkout", { book_id: id, origin_url: window.location.origin });
+      window.location.href = data.checkout_url;
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Could not start checkout. Please try again.");
+      setBuying(false);
+    }
+  };
 
   if (error) return (
     <div className="min-h-[60vh] grid place-items-center text-center px-6" data-testid="book-not-found">
@@ -35,7 +47,7 @@ export default function QRUBookPage() {
 
   if (!book) return <div className="min-h-[60vh] grid place-items-center"><Loader2 className="w-6 h-6 animate-spin text-[#C5A059]" /></div>;
 
-  const priceVal = book.list_price ?? book.paperback_price ?? book.ebook_price ?? null;
+  const priceVal = book.ebook_price ?? book.list_price ?? book.paperback_price ?? null;
   const price = priceVal != null ? `${book.currency === "USD" ? "$" : ""}${priceVal.toFixed(2)}` : null;
 
   return (
@@ -48,21 +60,26 @@ export default function QRUBookPage() {
         {/* Sticky cover */}
         <div className="lg:col-span-5">
           <div className="lg:sticky lg:top-28">
-            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}
-              className="relative overflow-hidden rounded-md border border-[#E5E5E0] bg-[#EDEBE4] shadow-2xl shadow-black/10 aspect-[2/3] max-w-sm">
+            <div className="relative overflow-hidden rounded-md border border-[#E5E5E0] bg-[#EDEBE4] shadow-2xl shadow-black/10 aspect-[2/3] max-w-sm">
               {book.cover_url ? (
-                <img src={assetUrl(book.cover_url)} alt={book.title} decoding="async" className="w-full h-full object-cover" data-testid="book-cover" />
+                <img src={assetUrl(book.thumb_url || book.cover_url)} alt={book.title} decoding="async" className="w-full h-full object-cover" data-testid="book-cover" />
               ) : (
                 <div className="w-full h-full grid place-items-center text-[#575754]">{book.title}</div>
               )}
-            </motion.div>
+            </div>
             {price && (
-              <div className="mt-6 flex items-center gap-4 max-w-sm">
-                <span className="qru-serif text-3xl text-[#1C1C1A]" data-testid="book-price">{price}</span>
-                <button disabled data-testid="book-availability"
-                  className="flex-1 rounded-full border border-[#E5E5E0] text-[#575754] px-6 py-3 text-sm cursor-not-allowed">
-                  Available soon
+              <div className="mt-6 max-w-sm">
+                <div className="flex items-baseline gap-2">
+                  <span className="qru-serif text-3xl" style={{ color: "#1C1C1A" }} data-testid="book-price">{price}</span>
+                  <span className="text-sm" style={{ color: "#3A3A37" }}>· ebook (EPUB)</span>
+                </div>
+                <button onClick={buy} disabled={buying} data-testid="buy-ebook-btn"
+                  style={{ backgroundColor: "#1C1C1A", color: "#FAFAF8" }}
+                  className="mt-4 w-full inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-60">
+                  {buying ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4" />}
+                  {buying ? "Redirecting to secure checkout…" : "Buy the ebook"}
                 </button>
+                <p className="text-xs mt-2 text-center" style={{ color: "#8A8A85" }}>Secure checkout by Stripe · instant download</p>
               </div>
             )}
           </div>
@@ -70,19 +87,19 @@ export default function QRUBookPage() {
 
         {/* Details */}
         <div className="lg:col-span-7">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
+          <div>
             <div className="inline-flex items-center gap-2 text-[#C5A059] mb-4">
               <BookOpen className="w-4 h-4" />
               <span className="text-xs uppercase tracking-[0.2em]">{book.imprint || "QRU Press™"}</span>
             </div>
-            <h1 className="qru-serif text-4xl md:text-5xl font-semibold tracking-tight leading-tight" data-testid="book-title">{book.title}</h1>
-            {book.subtitle && <p className="text-xl text-[#575754] mt-3 leading-relaxed">{book.subtitle}</p>}
-            <p className="qru-serif text-2xl text-[#1C1C1A] mt-6">by {book.author}</p>
+            <h1 className="qru-serif text-4xl md:text-5xl font-semibold tracking-tight leading-tight" style={{ color: "#1C1C1A" }} data-testid="book-title">{book.title}</h1>
+            {book.subtitle && <p className="text-xl mt-3 leading-relaxed" style={{ color: "#575754" }}>{book.subtitle}</p>}
+            <p className="qru-serif text-2xl mt-6" style={{ color: "#1C1C1A" }}>by {book.author}</p>
 
             {book.description && (
               <div className="mt-10 pt-10 border-t border-[#E5E5E0]">
                 <h2 className="text-xs uppercase tracking-[0.2em] text-[#C5A059] mb-4">About this book</h2>
-                <div className="prose max-w-none text-[#1C1C1A] leading-relaxed whitespace-pre-line" data-testid="book-description">
+                <div className="max-w-none leading-relaxed whitespace-pre-line" style={{ color: "#1C1C1A" }} data-testid="book-description">
                   {book.description}
                 </div>
               </div>
@@ -97,11 +114,11 @@ export default function QRUBookPage() {
               <Meta label="Series" value={book.series} />
             </dl>
 
-            <div className="mt-10 pt-8 border-t border-[#E5E5E0] flex items-start gap-3 text-sm text-[#575754]">
+            <div className="mt-10 pt-8 border-t border-[#E5E5E0] flex items-start gap-3 text-sm" style={{ color: "#575754" }}>
               <ShieldCheck className="w-5 h-5 text-[#C5A059] shrink-0 mt-0.5" />
-              <p>Manufactured and verified to the <span className="text-[#1C1C1A] font-medium">Treasure Standard™</span> — authorized for release by QRU Press™.</p>
+              <p>Manufactured and verified to the <span style={{ color: "#1C1C1A", fontWeight: 500 }}>Treasure Standard™</span> — authorized for release by QRU Press™.</p>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </div>

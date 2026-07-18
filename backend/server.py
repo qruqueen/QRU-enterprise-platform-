@@ -86,6 +86,7 @@ from routers.cinema_studio import router as cinema_studio_router
 from routers.decoder_engine import router as decoder_engine_router
 from routers.book_manufacturing import router as book_manufacturing_router
 from routers.public_site import router as public_site_router
+from routers.public_commerce import router as public_commerce_router
 from routers.manufacturing_standards import router as manufacturing_standards_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
@@ -154,6 +155,7 @@ for r in [
     book_manufacturing_router,
     manufacturing_standards_router,
     public_site_router,
+    public_commerce_router,
 ]:
     app.include_router(r)
 
