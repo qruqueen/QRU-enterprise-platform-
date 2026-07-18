@@ -35,7 +35,8 @@ export default function QRUBookPage() {
 
   if (!book) return <div className="min-h-[60vh] grid place-items-center"><Loader2 className="w-6 h-6 animate-spin text-[#C5A059]" /></div>;
 
-  const price = book.list_price != null ? `${book.currency === "USD" ? "$" : ""}${book.list_price.toFixed(2)}` : null;
+  const priceVal = book.list_price ?? book.paperback_price ?? book.ebook_price ?? null;
+  const price = priceVal != null ? `${book.currency === "USD" ? "$" : ""}${priceVal.toFixed(2)}` : null;
 
   return (
     <div className="max-w-7xl mx-auto px-6 md:px-10 py-12 md:py-20" data-testid="qru-book-page">
