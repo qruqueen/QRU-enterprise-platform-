@@ -4,6 +4,14 @@
 > Founder decisions: timing = after launch (1a); scope = full program (2d); item 3
 > (auto-surface products lacking a verified KR into the Decoder) = PAUSED for now.
 > Principle: "Improve the standard, not the product. One owner. Inheritance over duplication."
+>
+> HARD CONSTRAINT (Founder, 2026-06): "Hide complexity, increase quality." NO new buttons, NO
+> alternate workflows, NO added Founder steps. Keep the CURRENT button structure exactly. The
+> higher quality must arrive purely through stronger INHERITANCE behind the existing interface.
+> Where books have a Founder cover-concept selection, that stays for books; for other products
+> the strongest concept is chosen AUTOMATICALLY behind the scenes (no new selection UI). If the
+> Founder wants to intervene, they use the buttons that already exist (e.g. regenerate-cover),
+> which now simply yield book-grade output.
 
 ## The problem (verified in code, 2026-06)
 Two parallel design pipelines produce two quality tiers:
@@ -38,9 +46,10 @@ cover, because workbooks never touch `design_studio`.
 2. Refactor `rendering_engine.ensure_branded_assets` to call it (preserve: vault reuse-by-default,
    `asset_mode=generate` override, deterministic fallback when AI capacity/budget unavailable,
    Founder-imported `asset_vault_selected` protection).
-3. Add Founder cover-concept **selection** to non-book products (same UX as books).
-4. Regenerate/upgrade existing product covers on demand via the existing
-   `POST /products/{pid}/regenerate-cover` (now backed by design_studio).
+3. NO new UI: non-book products auto-select the strongest concept behind the scenes (no added
+   selection step). The existing `POST /products/{pid}/regenerate-cover` button stays and now
+   yields book-grade output. Books keep their existing selection flow unchanged.
+4. Upgrade existing product covers on demand via the existing regenerate-cover button.
 
 ### Phase 2 — Interior/deliverable parity (Scope 2b)
 5. Route product interiors/deliverables through the same design_studio composition + typography

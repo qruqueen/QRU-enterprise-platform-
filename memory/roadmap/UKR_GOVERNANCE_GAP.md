@@ -75,6 +75,13 @@ governed source for all future derivative products:
 - Building block present: `knowledge_extraction.py` (used by `library_import.py`, `kr_manufacturing.py`).
 - MISSING: a governed one-click pipeline from a `book_record` → extracted UKR(s) → verification.
 
+**HARD CONSTRAINT (Founder, 2026-06): "Hide complexity, increase quality."** No new buttons, no
+alternate workflows, no added Founder steps. Extraction from Founder-authored books happens
+AUTOMATICALLY behind the scenes when needed (e.g. on maturity/publish), surfacing extracted UKRs
+for verification within the EXISTING interface — not via a new button. Closing the inheritance gap
+must also be invisible: products inherit the verified-UKR requirement through the existing
+manufacturing flow, not through new Founder-facing steps.
+
 ### Three separated post-launch items
 1. **Close the gap** — enforce verified-UKR inheritance on `/products/generate`, `/products/assemble`,
    `asset_manufacturing`; add publish guard; migrate the 83 non-conforming products.
