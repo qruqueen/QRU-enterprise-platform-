@@ -152,6 +152,9 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(defaul
     """Stripe webhook with signature verification + idempotent fulfillment.
     Always returns 200 so Stripe won't retry indefinitely on our own logic errors."""
     payload = await request.body()
+    # Fail closed: never accept unsigned webhooks under LIVE keys.
+    if _STRIPE_KEY.startswith("sk_live") and not _WEBHOOK_SECRET:
+        raise HTTPException(status_code=503, detail="Webhook signing secret not configured.")
     try:
         event = await _stripe().handle_webhook(payload, stripe_signature)
     except Exception:

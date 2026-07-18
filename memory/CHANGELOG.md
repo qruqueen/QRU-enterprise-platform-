@@ -58,6 +58,34 @@ Mobile (390) + Tablet (820) pass. Regression: `/app/backend/tests/test_qru_publi
 `sudo supervisorctl restart frontend` is required after adding new pages or big class sets.
 Framer-motion entrance opacity animations rendered unreliably here; public pages use static render.
 
-**Backlog (non-blocking, from review):** manual "I paid — check again" button on success page;
-`Intl.NumberFormat` for non-USD currency; publicApi retry/backoff. Domain `qru-online.com` pointing
-is a deploy-time action. Next scope (Founder-gated): complete the bookstore, then Courses/University.
+## 2026-06 — QRU Go Live Security Review™ (code-side hardening, Stripe stays TEST)
+
+**All four code-side items closed + verified (iteration_82.json — 33/33 backend pytest, full E2E, no regressions):**
+
+1. **Secrets / git history** — `.env` patterns added to `.gitignore` (`.env`, `**/.env`, `**/.env.*`).
+   Confirmed `backend/.env` was NEVER committed and the secret key never appears in any commit,
+   the JS bundle, public API responses, or logs.
+2. **Stripe webhook** — `POST /api/public/webhook` (namespaced to avoid collision with commerce.py's
+   legacy `/api/webhook/stripe`). Signature verification via `StripeCheckout.handle_webhook` when
+   `STRIPE_WEBHOOK_SECRET` is set; idempotent fulfillment via `processed_webhook_events` (dedup on
+   `event_id`) + `_grant_fulfillment` guarded by `{payment_status:{$ne:'paid'}}`. Fail-closed: refuses
+   unsigned webhooks under `sk_live` keys (503). Malformed → 400.
+3. **Secure downloads** — `/api/public/download/{sid}` uses atomic `find_one_and_update` reserving a
+   slot: requires paid + within 72h (`download_expires_at`) + `download_count < 5`. 200 within policy,
+   410 on expiry/limit, 403 on unpaid/unknown. Raw EPUB path/URL never exposed (streamed via
+   FileResponse; public book JSON omits `epub`/`artifacts`/`working_copy`).
+4. **Privacy page** — `/privacy` (public route + footer link): what QRU collects, Stripe processing,
+   why, 72h/5-download retention, support/deletion contact (`privacy@qru-online.com` placeholder).
+
+**Draft docs (NOT published, Founder review) in `/app/memory/go_live/`:**
+`PRIVACY_POLICY_DRAFT.md`, `REFUND_AND_SUPPORT_PROCESS_DRAFT.md`, `BACKUP_AND_RECOVERY_RUNBOOK_DRAFT.md`.
+
+**Stripe remains in TEST mode. No domain, no Live keys, no email collection, no public deploy.**
+
+**Deploy gate reminders (before Live):** set `STRIPE_WEBHOOK_SECRET`, register the Stripe Dashboard
+webhook endpoint to `/api/public/webhook`, swap to Live keys, confirm `privacy@qru-online.com`.
+Founder/ops items still open: 2FA on all accounts, DB backups, refund policy choice, one Founder
+Live test purchase before promotion.
+
+**Backlog (advisory, non-blocking):** Pydantic `PublicBookOut` model to hard-whitelist public book
+fields (currently an explicit dict allow-list); "I paid — check again" button on success page.
