@@ -52,3 +52,32 @@ Console / consumer campus), not the public storefront. Book launch is clean.
 After launch. Relationship to other post-launch work: this Governance Gap closure and the Master
 Design Standard™ program are complementary (both are "improve the standard" / Manufacturing
 Foundation). Founder to set order. Do NOT start during launch freeze.
+
+---
+
+## Constitutional clarification (Founder, 2026-06) — authoritative model
+
+**Default rule (Knowledge-First):** every EDUCATIONAL product (workbooks, posters, courses,
+lesson plans, etc.) must be traceable to exactly one verified Universal Knowledge Record:
+`Verified UKR → Decoder → Manufacturing Ready → Product Manufacturing → Publishing`.
+
+**The ONE governed exception — Founder-authored manuscripts.** A Founder may author an original
+work (e.g. *The Science of Understanding*, *The Understanding Tree*, novels) that is NOT initially
+based on a UKR. The manuscript itself is the original intellectual work.
+- ALREADY SUPPORTED IN CODE: `book_manufacturing.upload_manuscript_file()` /
+  `create_book_record()` admit a manuscript as a Canonical Book Record with immutable original +
+  working copy, no KR required. This origin is legitimate and is NOT part of the governance gap.
+
+**Reverse flow (NEW capability, does not exist yet).** Once a Founder-authored work is mature, the
+Factory should EXTRACT one or more UKRs from the manuscript; those verified UKRs then become the
+governed source for all future derivative products:
+`Founder Manuscript → Published Book → Extract UKRs → Verification → Decoder → Workbooks/Courses/Posters`.
+- Building block present: `knowledge_extraction.py` (used by `library_import.py`, `kr_manufacturing.py`).
+- MISSING: a governed one-click pipeline from a `book_record` → extracted UKR(s) → verification.
+
+### Three separated post-launch items
+1. **Close the gap** — enforce verified-UKR inheritance on `/products/generate`, `/products/assemble`,
+   `asset_manufacturing`; add publish guard; migrate the 83 non-conforming products.
+2. **Preserve the book exception** — manuscript-first books remain a governed origin (already built);
+   do NOT force a pre-existing UKR on Founder-authored manuscripts.
+3. **Build the reverse flow** — Published Founder book → extract UKRs → verify → Decoder → derivatives.
