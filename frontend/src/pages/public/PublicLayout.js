@@ -51,6 +51,7 @@ export default function PublicLayout() {
             <span className="text-xs uppercase tracking-[0.2em] text-[#9BA3B5] mb-1">Explore</span>
             <Link to="/" className="hover:text-[#D4AF37] transition-colors">Home</Link>
             <Link to="/catalog" className="hover:text-[#D4AF37] transition-colors">Books Catalog</Link>
+            <Link to="/privacy" data-testid="footer-privacy" className="hover:text-[#D4AF37] transition-colors">Privacy</Link>
           </div>
         </div>
         <div className="border-t border-[#1E2943]">

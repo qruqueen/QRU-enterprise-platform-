@@ -112,6 +112,7 @@ import QRUHome from "@/pages/public/QRUHome";
 import QRUCatalog from "@/pages/public/QRUCatalog";
 import QRUBookPage from "@/pages/public/QRUBookPage";
 import QRUPurchaseSuccess from "@/pages/public/QRUPurchaseSuccess";
+import QRUPrivacy from "@/pages/public/QRUPrivacy";
 import { Loader2 } from "lucide-react";
 
 function ProtectedRoute({ children }) {
@@ -255,6 +256,7 @@ function PublicRoutes() {
         <Route path="catalog" element={<QRUCatalog />} />
         <Route path="book/:id" element={<QRUBookPage />} />
         <Route path="purchase/success" element={<QRUPurchaseSuccess />} />
+        <Route path="privacy" element={<QRUPrivacy />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
