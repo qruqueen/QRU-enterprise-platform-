@@ -49,9 +49,9 @@ export default function QRUBookPage() {
         <div className="lg:col-span-5">
           <div className="lg:sticky lg:top-28">
             <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}
-              className="relative overflow-hidden rounded-md border border-[#E5E5E0] bg-white shadow-2xl shadow-black/10 aspect-[2/3] max-w-sm">
+              className="relative overflow-hidden rounded-md border border-[#E5E5E0] bg-[#EDEBE4] shadow-2xl shadow-black/10 aspect-[2/3] max-w-sm">
               {book.cover_url ? (
-                <img src={assetUrl(book.cover_url)} alt={book.title} className="w-full h-full object-cover" data-testid="book-cover" />
+                <img src={assetUrl(book.cover_url)} alt={book.title} decoding="async" className="w-full h-full object-cover" data-testid="book-cover" />
               ) : (
                 <div className="w-full h-full grid place-items-center text-[#575754]">{book.title}</div>
               )}

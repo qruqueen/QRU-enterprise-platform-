@@ -34,9 +34,10 @@ export default function QRUCatalog() {
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, delay: (i % 8) * 0.05 }}>
               <Link to={`/book/${book.id}`} data-testid={`catalog-book-${book.id}`} className="group block">
-                <div className="relative overflow-hidden rounded-md border border-[#E5E5E0] bg-white shadow-xl shadow-black/5 aspect-[2/3] transition-transform duration-500 group-hover:-translate-y-2 group-hover:shadow-2xl">
+                <div className="relative overflow-hidden rounded-md border border-[#E5E5E0] bg-[#EDEBE4] shadow-xl shadow-black/5 aspect-[2/3] transition-transform duration-500 group-hover:-translate-y-2 group-hover:shadow-2xl">
                   {book.cover_url ? (
-                    <img src={assetUrl(book.cover_url)} alt={book.title} className="w-full h-full object-cover" loading="lazy" />
+                    <img src={assetUrl(book.cover_url)} alt={book.title} decoding="async"
+                      className="w-full h-full object-cover" loading="lazy" />
                   ) : (
                     <div className="w-full h-full grid place-items-center text-sm text-[#575754] p-4 text-center">{book.title}</div>
                   )}

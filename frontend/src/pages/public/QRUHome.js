@@ -4,8 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Loader2, ShieldCheck } from "lucide-react";
 import { publicApi, assetUrl } from "./publicApi";
 
-const HERO_IMG =
-  "https://images.unsplash.com/photo-1779703056727-3c8b2bd919bc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwxfHxlbGVnYW50JTIwbGlicmFyeSUyMGFyY2hpdGVjdHVyZSUyMG1vZGVybnxlbnwwfHx8fDE3ODQyNDIwNzB8MA&ixlib=rb-4.1.0&q=85";
+const HERO_IMG = "/qru-hero.png";
 
 function CoverCard({ book, index, large }) {
   return (
@@ -15,9 +14,9 @@ function CoverCard({ book, index, large }) {
       transition={{ duration: 0.5, delay: index * 0.08 }}
     >
       <Link to={`/book/${book.id}`} data-testid={`featured-book-${book.id}`} className="group block">
-        <div className={`relative overflow-hidden rounded-md border border-[#E5E5E0] bg-white shadow-xl shadow-black/5 transition-transform duration-500 group-hover:-translate-y-2 group-hover:shadow-2xl ${large ? "aspect-[3/4]" : "aspect-[2/3]"}`}>
+        <div className={`relative overflow-hidden rounded-md border border-[#E5E5E0] bg-[#EDEBE4] shadow-xl shadow-black/5 transition-transform duration-500 group-hover:-translate-y-2 group-hover:shadow-2xl ${large ? "aspect-[3/4]" : "aspect-[2/3]"}`}>
           {book.cover_url ? (
-            <img src={assetUrl(book.cover_url)} alt={book.title}
+            <img src={assetUrl(book.cover_url)} alt={book.title} decoding="async"
               className="w-full h-full object-cover" loading="lazy" />
           ) : (
             <div className="w-full h-full grid place-items-center text-[#575754]">{book.title}</div>
@@ -46,29 +45,36 @@ export default function QRUHome() {
 
   return (
     <div data-testid="qru-home">
-      {/* Hero */}
-      <section className="relative">
-        <div className="absolute inset-0">
-          <img src={HERO_IMG} alt="" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#FAFAF8] via-[#FAFAF8]/85 to-[#FAFAF8]/30" />
-        </div>
-        <div className="relative max-w-7xl mx-auto px-6 md:px-10 py-28 md:py-40">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 text-[#C5A059] mb-6">
+      {/* Hero — split layout: text on solid bone, image beside it (no overlays) */}
+      <section className="grid lg:grid-cols-2 items-stretch" style={{ backgroundColor: "#FAFAF8" }}>
+        <div className="flex items-center px-6 md:px-12 lg:pl-16 xl:pl-24 py-20 md:py-28 lg:py-36">
+          <div className="max-w-xl">
+            <div className="inline-flex items-center gap-2 mb-6" style={{ color: "#C5A059" }}>
               <ShieldCheck className="w-4 h-4" />
-              <span className="text-xs uppercase tracking-[0.25em]">The Treasure Standard™</span>
+              <span className="text-xs uppercase tracking-[0.25em]">QRU Press™ · The Treasure Standard™</span>
             </div>
-            <h1 className="qru-serif text-5xl md:text-7xl leading-[0.95] tracking-tight font-semibold text-[#1C1C1A]">
-              A premium educational<br />publishing house.
+            <h1 className="qru-serif text-5xl md:text-7xl leading-[0.95] tracking-tight font-semibold" style={{ color: "#1C1C1A" }}>
+              Books that make<br />hard ideas easy.
             </h1>
-            <p className="text-lg text-[#575754] mt-8 leading-relaxed max-w-xl">
-              {data.brand?.promise || "Only what has been authorized for release. Every title verified, every page governed at the source."}
+            <p className="text-lg mt-8 leading-relaxed" style={{ color: "#3A3A37" }}>
+              QRU Press is a premium educational publishing house. Every title is manufactured
+              and verified to the Treasure Standard™ — no fabrication, no shortcuts.
             </p>
-            <Link to="/catalog" data-testid="hero-browse-catalog"
-              className="inline-flex items-center gap-2 mt-10 rounded-full bg-[#1C1C1A] text-[#FAFAF8] px-8 py-3.5 text-sm font-medium transition-colors hover:bg-[#C5A059]">
-              Browse the Catalog <ArrowRight className="w-4 h-4" />
-            </Link>
-          </motion.div>
+            <div className="flex flex-wrap items-center gap-4 mt-10">
+              <Link to="/catalog" data-testid="hero-browse-catalog"
+                style={{ backgroundColor: "#1C1C1A", color: "#FAFAF8" }}
+                className="inline-flex items-center gap-2 rounded-full px-8 py-3.5 text-sm font-medium transition-opacity hover:opacity-90">
+                Browse the Books <ArrowRight className="w-4 h-4" />
+              </Link>
+              <span className="text-sm" style={{ color: "#3A3A37" }}>
+                {data.counts?.books ?? ""} {data.counts?.books === 1 ? "title" : "titles"} available now
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="relative" style={{ minHeight: 300 }}>
+          <img src={HERO_IMG} alt="QRU Press reading room"
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
         </div>
       </section>
 
