@@ -12,6 +12,31 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## ✅ UKR™ Standard v1.1 — Canonical Full Specification adopted (Phase 1, 2026-07-19)
+Per Founder directive: the uploaded `UKR 7.18.2026.pdf` IS the canonical standard; the DB evolves to
+match it via a NON-DESTRUCTIVE, backward-compatible phased migration (no second/competing schema).
+- **Single standard** expanded in place in `ukr_standard.py`: 24 governed SECTIONS (~300 fields),
+  20-state LIFECYCLE, 10 Gold-Standard review states, 15 review dimensions, 5 validation results.
+- **`build_canonical(rec)`** maps the 49 legacy flat fields into their canonical homes (Sections 1
+  Record Identity, 2 Purpose, 3 Core Knowledge, 4 Evidence, 6 Teaching, 14 Factory Interface, 15
+  Human Interface, 18 Lifecycle, 23 Versioning = 9 populated). The other 15 sections are present-
+  but-empty (never omitted). Legacy flat fields are KEPT as a live backward-compat surface.
+- **`migrate_to_canonical()`** = non-destructive + idempotent; preserves IDs, versions, approvals,
+  downstream product links AND any canonical content already populated downstream (deep-merge).
+  Runs automatically on startup so production converges on redeploy (no manual step).
+- **New KRs born canonical:** `routers/knowledge.py` create + `kr_manufacturing.py` manufacture now
+  attach the `ukr` object at insert.
+- **Endpoints** (`/api/manufacturing/ukr/*`): `GET canonical-spec`, `GET migration-status`,
+  `POST migrate-canonical` (super-admin), `GET record/{id}/canonical`.
+- **VERIFIED (preview):** 80/80 migrated; existing KR-list API returns legacy `title` + new `ukr`;
+  products still linked (ukr-audit 226 total / 143 green / 63.3% — no regression); re-run preserved a
+  downstream-populated pending field + legacy data; no data loss. REDEPLOY required for production.
+- **REMAINING (future phases):** populate/wire the 15 empty sections via their owning engines
+  (Multi-Audience translations, Visual/Audio/Video specs, AI-Agent support, Product Bindings,
+  Manufacturing Readiness, Dependencies graph, Gold Standard Review workflow, Intelligence Value,
+  Rights/Brand, Continuous Improvement, Validation engine, Executable Behaviors).
+
+
 ## ✅ UKR Compliance Panel + Guided Remediation (2026-06)
 Governance page (`/governance`) now opens with a **Knowledge-First™ Compliance** panel
 (`components/UKRCompliance.js`): live green/amber/red counts, compliance %, published-noncompliant

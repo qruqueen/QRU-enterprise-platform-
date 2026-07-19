@@ -191,4 +191,406 @@ def standard():
             "Default discovery order is alphabetical by Knowledge Title.",
             "Migration is non-destructive: originals, IDs, versions, approvals and links are preserved.",
         ],
+        "canonical_specification": CANONICAL_SPEC_NAME,
+        "canonical_spec_date": CANONICAL_SPEC_DATE,
+        "sections_total": len(SECTIONS),
+        "lifecycle_states": LIFECYCLE_STATES,
+        "gold_standard_review_states": GOLD_STANDARD_STATES,
+        "gold_standard_review_dimensions": REVIEW_DIMENSIONS,
+        "validation_results": VALIDATION_RESULTS,
+    }
+
+
+# =============================================================================
+# QRU UKR™ Standard v1.1 — CANONICAL FULL SPECIFICATION (approved doc, 2026-07-18)
+# -----------------------------------------------------------------------------
+# The Founder-approved UKR document is THE standard. This is a single canonical
+# schema (NOT a competing one): the 49 legacy flat fields are preserved as a live
+# backward-compatibility surface, while every record also carries the full
+# 24-section canonical `ukr` object. Unimplemented sections are present-but-empty
+# (never omitted). Migration is non-destructive + idempotent (preserves any
+# canonical content already populated by downstream engines).
+# =============================================================================
+
+CANONICAL_SPEC_NAME = "QRU UKR™ Standard v1.1 — Canonical Full Specification (24 Sections)"
+CANONICAL_SPEC_DATE = "2026-07-18"
+
+# 24 governed sections. `implemented` = Phase-1 mapping is wired to real data today.
+SECTIONS = [
+    {"num": 1, "id": "record_identity", "name": "Record Identity", "implemented": True, "fields": [
+        "knowledge_title", "published_title", "knowledge_record_id", "record_type", "version",
+        "schema_version", "status", "lifecycle_state", "owner", "steward", "responsible_department",
+        "created_date", "modified_date", "effective_date", "last_reviewed_date", "next_scheduled_review_date",
+        "approval_status", "founder_review_status", "gold_standard_status", "supersedes", "superseded_by",
+        "archive_status", "confidentiality_classification", "rights_classification", "brand_family",
+        "applicable_product_families"]},
+    {"num": 2, "id": "purpose_and_human_value", "name": "Purpose and Human Value", "implemented": True, "fields": [
+        "why_this_knowledge_exists", "human_problem_addressed", "decision_improved", "learner_need_addressed",
+        "consequence_if_misunderstood", "consequence_if_never_learned", "educational_importance",
+        "societal_importance", "strategic_importance_to_qru", "intended_transformation", "primary_audience",
+        "secondary_audiences", "excluded_audiences", "required_prior_knowledge", "expected_learner_outcome"]},
+    {"num": 3, "id": "core_knowledge", "name": "Core Knowledge", "implemented": True, "fields": [
+        "canonical_definition", "plain_language_definition", "core_explanation", "core_idea",
+        "governing_principles", "essential_facts", "mechanisms", "processes", "components", "relationships",
+        "conditions", "constraints", "boundaries", "assumptions", "known_limitations", "scope",
+        "out_of_scope_claims", "open_questions", "unresolved_disputes", "technical_terminology",
+        "key_takeaways", "remember_this_statement", "fact", "interpretation", "hypothesis", "analogy",
+        "inference", "opinion", "unresolved_question"]},
+    {"num": 4, "id": "evidence_and_verification", "name": "Evidence and Verification", "implemented": True, "fields": [
+        "evidence_summary", "source_records", "citations", "source_type", "evidence_type", "evidence_strength",
+        "verification_status", "confidence_score", "freshness_score", "last_verified_date",
+        "next_reverification_date", "contradictory_evidence", "competing_interpretations",
+        "known_counterexamples", "challenge_history", "reviewer_comments", "verification_history",
+        "retractions_or_corrections", "evidence_gaps", "legal_or_compliance_concerns",
+        "human_review_requirements", "evidence_items"]},
+    {"num": 5, "id": "multi_audience_understanding", "name": "Multi-Audience Understanding", "implemented": False, "fields": [
+        "required_translations"]},
+    {"num": 6, "id": "teaching_and_learning_assets", "name": "Teaching and Learning Assets", "implemented": True, "fields": [
+        "learning_objectives", "essential_question", "lesson_purpose", "analogies", "stories", "examples",
+        "worked_examples", "counterexamples", "demonstrations", "case_studies", "scenarios", "misconceptions",
+        "common_mistakes", "questions_learners_may_ask", "reflection_questions", "discussion_prompts",
+        "practice_exercises", "assessments", "answer_keys", "formative_checks", "summative_checks",
+        "application_tasks", "transfer_tasks", "memory_aids", "mnemonics", "teacher_notes", "parent_notes",
+        "accommodations", "accessibility_considerations", "enrichment_options", "remediation_options"]},
+    {"num": 7, "id": "visual_intelligence", "name": "Visual Intelligence", "implemented": False, "fields": [
+        "visual_concept_summary", "diagram_specifications", "illustration_descriptions", "infographic_structure",
+        "chart_requirements", "poster_concept", "knowledge_card_concept", "scene_descriptions", "image_prompts",
+        "visual_hierarchy", "labels", "captions", "alt_text", "accessibility_notes", "brand_requirements",
+        "approved_reference_assets", "prohibited_visual_interpretations", "animation_ready_visual_assets",
+        "visual_verification_status"]},
+    {"num": 8, "id": "audio_and_voice", "name": "Audio and Voice", "implemented": False, "fields": [
+        "narration_script", "audiobook_script", "short_form_audio_script", "podcast_script",
+        "pronunciation_guide", "emphasis_notes", "pacing", "pauses", "emotional_tone", "voice_characteristics",
+        "regional_flavor", "captions_or_transcript", "accessibility_requirements", "music_or_sound_guidance",
+        "prohibited_voice_imitation", "audio_asset_status"]},
+    {"num": 9, "id": "video_and_animation", "name": "Video and Animation", "implemented": False, "fields": [
+        "video_objective", "target_runtime", "scene_order", "storyboard", "scene_descriptions",
+        "narration_alignment", "dialogue", "motion_notes", "character_actions", "camera_direction",
+        "b_roll_guidance", "transitions", "on_screen_text", "captions", "audio_cues", "visual_dependencies",
+        "animation_constraints", "continuity_requirements", "asset_references", "accessibility_requirements",
+        "final_call_to_action"]},
+    {"num": 10, "id": "ai_and_agent_support", "name": "AI and Agent Support", "implemented": False, "fields": [
+        "semantic_search_terms", "synonyms", "alternate_wording", "embeddings_metadata", "related_questions",
+        "likely_user_intents", "tutor_responses", "socratic_prompts", "conversation_examples",
+        "correction_responses", "uncertainty_responses", "refusal_boundaries", "prompt_pack",
+        "prompt_variations", "prompt_evaluations", "retrieval_guidance", "hallucination_risks",
+        "agent_permissions", "permitted_actions", "prohibited_actions", "escalation_rules",
+        "human_review_triggers"]},
+    {"num": 11, "id": "product_bindings", "name": "Product Bindings", "implemented": False, "fields": ["bindings"]},
+    {"num": 12, "id": "manufacturing_readiness", "name": "Manufacturing Readiness", "implemented": False, "fields": [
+        "eligible_products", "product_readiness_by_type", "required_assets", "missing_assets",
+        "blocked_products", "manufacturing_warnings", "specification_compatibility", "schema_compatibility",
+        "export_eligibility", "content_completeness", "translation_completeness", "visual_completeness",
+        "audio_completeness", "assessment_completeness", "verification_completeness", "certification_state"]},
+    {"num": 13, "id": "dependencies_and_knowledge_graph", "name": "Dependencies and Knowledge Graph", "implemented": False, "fields": [
+        "upstream_dependencies", "downstream_consumers", "prerequisite_records", "dependent_records",
+        "related_records", "conflicting_records", "replacement_records", "evidence_dependencies",
+        "visual_dependencies", "legal_dependencies", "product_dependencies", "department_dependencies",
+        "agent_dependencies", "fallback_behavior", "criticality", "validation_metrics", "change_impact_rules",
+        "dependencies"]},
+    {"num": 14, "id": "factory_interface", "name": "Factory Interface (machine-readable)", "implemented": True, "fields": [
+        "record_identity", "title", "version", "schema_version", "lifecycle_state", "verification_status",
+        "gold_standard_status", "confidence", "audience_availability", "available_teaching_assets",
+        "available_visual_assets", "available_audio_assets", "eligible_product_types", "product_bindings",
+        "dependencies", "missing_requirements", "active_warnings", "permissions", "last_update",
+        "review_due_date", "compatibility_status"]},
+    {"num": 15, "id": "human_interface", "name": "Human Interface", "implemented": True, "fields": [
+        "knowledge_title", "plain_language_purpose", "status", "version", "core_definition", "core_idea",
+        "evidence_status", "audience_translations", "teaching_assets", "products_available",
+        "missing_requirements", "dependencies", "gold_standard_status", "review_history", "next_action"]},
+    {"num": 16, "id": "agent_interface", "name": "Agent Interface", "implemented": False, "fields": ["query_capabilities"]},
+    {"num": 17, "id": "gold_standard_review", "name": "QRU Gold Standard Review", "implemented": False, "fields": [
+        "reviews", "review_state"]},
+    {"num": 18, "id": "lifecycle", "name": "Lifecycle", "implemented": True, "fields": ["lifecycle_state", "transitions"]},
+    {"num": 19, "id": "executable_behaviors", "name": "Executable Behaviors", "implemented": False, "fields": [
+        "event_response_rules"]},
+    {"num": 20, "id": "intelligence_value_and_priority", "name": "Intelligence Value and Priority", "implemented": False, "fields": [
+        "educational_value", "societal_value", "strategic_value", "frequency_of_use", "downstream_consumer_count",
+        "risk_if_incorrect", "harm_if_misunderstood", "urgency", "evidence_volatility", "manufacturing_potential",
+        "revenue_potential", "community_benefit", "maintenance_cost", "review_priority", "reverification_priority"]},
+    {"num": 21, "id": "rights_brand_enterprise_controls", "name": "Rights, Brand, and Enterprise Controls", "implemented": False, "fields": [
+        "copyright_owner", "trademark_references", "licensing_rights", "source_permissions",
+        "third_party_restrictions", "allowed_product_uses", "prohibited_uses", "attribution_requirements",
+        "confidentiality_level", "privacy_classification", "child_safety_requirements", "legal_review_status",
+        "compliance_status", "qru_brand_family", "approved_design_system", "distribution_permissions",
+        "monetization_permissions", "territory_limitations", "expiration_dates"]},
+    {"num": 22, "id": "continuous_improvement", "name": "Continuous Improvement", "implemented": False, "fields": [
+        "revision_history", "change_rationale", "user_feedback", "learner_feedback", "educator_feedback",
+        "product_performance", "comprehension_results", "assessment_outcomes", "support_questions",
+        "manufacturing_failures", "returns_or_complaints", "improvement_proposals", "approved_improvements",
+        "rejected_changes", "lessons_learned", "linked_adr"]},
+    {"num": 23, "id": "versioning_and_compatibility", "name": "Versioning and Compatibility", "implemented": True, "fields": [
+        "version_number", "schema_version", "compatibility_declaration", "migration_history",
+        "backward_compatibility_status", "deprecation_status", "supersession_links", "changed_fields",
+        "affected_interfaces", "affected_products", "affected_dependencies"]},
+    {"num": 24, "id": "validation_rules", "name": "Validation Rules", "implemented": False, "fields": [
+        "checks", "last_validation_result", "validation_details"]},
+]
+
+LIFECYCLE_STATES = [
+    "Proposed", "Discovered", "Researching", "Draft", "Internal Review", "Verification Required",
+    "Verified", "Understanding Review", "Gold Review", "Founder Review Required", "Approved",
+    "Gold Certified", "Manufacturing Ready", "Published", "Under Observation", "Reverification Due",
+    "Revision Required", "Deprecated", "Superseded", "Archived",
+]
+
+GOLD_STANDARD_STATES = [
+    "Not Reviewed", "Review Scheduled", "Under Review", "Returned for Correction", "Conditionally Approved",
+    "Approved", "Gold Certified", "Certification Suspended", "Reverification Required", "Certification Revoked",
+]
+
+REVIEW_DIMENSIONS = [
+    "Knowledge Integrity", "Evidence and Verification", "Understanding and Clarity", "Educational Effectiveness",
+    "Audience Suitability", "Accessibility", "Product Completeness", "Manufacturing Compliance",
+    "Technical Validation", "Brand Alignment", "Ethical and Legal Readiness", "Dependency Integrity",
+    "Publication Readiness", "Founder Approval", "Treasure Standard Alignment",
+]
+
+VALIDATION_RESULTS = ["pass", "warning", "failure", "blocked", "requires_human_review"]
+
+# Sections whose Phase-1 mapping is wired to real data today.
+IMPLEMENTED_SECTIONS = [s["id"] for s in SECTIONS if s["implemented"]]
+PENDING_SECTIONS = [s["id"] for s in SECTIONS if not s["implemented"]]
+
+
+def _blank_section(section):
+    return {f: "" for f in section["fields"]}
+
+
+def blank_canonical():
+    """Full 24-section canonical object with every field present-but-empty."""
+    return {s["id"]: _blank_section(s) for s in SECTIONS}
+
+
+def derive_lifecycle_state(rec):
+    """Map the current governance status onto a canonical lifecycle state (non-destructive read)."""
+    if rec.get("treasure_standard"):
+        return "Gold Certified"
+    if rec.get("approval_status") == "Approved":
+        return "Approved"
+    vs = (rec.get("verification_status") or "").strip()
+    if vs == "Verified":
+        return "Verified"
+    if vs in ("Under Review", "In Review"):
+        return "Internal Review"
+    if vs in ("Pending", "Pending Founder Review", "Founder Review Required"):
+        return "Founder Review Required"
+    if vs in ("Archived",):
+        return "Archived"
+    return "Draft"
+
+
+def _nonempty(v):
+    return v not in (None, "", [], {}, ())
+
+
+def build_canonical(rec, existing=None):
+    """Build the canonical `ukr` object for a legacy record, mapping the 49 flat fields into their
+    canonical homes. Non-destructive: any already-populated canonical value in `existing` wins."""
+    u = blank_canonical()
+    lifecycle = derive_lifecycle_state(rec)
+
+    # --- Section 1: Record Identity ---
+    s1 = u["record_identity"]
+    s1["knowledge_title"] = rec.get("knowledge_title") or rec.get("title") or ""
+    s1["published_title"] = rec.get("published_title") or rec.get("title") or ""
+    s1["knowledge_record_id"] = rec.get("kr_code") or ""
+    s1["record_type"] = "Knowledge Record"
+    s1["version"] = rec.get("version", 1)
+    s1["schema_version"] = SCHEMA_VERSION
+    s1["status"] = rec.get("verification_status") or "Draft"
+    s1["lifecycle_state"] = lifecycle
+    s1["owner"] = rec.get("owner_id") or rec.get("created_by") or ""
+    s1["responsible_department"] = rec.get("division") or ""
+    s1["created_date"] = rec.get("created_at") or ""
+    s1["modified_date"] = rec.get("updated_at") or ""
+    s1["approval_status"] = rec.get("approval_status") or ""
+    s1["founder_review_status"] = "Approved" if rec.get("approval_status") == "Approved" else "Founder Review Required"
+    s1["gold_standard_status"] = "Gold Certified" if rec.get("treasure_standard") else "Not Reviewed"
+    s1["archive_status"] = "Active"
+    s1["brand_family"] = "QRU"
+
+    # --- Section 2: Purpose and Human Value ---
+    s2 = u["purpose_and_human_value"]
+    s2["why_this_knowledge_exists"] = rec.get("why_it_matters") or ""
+    s2["educational_importance"] = rec.get("why_it_matters") or ""
+    s2["learner_need_addressed"] = rec.get("the_question") or ""
+
+    # --- Section 3: Core Knowledge ---
+    s3 = u["core_knowledge"]
+    s3["canonical_definition"] = rec.get("verified_truth") or ""
+    s3["plain_language_definition"] = rec.get("simple_answer") or ""
+    s3["core_explanation"] = rec.get("qru_translation") or rec.get("consumer_translation") or ""
+    s3["core_idea"] = rec.get("memory_sentence") or ""
+    s3["governing_principles"] = rec.get("deep_roots") or ""
+    s3["technical_terminology"] = rec.get("key_vocabulary") or []
+    s3["analogy"] = rec.get("everyday_analogy") or ""
+    s3["remember_this_statement"] = rec.get("memory_sentence") or ""
+
+    # --- Section 4: Evidence and Verification ---
+    s4 = u["evidence_and_verification"]
+    s4["source_records"] = rec.get("references") or []
+    s4["citations"] = rec.get("sources") or []
+    s4["verification_status"] = rec.get("verification_status") or ""
+    s4["confidence_score"] = rec.get("confidence_score") or ""
+    s4["reviewer_comments"] = rec.get("reviewer") or ""
+    s4["verification_history"] = [rec["verification"]] if _nonempty(rec.get("verification")) else []
+
+    # --- Section 6: Teaching and Learning Assets ---
+    s6 = u["teaching_and_learning_assets"]
+    s6["essential_question"] = rec.get("the_question") or ""
+    s6["examples"] = rec.get("real_world_example") or ""
+    s6["stories"] = rec.get("story") or ""
+    s6["practice_exercises"] = rec.get("practice_activities") or []
+    s6["application_tasks"] = rec.get("practice_application") or []
+
+    # --- Section 14: Factory Interface (machine-readable projection) ---
+    s14 = u["factory_interface"]
+    s14["record_identity"] = rec.get("kr_code") or ""
+    s14["title"] = s1["knowledge_title"]
+    s14["version"] = rec.get("version", 1)
+    s14["schema_version"] = SCHEMA_VERSION
+    s14["lifecycle_state"] = lifecycle
+    s14["verification_status"] = rec.get("verification_status") or ""
+    s14["gold_standard_status"] = s1["gold_standard_status"]
+    s14["confidence"] = rec.get("confidence_score") or ""
+    s14["eligible_product_types"] = []
+    s14["last_update"] = rec.get("updated_at") or ""
+    s14["compatibility_status"] = "compatible"
+
+    # --- Section 15: Human Interface projection ---
+    s15 = u["human_interface"]
+    s15["knowledge_title"] = s1["knowledge_title"]
+    s15["plain_language_purpose"] = rec.get("why_it_matters") or ""
+    s15["status"] = rec.get("verification_status") or "Draft"
+    s15["version"] = rec.get("version", 1)
+    s15["core_definition"] = rec.get("verified_truth") or ""
+    s15["core_idea"] = rec.get("memory_sentence") or ""
+    s15["gold_standard_status"] = s1["gold_standard_status"]
+
+    # --- Section 18: Lifecycle ---
+    u["lifecycle"]["lifecycle_state"] = lifecycle
+    u["lifecycle"]["transitions"] = []
+
+    # --- Section 23: Versioning and Compatibility ---
+    s23 = u["versioning_and_compatibility"]
+    s23["version_number"] = rec.get("version", 1)
+    s23["schema_version"] = SCHEMA_VERSION
+    s23["backward_compatibility_status"] = "backward-compatible (legacy flat fields preserved)"
+    s23["migration_history"] = rec.get("migration") or {}
+
+    # Non-destructive merge: preserve any canonical values already populated downstream.
+    if existing:
+        for sec_id, fields in u.items():
+            prev = existing.get(sec_id) or {}
+            for fk in fields:
+                if _nonempty(prev.get(fk)) and not _nonempty(fields[fk]):
+                    fields[fk] = prev[fk]
+    return u
+
+
+def _populated_sections(u):
+    """List of section ids that have at least one populated field."""
+    out = []
+    for s in SECTIONS:
+        data = u.get(s["id"], {})
+        if any(_nonempty(data.get(f)) for f in s["fields"]):
+            out.append(s["id"])
+    return out
+
+
+def canonical_spec():
+    """The single canonical UKR specification (the approved doc, as implemented)."""
+    return {
+        "standard_id": STANDARD_ID,
+        "name": "QRU Universal Knowledge Record™",
+        "canonical_specification": CANONICAL_SPEC_NAME,
+        "canonical_spec_date": CANONICAL_SPEC_DATE,
+        "schema_version": SCHEMA_VERSION,
+        "canonical_collection": CANONICAL_COLLECTION,
+        "sections_total": len(SECTIONS),
+        "implemented_sections": IMPLEMENTED_SECTIONS,
+        "pending_sections": PENDING_SECTIONS,
+        "sections": [{"num": s["num"], "id": s["id"], "name": s["name"],
+                      "implemented": s["implemented"], "field_count": len(s["fields"]),
+                      "fields": s["fields"]} for s in SECTIONS],
+        "lifecycle_states": LIFECYCLE_STATES,
+        "gold_standard_review_states": GOLD_STANDARD_STATES,
+        "gold_standard_review_dimensions": REVIEW_DIMENSIONS,
+        "validation_results": VALIDATION_RESULTS,
+        "governance": [
+            "One governed source of truth; knowledge separated from product formatting.",
+            "Structured, machine-readable, version-controlled, governable knowledge object.",
+            "Legacy 49 flat fields preserved as a live backward-compatibility surface.",
+            "Unimplemented sections are present-but-empty, never omitted.",
+            "Product-specific manufacturing metadata stays outside the canonical UKR (that is the PMS™).",
+            "Knowledge-First™ enforced; Founder-authored book exception preserved.",
+        ],
+    }
+
+
+async def migrate_to_canonical(actor="Founder", dry_run=False):
+    """Phase-1 NON-DESTRUCTIVE + idempotent migration: attach the full 24-section canonical `ukr`
+    object to every record, mapping the legacy flat fields into their canonical homes. Preserves
+    IDs, versions, approvals, downstream links and any canonical content already populated."""
+    docs = await db[CANONICAL_COLLECTION].find({}, {"_id": 0}).to_list(5000)
+    migrated, sample = 0, []
+    section_pop_totals = {s["id"]: 0 for s in SECTIONS}
+    for d in docs:
+        u = build_canonical(d, existing=d.get("ukr"))
+        populated = _populated_sections(u)
+        for sid in populated:
+            section_pop_totals[sid] += 1
+        set_fields = {
+            "ukr": u,
+            "schema_version": SCHEMA_VERSION,
+            "canonical_spec": CANONICAL_SPEC_NAME,
+            "canonical_spec_date": CANONICAL_SPEC_DATE,
+            "canonical_migration": {
+                "migrated_at": _now(), "migrated_by": actor,
+                "sections_total": len(SECTIONS), "sections_populated": len(populated),
+                "populated_sections": populated,
+                "preserved_kr_code": d.get("kr_code"), "preserved_version": d.get("version", 1),
+                "from_schema": d.get("schema_version") or "legacy",
+                "non_destructive": True,
+            },
+        }
+        if not dry_run:
+            await db[CANONICAL_COLLECTION].update_one({"id": d["id"]}, {"$set": set_fields})
+        migrated += 1
+        if len(sample) < 6:
+            sample.append({"kr_code": d.get("kr_code"),
+                           "knowledge_title": u["record_identity"]["knowledge_title"],
+                           "lifecycle_state": u["record_identity"]["lifecycle_state"],
+                           "sections_populated": len(populated)})
+    sections_completed = sorted({sid for sid, n in section_pop_totals.items() if n > 0})
+    return {
+        "total": len(docs), "migrated": migrated, "dry_run": dry_run,
+        "schema_version": SCHEMA_VERSION, "canonical_specification": CANONICAL_SPEC_NAME,
+        "sections_total": len(SECTIONS),
+        "sections_completed": sections_completed,
+        "sections_completed_count": len(sections_completed),
+        "sections_remaining": [s["id"] for s in SECTIONS if s["id"] not in sections_completed],
+        "section_population_counts": section_pop_totals,
+        "compatibility_status": "backward-compatible — legacy flat fields untouched; no production behavior changed",
+        "redeploy_required": True,
+        "sample": sample,
+    }
+
+
+async def migration_status():
+    """Factory-wide canonical migration status (read-only)."""
+    docs = await db[CANONICAL_COLLECTION].find({}, {"_id": 0, "ukr": 1, "canonical_migration": 1}).to_list(5000)
+    total = len(docs)
+    migrated = sum(1 for d in docs if d.get("ukr"))
+    dist = {}
+    for d in docs:
+        cm = d.get("canonical_migration") or {}
+        n = cm.get("sections_populated", 0) if d.get("ukr") else 0
+        dist[n] = dist.get(n, 0) + 1
+    return {
+        "total": total, "migrated": migrated, "not_migrated": total - migrated,
+        "canonical_specification": CANONICAL_SPEC_NAME, "sections_total": len(SECTIONS),
+        "sections_populated_distribution": dict(sorted(dist.items())),
+        "fully_backward_compatible": True,
     }

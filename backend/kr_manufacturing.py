@@ -194,6 +194,9 @@ async def manufacture(source_type, topic, category, division, source_text, goal,
     }
     # KR 2.0 sections (non-destructive migration maps methodology → 36 sections)
     rec.update(kr2.migrate_kr(rec))
+    import ukr_standard
+    rec["ukr"] = ukr_standard.build_canonical(rec)
+    rec["canonical_spec"] = ukr_standard.CANONICAL_SPEC_NAME
     await db.knowledge_records.insert_one(dict(rec))
 
     # 5) Advisory verification (scores only — Founder is the gate)

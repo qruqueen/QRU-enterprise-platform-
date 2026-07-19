@@ -98,6 +98,10 @@ async def create_record(data: KRInput, user=Depends(get_current_user)):
         "created_at": now_iso(),
         "updated_at": now_iso(),
     }
+    import ukr_standard
+    rec["ukr"] = ukr_standard.build_canonical(rec)
+    rec["schema_version"] = ukr_standard.SCHEMA_VERSION
+    rec["canonical_spec"] = ukr_standard.CANONICAL_SPEC_NAME
     await db.knowledge_records.insert_one(dict(rec))
     await log_activity(user["name"], "created", "KnowledgeRecord", rec["id"], rec["title"])
     return clean(rec)

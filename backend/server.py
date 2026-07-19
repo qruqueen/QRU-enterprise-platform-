@@ -202,6 +202,12 @@ async def startup():
     await little_legacy.seed()
     import capability_registry
     await capability_registry.seed()
+    import ukr_standard
+    try:
+        _ukr_rep = await ukr_standard.migrate_to_canonical(actor="System (startup)")
+        logger.info(f"UKR canonical migration: {_ukr_rep['migrated']}/{_ukr_rep['total']} records on v1.1 canonical spec ({_ukr_rep['sections_completed_count']} sections populated)")
+    except Exception as e:
+        logger.error(f"UKR canonical migration skipped: {e}")
     import seed_forex_seeds
     await seed_forex_seeds.seed()
     import book_manufacturing

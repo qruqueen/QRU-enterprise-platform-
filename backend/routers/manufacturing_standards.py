@@ -67,6 +67,39 @@ async def ukr_migrate(dry_run: bool = False, user=Depends(require_super_admin)):
     return await ukr.migrate_all(actor=user.get("name", "Founder"), dry_run=dry_run)
 
 
+# ---- Canonical UKR™ Standard v1.1 (full 24-section spec — the approved document) ----
+
+@router.get("/ukr/canonical-spec")
+async def ukr_canonical_spec(user=Depends(get_current_user)):
+    """The single canonical UKR specification (the Founder-approved document as implemented)."""
+    return ukr.canonical_spec()
+
+
+@router.get("/ukr/migration-status")
+async def ukr_migration_status(user=Depends(get_current_user)):
+    """Factory-wide canonical migration status (read-only, backward-compatibility report)."""
+    return await ukr.migration_status()
+
+
+@router.post("/ukr/migrate-canonical")
+async def ukr_migrate_canonical(dry_run: bool = False, user=Depends(require_super_admin)):
+    """Phase-1 NON-DESTRUCTIVE migration: attach the full 24-section canonical `ukr` object to every
+    record (legacy flat fields preserved). Idempotent. Returns the migration/compatibility report."""
+    return await ukr.migrate_to_canonical(actor=user.get("name", "Founder"), dry_run=dry_run)
+
+
+@router.get("/ukr/record/{rid}/canonical")
+async def ukr_record_canonical(rid: str, user=Depends(get_current_user)):
+    """Return one record's canonical `ukr` object (built on-demand if not yet migrated)."""
+    rec = await db[ukr.CANONICAL_COLLECTION].find_one({"id": rid}, {"_id": 0}) \
+        or await db[ukr.CANONICAL_COLLECTION].find_one({"kr_code": rid}, {"_id": 0})
+    if not rec:
+        raise HTTPException(404, "Knowledge Record not found.")
+    canonical = rec.get("ukr") or ukr.build_canonical(rec)
+    return {"kr_code": rec.get("kr_code"), "id": rec.get("id"),
+            "migrated": bool(rec.get("ukr")), "ukr": canonical}
+
+
 class PublishInput(BaseModel):
     engine: str
     id: str
