@@ -358,28 +358,38 @@ async def ensure_branded_assets(pid, actor="Creative Studio™", allow_ai_hero_a
     except Exception as e:
         logger.error(f"vault cover reuse check failed (non-blocking): {e}")
 
-    # Best-effort AI hero artwork — composited under the QRU frame. Skips silently when
-    # AI capacity is unavailable (daily cap / budget), so covers always render.
-    # Deterministic-first: only attempted when allow_ai_hero_art is True.
-    hero = None
+    # QRU Master Design Standard™ — ONE owner of cover quality. Every product family now inherits
+    # the SAME art-directed, typographically-composed cover pipeline as books (design_studio),
+    # with a deterministic ZERO-AI fallback so a cover ALWAYS renders (budget cap / provider down).
+    # allow_ai_hero_art=False forces the deterministic path (guaranteed $0 AI).
+    cover = None
+    cover_has_hero = False
+    design_engine = "QRU Design Language™ (deterministic)"
     if allow_ai_hero_art:
         try:
-            accent_hex = '#%02X%02X%02X' % pal['accent']
-            prompt = (
-                f"Premium book-cover hero illustration for an educational product titled "
-                f"'{p.get('title','')}' (subject: {p.get('topic') or p.get('family','')}). "
-                f"Cinematic, dramatic and aspirational editorial artwork in the QRU luxury brand style: "
-                f"deep navy-to-royal-purple background with radial depth and glow, rich metallic GOLD "
-                f"accents and light rays, elegant symbolic imagery representing the topic, subtle world/data "
-                f"motifs, refined premium finish like a bestselling non-fiction cover. Accent color {accent_hex}. "
-                f"Portrait composition, generous negative space in the CENTER and TOP for a title overlay, "
-                f"absolutely NO text, NO letters, NO words, NO logos in the image. High detail, professional, "
-                f"treasure-worthy, gallery quality."
-            )
-            hero = await generate_image(prompt, f"hero-{pid}")
-        except Exception:
-            hero = None
-    cover = dl.premium_cover(p, kr or {}, hero_bytes=hero)
+            import design_studio as ds
+            ctx = {
+                "title": p.get("title", ""), "subtitle": p.get("subtitle", ""),
+                "byline": p.get("author") or "", "imprint": p.get("imprint") or "QRU",
+                "genre": p.get("family") or p.get("category") or "",
+                "family": p.get("family", ""), "topic": p.get("topic", ""),
+                "audience": p.get("audience", ""),
+                "content": ((kr or {}).get("verified_truth") or (kr or {}).get("qru_translation")
+                            or p.get("summary") or p.get("content") or ""),
+                "slug": f"cover-{pid}",
+            }
+            concepts = await ds.manufacture_bytes(ctx, kind="cover", n=3, slug=f"cover-{pid}")
+            # Non-book products auto-select the strongest concept (no new Founder selection UI).
+            best = next((c for c in concepts if c.get("status") == "success" and c.get("has_ai_art")), None)
+            if best:
+                cover = best["png"]
+                cover_has_hero = True
+                design_engine = "QRU Design Studio™ (Master Design Standard™)"
+        except Exception as e:
+            logger.error(f"design_studio cover delegation failed (non-blocking, deterministic fallback): {e}")
+            cover = None
+    if cover is None:
+        cover = dl.premium_cover(p, kr or {})
     cover_url = _asset_url(_save("cover", "png", cover))
     thumb_url = _asset_url(_save("thumb", "png", dl.premium_thumbnail(cover)))
     store_url = _asset_url(_save("store", "png", dl.premium_store_graphic(p, cover)))
@@ -397,7 +407,8 @@ async def ensure_branded_assets(pid, actor="Creative Studio™", allow_ai_hero_a
         "cover_url": cover_url, "thumbnail_url": thumb_url, "store_graphic_url": store_url,
         "design_palette": {"key": pal["key"], "label": pal["label"],
                            "accent": "#%02X%02X%02X" % pal["accent"]},
-        "cover_has_hero_art": bool(hero), "qbos_version": gov_version, "qeds_version": edu_version,
+        "cover_has_hero_art": cover_has_hero, "design_engine": design_engine,
+        "qbos_version": gov_version, "qeds_version": edu_version,
         "design_language_applied": True, "updated_at": now_iso()}})
     await log_org("Creative Studio Director™", "Creative Studio",
                   f"applied QRU Design Language™ ({pal['label']}) to", p.get("product_code", ""), "success")

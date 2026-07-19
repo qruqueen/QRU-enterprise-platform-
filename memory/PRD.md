@@ -12,6 +12,27 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## ✅ Book Promo Trailers™ + Master Design Standard™ Phase 1 (2026-06)
+**Book promo trailers (enhancement):** `video_fulfillment.ensure_book_promo` / `generate_all_book_promos`
+render short Ken Burns + narration MP4 trailers from published (Founder-authorized) `book_records`
+(the governed Founder-authored exception — no KR required), register them as distribution-ready
+Factory assets marked `pending_distribution:["youtube"]`, and expose them via `GET /api/video/queue`.
+Endpoints: `POST /api/video/books/{id}/promo`, `POST /api/video/books/promos/generate-all`.
+VERIFIED: 4/4 published books got trailers (17–23s each, files on disk, queued for YouTube). They
+auto-appear in YouTube Publisher™ factory-assets and publish once the YouTube OAuth is reconnected.
+
+**Master Design Standard™ — Phase 1 (covers parity) DONE:** `rendering_engine.ensure_branded_assets`
+now DELEGATES cover generation to `design_studio` (art direction → 3 concepts → typographic compose),
+so EVERY product family inherits book-grade covers. Non-book products auto-select the strongest
+concept (NO new UI — the existing regenerate-cover button now yields book-grade output). Preserved:
+vault reuse-by-default, `asset_mode=generate` override, Founder-imported `asset_vault_selected`
+protection, and a deterministic ZERO-AI fallback (`dl.premium_cover`) so a cover always renders.
+Stamps `design_engine`. VERIFIED: a Poster product produced a 1.45MB art-directed hero cover via
+"QRU Design Studio™ (Master Design Standard™)". Books unaffected (already use design_studio).
+- REMAINING (Master Design Standard): Phase 2 interior/deliverable typography parity;
+  Phase 3 generalize the Decoder→Create-Product bridge beyond Book.
+
+
 ## ✅ QRU Video Fulfillment™ — real publishable MP4 for products (2026-06)
 Fixes the reported "YouTube requires a video file" dead-end (video step used to yield a manifest only).
 - New `video_fulfillment.ensure_product_video(product_id)` renders a REAL MP4 (image-based motion /
