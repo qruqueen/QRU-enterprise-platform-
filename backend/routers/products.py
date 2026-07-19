@@ -70,6 +70,10 @@ class BriefInput(BaseModel):
     pass
 
 
+class BindInput(BaseModel):
+    kr_id: str
+
+
 @router.post("/{pid}/creative-brief")
 async def creative_brief(pid: str, user=Depends(get_current_user)):
     """Creative Studio enhances the product page with a decision-ready brief.
@@ -281,6 +285,72 @@ async def ukr_audit(user=Depends(get_current_user)):
     """UKR-traceability audit: green (verified UKR) / amber (unverified/dangling) / red (no UKR)."""
     import ukr_governance
     return await ukr_governance.audit_report()
+
+
+@router.get("/ukr-audit/details")
+async def ukr_audit_details(user=Depends(get_current_user)):
+    """Red + amber products needing remediation (published-noncompliant surfaced first)."""
+    import ukr_governance
+    prods = await db.products.find({}, {"_id": 0}).to_list(5000)
+    rows = []
+    for p in prods:
+        t = await ukr_governance.traceability(p)
+        if t["status"] == "green":
+            continue
+        rows.append({"id": p.get("id"), "code": p.get("product_code"), "title": p.get("title"),
+                     "product_type": p.get("product_type"), "topic": p.get("topic"),
+                     "knowledge_record_id": p.get("knowledge_record_id"),
+                     "status": p.get("status"), "trace_status": t["status"], "reason": t["reason"],
+                     "published": str(p.get("status", "")).lower() == "published"})
+    rows.sort(key=lambda r: (not r["published"], r["trace_status"] != "red"))
+    return {"items": rows, "count": len(rows)}
+
+
+@router.get("/{pid}/ukr-suggestions")
+async def ukr_suggestions(pid: str, user=Depends(get_current_user)):
+    import ukr_governance
+    p = await db.products.find_one({"id": pid})
+    if not p:
+        raise HTTPException(404, "Product not found")
+    return {"suggestions": await ukr_governance.suggest_krs(p)}
+
+
+@router.post("/{pid}/ukr-bind")
+async def ukr_bind(pid: str, data: BindInput, user=Depends(get_current_user)):
+    """Bind a product to a chosen VERIFIED KR (validated). Never silent/automatic."""
+    import ukr_governance
+    p = await db.products.find_one({"id": pid})
+    if not p:
+        raise HTTPException(404, "Product not found")
+    kr = await ukr_governance.require_verified_ukr(data.kr_id, p.get("product_type", ""))
+    await db.products.update_one({"id": pid}, {"$set": {
+        "knowledge_record_id": kr["id"], "governance_status": "governed",
+        "governed_by": user.get("name", "Founder"), "updated_at": now_iso()}})
+    return {"ok": True, "bound_to": {"id": kr["id"], "kr_code": kr.get("kr_code"), "title": kr.get("title")}}
+
+
+@router.post("/{pid}/ukr-quarantine")
+async def ukr_quarantine(pid: str, user=Depends(get_current_user)):
+    """Quarantine a product that cannot be safely governed (non-destructive: unpublish + flag)."""
+    p = await db.products.find_one({"id": pid})
+    if not p:
+        raise HTTPException(404, "Product not found")
+    await db.products.update_one({"id": pid}, {"$set": {
+        "governance_status": "quarantined", "status": "Archived",
+        "quarantined_by": user.get("name", "Founder"), "updated_at": now_iso()}})
+    return {"ok": True, "governance_status": "quarantined"}
+
+
+@router.post("/{pid}/ukr-exception")
+async def ukr_exception(pid: str, user=Depends(get_current_user)):
+    """Classify a product as the governed Founder-authored manuscript exception."""
+    p = await db.products.find_one({"id": pid})
+    if not p:
+        raise HTTPException(404, "Product not found")
+    await db.products.update_one({"id": pid}, {"$set": {
+        "founder_authored": True, "governance_status": "founder_exception",
+        "classified_by": user.get("name", "Founder"), "updated_at": now_iso()}})
+    return {"ok": True, "governance_status": "founder_exception"}
 
 
 @router.get("/{pid}")

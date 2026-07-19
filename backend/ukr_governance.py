@@ -89,3 +89,38 @@ async def audit_report() -> dict:
         "published_noncompliant": published_red,
         "published_noncompliant_count": len(published_red),
     }
+
+
+_STOP = {"the", "a", "an", "of", "for", "and", "to", "how", "why", "what", "in", "on", "with", "your",
+         "guide", "book", "workbook", "lesson", "plan", "poster", "card", "cards", "quiz", "course"}
+
+
+def _tokens(text):
+    import re
+    return {w for w in re.findall(r"[a-z]+", (text or "").lower()) if len(w) > 2 and w not in _STOP}
+
+
+async def suggest_krs(product, limit=5):
+    """Suggest candidate VERIFIED KRs for a product (labeled suggestions — never auto-bound)."""
+    ptoks = _tokens(product.get("title")) | _tokens(product.get("topic")) | _tokens(product.get("category"))
+    cands = []
+    for coll in _KR_COLLECTIONS:
+        rows = await db[coll].find(
+            {"$or": [{"verification_status": "Verified"}, {"approval_status": "Approved"}]},
+            {"_id": 0, "id": 1, "kr_code": 1, "title": 1, "category": 1}).to_list(2000)
+        for kr in rows:
+            ktoks = _tokens(kr.get("title")) | _tokens(kr.get("category"))
+            overlap = len(ptoks & ktoks)
+            if overlap:
+                cands.append({"id": kr["id"], "kr_code": kr.get("kr_code"), "title": kr.get("title"),
+                              "category": kr.get("category"), "match_score": overlap, "verified": True})
+    cands.sort(key=lambda c: c["match_score"], reverse=True)
+    # de-dup by id
+    seen, out = set(), []
+    for c in cands:
+        if c["id"] not in seen:
+            seen.add(c["id"]); out.append(c)
+        if len(out) >= limit:
+            break
+    return out
+

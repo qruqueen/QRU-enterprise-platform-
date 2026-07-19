@@ -12,6 +12,19 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## ✅ UKR Compliance Panel + Guided Remediation (2026-06)
+Governance page (`/governance`) now opens with a **Knowledge-First™ Compliance** panel
+(`components/UKRCompliance.js`): live green/amber/red counts, compliance %, published-noncompliant
+count, refresh. "Open guided remediation" lists all amber+red products (published-noncompliant first)
+with per-product actions — **Bind to a suggested Verified UKR** / **Founder-authored exception** /
+**Quarantine**. Nothing is ever auto-bound (Founder decides each).
+Backend (`ukr_governance.py` + `routers/products.py`): `GET /products/ukr-audit/details`,
+`GET /products/{id}/ukr-suggestions` (token-matched Verified KRs, scored), `POST /{id}/ukr-bind`
+(validates Verified), `POST /{id}/ukr-quarantine` (unpublish+flag), `POST /{id}/ukr-exception`.
+VERIFIED: bind moved a product green (compliance 62.8%→63.3%), bind-to-unverified rejected (422),
+panel + remediation list render in UI. Needs redeploy to reach production.
+
+
 ## ✅ UKR-Inheritance Governance enforced at the manufacturing choke point (2026-06)
 Closes the biggest trust gap: educational products can no longer be manufactured/published without a
 VERIFIED Universal Knowledge Record (Knowledge-First™). New `ukr_governance.py` = single shared guard.
