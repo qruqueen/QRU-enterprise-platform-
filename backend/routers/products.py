@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
+import asyncio
 
 from database import db
-from auth import get_current_user
+from auth import get_current_user, require_super_admin
 from models import gen_id, now_iso, clean
 from ai_service import llm_generate, parse_json
 from org_activity import log_org
@@ -278,6 +279,58 @@ async def assemble_product(data: AssembleInput, user=Depends(get_current_user)):
 @router.get("/recipes")
 async def recipes(user=Depends(get_current_user)):
     return {"recipes": {k: v for k, v in RECIPES.items()}, "field_labels": FIELD_LABELS}
+
+
+# --- Publication Quality Standard™ (Phase 2) — production re-render batch (zero AI spend) ---
+_RERENDER_JOB = "deliverable_rerender_jobs"
+_DOC_CATS = {"book", "guide", "workbook", "card"}
+
+
+async def _rerender_worker(actor, base_url=""):
+    import product_recipes as pr
+    import deliverable_renderer as dr
+    prods = await db.products.find({"content": {"$exists": True, "$ne": ""}},
+                                   {"id": 1, "product_type": 1}).to_list(10000)
+    ids = [p["id"] for p in prods if pr.get_recipe(p.get("product_type", "")).get("category") in _DOC_CATS]
+    total = len(ids)
+    done = ok = failed = 0
+    await db[_RERENDER_JOB].update_one({"id": "current"}, {"$set": {
+        "id": "current", "status": "running", "total": total, "done": 0, "ok": 0, "failed": 0,
+        "started_at": now_iso(), "by": actor}}, upsert=True)
+    for pid in ids:
+        try:
+            res = await dr.ensure_deliverable(pid, actor=actor, base_url=base_url,
+                                              build_marketing=False, allow_ai_cover=False)
+            ok += 1 if (res and res.get("files")) else 0
+            failed += 0 if (res and res.get("files")) else 1
+        except Exception:
+            failed += 1
+        done += 1
+        if done % 5 == 0:
+            await db[_RERENDER_JOB].update_one({"id": "current"},
+                                               {"$set": {"done": done, "ok": ok, "failed": failed}})
+    await db[_RERENDER_JOB].update_one({"id": "current"}, {"$set": {
+        "status": "complete", "done": done, "ok": ok, "failed": failed, "finished_at": now_iso()}})
+
+
+@router.post("/rerender-documents")
+async def rerender_documents(request: Request, user=Depends(require_super_admin)):
+    """Re-render EVERY document-family product so it inherits the QRU Publication Quality Standard™.
+    Zero AI cover spend. Runs in the background; poll /rerender-documents/status."""
+    existing = await db[_RERENDER_JOB].find_one({"id": "current"}, {"_id": 0})
+    if existing and existing.get("status") == "running":
+        return {"ok": True, "status": "running", "message": "A re-render batch is already running.",
+                **{k: existing.get(k) for k in ("total", "done", "ok", "failed")}}
+    base_url = str(request.base_url).rstrip("/")
+    asyncio.create_task(_rerender_worker(user.get("name", "Founder"), base_url))
+    return {"ok": True, "status": "started",
+            "message": "Publication Quality re-render started (zero AI spend). Poll status to track."}
+
+
+@router.get("/rerender-documents/status")
+async def rerender_documents_status(user=Depends(get_current_user)):
+    j = await db[_RERENDER_JOB].find_one({"id": "current"}, {"_id": 0})
+    return j or {"status": "idle"}
 
 
 @router.get("/ukr-audit")

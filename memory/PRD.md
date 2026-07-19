@@ -12,6 +12,35 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## ✅ Phase 3 — Generalized Decoder→Create-Product bridge + Production re-render endpoint (2026-07-19)
+**Generalized bridge (beyond Book):** `decoder_engine.create_product_from_decoder(d, product_type,...)`
+turns a Manufacturing Ready™ understanding into ANY document family. Book → the dedicated 7-button
+Book line (unchanged); every other family (Workbook, Teacher/Caregiver/Student/Family Guide, Lesson
+Plan, Printable PDF, Course, Flash/Quick Card, Quiz) → the shared products pipeline and inherits the
+QRU Publication Quality Standard™ (Phase 2). Knowledge-First preserved (product linked to the decoder's
+source Verified KR; `verified` derived from the KR; `products_created` incremented). Content reuses the
+deterministic `_decoder_to_manuscript` assembler (no invented knowledge, $0 LLM). Deliverable rendered
+with `allow_ai_cover=False` ($0 AI).
+- **Endpoints:** `GET /api/decoder/product-types/available`; `POST /api/decoder/{id}/create-product`
+  (super-admin, now accepts any available `product_type`, returns `route` = /products or
+  /book-manufacturing).
+- **Frontend:** `DecoderEngine.js` CTA now has a product-type `<select>` (data-testid
+  `create-product-type`) + "Create Product"; routes to My Products or Book Manufacturing by engine.
+- **Production re-render batch endpoint (zero AI):** `POST /api/products/rerender-documents`
+  (super-admin, background) + `GET /api/products/rerender-documents/status`. Re-renders all
+  document-family products through the Publication Quality Standard™; job tracked in
+  `deliverable_rerender_jobs`.
+- **Threaded `allow_ai_cover` flag** into `deliverable_renderer.ensure_deliverable` (default True; batch
+  + bridge pass False for guaranteed $0). Also fixed a latent `product_id`→`pid` NameError in the AI
+  cover path.
+- **VERIFIED:** bridge created a real Workbook from DEC-00008 (verified=True, KR-linked, PDF w/
+  Copyright+Colophon, no chrome) then cleaned up; available-types endpoint returns 12 families; batch
+  endpoint start→status→complete = 94/94, 0 failed; frontend selector renders all 12 options; backend
+  200, frontend compiled.
+- **NOTE:** preview + production have separate DBs — run `POST /api/products/rerender-documents` in
+  production after redeploy to upgrade live deliverables.
+
+
 ## ✅ Master Design Standard™ Phase 2 — QRU Publication Quality Standard™ (2026-07-19)
 Founder directive: make every DOCUMENT product inherit ONE shared publication-quality foundation
 (not "make everything look like a book"); build once, inherit everywhere; keep posters/audio/video on

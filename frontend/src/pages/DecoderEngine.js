@@ -93,15 +93,21 @@ export default function DecoderEngine() {
   const [attention, setAttention] = useState([]);
   const [selected, setSelected] = useState(null);
   const [acting, setActing] = useState(false);
+  const [productTypes, setProductTypes] = useState(["Book"]);
   const navigate = useNavigate();
 
-  const createProduct = async () => {
+  const createProduct = async (productType = "Book") => {
     if (!selected) return;
     setActing(true);
     try {
-      const { data } = await api.post(`/decoder/${selected.id}/create-product`, { product_type: "Book" });
-      toast.success(`“${data.title}” created — opening the Book Manufacturing System™.`);
-      navigate(`${data.route || "/book-manufacturing"}?book=${data.book_id}`);
+      const { data } = await api.post(`/decoder/${selected.id}/create-product`, { product_type: productType });
+      if (data.engine === "book" || data.book_id) {
+        toast.success(`“${data.title}” created — opening the Book Manufacturing System™.`);
+        navigate(`${data.route || "/book-manufacturing"}?book=${data.book_id}`);
+      } else {
+        toast.success(`“${data.title}” created${data.publication_quality_applied ? " with Publication Quality Standard™" : ""} — opening My Products.`);
+        navigate(`${data.route || "/products"}?highlight=${data.id}`);
+      }
     } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
     finally { setActing(false); }
   };
@@ -113,6 +119,7 @@ export default function DecoderEngine() {
   };
   useEffect(() => {
     api.get("/decoder/verified-krs").then((r) => setKrs(r.data.records || [])).catch(() => {});
+    api.get("/decoder/product-types/available").then((r) => setProductTypes(r.data.product_types || ["Book"])).catch(() => {});
     load();
   }, []);
 
@@ -176,7 +183,7 @@ export default function DecoderEngine() {
 
       {selected ? (
         <DecoderDetail d={selected} isSuper={isSuper} acting={acting} act={act} exportJson={exportJson}
-          onCreateProduct={createProduct} onBack={() => { setSelected(null); load(); }} />
+          productTypes={productTypes} onCreateProduct={createProduct} onBack={() => { setSelected(null); load(); }} />
       ) : (
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-6">
@@ -280,12 +287,13 @@ export default function DecoderEngine() {
   );
 }
 
-function DecoderDetail({ d, isSuper, acting, act, exportJson, onCreateProduct, onBack }) {
+function DecoderDetail({ d, isSuper, acting, act, exportJson, productTypes = ["Book"], onCreateProduct, onBack }) {
   const uc = d.understanding_checks || {};
   const vs = d.visual_spec || {};
   const rows = (d.scorecard || {}).rows || [];
   const gp = d.governance_package || {};
   const canCertify = d.treasure_standard_candidate && !d.treasure_standard_certified;
+  const [pType, setPType] = useState("Book");
 
   const requestRevision = () => {
     const notes = window.prompt("What should be revised? (educational feedback)", "");
@@ -327,12 +335,19 @@ function DecoderDetail({ d, isSuper, acting, act, exportJson, onCreateProduct, o
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="min-w-0">
                 <p className="text-sm font-bold text-navy">This understanding is ready to become a product.</p>
-                <p className="text-[12px] text-muted-foreground">The Factory has finished its work. Build a finished Book from this — the manuscript, metadata and governance are carried over for you.</p>
+                <p className="text-[12px] text-muted-foreground">The Factory has finished its work. Choose a product family — the understanding, metadata and governance carry over, and every document inherits the QRU Publication Quality Standard™.</p>
               </div>
-              <button data-testid="create-product-btn" onClick={onCreateProduct} disabled={acting || !isSuper}
-                className="inline-flex items-center gap-2 bg-navy text-white px-5 py-2.5 rounded-md text-sm font-bold disabled:opacity-40 shrink-0">
-                {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackagePlus className="w-4 h-4" />} Create Product · Book
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <select data-testid="create-product-type" value={pType} onChange={(e) => setPType(e.target.value)}
+                  disabled={acting || !isSuper}
+                  className="rounded-md border border-emerald-300 bg-white px-3 py-2.5 text-sm font-semibold text-navy disabled:opacity-40">
+                  {productTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <button data-testid="create-product-btn" onClick={() => onCreateProduct(pType)} disabled={acting || !isSuper}
+                  className="inline-flex items-center gap-2 bg-navy text-white px-5 py-2.5 rounded-md text-sm font-bold disabled:opacity-40 shrink-0">
+                  {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackagePlus className="w-4 h-4" />} Create Product
+                </button>
+              </div>
             </div>
           </div>
         )}

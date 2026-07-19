@@ -1,6 +1,6 @@
 """QRU Decoder Engine™ — API (Stone 1). Founder Review Shelf™ owns Decoder educational review."""
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from auth import get_current_user, require_super_admin
@@ -100,18 +100,24 @@ class CreateProductInput(BaseModel):
     product_type: Optional[str] = "Book"
 
 
+@router.get("/product-types/available")
+async def product_types_available(user=Depends(get_current_user)):
+    """Product families the Create-Product bridge can manufacture from an understanding."""
+    return {"product_types": de.available_product_types()}
+
+
 @router.post("/{did}/create-product")
-async def create_product(did: str, data: CreateProductInput = CreateProductInput(), user=Depends(require_super_admin)):
-    """Create Product — the single bridge from a Manufacturing Ready™ understanding into the
-    seven-button Book Manufacturing System™ (Stone 2, Books only). Reuses the existing engine."""
+async def create_product(did: str, request: Request, data: CreateProductInput = CreateProductInput(),
+                         user=Depends(require_super_admin)):
+    """Create Product — the single bridge from a Manufacturing Ready™ understanding into a product.
+    Book → the 7-button Book Manufacturing line; every other document family → the shared products
+    pipeline, inheriting the QRU Publication Quality Standard™ (Phase 2). Knowledge-First preserved."""
     d = await de.get_decoder(did)
     if not d:
         raise HTTPException(404, "Understanding record not found.")
-    if (data.product_type or "Book") != "Book":
-        raise HTTPException(400, "Only Book is available today — more product types are coming.")
-    import book_manufacturing as bm
-    rec = await bm.create_book_from_decoder(d, user.get("name", "Founder"))
-    if isinstance(rec, dict) and rec.get("error"):
-        raise HTTPException(400, rec["error"])
-    return {"ok": True, "product_type": "Book", "book_id": rec["id"], "book_code": rec.get("book_code"),
-            "title": rec.get("title"), "route": "/book-manufacturing"}
+    base_url = str(request.base_url).rstrip("/")
+    res = await de.create_product_from_decoder(d, data.product_type or "Book",
+                                               user.get("name", "Founder"), base_url)
+    if isinstance(res, dict) and res.get("error"):
+        raise HTTPException(400, res["error"])
+    return res

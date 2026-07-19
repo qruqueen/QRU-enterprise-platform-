@@ -373,3 +373,90 @@ async def stats():
 
 
 TAXONOMY = {"domains": DOMAINS, "review_states": REVIEW_STATES}
+
+
+# ---------------------------------------------------------------------------
+# Stone 2 (Phase 3) — Create-Product bridge, GENERALIZED beyond Book.
+# ONE bridge: a Manufacturing Ready™ understanding → any document product family. Book keeps its
+# dedicated 7-button line; every other document family flows through the shared products pipeline and
+# inherits the QRU Publication Quality Standard™ (Phase 2). No knowledge is invented — content is the
+# already-verified decoded understanding, and Knowledge-First™ is preserved (linked to the source KR).
+# ---------------------------------------------------------------------------
+DOC_PRODUCT_TYPES = [
+    "Workbook", "Teacher Guide", "Caregiver Guide", "Student Guide", "Family Guide",
+    "Lesson Plan", "Printable PDF", "Course", "Flash Cards", "Quick Card", "Quiz",
+]
+
+
+def available_product_types():
+    """Product families the Create-Product bridge can manufacture from an understanding."""
+    return ["Book"] + DOC_PRODUCT_TYPES
+
+
+async def create_product_from_decoder(d, product_type, actor, base_url=""):
+    if not d:
+        return {"error": "Understanding record not found."}
+    if d.get("review_state") != "Manufacturing Ready":
+        return {"error": "This understanding is not Manufacturing Ready™ yet — the Factory is still finishing it."}
+    product_type = product_type or "Book"
+
+    # Book → the dedicated Founder-authored 7-button line (unchanged).
+    if product_type == "Book":
+        import book_manufacturing as bm
+        rec = await bm.create_book_from_decoder(d, actor)
+        if isinstance(rec, dict) and rec.get("error"):
+            return rec
+        return {"ok": True, "product_type": "Book", "engine": "book", "id": rec["id"],
+                "book_id": rec["id"], "book_code": rec.get("book_code"),
+                "title": rec.get("title"), "route": "/book-manufacturing"}
+
+    if product_type not in DOC_PRODUCT_TYPES:
+        return {"error": f"'{product_type}' is not available from the understanding bridge. "
+                         f"Choose one of: {', '.join(available_product_types())}."}
+
+    # Document product → shared products pipeline + Publication Quality Standard™.
+    import book_manufacturing as bm  # reuse the deterministic assembler (no duplicated logic)
+    content = bm._decoder_to_manuscript(d)
+    src = (d.get("source_kr_ids") or [{}])[0]
+    kr_id = src.get("kr_id")
+    kr = await _resolve_kr(kr_id) if kr_id else None
+    count = await db.products.count_documents({})
+    pid = gen_id()
+    title = f"{d.get('title', 'Untitled')} — {product_type}"
+    product = {
+        "id": pid, "product_code": f"PRD-{count + 1:05d}", "title": title,
+        "product_type": product_type,
+        "family": d.get("domain") or (kr or {}).get("category") or "General",
+        "topic": d.get("title"), "audience": d.get("audience") or "General",
+        "learning_level": d.get("level") or "Introductory",
+        "content": content, "status": "Ready",
+        "verified": bool(kr and _is_verified(kr)),
+        "knowledge_record_id": kr_id, "kr_version": (kr or {}).get("version", 1),
+        "creative_status": "Reviewed",
+        "manufactured_by": "QRU Decoder Engine™ → Publication Quality Standard™",
+        "source_decoder": {"decoder_id": d.get("decoder_id"), "source_kr_ids": d.get("source_kr_ids", []),
+                           "created_at": _now(), "by": actor},
+        "created_by": actor, "created_at": _now(), "updated_at": _now(),
+    }
+    await db.products.insert_one(dict(product))
+    if kr_id:
+        await db.knowledge_records.update_one({"id": kr_id}, {"$inc": {"products_created": 1}})
+
+    deliverable = None
+    try:
+        import deliverable_renderer as dr
+        deliverable = await dr.ensure_deliverable(pid, actor=actor, base_url=base_url,
+                                                  build_marketing=False, allow_ai_cover=False)
+    except Exception as e:
+        logger.error(f"decoder→{product_type} deliverable render failed (non-blocking): {e}")
+
+    await db[COLL].update_one({"id": d.get("id")}, {"$push": {"manufactured_products": {
+        "product_type": product_type, "product_id": pid, "product_code": product["product_code"],
+        "title": title, "created_at": _now(), "by": actor}}})
+    await log_org("QRU Decoder Engine™", "Manufacturing",
+                  f"created {product_type} {product['product_code']} from {d.get('decoder_id')}",
+                  product["product_code"], "success")
+    return {"ok": True, "product_type": product_type, "engine": "publication", "id": pid,
+            "product_code": product["product_code"], "title": title, "route": "/products",
+            "deliverable_ready": bool(deliverable and deliverable.get("ready")),
+            "publication_quality_applied": True}
