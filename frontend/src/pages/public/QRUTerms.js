@@ -63,8 +63,8 @@ export default function QRUTerms() {
       </Section>
 
       <Section title="Governing law">
-        These terms are governed by the laws of [State/Country — to be confirmed by QRU]. Disputes
-        will be handled in the courts of that jurisdiction.
+        These terms are governed by the laws of the State of Louisiana, USA. Any disputes will be
+        handled in the state or federal courts located in Louisiana.
       </Section>
 
       <Section title="Contact">
