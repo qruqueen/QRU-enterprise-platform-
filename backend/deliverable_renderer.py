@@ -239,22 +239,45 @@ def _render_epub(product, cover_bytes=None) -> bytes:
     from ebooklib import epub
     book = epub.EpubBook()
     book.set_identifier(product.get("id", "qru"))
-    book.set_title(product.get("title", "QRU Book"))
+    rp = product.get("retail_publication")
+    pm = (rp or {}).get("metadata", {})
+    book.set_title(pm.get("title") or product.get("title", "QRU Book"))
     book.set_language("en")
-    book.add_author("QRU PRESS™")
+    book.add_author(pm.get("author") or "QRU Press™")
     # Embed the finished cover so the eBook shows the real cover (not a reader-generated placeholder).
     if cover_bytes:
         try:
             book.set_cover("cover.png", cover_bytes, create_page=True)
         except Exception as e:
             logger.error(f"epub set_cover failed: {e}")
+    chapters = []
+    if rp:
+        # Publication Quality Standard™: clean Title + Copyright page — no manufacturing chrome.
+        tp = rp.get("title_page", {})
+        front = (f"<h1>{_html.escape(tp.get('title',''))}</h1>"
+                 + (f"<h3><em>{_html.escape(tp.get('subtitle',''))}</em></h3>" if tp.get("subtitle") else "")
+                 + (f"<p>{_html.escape(tp.get('author',''))}</p>" if tp.get("author") else "")
+                 + (f"<p><small>{_html.escape(tp.get('imprint',''))}</small></p>" if tp.get("imprint") else "")
+                 + "<hr/>"
+                 + "".join(f"<p><small>{_html.escape(x)}</small></p>" for x in rp.get("copyright_page", [])))
+        fc = epub.EpubHtml(title="Title", file_name="front.xhtml", lang="en")
+        fc.content = front
+        book.add_item(fc); chapters.append(fc)
     body_html = _md_to_html(product.get("content") or "")
     c = epub.EpubHtml(title=product.get("title", "Chapter"), file_name="content.xhtml", lang="en")
-    c.content = (f"<h1>{_html.escape(product.get('title',''))}</h1>"
-                 f"<p><em>Treasure Standard™ Certified · QRU PRESS™</em></p>{body_html}")
-    book.add_item(c)
-    book.toc = (c,)
-    book.spine = ["cover", "nav", c] if cover_bytes else ["nav", c]
+    heading = "" if rp else (f"<h1>{_html.escape(product.get('title',''))}</h1>"
+                             "<p><em>Treasure Standard™ Certified · QRU PRESS™</em></p>")
+    c.content = heading + body_html
+    book.add_item(c); chapters.append(c)
+    # Colophon (educational/book profiles that include it).
+    if rp and rp.get("colophon"):
+        colo = rp["colophon"]
+        cc = epub.EpubHtml(title="Colophon", file_name="colophon.xhtml", lang="en")
+        cc.content = (f"<h2>{_html.escape(colo[0])}</h2>"
+                      + "".join(f"<p><small>{_html.escape(x)}</small></p>" for x in colo[1:]))
+        book.add_item(cc); chapters.append(cc)
+    book.toc = tuple(chapters)
+    book.spine = (["cover", "nav"] if cover_bytes else ["nav"]) + chapters
     book.add_item(epub.EpubNcx())
     book.add_item(epub.EpubNav())
     buf = io.BytesIO()
@@ -325,6 +348,21 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
     recipe = pr.get_recipe(ptype)
     primary = recipe["primary"]
 
+    # QRU Publication Quality Standard™ (Master Design Standard™ Phase 2) — DOCUMENT families inherit
+    # the shared publication foundation: sanitized body + clean Title/Copyright/Colophon + (educational)
+    # governance & accessibility front matter + consistent typography/branding. Non-document families
+    # (poster/deck/quiz/lesson/script/certificate/audio/video) return None → stay on their own pipeline.
+    p_doc = p_clean
+    pub_prep = None
+    try:
+        import publication_quality as pq
+        pub_prep = pq.prepare(p_clean, category=recipe.get("category"))
+        if pub_prep:
+            p_doc = {**p_clean, "content": pub_prep["clean_content"],
+                     "retail_publication": pub_prep["retail_publication"]}
+    except Exception as e:
+        logger.error(f"publication quality prepare failed (non-blocking): {e}")
+
     # 1) Always: readable HTML edition (the open/read/scroll experience)
     try:
         add("html", _render_html(p_clean, cover_bytes))
@@ -338,16 +376,16 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
         elif primary == "png":
             add("png", _render_poster_png(p_clean, cover_bytes))
         elif primary == "epub":
-            add("epub", _render_epub(p_clean, cover_bytes))
+            add("epub", _render_epub(p_doc, cover_bytes))
         # PDF is always available as a print/download format for text products.
         if primary in ("pdf", "epub", "html", "pptx"):
-            add("pdf", _render_pdf(p_clean, kr, cover_bytes))
+            add("pdf", _render_pdf(p_doc, kr, cover_bytes))
     except Exception as e:
         logger.error(f"primary({primary}) render failed for {pid}: {e}")
         # guarantee at least a PDF exists
         if not any(f["format"] == "pdf" for f in files):
             try:
-                add("pdf", _render_pdf(p_clean, kr, cover_bytes))
+                add("pdf", _render_pdf(p_doc, kr, cover_bytes))
             except Exception as e2:
                 logger.error(f"pdf fallback failed for {pid}: {e2}")
 

@@ -1031,84 +1031,38 @@ async def video_plan(book_id):
 
 
 # ----------------- PUBLICATION SANITIZATION PASS™ (pre-Final-Release) -----------------
-# Internal markers that must NEVER reach a reader-facing (retail) page.
-_PLACEHOLDER_PATTERNS = [
-    (r"\(?\s*working title\s*\)?", "working-title placeholder"),
-    (r"\[[^\]]*?\b(TK|TBD|TODO|PLACEHOLDER|DRAFT|FIXME|XXX)\b[^\]]*?\]", "bracketed editorial marker"),
-    (r"\bTKTK\b|\bTK\b(?=\s|$)", "TK marker"),
-    (r"\[\s*insert[^\]]*?\]", "insert-note marker"),
-    (r"\(draft\)|\bDRAFT ONLY\b|\bDO NOT DISTRIBUTE\b|\bCONFIDENTIAL\b|\bINTERNAL USE ONLY\b", "internal-status marker"),
-    (r"\b(TODO|FIXME|XXX|TBD)\b\s*:?[^\n]*", "editorial note"),
-    (r"\bfull manuscript\b", "full-manuscript label"),
-    (r"ISBN:?\s*assignment pending", "placeholder ISBN"),
-]
+# Master Design Standard™ Phase 2: the sanitization + Title/Copyright/Colophon logic is now OWNED by
+# the shared QRU Publication Quality Standard™ (`publication_quality.py`). The book line INHERITS it
+# (fiction "book" profile) and extends it with print-wrap + Founder cover selection. No duplication.
+import publication_quality as _pq
+
+_PLACEHOLDER_PATTERNS = _pq.PLACEHOLDER_PATTERNS
 
 
 def _detect_placeholders(text):
-    import re
-    findings = []
-    for pat, label in _PLACEHOLDER_PATTERNS:
-        for m in re.finditer(pat, text, re.I):
-            s = max(0, m.start() - 30)
-            findings.append({"marker": label, "text": m.group(0).strip(),
-                             "context": " ".join(text[s:m.end() + 30].split())})
-    return findings
+    return _pq.detect_placeholders(text)
 
 
 def _split_front_matter(content):
-    """Separate the manuscript-embedded front-matter block (title/byline/publisher line) from the
-    reader body. The reader body begins at the first chapter heading. The embedded block is NOT
-    reader prose — it is regenerated cleanly as a Title Page — so it is dropped from the body."""
-    import re
-    lines = content.split("\n")
-    for i, ln in enumerate(lines):
-        st = ln.strip()
-        if st.startswith("## ") or re.match(r"^#{1,6}\s*chapter\b", st, re.I):
-            return "\n".join(lines[:i]), "\n".join(lines[i:])
-    return "", content
+    return _pq.split_front_matter(content)
 
 
 def _build_publication(b):
-    year = datetime.now(timezone.utc).year
-    title = b.get("title") or "Untitled"
-    author = b.get("author") or "Author"
-    publisher = b.get("rights_holder") or b.get("imprint") or "QRU Press"
-    imprint = b.get("imprint") or publisher
-    edition = b.get("edition") or "First Edition"
-    lang = b.get("language") or "English"
-    isbn = b.get("isbn") or "ISBN: __________________________  (assigned by Amazon KDP at publication)"
-    genre = b.get("genre") or "Fiction"
-    ai_disc = b.get("ai_disclosure") or "AI-assisted manufacturing; human-authored and human-approved."
-    pub_meta = {
-        "title": title, "subtitle": b.get("subtitle") or "", "author": author, "imprint": imprint,
-        "publisher": publisher, "edition": edition, "language": lang, "isbn": isbn,
-        "copyright_year": year, "copyright_holder": publisher, "rights_statement": "All rights reserved.",
-        "publication_date": None, "genre": genre, "ai_content_disclosure": ai_disc,
+    """Book (Founder-authored trade edition) inherits the shared builder with the fiction profile,
+    passing book-specific defaults so the retail edition output is unchanged."""
+    meta = {
+        "title": b.get("title") or "Untitled",
+        "subtitle": b.get("subtitle") or "",
+        "author": b.get("author") or "Author",
+        "publisher": b.get("rights_holder") or b.get("imprint") or "QRU Press",
+        "imprint": b.get("imprint") or b.get("rights_holder") or "QRU Press",
+        "edition": b.get("edition") or "First Edition",
+        "language": b.get("language") or "English",
+        "isbn": b.get("isbn") or "ISBN: __________________________  (assigned by Amazon KDP at publication)",
+        "genre": b.get("genre") or "Fiction",
+        "ai_content_disclosure": b.get("ai_disclosure") or "AI-assisted manufacturing; human-authored and human-approved.",
     }
-    title_page = {"title": title, "subtitle": b.get("subtitle") or "A Novel", "author": author, "imprint": imprint}
-    copyright_page = [
-        title,
-        f"Copyright © {year} {publisher}",
-        "All rights reserved.",
-        ("No part of this book may be reproduced in any form or by any electronic or mechanical means, "
-         "including information storage and retrieval systems, without written permission from the publisher, "
-         "except by a reviewer who may quote brief passages in a review."),
-        ("This is a work of fiction. Names, characters, places, and incidents are the product of the author's "
-         "imagination or are used fictitiously. Any resemblance to actual persons, living or dead, events, or "
-         "locales is entirely coincidental."),
-        edition,
-        isbn,
-        f"Published by {imprint}.",
-        f"AI content disclosure: {ai_disc}",
-    ]
-    # Retail colophon — typographic note only; NO internal manufacturing-system language.
-    colophon = [
-        "Colophon",
-        (f"{title} was set in a classic serif text face chosen for comfortable long-form reading, with "
-         "display typography in a complementary sans-serif."),
-        f"Interior design and typesetting by {imprint}.",
-    ]
-    return pub_meta, title_page, copyright_page, colophon
+    return _pq.build_publication(meta, _pq.PROFILES["book"])
 
 
 async def sanitization_pass(book_id, actor, base_url=""):

@@ -12,6 +12,33 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## ✅ Master Design Standard™ Phase 2 — QRU Publication Quality Standard™ (2026-07-19)
+Founder directive: make every DOCUMENT product inherit ONE shared publication-quality foundation
+(not "make everything look like a book"); build once, inherit everywhere; keep posters/audio/video on
+their own pipelines. New shared owner `publication_quality.py` (STD-PUB-0001) provides:
+Publication Sanitization Pass™ · professional Title/Copyright/Colophon · consistent typography
+hierarchy + spacing + QRU branding · accessibility/governance front matter (educational profile).
+- **Inheritance model:** three governed profiles inherit ONE builder — `book` (fiction clause, no
+  governance dump, no learning QR), `publication` (educational disclaimer + inherited Product
+  Governance Package™ + continue-learning QR), `card` (title+copyright, no colophon). Category→profile
+  map gates it to document families (book/guide/workbook/card); poster/deck/quiz/lesson/script/
+  certificate/audio/video → `prepare()` returns None (own pipeline).
+- **No duplication:** `book_manufacturing` now DELEGATES its sanitization + Title/Copyright/Colophon to
+  the shared module (book profile, output preserved). `rendering_engine._make_pdf` extended to render
+  the educational governance/accessibility front page + keep the learning QR for educational docs
+  (books still end clean after colophon). `deliverable_renderer.ensure_deliverable` runs `pq.prepare`
+  for document families and renders PDF + EPUB from the sanitized body + `retail_publication` block.
+  `_render_epub` now honors the retail block (clean title/copyright/colophon, no factory chrome).
+- **VERIFIED (credit-free, direct render + 1 real product):** real product "Love — Book" re-rendered →
+  29pp PDF WITH Copyright + Colophon + Governance/Accessibility, **"Manufactured by QRU Factory" chrome
+  GONE**, EPUB 1.7MB; Teacher Guide/Lesson Plan/Course → publication profile w/ governance; Flash Cards
+  → card profile (no governance); Poster/Presentation correctly skipped; book fiction clause + "A Novel"
+  preserved; backend healthy.
+- **NOTE:** existing already-rendered deliverables upgrade on their next re-render (manufacture/publish/
+  regenerate-cover) — non-destructive, no migration. REMAINING (Phase 3): generalize the
+  Decoder→Create-Product bridge beyond Book; optional pptx branding parity.
+
+
 ## ✅ UKR™ Governance Engine — Lifecycle (S18) + Gold Standard Review (S17) (Phase 2, 2026-07-19)
 Per Founder directive: activated the canonical governance lifecycle + certification engine on the
 UKR™ Standard v1.1 canonical layer. New module `ukr_lifecycle.py` (operates on the `ukr` object;

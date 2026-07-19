@@ -176,6 +176,28 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
         pdf.add_page(); pdf.ln(8); pdf.set_text_color(80, 78, 92); pdf.set_font("Times", "", 9.5)
         for para in rp.get("copyright_page", []):
             pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.2, _strip_md(para)); pdf.ln(1.6)
+        # Educational profile: inherited Product Governance Package™ + accessibility front matter.
+        gf = rp.get("governance_front")
+        if rp.get("include_governance") and gf:
+            pdf.add_page(); pdf.set_text_color(*ROYAL); pdf.set_font("Helvetica", "B", 10)
+            pdf.cell(0, 7, _strip_md("FRONT MATTER")); pdf.ln(10)
+            pdf.set_text_color(*NAVY); pdf.set_font("Times", "", 11)
+            if gf.get("copyright"):
+                pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md(gf["copyright"]))
+            if gf.get("licensing"):
+                pdf.ln(1); pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md(gf["licensing"]))
+            pdf.ln(4); pdf.set_font("Helvetica", "B", 11); pdf.set_text_color(*ROYAL)
+            pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md("Product Governance Package(TM)"))
+            pdf.set_text_color(*NAVY); pdf.set_font("Times", "", 10.5)
+            for dstmt in gf.get("disclaimers", []):
+                pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md("- " + dstmt))
+            cg = gf.get("category_governance")
+            if cg:
+                pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md(f"- {cg['domain']}: {cg['statement']}"))
+            if gf.get("transparency"):
+                pdf.ln(2); pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md(gf["transparency"]))
+            if gf.get("accessibility"):
+                pdf.ln(1); pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md("Accessibility: " + gf["accessibility"]))
     else:
         pdf.set_text_color(*ROYAL); pdf.set_font("Helvetica", "B", 9)
         pdf.cell(0, 6, _strip_md(f"QRU PRESS(TM)   -   {family_txt.upper()}"))
@@ -293,7 +315,7 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
             pdf.set_font("Times", "", 12)
             pdf.multi_cell(0, 6.5, b)
 
-    # --- Retail Colophon page (Publication Sanitization Pass™) — no continue-learning QR on a retail novel ---
+    # --- Retail Colophon page (Publication Quality Standard™) ---
     if rp:
         colo = rp.get("colophon", [])
         if colo:
@@ -302,8 +324,10 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
             pdf.set_text_color(*NAVY); pdf.set_font("Times", "", 10.5)
             for para in colo[1:]:
                 pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.8, _strip_md(para)); pdf.ln(2.5)
-        out = pdf.output()
-        return bytes(out)
+        # Fiction/book editions end here (no learning QR); educational documents keep the QR below.
+        if not rp.get("include_learning_qr"):
+            out = pdf.output()
+            return bytes(out)
 
     # --- Continue-learning QR (learning products only) ---
     qr_path = os.path.join(ASSET_DIR, _save("tmp-qr", "png", qr_bytes))
