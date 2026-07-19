@@ -12,6 +12,20 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## 🚀 QRU ONLINE — LIVE LAUNCH COMPLETE ✅ (2026-06)
+Public bookstore (qru-online.com) is LIVE on real Stripe and verified end-to-end.
+- **Stripe Live cutover done:** `backend/.env` holds LIVE keys (sk_live/pk_live/whsec). `.env` is
+  shared by BOTH preview + production and is a per-deploy SNAPSHOT — **NEVER revert to test keys**
+  or the next redeploy silently downgrades production. See `/app/memory/go_live/STRIPE_LIVE_KEYS_LOCK.md`.
+- **Cloudflare DNS:** keep qru-online.com (A) + www (CNAME) on **DNS Only / gray cloud** permanently
+  (Emergent provisions SSL; orange-cloud proxy breaks cert issuance).
+- **Redeploy note:** first prod redeploy failed on a TRANSIENT Cloud Build error; a plain retry fixed it.
+  Local prod build + backend import are clean; no code defect.
+- **First Founder Live purchase VERIFIED end-to-end:** Stripe session complete/paid ($4.99) →
+  production status `paid` → secure tokenized download link → EPUB delivered (HTTP 200, 1.6MB,
+  valid application/epub+zip). Book: "The Heart as a Daily Circulation Pump".
+
+
 ## Every Engine Merged onto the Manufacturing Foundation™ (inherit, don't recreate) ✅ (2026-07-16, self-verified via curl + screenshot)
 Highest-leverage architectural item. Every engine is now a PMS™ inheriting ONE shared Foundation — publish, PMF™, packaging inherited, not recreated.
 - **Auto-provisioned PMS coverage:** `get_pms()` now auto-provisions a Foundation-inheriting PMS for ANY product family without a hand-authored one → universal coverage (44 families across 5 engines), no product_type lacks an approved PMS. Book + 9 others remain hand-authored (★); the rest inherit generic defaults. Founder model realized: "one PMS per family, all inheriting one Foundation."

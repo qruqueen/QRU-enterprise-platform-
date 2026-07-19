@@ -19,3 +19,14 @@
 ## Verified
 - Preview checkout endpoint returns `cs_live_...` sessions ✅ (after this change).
 - Production (qru-online.com) will go Live only AFTER the user redeploys with this .env snapshot.
+
+## ✅ GO-LIVE COMPLETE (2026-06)
+- Production redeploy succeeded (first attempt failed on a TRANSIENT Cloud Build error → simple retry fixed it; code/build were clean).
+- Production mints `cs_live_...` sessions ✅.
+- FIRST FOUNDER LIVE PURCHASE verified end-to-end on qru-online.com:
+  1. Stripe: session `cs_live_a1xdmTAZ…` → complete/paid, $4.99 USD, livemode true.
+  2. App: /api/public/checkout/status → payment_status paid, book "The Heart as a Daily Circulation Pump".
+  3. Secure download link generated (tokenized, paid-only).
+  4. EPUB delivered: HTTP 200, 1.6MB, valid application/epub+zip.
+- Note: 1 of the buyer's 5 downloads consumed during verification (4 remaining).
+- QRU Online is officially LIVE and accepting real revenue.
