@@ -59,24 +59,28 @@ export default function YouTubePublisher() {
   }).catch(() => []);
   const runBackfill = async () => {
     setBackfilling(true);
-    toast.info("Rendering missing videos… this can take a few minutes. Keep this tab open.");
+    toast.info("Rendering videos in the background… this can take a few minutes. You can keep working.");
     try {
+      await api.post("/video/backfill", {});
       let done = false, guard = 0;
-      let s = {};
-      while (!done && guard < 40) {
+      while (!done && guard < 120) {
         guard += 1;
-        const { data } = await api.post("/video/backfill", { limit: 2 });
-        s = data.summary || s;
-        done = data.done;
-        if (!done) {
-          toast.info(`Rendering… ${s.book_trailers_ok || 0}/${s.book_trailers_total || 0} trailers, ${s.script_videos_ok || 0}/${s.script_videos_total || 0} script videos so far (${data.remaining} left).`);
+        await new Promise((r) => setTimeout(r, 4000));
+        const { data } = await api.get("/video/backfill/status");
+        const job = data.job || {};
+        const s = data.summary || {};
+        if (job.running) {
+          toast.info(`Rendering… ${job.done || 0}/${job.total || 0} done${job.current_title ? ` — ${job.current_title}` : ""}.`);
+        }
+        done = !job.running;
+        if (done) {
+          toast.success(`Videos ready — ${s.book_trailers_ok || 0}/${s.book_trailers_total || 0} trailers, ${s.script_videos_ok || 0}/${s.script_videos_total || 0} script videos.`);
         }
       }
-      toast.success(`Videos ready — ${s.book_trailers_ok || 0}/${s.book_trailers_total || 0} trailers, ${s.script_videos_ok || 0}/${s.script_videos_total || 0} script videos.`);
       const list = await loadFactoryAssets();
       if ((list || []).length > 0) setSource("factory");
     } catch (e) {
-      toast.error(e?.response?.data?.detail || "Could not finish rendering. Click again to resume — completed videos are cached.");
+      toast.error(e?.response?.data?.detail || "Could not start rendering. Please try again.");
       await loadFactoryAssets();
     } finally {
       setBackfilling(false);

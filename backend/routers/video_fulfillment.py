@@ -68,9 +68,14 @@ async def generate_all_promos(data: RenderInput, user=Depends(require_super_admi
 
 @router.post("/backfill")
 async def backfill(data: RenderInput, user=Depends(require_super_admin)):
-    """Incremental production backfill: renders up to `limit` missing/stale videos per call."""
-    return await vf.backfill_all(actor=user.get("name", "Founder"), force=bool(data.force),
-                                 limit=max(1, min(int(data.limit or 3), 5)))
+    """Start a NON-BLOCKING background render of all missing/stale videos. Returns immediately;
+    poll GET /video/backfill/status for progress. Avoids proxy/Cloudflare timeouts."""
+    return await vf.start_backfill(actor=user.get("name", "Founder"), force=bool(data.force))
+
+
+@router.get("/backfill/status")
+async def backfill_status(user=Depends(get_current_user)):
+    return await vf.backfill_status()
 
 
 @router.get("/queue")

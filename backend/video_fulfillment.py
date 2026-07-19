@@ -318,54 +318,91 @@ async def _product_needs_render(product_id):
     return sig is None or existing.get("source_signature") != sig
 
 
-async def backfill_all(actor="Founder", force=False, limit=3):
-    """Incremental production backfill — renders up to `limit` missing/stale videos per call and
-    reports remaining, so the caller can loop without hitting request timeouts. Idempotent + cached."""
-    # Candidate lists
+_JOB_ID = "current"
+_bg_tasks = set()
+
+
+async def _compute_pending(force=False):
     books = await db.book_records.find(_BOOK_AUTHORIZED, {"_id": 0, "id": 1, "title": 1}).to_list(500)
     prods = await db.products.find(
         {"product_type": {"$in": ["Video Script", "Short Video", "YouTube Video Script"]}},
-        {"_id": 0, "id": 1, "title": 1, "product_type": 1}).to_list(500)
-
-    # Pending = needs render (unless force, then everything)
+        {"_id": 0, "id": 1, "title": 1}).to_list(500)
     pending = []
     for b in books:
         if force or await _book_needs_render(b["id"]):
-            pending.append(("book", b))
+            pending.append({"kind": "book", "id": b["id"], "title": b.get("title")})
     for p in prods:
         if force or await _product_needs_render(p["id"]):
-            pending.append(("product", p))
+            pending.append({"kind": "product", "id": p["id"], "title": p.get("title")})
+    return pending, len(books), len(prods)
 
-    total_book = len(books)
-    total_prod = len(prods)
-    rendered = []
-    for kind, item in pending[:limit]:
-        if kind == "book":
-            res = await ensure_book_promo(item["id"], actor=actor, force=force)
-        else:
-            res = await ensure_product_video(item["id"], actor=actor, force=force)
-        rendered.append({"kind": kind, "id": item["id"], "title": item.get("title"),
-                         "ok": res.get("ok"), "asset_id": (res.get("asset") or {}).get("qru_asset_id"),
-                         "error": res.get("error")})
-    remaining = max(0, len(pending) - limit)
-    # Totals present after this pass
-    have_books = 0
+
+async def _run_backfill(actor, force, pending):
+    """Background worker — renders each pending video sequentially, updating the job doc."""
+    done = ok = failed = 0
+    for item in pending:
+        try:
+            if item["kind"] == "book":
+                res = await ensure_book_promo(item["id"], actor=actor, force=force)
+            else:
+                res = await ensure_product_video(item["id"], actor=actor, force=force)
+            ok += 1 if res.get("ok") else 0
+            failed += 0 if res.get("ok") else 1
+        except Exception as e:
+            failed += 1
+            logger.warning(f"backfill item failed [{item['kind']} {item['id']}]: {e}")
+        done += 1
+        await db.video_backfill_jobs.update_one({"id": _JOB_ID}, {"$set": {
+            "done": done, "ok": ok, "failed": failed, "remaining": max(0, len(pending) - done),
+            "current_title": item.get("title"), "updated_at": now_iso()}})
+    await db.video_backfill_jobs.update_one({"id": _JOB_ID}, {"$set": {
+        "running": False, "current_title": None, "finished_at": now_iso(), "updated_at": now_iso()}})
+
+
+async def start_backfill(actor="Founder", force=False):
+    """Non-blocking: start a background render job for all missing/stale videos. Returns immediately.
+    Avoids proxy/Cloudflare timeouts (renders are heavy). Idempotent — reuses cached MP4s."""
+    import asyncio
+    existing = await db.video_backfill_jobs.find_one({"id": _JOB_ID}, {"_id": 0})
+    # If a job is actively running (heartbeat < 3 min old), don't start another.
+    if existing and existing.get("running"):
+        try:
+            from datetime import datetime, timezone
+            last = datetime.fromisoformat(existing.get("updated_at").replace("Z", "+00:00"))
+            if (datetime.now(timezone.utc) - last).total_seconds() < 180:
+                return existing
+        except Exception:
+            pass
+    pending, total_book, total_prod = await _compute_pending(force=force)
+    job = {"id": _JOB_ID, "running": len(pending) > 0, "total": len(pending), "done": 0, "ok": 0,
+           "failed": 0, "remaining": len(pending), "current_title": None,
+           "book_total": total_book, "script_total": total_prod,
+           "started_at": now_iso(), "updated_at": now_iso(), "finished_at": None if pending else now_iso()}
+    await db.video_backfill_jobs.update_one({"id": _JOB_ID}, {"$set": job}, upsert=True)
+    if pending:
+        task = asyncio.create_task(_run_backfill(actor, force, pending))
+        _bg_tasks.add(task)
+        task.add_done_callback(_bg_tasks.discard)
+    return job
+
+
+async def backfill_status():
+    job = await db.video_backfill_jobs.find_one({"id": _JOB_ID}, {"_id": 0})
+    # Current durable totals (what's actually available now).
+    have_books = have_prods = 0
+    books = await db.book_records.find(_BOOK_AUTHORIZED, {"_id": 0, "id": 1}).to_list(500)
     for b in books:
         if not await _book_needs_render(b["id"]):
             have_books += 1
-    have_prods = 0
+    prods = await db.products.find(
+        {"product_type": {"$in": ["Video Script", "Short Video", "YouTube Video Script"]}},
+        {"_id": 0, "id": 1}).to_list(500)
     for p in prods:
         if not await _product_needs_render(p["id"]):
             have_prods += 1
-    return {
-        "rendered_this_call": rendered,
-        "remaining": remaining,
-        "done": remaining == 0,
-        "summary": {
-            "book_trailers_ok": have_books, "book_trailers_total": total_book,
-            "script_videos_ok": have_prods, "script_videos_total": total_prod,
-        },
-    }
+    return {"job": job or {"running": False, "total": 0, "done": 0},
+            "summary": {"book_trailers_ok": have_books, "book_trailers_total": len(books),
+                        "script_videos_ok": have_prods, "script_videos_total": len(prods)}}
 
 
 async def distribution_queue():

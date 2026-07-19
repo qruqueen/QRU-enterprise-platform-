@@ -12,8 +12,18 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
-## ✅ Durable video storage — root-cause fix for "videos missing / repeat credit spend" (2026-06)
-ROOT CAUSE (confirmed via support): the container filesystem is EPHEMERAL — every redeploy/restart
+## ✅ Non-blocking backfill — fixes Cloudflare/origin timeout on "Generate missing videos" (2026-06)
+The button used to render videos INSIDE the HTTP request → exceeded proxy/Cloudflare timeout →
+"origin returned invalid/incomplete response" (520/524). FIX: `POST /api/video/backfill` now
+`start_backfill()` spawns an asyncio background worker and returns instantly (verified 0.03s);
+progress tracked in `db.video_backfill_jobs` (id="current"), polled via `GET /api/video/backfill/status`.
+Frontend starts the job then polls every 4s showing progress. Renders run sequentially (one at a
+time) so the container isn't overloaded. Idempotent + cached + durable (object storage).
+NOTE: user's Cloudflare appears PROXIED (orange cloud) — recommend switching qru-online.com + www
+back to DNS Only (gray cloud) as originally advised. Requires redeploy to take effect in production.
+
+
+## ✅ Durable video storage — root-cause fix for "videos missing / repeat credit spend" (2026-06)ROOT CAUSE (confirmed via support): the container filesystem is EPHEMERAL — every redeploy/restart
 wipes `/app/backend/rendered_assets`, so runtime-generated MP4s vanished and had to be re-rendered
 (re-charging AI credits). Preview & production have SEPARATE disk + DB.
 FIX (Phase A — videos only, per Founder): new `storage.py` wraps **Emergent Object Storage**
