@@ -105,25 +105,35 @@ class YouTubeConnector(Connector):
 
     async def distribute(self, product, meta, mode, options):
         import youtube_publisher as yt
-        upload_id = (options or {}).get("video_upload_id")
-        if not upload_id:
-            return DistributionResult(ok=False, status=DistStatus.NEEDS_SETUP.value,
-                                      detail="YouTube requires a video file. Upload the MP4 in YouTube Publisher™, or attach a rendered video asset.")
-        path = os.path.join(UPLOAD_DIR, os.path.basename(upload_id))
-        if not os.path.exists(path) or os.path.getsize(path) == 0:
-            return DistributionResult(ok=False, status=DistStatus.FAILED.value, detail="Uploaded video file not found.")
-        thumb = (options or {}).get("thumbnail_upload_id")
+        options = options or {}
+        upload_id = options.get("video_upload_id")
+        is_vault = False
+        if upload_id:
+            path = os.path.join(UPLOAD_DIR, os.path.basename(upload_id))
+            if not os.path.exists(path) or os.path.getsize(path) == 0:
+                return DistributionResult(ok=False, status=DistStatus.FAILED.value, detail="Uploaded video file not found.")
+        else:
+            # No manual upload — auto-render (or reuse) a real MP4 from the product's verified KR.
+            import video_fulfillment as vf
+            res = await vf.ensure_product_video(product["id"], actor=options.get("actor", "Founder"))
+            if not res.get("ok"):
+                return DistributionResult(ok=False, status=DistStatus.NEEDS_SETUP.value, detail=res.get("error"))
+            path = res["path"]
+            is_vault = True
+        thumb = options.get("thumbnail_upload_id")
         thumb_path = os.path.join(UPLOAD_DIR, os.path.basename(thumb)) if thumb else None
         try:
             pub = await yt.publish_video(
                 file_path=path, title=meta["title"], description=meta.get("description", ""),
                 tags=meta.get("tags", []), privacy=mode if mode in ("private", "unlisted", "public") else "private",
                 thumbnail_path=thumb_path if thumb_path and os.path.exists(thumb_path) else None,
-                playlist_id=(options or {}).get("playlist_id"), product_id=product["id"], actor=(options or {}).get("actor", "Founder"))
+                playlist_id=options.get("playlist_id"), product_id=product["id"], actor=options.get("actor", "Founder"))
         except yt.YouTubeError as e:
             return DistributionResult(ok=False, status=DistStatus.FAILED.value, detail=str(e))
         finally:
-            for p in (path, thumb_path):
+            # Clean up ONLY temp upload files — NEVER delete a Factory vault master.
+            cleanup = [thumb_path] + ([] if is_vault else [path])
+            for p in cleanup:
                 try:
                     if p and os.path.exists(p):
                         os.remove(p)

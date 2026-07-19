@@ -12,6 +12,22 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## ✅ QRU Video Fulfillment™ — real publishable MP4 for products (2026-06)
+Fixes the reported "YouTube requires a video file" dead-end (video step used to yield a manifest only).
+- New `video_fulfillment.ensure_product_video(product_id)` renders a REAL MP4 (image-based motion /
+  Ken Burns + AI narration — honestly labeled, NOT frame-by-frame) from the product's VERIFIED KR
+  (Knowledge-First), then registers it as a distribution-ready Factory vault asset
+  (`db.media_assets`, provider=qru_production) so YouTube Publisher™ + Distribution can publish it.
+- Idempotent (reuses existing asset, no re-spend). Honest failure if product has no verified KR.
+- `YouTubeConnector.distribute` now AUTO-uses/auto-renders the product video when no MP4 is uploaded
+  (never deletes the vault master). New endpoints: `GET /api/video/products/{id}`,
+  `POST /api/video/products/{id}/render` (super-admin).
+- VERIFIED directly: rendered 1.38MB / 19.2s / 2-scene MP4 for "How the Human Heart Pumps Blood",
+  idempotent reuse confirmed, resolvable by the YouTube publisher (path under MEDIA_ROOT).
+- NOTE: actual YouTube UPLOAD still needs the YouTube OAuth token reconnected (pre-existing
+  invalid_grant, Founder must re-auth) — separate from this fix.
+
+
 ## 🚀 QRU ONLINE — LIVE LAUNCH COMPLETE ✅ (2026-06)
 Public bookstore (qru-online.com) is LIVE on real Stripe and verified end-to-end.
 - **Stripe Live cutover done:** `backend/.env` holds LIVE keys (sk_live/pk_live/whsec). `.env` is

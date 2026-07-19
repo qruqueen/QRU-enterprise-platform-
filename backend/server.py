@@ -65,6 +65,7 @@ from routers.manufacturing_dashboard import router as mfg_dashboard_router
 from routers.knowledge_v2 import router as kr2_router
 from routers.director import router as director_router
 from routers.youtube import router as youtube_router
+from routers.video_fulfillment import router as video_fulfillment_router
 from routers.distribution import router as distribution_router
 from routers.governance_binding import router as governance_binding_router
 from routers.visual_studio import router as visual_studio_router
@@ -133,6 +134,7 @@ for r in [
     kr2_router,
     director_router,
     youtube_router,
+    video_fulfillment_router,
     distribution_router,
     governance_binding_router,
     visual_studio_router,
