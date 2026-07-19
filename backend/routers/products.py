@@ -225,9 +225,8 @@ class AssembleInput(BaseModel):
 @router.post("/assemble")
 async def assemble_product(data: AssembleInput, user=Depends(get_current_user)):
     """Assemble a product from EXISTING Knowledge Record fields (no regeneration)."""
-    kr = await db.knowledge_records.find_one({"id": data.knowledge_record_id})
-    if not kr:
-        raise HTTPException(404, "Knowledge Record not found")
+    import ukr_governance
+    kr = await ukr_governance.require_verified_ukr(data.knowledge_record_id, data.product_type)
     recipe = RECIPES.get(data.product_type)
     if not recipe:
         raise HTTPException(400, f"No recipe for {data.product_type}. Use /generate for AI generation.")
@@ -277,6 +276,13 @@ async def recipes(user=Depends(get_current_user)):
     return {"recipes": {k: v for k, v in RECIPES.items()}, "field_labels": FIELD_LABELS}
 
 
+@router.get("/ukr-audit")
+async def ukr_audit(user=Depends(get_current_user)):
+    """UKR-traceability audit: green (verified UKR) / amber (unverified/dangling) / red (no UKR)."""
+    import ukr_governance
+    return await ukr_governance.audit_report()
+
+
 @router.get("/{pid}")
 async def get_product(pid: str, user=Depends(get_current_user)):
     p = await db.products.find_one({"id": pid})
@@ -287,16 +293,11 @@ async def get_product(pid: str, user=Depends(get_current_user)):
 
 @router.post("/generate")
 async def generate_product(data: GenerateInput, user=Depends(get_current_user)):
-    kr = None
-    topic = data.topic
-    family = "General"
-    if data.knowledge_record_id:
-        kr = await db.knowledge_records.find_one({"id": data.knowledge_record_id})
-        if kr:
-            topic = kr["title"]
-            family = kr.get("category", "General")
-    if not topic:
-        raise HTTPException(400, "topic or knowledge_record_id required")
+    import ukr_governance
+    # Knowledge-First™ enforcement — educational products must inherit from a Verified UKR.
+    kr = await ukr_governance.require_verified_ukr(data.knowledge_record_id, data.product_type)
+    topic = kr["title"]
+    family = kr.get("category", "General")
 
     context = ""
     if kr:
@@ -360,6 +361,11 @@ async def set_status(pid: str, data: StatusInput, user=Depends(get_current_user)
             raise HTTPException(400, "Send this product through the Creative Studio before publication.")
         if not p.get("verified"):
             raise HTTPException(400, "This product must pass AI Verification (Product Protection) before it can be published or sold.")
+        import ukr_governance
+        trace = await ukr_governance.traceability(p)
+        if trace["status"] != "green":
+            raise HTTPException(422, f"Knowledge-First™ publish guard: {trace['reason']}. Bind this product "
+                                     "to a Verified Knowledge Record before publishing.")
     await db.products.update_one({"id": pid}, {"$set": {"status": data.status, "updated_at": now_iso()}})
     return clean(await db.products.find_one({"id": pid}))
 

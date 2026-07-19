@@ -12,6 +12,24 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## ✅ UKR-Inheritance Governance enforced at the manufacturing choke point (2026-06)
+Closes the biggest trust gap: educational products can no longer be manufactured/published without a
+VERIFIED Universal Knowledge Record (Knowledge-First™). New `ukr_governance.py` = single shared guard.
+- `POST /api/products/generate` + `/assemble` now call `require_verified_ukr()` → **block** (422) if no
+  KR or KR not Verified; verified KR proceeds normally.
+- **Publish guard:** `PATCH /products/{id}/status → Published` blocked (422) unless the product traces
+  to a Verified UKR (or is a Founder-authored manuscript exception). Asset-manufactured products are
+  caught by this backstop.
+- **Audit report:** `GET /api/products/ukr-audit` → green/amber/red traceability. LIVE audit:
+  226 products → 142 green / 22 amber / 62 red (62.8% compliant); 16 published-noncompliant.
+- Founder-authored manuscripts remain the ONE governed exception (book_records, untouched).
+- VERIFIED (preview): no-KR generate→422, unverified assemble→422, verified assemble→200 (no LLM cost),
+  publish red product→422, storefront unaffected (reads book_records).
+- REMAINING: migrate the 62 red + 22 amber products (bind to a verified UKR or quarantine — needs
+  per-product KR choice, not safely auto-bindable); optional Governance-console view of the audit;
+  reverse-flow UKR extraction from Founder books (P2).
+
+
 ## ✅ Non-blocking backfill — fixes Cloudflare/origin timeout on "Generate missing videos" (2026-06)
 The button used to render videos INSIDE the HTTP request → exceeded proxy/Cloudflare timeout →
 "origin returned invalid/incomplete response" (520/524). FIX: `POST /api/video/backfill` now
