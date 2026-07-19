@@ -12,6 +12,7 @@ router = APIRouter(prefix="/api/video", tags=["video-fulfillment"])
 class RenderInput(BaseModel):
     format_id: Optional[str] = None
     force: Optional[bool] = False
+    limit: Optional[int] = 3
 
 
 def _public(asset):
@@ -63,6 +64,13 @@ async def render_book_promo(book_id: str, data: RenderInput, user=Depends(requir
 @router.post("/books/promos/generate-all")
 async def generate_all_promos(data: RenderInput, user=Depends(require_super_admin)):
     return await vf.generate_all_book_promos(actor=user.get("name", "Founder"), force=bool(data.force))
+
+
+@router.post("/backfill")
+async def backfill(data: RenderInput, user=Depends(require_super_admin)):
+    """Incremental production backfill: renders up to `limit` missing/stale videos per call."""
+    return await vf.backfill_all(actor=user.get("name", "Founder"), force=bool(data.force),
+                                 limit=max(1, min(int(data.limit or 3), 5)))
 
 
 @router.get("/queue")

@@ -48,9 +48,40 @@ export default function YouTubePublisher() {
 
   const [progress, setProgress] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
   const [result, setResult] = useState(null);
 
   const loadPubs = () => api.get("/youtube/publications").then((r) => setPubs(r.data.publications)).catch(() => {});
+  const loadFactoryAssets = () => api.get("/youtube/factory-assets").then((r) => {
+    const list = (r.data.assets || []).filter((a) => a.file_available && !a.is_draft_preview);
+    setFactoryAssets(list);
+    return list;
+  }).catch(() => []);
+  const runBackfill = async () => {
+    setBackfilling(true);
+    toast.info("Rendering missing videos… this can take a few minutes. Keep this tab open.");
+    try {
+      let done = false, guard = 0;
+      let s = {};
+      while (!done && guard < 40) {
+        guard += 1;
+        const { data } = await api.post("/video/backfill", { limit: 2 });
+        s = data.summary || s;
+        done = data.done;
+        if (!done) {
+          toast.info(`Rendering… ${s.book_trailers_ok || 0}/${s.book_trailers_total || 0} trailers, ${s.script_videos_ok || 0}/${s.script_videos_total || 0} script videos so far (${data.remaining} left).`);
+        }
+      }
+      toast.success(`Videos ready — ${s.book_trailers_ok || 0}/${s.book_trailers_total || 0} trailers, ${s.script_videos_ok || 0}/${s.script_videos_total || 0} script videos.`);
+      const list = await loadFactoryAssets();
+      if ((list || []).length > 0) setSource("factory");
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Could not finish rendering. Click again to resume — completed videos are cached.");
+      await loadFactoryAssets();
+    } finally {
+      setBackfilling(false);
+    }
+  };
   useEffect(() => {
     api.get("/youtube/status").then((r) => {
       setStatus(r.data);
@@ -59,11 +90,7 @@ export default function YouTubePublisher() {
       }
     }).catch(() => setStatus(false));
     api.get("/founder-inbox").then((r) => setProducts((r.data.products || []).slice(0, 200))).catch(() => {});
-    api.get("/youtube/factory-assets").then((r) => {
-      const list = (r.data.assets || []).filter((a) => a.file_available && !a.is_draft_preview);
-      setFactoryAssets(list);
-      if (list.length === 0) setSource("manual");
-    }).catch(() => setSource("manual"));
+    loadFactoryAssets().then((list) => { if ((list || []).length === 0) setSource("manual"); });
     loadPubs();
   }, []);
 
@@ -161,9 +188,15 @@ export default function YouTubePublisher() {
 
                 {source === "factory" && (
                   <div data-testid="yt-factory-picker">
-                    <label className="text-xs font-bold text-navy uppercase tracking-wide">Select a Factory-owned video</label>
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="text-xs font-bold text-navy uppercase tracking-wide">Select a Factory-owned video</label>
+                      <button onClick={runBackfill} disabled={backfilling} data-testid="yt-render-missing"
+                        className="text-[11px] font-semibold text-royal border border-royal/30 rounded-full px-3 py-1 hover:bg-royal/[0.06] disabled:opacity-50">
+                        {backfilling ? "Rendering…" : "Generate missing videos"}
+                      </button>
+                    </div>
                     {factoryAssets.length === 0 ? (
-                      <p className="text-[12px] text-amber-700 mt-1">No Factory-manufactured videos are ready yet. Produce one in the <button onClick={() => nav("/flagship-showcase")} className="text-royal underline">Flagship Showcase™</button>, then it appears here automatically.</p>
+                      <p className="text-[12px] text-amber-700 mt-1">No Factory videos yet. Click <span className="font-semibold">Generate missing videos</span> to render trailers for your published books and MP4s for your video scripts — they'll appear here automatically.</p>
                     ) : (
                       <select data-testid="yt-factory-asset" value={factoryAssetId} onChange={(e) => onSelectFactoryAsset(e.target.value)} className="w-full mt-1 border rounded-sm p-2 text-sm">
                         <option value="">— Choose a manufactured video —</option>

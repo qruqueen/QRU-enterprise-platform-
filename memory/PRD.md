@@ -12,6 +12,27 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## ✅ Video-script auto-render + cache + production backfill (2026-06)
+Founder issues: (1) trailers not visible in YouTube Publisher on the LIVE site; (2) video scripts
+should render to MP4 automatically. Root cause of (1): trailers were rendered in PREVIEW's DB/disk;
+production has a SEPARATE DB — video must be rendered IN production (after redeploy).
+- **Script-aware render:** `video_fulfillment.ensure_product_video` now renders "Video Script" /
+  "Short Video" / "YouTube Video Script" products FROM THE SCRIPT (narration source = product
+  content), else from the verified KR. VERIFIED: a Video Script → 2.8MB/32.7s MP4 (rendered_from=script).
+- **Caching (Founder policy):** each video stores a `source_signature`; the MP4 is REUSED unless the
+  script/description changes or `force=True`. Replace-not-append (one current MP4 per product/book).
+- **Render on PUBLISH or explicit request only** (NOT on every manufacture): YouTube connector
+  auto-renders on publish; explicit endpoints `/api/video/products/{id}/render`, `/books/{id}/promo`.
+- **Incremental production backfill:** `POST /api/video/backfill` renders up to `limit` (default 3,
+  max 5) missing/stale videos per call and returns `remaining`/`done`/`summary` so the caller loops
+  without hitting request timeouts. One-click **"Generate missing videos"** button added to the
+  YouTube Publisher™ UI (loops until done, shows progress, resumes on failure via cache). VERIFIED
+  incremental contract + button render.
+- **DEPLOY REALITY:** these are code changes — take effect on the live site only AFTER redeploy;
+  then the Founder clicks "Generate missing videos" (or it auto-renders on publish) to populate
+  production. YouTube UPLOAD still requires the production YouTube channel to be connected.
+
+
 ## ✅ Book Promo Trailers™ + Master Design Standard™ Phase 1 (2026-06)
 **Book promo trailers (enhancement):** `video_fulfillment.ensure_book_promo` / `generate_all_book_promos`
 render short Ken Burns + narration MP4 trailers from published (Founder-authorized) `book_records`
