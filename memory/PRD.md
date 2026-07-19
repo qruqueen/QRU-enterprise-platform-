@@ -12,6 +12,30 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## ✅ UKR™ Governance Engine — Lifecycle (S18) + Gold Standard Review (S17) (Phase 2, 2026-07-19)
+Per Founder directive: activated the canonical governance lifecycle + certification engine on the
+UKR™ Standard v1.1 canonical layer. New module `ukr_lifecycle.py` (operates on the `ukr` object;
+one canonical standard — no schema fork). Legacy `verification_status`/`approval_status`/
+`treasure_standard` are NOT mutated → Knowledge-First™ enforcement + product links undisturbed.
+- **20-state lifecycle** with a governed TRANSITIONS graph; invalid transitions return clear 422s;
+  every transition appends full history (prior/new state, trigger, actor, timestamp, validation).
+- **Founder-only states** (Approved, Gold Certified) require super-admin; final certification preserved.
+- **15-dimension Gold Standard Review**: dimensions reviewed INDIVIDUALLY (score, pass/fail,
+  deficiencies, severity, corrective action…); `review_state` auto-computed (Under Review / Returned
+  for Correction / Approved). **Certification BLOCKED until all 15 pass** (super-admin `certify-gold`).
+- **Endpoints** (`/api/manufacturing/ukr/*`): `GET lifecycle/states`, `GET governance-overview`,
+  `GET record/{id}/lifecycle`, `POST record/{id}/transition`, `GET/POST record/{id}/gold-review`,
+  `POST record/{id}/certify-gold`.
+- **VERIFIED (preview, credit-free):** valid chain succeeds + history preserved; invalid transition
+  → 422; Founder-only → 403; certify blocked at 14/15 then succeeds at 15/15 → Gold Certified;
+  factory-wide `all_valid: True` (80/80 valid lifecycle state); storefront /api/public/* = 200; no
+  data loss (80 records). Tested on a throwaway record + read-only live curls (real records untouched).
+- **BLOCKER:** production redeploy is a Founder action (Deploy button); startup hook auto-migrates +
+  the engine ships with it. Not certifying anything until Founder runs reviews on the live site.
+- **DELIBERATE:** lifecycle/certification live in the canonical `ukr` layer (additive); they do NOT
+  yet drive legacy verification/treasure flags or the UKR Readiness screen (deferred per directive).
+
+
 ## ✅ UKR™ Standard v1.1 — Canonical Full Specification adopted (Phase 1, 2026-07-19)
 Per Founder directive: the uploaded `UKR 7.18.2026.pdf` IS the canonical standard; the DB evolves to
 match it via a NON-DESTRUCTIVE, backward-compatible phased migration (no second/competing schema).

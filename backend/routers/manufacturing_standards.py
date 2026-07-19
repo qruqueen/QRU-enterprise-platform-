@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from database import db
 from auth import get_current_user, require_super_admin
 import ukr_standard as ukr
+import ukr_lifecycle as ukrlife
 import manufacturing_foundation as mf
 
 router = APIRouter(prefix="/api/manufacturing", tags=["manufacturing-standards"])
@@ -98,6 +99,71 @@ async def ukr_record_canonical(rid: str, user=Depends(get_current_user)):
     canonical = rec.get("ukr") or ukr.build_canonical(rec)
     return {"kr_code": rec.get("kr_code"), "id": rec.get("id"),
             "migrated": bool(rec.get("ukr")), "ukr": canonical}
+
+
+# ---- UKR™ Governance Engine: Lifecycle (S18) + Gold Standard Review (S17) ----
+
+@router.get("/ukr/lifecycle/states")
+async def ukr_lifecycle_states(user=Depends(get_current_user)):
+    return {"states": ukr.LIFECYCLE_STATES, "transitions": ukrlife.TRANSITIONS,
+            "founder_only_states": sorted(ukrlife.FOUNDER_ONLY_STATES)}
+
+
+@router.get("/ukr/governance-overview")
+async def ukr_governance_overview(user=Depends(get_current_user)):
+    return await ukrlife.governance_overview()
+
+
+@router.get("/ukr/record/{rid}/lifecycle")
+async def ukr_record_lifecycle(rid: str, user=Depends(get_current_user)):
+    return await ukrlife.lifecycle_state(rid)
+
+
+class TransitionInput(BaseModel):
+    to_state: str
+    trigger: str = "manual"
+    note: str = ""
+
+
+@router.post("/ukr/record/{rid}/transition")
+async def ukr_record_transition(rid: str, data: TransitionInput, user=Depends(get_current_user)):
+    """Apply a governed lifecycle transition. Founder-only states require super-admin."""
+    is_super = user.get("role") in ("Founder & CEO", "Administrator")
+    return await ukrlife.transition(rid, data.to_state, actor=user.get("name", "Founder"),
+                                    trigger=data.trigger, note=data.note, is_super=is_super)
+
+
+@router.get("/ukr/record/{rid}/gold-review")
+async def ukr_record_gold_review(rid: str, user=Depends(get_current_user)):
+    return await ukrlife.gold_review(rid)
+
+
+class DimensionReviewInput(BaseModel):
+    dimension: str
+    score: float = 0
+    passed: bool = False
+    deficiencies: str = ""
+    severity: str = ""
+    corrective_action: str = ""
+    department: str = ""
+    due_date: str = ""
+    resolution: str = ""
+
+
+@router.post("/ukr/record/{rid}/gold-review")
+async def ukr_record_review_dimension(rid: str, data: DimensionReviewInput, user=Depends(get_current_user)):
+    """Review a SINGLE Gold Standard dimension (individually). Never auto-certifies."""
+    return await ukrlife.review_dimension(
+        rid, data.dimension, data.score, data.passed, reviewer=user.get("name", "Founder"),
+        reviewer_type=user.get("role", "Founder"), deficiencies=data.deficiencies, severity=data.severity,
+        corrective_action=data.corrective_action, department=data.department, due_date=data.due_date,
+        resolution=data.resolution)
+
+
+@router.post("/ukr/record/{rid}/certify-gold")
+async def ukr_record_certify_gold(rid: str, user=Depends(require_super_admin)):
+    """Founder-only final Gold certification. Blocked unless ALL 15 dimensions pass."""
+    return await ukrlife.certify_gold(rid, actor=user.get("name", "Founder"))
 
 
 class PublishInput(BaseModel):
