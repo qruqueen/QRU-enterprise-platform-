@@ -20,6 +20,7 @@ from models import gen_id, now_iso
 import cinema_studio as cinema
 import rendering_engine as re_engine
 import media_production as mp
+import storage
 from media_division import _resolve_kr, _is_verified
 
 logger = logging.getLogger("qru.video_fulfillment")
@@ -44,6 +45,37 @@ def _asset_on_disk(doc):
     if path and os.path.exists(os.path.abspath(path)) and os.path.getsize(os.path.abspath(path)) > 0:
         return os.path.abspath(path)
     return None
+
+
+def _available(doc):
+    """Available if in durable object storage (survives redeploys) OR present on local disk."""
+    if not doc:
+        return False
+    return bool(doc.get("storage_path")) or bool(_asset_on_disk(doc))
+
+
+async def materialize(doc):
+    """Return a LOCAL file path for a stored video, downloading from object storage if needed."""
+    local = _asset_on_disk(doc)
+    if local:
+        return local
+    sp = doc.get("storage_path") if doc else None
+    if not sp:
+        return None
+    os.makedirs(mp.MEDIA_ROOT, exist_ok=True)
+    dest = os.path.join(mp.MEDIA_ROOT, os.path.basename(sp))
+    data = await storage.aget_object(sp)
+    with open(dest, "wb") as f:
+        f.write(data)
+    return dest
+
+
+async def _persist(dest, qru_asset_id):
+    """Upload a rendered MP4 to durable object storage; return its storage_path."""
+    storage_path = f"{storage.APP_NAME}/videos/{qru_asset_id}.mp4"
+    with open(dest, "rb") as f:
+        await storage.aput_object(storage_path, f.read(), "video/mp4")
+    return storage_path
 
 
 async def existing_video_asset(product_id):
@@ -109,9 +141,8 @@ async def ensure_product_video(product_id, actor="Founder", format_id=DEFAULT_FO
 
     # Cache: reuse unless the source changed or a re-render is forced.
     existing = await existing_video_asset(product_id)
-    epath = _asset_on_disk(existing)
-    if existing and epath and not force and existing.get("source_signature") == signature:
-        return {"ok": True, "asset": existing, "path": epath, "reused": True}
+    if existing and _available(existing) and not force and existing.get("source_signature") == signature:
+        return {"ok": True, "asset": existing, "path": await materialize(existing), "reused": True}
 
     src, media = await _render_mp4(source_kr, format_id)
     if src is None:
@@ -123,6 +154,7 @@ async def ensure_product_video(product_id, actor="Founder", format_id=DEFAULT_FO
     dest = os.path.join(mp.MEDIA_ROOT, f"{qru_asset_id}.mp4")
     shutil.copyfile(src, dest)
     size = os.path.getsize(dest)
+    storage_path = await _persist(dest, qru_asset_id)
 
     title = product.get("title") or media.get("title") or "QRU Educational Video"
     body = (script or product.get("content") or product.get("summary") or "")
@@ -133,7 +165,7 @@ async def ensure_product_video(product_id, actor="Founder", format_id=DEFAULT_FO
 
     doc = {
         "id": gen_id(), "qru_asset_id": qru_asset_id, "kind": "video", "provider": "qru_production",
-        "title": title, "internal_storage_url": dest, "file_size_bytes": size,
+        "title": title, "internal_storage_url": dest, "storage_path": storage_path, "file_size_bytes": size,
         "duration_seconds": media.get("duration"), "width": None, "height": None,
         "has_narration": True, "technique": _TECHNIQUE, "scenes": media.get("scenes"),
         "captions": media.get("captions"), "source_signature": signature,
@@ -147,9 +179,10 @@ async def ensure_product_video(product_id, actor="Founder", format_id=DEFAULT_FO
     }
     # Replace-not-append: one current video per product (removes the stale cached asset + file).
     if existing:
+        ep = _asset_on_disk(existing)
         try:
-            if epath and os.path.exists(epath):
-                os.remove(epath)
+            if ep and os.path.exists(ep):
+                os.remove(ep)
         except Exception:
             pass
         await db.media_assets.delete_many({"product_id": product_id, "kind": "video", "provider": "qru_production"})
@@ -194,9 +227,8 @@ async def ensure_book_promo(book_id, actor="Founder", force=False):
                                        "only published titles get a public trailer."}
     signature = _book_signature(book)
     existing = await existing_book_promo(book_id)
-    epath = _asset_on_disk(existing)
-    if existing and epath and not force and existing.get("source_signature") == signature:
-        return {"ok": True, "asset": existing, "path": epath, "reused": True}
+    if existing and _available(existing) and not force and existing.get("source_signature") == signature:
+        return {"ok": True, "asset": existing, "path": await materialize(existing), "reused": True}
 
     src, media = await _render_mp4(_book_pseudo_kr(book), "youtube_short")
     if src is None:
@@ -208,6 +240,7 @@ async def ensure_book_promo(book_id, actor="Founder", force=False):
     dest = os.path.join(mp.MEDIA_ROOT, f"{qru_asset_id}.mp4")
     shutil.copyfile(src, dest)
     size = os.path.getsize(dest)
+    storage_path = await _persist(dest, qru_asset_id)
 
     title = f"{book.get('title')} — Official Trailer"
     blurb = (book.get("description") or book.get("subtitle") or "").strip()
@@ -220,7 +253,8 @@ async def ensure_book_promo(book_id, actor="Founder", force=False):
 
     doc = {
         "id": gen_id(), "qru_asset_id": qru_asset_id, "kind": "video", "provider": "qru_production",
-        "asset_role": "book_promo", "title": title, "internal_storage_url": dest, "file_size_bytes": size,
+        "asset_role": "book_promo", "title": title, "internal_storage_url": dest, "storage_path": storage_path,
+        "file_size_bytes": size,
         "duration_seconds": media.get("duration"), "width": None, "height": None,
         "has_narration": True, "technique": _TECHNIQUE, "scenes": media.get("scenes"),
         "captions": media.get("captions"), "source_signature": signature,
@@ -233,9 +267,10 @@ async def ensure_book_promo(book_id, actor="Founder", force=False):
         "imported_by": actor, "created_by": actor, "created_at": now_iso(), "updated_at": now_iso(),
     }
     if existing:
+        ep = _asset_on_disk(existing)
         try:
-            if epath and os.path.exists(epath):
-                os.remove(epath)
+            if ep and os.path.exists(ep):
+                os.remove(ep)
         except Exception:
             pass
         await db.media_assets.delete_many({"book_id": book_id, "kind": "video", "provider": "qru_production",
@@ -262,7 +297,7 @@ async def _book_needs_render(book_id):
     if not book:
         return False
     existing = await existing_book_promo(book_id)
-    return not (existing and _asset_on_disk(existing) and existing.get("source_signature") == _book_signature(book))
+    return not (existing and _available(existing) and existing.get("source_signature") == _book_signature(book))
 
 
 async def _product_needs_render(product_id):
@@ -278,7 +313,7 @@ async def _product_needs_render(product_id):
             return False
         sig = None  # KR sig computed on render; treat as needs-render unless matching sig present
     existing = await existing_video_asset(product_id)
-    if not (existing and _asset_on_disk(existing)):
+    if not (existing and _available(existing)):
         return True
     return sig is None or existing.get("source_signature") != sig
 
@@ -340,4 +375,4 @@ async def distribution_queue():
     return [{"qru_asset_id": r.get("qru_asset_id"), "title": r.get("title"), "asset_role": r.get("asset_role"),
              "book_id": r.get("book_id"), "duration_seconds": r.get("duration_seconds"),
              "pending_distribution": r.get("pending_distribution"), "queued_at": r.get("queued_at"),
-             "file_available": bool(_asset_on_disk(r))} for r in rows]
+             "file_available": _available(r)} for r in rows]

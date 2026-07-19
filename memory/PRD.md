@@ -12,6 +12,22 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## ✅ Durable video storage — root-cause fix for "videos missing / repeat credit spend" (2026-06)
+ROOT CAUSE (confirmed via support): the container filesystem is EPHEMERAL — every redeploy/restart
+wipes `/app/backend/rendered_assets`, so runtime-generated MP4s vanished and had to be re-rendered
+(re-charging AI credits). Preview & production have SEPARATE disk + DB.
+FIX (Phase A — videos only, per Founder): new `storage.py` wraps **Emergent Object Storage**
+(`EMERGENT_LLM_KEY`, app prefix `qru-online`, durable across redeploys). `video_fulfillment` now
+uploads every rendered MP4 to object storage (`storage_path`), and availability/caching use a durable
+`_available()` (object storage OR local). `materialize()` re-downloads on demand. YouTube
+`_resolve_factory_asset` + `/factory-assets` + connector publish all materialize from object storage.
+VERIFIED: rendered → uploaded → **simulated redeploy (deleted local file)** → still available →
+re-materialized byte-identical → `ensure_product_video` REUSED with NO re-render / NO credit spend.
+- Legacy assets (pre-fix, no `storage_path`) will re-render ONCE via backfill, then persist durably.
+- FAST FOLLOW (Phase B, scheduled): move the live store's EPUBs + covers to object storage too
+  (protects paid downloads from ephemeral-disk loss). Not yet done.
+
+
 ## ✅ Video-script auto-render + cache + production backfill (2026-06)
 Founder issues: (1) trailers not visible in YouTube Publisher on the LIVE site; (2) video scripts
 should render to MP4 automatically. Root cause of (1): trailers were rendered in PREVIEW's DB/disk;

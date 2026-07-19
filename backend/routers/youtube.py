@@ -147,14 +147,23 @@ async def _metadata_from_product(pid):
 
 
 async def _resolve_factory_asset(asset_id):
-    """Resolve a Factory-owned vault video + its on-disk MP4 (validated inside the media root)."""
+    """Resolve a Factory-owned vault video + a LOCAL MP4 path (materialised from durable object storage)."""
     import media_production as mp
+    import video_fulfillment as vf
     doc = await db.media_assets.find_one({"$or": [{"qru_asset_id": asset_id}, {"id": asset_id}]})
-    if not doc or not doc.get("internal_storage_url"):
+    if not doc:
         return None, None
-    path = os.path.abspath(doc["internal_storage_url"])
-    if not path.startswith(os.path.abspath(mp.MEDIA_ROOT)) or not os.path.exists(path):
-        return doc, None
+    path = None
+    isu = doc.get("internal_storage_url")
+    if isu:
+        ap = os.path.abspath(isu)
+        if ap.startswith(os.path.abspath(mp.MEDIA_ROOT)) and os.path.exists(ap):
+            path = ap
+    if path is None and doc.get("storage_path"):
+        try:
+            path = await vf.materialize(doc)
+        except Exception:
+            path = None
     return doc, path
 
 
@@ -206,12 +215,13 @@ def _extract_thumbnail(video_path):
 @router.get("/factory-assets")
 async def factory_assets(user=Depends(get_current_user)):
     """Videos the Factory already owns (manufactured in-house) — ready to publish without re-upload."""
+    import video_fulfillment as vf
     rows = await db.media_assets.find(
-        {"kind": "video", "provider": "qru_production", "internal_storage_url": {"$exists": True}},
+        {"kind": "video", "provider": "qru_production",
+         "$or": [{"internal_storage_url": {"$exists": True}}, {"storage_path": {"$exists": True}}]},
         {"_id": 0}).sort("created_at", -1).to_list(100)
     out = []
     for a in rows:
-        path = a.get("internal_storage_url")
         out.append({
             "qru_asset_id": a.get("qru_asset_id"), "title": a.get("title"),
             "duration_seconds": a.get("duration_seconds"), "width": a.get("width"), "height": a.get("height"),
@@ -219,7 +229,7 @@ async def factory_assets(user=Depends(get_current_user)):
             "gold_master_certified": bool(a.get("gold_master_certified")),
             "is_draft_preview": bool(a.get("is_draft_preview")),
             "created_at": a.get("created_at"),
-            "file_available": bool(path and os.path.exists(os.path.abspath(path))),
+            "file_available": vf._available(a),
         })
     return {"assets": out, "count": len(out)}
 
