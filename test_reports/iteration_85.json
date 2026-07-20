@@ -1,0 +1,65 @@
+{
+  "summary": "Iteration 85 — PREVIEW security fix + deliverable tokens + 'Upgrade all documents' + QA Cleanup™. Ran 17 pytest cases (all PASS) covering signed file+action+user tokens, inline vs attachment headers, public storefront intact, token security violations (no-token/scope-mismatch/tampered/cross-file), the batch status endpoint and full QA lifecycle (mark → soft-delete → restore → permanent-delete safeguard → published-protection). Full UI verified end-to-end on desktop (1920x1080) and mobile (390x844): DeliverablePreview modal opens inline PDF with a token-carrying iframe (no &download=1), separate 'Download original' + 'Open in new tab' actions, Product Detail preview works, Governance Publication Ops shows 94 eligible / 94 processed / 94 succeeded / 0 failed / Status=Complete, and the QA Cleanup permanent-delete confirmation stays disabled until the EXACT product title is typed.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "DeliverablePreview / QA dialogs", "issues": ["Radix DialogContent warnings 'Missing Description or aria-describedby={undefined}' (accessibility hint) — cosmetic, does not affect UX."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration85_preview_qa.py",
+    "/app/test_reports/pytest/iter85.xml"
+  ],
+  "action_items": [
+    "Optional a11y hardening: add aria-describedby (or DialogDescription) to DeliverablePreview and QA dialogs to silence Radix warnings.",
+    "Note: In the request the trash-<id> testids were described as 'trash-item-<id>' where <id> is the product id, but the implementation uses trash-item-<TRASH_RECORD_ID> (t.id). Same for trash-restore- / trash-perm-. This is fine (trash records have their own ids and the UI list keys are unique), but consider aligning the docs to the code."
+  ],
+  "critical_code_review_comments": [
+    "Preview iframe URL is minted server-side with an HS256 JWT bound to (fid, uid, action, exp≈10min) — solid scoping. Verify path in /app/backend/routers/rendering.py returns 403 for missing/mismatched fid/act, 401 for expired.",
+    "Response headers for protected deliverables correctly set: Content-Disposition inline vs attachment; Cache-Control 'private, no-store, max-age=0'; Referrer-Policy 'no-referrer'; X-Content-Type-Options 'nosniff'.",
+    "Public assets (cover-*/thumb-*/store-*/qr-*) remain reachable without a token — /api/rendering/asset/<cover>.png returned 200; /api/public/home and /api/public/books returned 200.",
+    "Raw deliverable-*.pdf without token → 403 (was previously 200) — regression closed.",
+    "Publication-quality re-render job is idempotent (guard against duplicate 'running' start), reports total/done/ok/failed/failed_ids, persists in mongo (deliverable_rerender_jobs) so status survives reload.",
+    "QA Cleanup: soft-delete cleans decoder.manufactured_products and decrements KR products_created; restore reinserts and re-increments. Permanent-delete re-asserts published/paid blockers even from trash. Good defense-in-depth.",
+    "Zero AI/LLM/cover spend during preview and batch — /rerender-documents worker calls ensure_deliverable(build_marketing=False, allow_ai_cover=False). Preview never regenerates. Backend logs' LiteLLM entries are the unrelated periodic background task on a ~12min cadence; they are NOT preview/upgrade triggers."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration85_preview_qa.py (new — 17 pytest cases)"
+  ],
+  "success_rate": {"backend": "100% (17/17)", "frontend": "100% (all critical flows verified)"},
+  "test_credentials": "demo.admin@qru.com / qru-demo-admin-2026 (Administrator = super-admin)",
+  "seed_data_creation": "None. Marked AI Literacy — Lesson Plan qa_status=test → soft-deleted → restored → qa_status=null. Final DB state: trash count=0, marked_total=0, product intact with status='Needs Review', qa_status=None.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend + frontend both verified against https://understanding-os.preview.emergentagent.com. Key data-testids used: shelf-preview-<id>, deliverable-preview, preview-frame, preview-download-original, preview-open-newtab, pd-open-reader, pd-download-pdf, pd-qa-status (native <select>), publication-ops, ops-eligible-count, ops-upgrade-btn, ops-progress, ops-complete-report, qa-cleanup-panel, qa-item-<pid>, qa-delete-<pid>, qa-delete-confirm, qa-delete-confirm-btn, qa-delete-reason, trash-item-<TRASH_RECORD_ID>, trash-restore-<TRASH_RECORD_ID>, trash-perm-<TRASH_RECORD_ID>, qa-perm-confirm, qa-perm-title, qa-perm-confirm-btn. NOTE the trash-* ids are keyed on the trash record id, not the product id. The batch was already completed prior (94/94) so ops-upgrade-btn was still visible; a fresh re-click would only re-run if backend allows. All real products left untouched.",
+  "screenshots": [
+    "/app/test_reports/products_desktop.png",
+    "/app/test_reports/preview_modal_desktop.png",
+    "/app/test_reports/preview_modal_mobile.png",
+    "/app/test_reports/governance_publication_ops.png",
+    "/app/test_reports/governance_qa_cleanup.png",
+    "/app/test_reports/qa_trash_state.png",
+    "/app/test_reports/qa_perm_safeguard.png"
+  ],
+  "detailed_results": {
+    "1_auth_login": "PASS — access_token returned; stored in localStorage 'qru_token'.",
+    "2_preview_desktop": "PASS — clicking shelf-preview-<id> opens deliverable-preview modal with preview-frame iframe using token URL (no &download=1); preview-download-original + preview-open-newtab both present and distinct.",
+    "3_preview_mobile_390x844": "PASS — modal renders inline PDF, actions usable on iPhone-sized viewport.",
+    "4_pd_preview": "PASS — pd-open-reader opens the modal; iframe uses token+inline (download=1 absent); pd-download-pdf is separate.",
+    "5_header_verification_inline_vs_attachment": "PASS — preview token → Content-Disposition: inline, Content-Type: application/pdf, Cache-Control: private, no-store, max-age=0, Referrer-Policy: no-referrer. Download token → Content-Disposition: attachment; filename=…",
+    "6a_no_token_403": "PASS — GET /api/rendering/asset/deliverable-*.pdf without token → 403.",
+    "6b_preview_token_with_download_403": "PASS — action-scope mismatch → 403.",
+    "6c_tampered_token_401_or_403": "PASS — returned 403 (jwt.InvalidTokenError branch).",
+    "6d_cross_file_token_403": "PASS — token minted for one deliverable cannot fetch another (file-scope mismatch).",
+    "7_public_storefront_intact": "PASS — /api/rendering/asset/<cover-*.png> = 200; /api/public/home = 200; /api/public/books = 200.",
+    "8_paid_deliverable_no_longer_public": "PASS — raw deliverable URL without token = 403.",
+    "9_upgrade_all_documents_panel": "PASS — publication-ops panel shows ops-eligible-count 'Eligible document products: 94'; batch already completed prior; ops-progress shows 94/94/94/0/0/Complete; ops-complete-report shows 'Batch complete — 94/94 upgraded, 0 failed.' Reload persists via mongo deliverable_rerender_jobs. (Did not re-fire the batch to avoid unnecessary regen; correctness of resumability confirmed by API status endpoint.)",
+    "10_qa_mark_test_via_pd_qa_status": "PASS — native <select> pd-qa-status set to 'test' via select_option; product appeared in qa-cleanup/eligible list; qa-item-<pid> visible with qa-delete-<pid>.",
+    "11_qa_soft_delete_and_restore": "PASS — qa-delete → qa-delete-confirm dialog → qa-delete-confirm-btn moved product to Trash (toast 'moved to Trash'); trash-item-<TRASH_ID> visible; trash-restore-<TRASH_ID> restored product back; final qa-status set to null. DB state verified clean.",
+    "12_qa_perm_delete_safeguard": "PASS — confirm-btn disabled with empty and wrong title; enabled ONLY with EXACT title. Cancelled to preserve real product.",
+    "13_qa_published_protection": "PASS — soft-delete on a published product → 400 with reason 'published/production records are protected'.",
+    "14_no_ai_spend_during_preview_or_upgrade": "PASS — preview flow makes no LLM calls; upgrade batch uses allow_ai_cover=False, build_marketing=False. Periodic LiteLLM entries in backend logs occur on a ~12-minute background cadence and are unrelated to preview/upgrade triggers."
+  }
+}

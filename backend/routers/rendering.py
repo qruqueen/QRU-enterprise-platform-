@@ -87,7 +87,7 @@ async def get_render(pid: str, user=Depends(get_current_user)):
 
 
 @router.get("/asset/{fname}")
-async def asset(fname: str, download: bool = False, name: str = None):
+async def asset(fname: str, download: bool = False, name: str = None, token: str = None):
     # basic path-traversal guard
     if "/" in fname or ".." in fname:
         raise HTTPException(400, "Invalid asset name")
@@ -101,12 +101,37 @@ async def asset(fname: str, download: bool = False, name: str = None):
         "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     }
     media = media_map.get(ext, "application/octet-stream")
-    # MT-025 — force a real download (cross-origin `download` attr is ignored by browsers,
-    # so we set Content-Disposition: attachment server-side). Reader/preview stays inline.
+    renderable = ext in ("pdf", "png", "jpg", "jpeg", "html", "mp3", "mp4")
+
+    # PROTECTED deliverables (customer-purchased files) require a signed, file+action+user-scoped token.
+    # Brand/marketing images (cover-/thumb-/store-/qr-…) remain public — they appear on the storefront.
+    if fname.startswith("deliverable-"):
+        import deliverable_tokens as dt
+        action = "download" if download else "preview"
+        try:
+            dt.verify(token, fname, action)
+        except dt.TokenExpired:
+            raise HTTPException(401, "This secure link has expired. Reopen the product to continue.")
+        except dt.TokenInvalid:
+            raise HTTPException(403, "Not authorized to access this file.")
+        headers = {"Cache-Control": "private, no-store, max-age=0",
+                   "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff"}
+        if action == "download":
+            safe = "".join(ch for ch in (name or fname) if ch.isalnum() or ch in " ._-").strip() or fname
+            if not safe.lower().endswith("." + ext):
+                safe = f"{safe}.{ext}"
+            headers["Content-Disposition"] = f'attachment; filename="{safe}"'
+        else:
+            headers["Content-Disposition"] = "inline"
+        return FileResponse(path, media_type=media, headers=headers)
+
+    # Public assets. Explicit disposition: attachment on download, inline where browser-renderable.
     if download:
         safe = "".join(ch for ch in (name or fname) if ch.isalnum() or ch in " ._-").strip() or fname
         if not safe.lower().endswith("." + ext):
             safe = f"{safe}.{ext}"
         return FileResponse(path, media_type=media, filename=safe,
                             headers={"Content-Disposition": f'attachment; filename="{safe}"'})
+    if renderable:
+        return FileResponse(path, media_type=media, headers={"Content-Disposition": "inline"})
     return FileResponse(path, media_type=media)

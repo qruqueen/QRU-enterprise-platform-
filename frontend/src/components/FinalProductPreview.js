@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DeliverablePreview } from "@/components/DeliverablePreview";
+import { downloadDeliverable } from "@/lib/deliverable";
 import { CheckCircle2, Eye, Download, Rocket, Package, Loader2, ExternalLink, FileText, BookOpen, Presentation, Image as ImageIcon, FileType2 } from "lucide-react";
 
 const FMT_ICON = { pdf: FileText, epub: BookOpen, pptx: Presentation, png: ImageIcon, html: FileType2 };
@@ -15,6 +17,7 @@ export function FinalProductPreview({ open, onOpenChange, pipeline, render }) {
   const [busy, setBusy] = useState("");
   const [published, setPublished] = useState(pipeline?.status === "Published");
   const [showReader, setShowReader] = useState(false);
+  const [dlFmt, setDlFmt] = useState(null);
   const BACKEND = process.env.REACT_APP_BACKEND_URL;
 
   useEffect(() => { setPublished(pipeline?.status === "Published"); }, [pipeline?.status]);
@@ -23,7 +26,7 @@ export function FinalProductPreview({ open, onOpenChange, pipeline, render }) {
   const abs = (u) => (u ? (u.startsWith("http") ? u : `${BACKEND}${u}`) : null);
   const deliverable = pipeline.customer_deliverable || null;
   const files = deliverable?.files || [];
-  const previewUrl = abs(deliverable?.preview_url);
+  const hasPreviewable = files.length > 0;
   const coverRel = render?.rendered_assets?.cover || render?.cover_url || pipeline.cover_url;
   const cover = abs(coverRel);
   const ready = pipeline.deliverable_ready || deliverable?.ready;
@@ -32,7 +35,12 @@ export function FinalProductPreview({ open, onOpenChange, pipeline, render }) {
   const contentReviewRequired = deliverable?.customer_content_review_required ?? pipeline.customer_content_review_required;
   const removedSections = deliverable?.removed_internal_sections || pipeline.removed_internal_sections || [];
   const canPublish = ready && designApproved && !contentReviewRequired;
-  const dlHref = (f) => `${abs(f.url)}?download=1&name=${encodeURIComponent(pipeline.title + " — " + pipeline.product_type)}`;
+  const doDl = async (fmt) => {
+    setDlFmt(fmt);
+    try { await downloadDeliverable(pipeline.id, fmt); }
+    catch (e) { toast.error(e?.response?.data?.detail || "Download failed."); }
+    finally { setDlFmt(null); }
+  };
 
   const publish = async () => {
     setBusy("publish");
@@ -68,14 +76,14 @@ export function FinalProductPreview({ open, onOpenChange, pipeline, render }) {
                 {files.map((f, i) => {
                   const Icon = FMT_ICON[f.format] || FileText;
                   return (
-                    <a key={i} href={dlHref(f)}
-                      className="flex items-center gap-2 text-sm text-foreground/80 px-2.5 py-1.5 rounded-md border border-border hover:border-navy hover:bg-navy/[0.03] transition-colors"
+                    <button key={i} onClick={() => doDl(f.format)} disabled={dlFmt === f.format}
+                      className="w-full flex items-center gap-2 text-sm text-foreground/80 px-2.5 py-1.5 rounded-md border border-border hover:border-navy hover:bg-navy/[0.03] transition-colors disabled:opacity-50 text-left"
                       data-testid={`fpp-file-${f.format}`}>
                       <Icon className="w-4 h-4 text-navy shrink-0" />
                       <span className="flex-1">{f.label}</span>
                       <span className="text-[10px] text-muted-foreground">{Math.max(1, Math.round((f.bytes || 0) / 1024))} KB</span>
-                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
-                    </a>
+                      {dlFmt === f.format ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5 text-muted-foreground" />}
+                    </button>
                   );
                 })}
               </div>
@@ -103,39 +111,33 @@ export function FinalProductPreview({ open, onOpenChange, pipeline, render }) {
           </div>
         </div>
 
-        {previewUrl && (
+        {hasPreviewable && (
           <div className="mt-4">
             <div className="flex items-center justify-between mb-1.5">
               <p className="text-[11px] font-semibold text-gold uppercase tracking-wide">Founder Inspection · Read the finished product</p>
-              <div className="flex gap-2">
-                <button data-testid="fpp-toggle-reader" onClick={() => setShowReader((v) => !v)} className="text-xs inline-flex items-center gap-1 text-primary">
-                  <Eye className="w-3.5 h-3.5" /> {showReader ? "Hide reader" : "Open reader"}
-                </button>
-                <a data-testid="fpp-open-newtab" href={previewUrl} target="_blank" rel="noreferrer" className="text-xs inline-flex items-center gap-1 text-primary">
-                  Open in new tab <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
+              <button data-testid="fpp-toggle-reader" onClick={() => setShowReader(true)} className="text-xs inline-flex items-center gap-1 text-primary">
+                <Eye className="w-3.5 h-3.5" /> Open preview
+              </button>
             </div>
-            {showReader && (
-              <iframe title="deliverable-reader" src={previewUrl} data-testid="fpp-reader"
-                className="w-full h-[420px] rounded-lg border border-border bg-white" />
-            )}
           </div>
         )}
 
         <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
           <button data-testid="fpp-preview" onClick={() => { onOpenChange(false); navigate(`/products/${pipeline.id}`); }}
             className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border border-border hover:border-navy"><Eye className="w-4 h-4" /> Product Page</button>
-          {deliverable?.download_url && (
-            <a data-testid="fpp-download" href={`${abs(deliverable.download_url)}?download=1&name=${encodeURIComponent(pipeline.title + " — " + pipeline.product_type)}`}
-              className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border border-border hover:border-navy">
-              <Download className="w-4 h-4" /> Download {deliverable.primary_format?.toUpperCase()}</a>
+          {deliverable?.primary_format && (
+            <button data-testid="fpp-download" onClick={() => doDl(deliverable.primary_format)} disabled={dlFmt === deliverable.primary_format}
+              className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border border-border hover:border-navy disabled:opacity-50">
+              {dlFmt === deliverable.primary_format ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Download {deliverable.primary_format?.toUpperCase()}</button>
           )}
           <button data-testid="fpp-publish" onClick={publish} disabled={busy === "publish" || published || !canPublish}
             className={`inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm ml-auto ${published ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-navy text-white hover:bg-navy/90"} disabled:opacity-50`}>
             {busy === "publish" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />} {published ? "Published" : "Approve & Publish"}</button>
         </div>
       </DialogContent>
+      <DeliverablePreview open={showReader}
+        product={{ id: pipeline.id, title: pipeline.title, product_type: pipeline.product_type, customer_deliverable: deliverable }}
+        onOpenChange={setShowReader} />
     </Dialog>
   );
 }

@@ -290,27 +290,40 @@ async def _rerender_worker(actor, base_url=""):
     import product_recipes as pr
     import deliverable_renderer as dr
     prods = await db.products.find({"content": {"$exists": True, "$ne": ""}},
-                                   {"id": 1, "product_type": 1}).to_list(10000)
-    ids = [p["id"] for p in prods if pr.get_recipe(p.get("product_type", "")).get("category") in _DOC_CATS]
+                                   {"id": 1, "product_type": 1, "title": 1}).to_list(10000)
+    docs = [p for p in prods if pr.get_recipe(p.get("product_type", "")).get("category") in _DOC_CATS]
+    ids = [p["id"] for p in docs]
     total = len(ids)
     done = ok = failed = 0
+    failed_ids = []
     await db[_RERENDER_JOB].update_one({"id": "current"}, {"$set": {
         "id": "current", "status": "running", "total": total, "done": 0, "ok": 0, "failed": 0,
-        "started_at": now_iso(), "by": actor}}, upsert=True)
+        "failed_ids": [], "started_at": now_iso(), "finished_at": None, "by": actor}}, upsert=True)
     for pid in ids:
         try:
             res = await dr.ensure_deliverable(pid, actor=actor, base_url=base_url,
                                               build_marketing=False, allow_ai_cover=False)
-            ok += 1 if (res and res.get("files")) else 0
-            failed += 0 if (res and res.get("files")) else 1
+            if res and res.get("files"):
+                ok += 1
+            else:
+                failed += 1; failed_ids.append(pid)
         except Exception:
-            failed += 1
+            failed += 1; failed_ids.append(pid)
         done += 1
         if done % 5 == 0:
             await db[_RERENDER_JOB].update_one({"id": "current"},
-                                               {"$set": {"done": done, "ok": ok, "failed": failed}})
+                                               {"$set": {"done": done, "ok": ok, "failed": failed,
+                                                         "failed_ids": failed_ids}})
     await db[_RERENDER_JOB].update_one({"id": "current"}, {"$set": {
-        "status": "complete", "done": done, "ok": ok, "failed": failed, "finished_at": now_iso()}})
+        "status": "complete", "done": done, "ok": ok, "failed": failed, "failed_ids": failed_ids,
+        "finished_at": now_iso()}})
+
+
+async def _eligible_doc_count():
+    import product_recipes as pr
+    prods = await db.products.find({"content": {"$exists": True, "$ne": ""}},
+                                   {"id": 1, "product_type": 1}).to_list(10000)
+    return sum(1 for p in prods if pr.get_recipe(p.get("product_type", "")).get("category") in _DOC_CATS)
 
 
 @router.post("/rerender-documents")
@@ -330,7 +343,125 @@ async def rerender_documents(request: Request, user=Depends(require_super_admin)
 @router.get("/rerender-documents/status")
 async def rerender_documents_status(user=Depends(get_current_user)):
     j = await db[_RERENDER_JOB].find_one({"id": "current"}, {"_id": 0})
-    return j or {"status": "idle"}
+    eligible = await _eligible_doc_count()
+    base = {"status": "idle", "total": 0, "done": 0, "ok": 0, "failed": 0, "failed_ids": []}
+    if j:
+        base.update(j)
+    base["eligible_count"] = eligible
+    if base.get("status") in ("running", "complete"):
+        base["remaining"] = max(0, (base.get("total", 0) or 0) - (base.get("done", 0) or 0))
+    else:
+        base["remaining"] = eligible
+    return base
+
+
+# --- Signed short-lived deliverable access tokens (Preview / Download) ---
+class FileTokenIn(BaseModel):
+    format: str = "pdf"
+    action: str = "preview"  # "preview" | "download"
+
+
+@router.post("/{pid}/file-token")
+async def file_token(pid: str, data: FileTokenIn, user=Depends(get_current_user)):
+    """Mint a signed, ~10-min token scoped to the EXACT file + user + action. Preview picks a
+    browser-renderable representation (PDF for EPUB/PPTX/DOCX); download returns the requested original."""
+    if data.action not in ("preview", "download"):
+        raise HTTPException(400, "action must be preview or download")
+    p = await db.products.find_one({"id": pid}, {"_id": 0, "customer_deliverable": 1, "title": 1})
+    if not p:
+        raise HTTPException(404, "Product not found.")
+    files = (p.get("customer_deliverable") or {}).get("files") or []
+    if not files:
+        raise HTTPException(404, "This product has no rendered deliverable yet.")
+    renderable = {"pdf", "png", "jpg", "jpeg", "html", "mp3", "mp4"}
+    fmt = data.format
+    requested = next((x for x in files if x.get("format") == fmt), None)
+    if data.action == "preview":
+        target = requested if (requested and fmt in renderable) else None
+        if not target:
+            target = (next((x for x in files if x.get("format") == "pdf"), None)
+                      or next((x for x in files if x.get("format") == "html"), None)
+                      or next((x for x in files if x.get("format") in renderable), None))
+    else:
+        target = requested or next((x for x in files if x.get("format") == "pdf"), None) or files[0]
+    if not target:
+        raise HTTPException(404, "No suitable deliverable file found.")
+    fid = target.get("filename")
+    if not fid or not str(fid).startswith("deliverable-"):
+        raise HTTPException(400, "Deliverable file is not token-protected.")
+    import deliverable_tokens as dt
+    from urllib.parse import quote
+    tok = dt.mint(fid, user["id"], data.action)
+    url = f"/api/rendering/asset/{fid}?token={tok}"
+    if data.action == "download":
+        safe = f"{p.get('title', 'download')}"
+        url += f"&download=1&name={quote(safe)}"
+    return {"url": url, "format": target.get("format"), "media_type": target.get("media_type"),
+            "action": data.action, "expires_in": 600,
+            "is_representation": bool(data.action == "preview" and requested and target is not requested)}
+
+
+# --- QA Cleanup™ (super-admin, soft-delete to Trash, audit-logged) ---
+import qa_cleanup as qa
+
+
+class QAMarkIn(BaseModel):
+    qa_status: Optional[str] = None  # test | qa | preview | null
+
+
+class QADeleteIn(BaseModel):
+    reason: Optional[str] = "QA cleanup"
+
+
+class QAPermanentIn(BaseModel):
+    confirm_title: str
+
+
+@router.post("/{pid}/qa-status")
+async def qa_mark(pid: str, data: QAMarkIn, user=Depends(require_super_admin)):
+    res = await qa.set_qa_status(pid, data.qa_status, user.get("name", "Founder"))
+    if res.get("error"):
+        raise HTTPException(400, res["error"])
+    return res
+
+
+@router.get("/qa-cleanup/eligible")
+async def qa_eligible(user=Depends(require_super_admin)):
+    return await qa.eligible_list()
+
+
+@router.post("/{pid}/qa-cleanup")
+async def qa_soft_delete(pid: str, data: QADeleteIn, user=Depends(require_super_admin)):
+    res = await qa.soft_delete(pid, data.reason, user.get("name", "Founder"))
+    if res.get("error"):
+        raise HTTPException(400, res["error"] + (" " + "; ".join(res.get("blockers", [])) if res.get("blockers") else ""))
+    return res
+
+
+@router.get("/qa-cleanup/trash")
+async def qa_trash(user=Depends(require_super_admin)):
+    return await qa.trash_list()
+
+
+@router.post("/qa-cleanup/trash/{trash_id}/restore")
+async def qa_restore(trash_id: str, user=Depends(require_super_admin)):
+    res = await qa.restore(trash_id, user.get("name", "Founder"))
+    if res.get("error"):
+        raise HTTPException(400, res["error"])
+    return res
+
+
+@router.post("/qa-cleanup/trash/{trash_id}/permanent-delete")
+async def qa_permanent(trash_id: str, data: QAPermanentIn, user=Depends(require_super_admin)):
+    res = await qa.permanent_delete(trash_id, user.get("name", "Founder"), data.confirm_title)
+    if res.get("error"):
+        raise HTTPException(400, res["error"] + (" " + "; ".join(res.get("blockers", [])) if res.get("blockers") else ""))
+    return res
+
+
+@router.get("/qa-cleanup/audit")
+async def qa_audit(user=Depends(require_super_admin)):
+    return await qa.audit_log()
 
 
 @router.get("/ukr-audit")

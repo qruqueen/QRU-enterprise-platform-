@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { Landmark, ShieldCheck, GraduationCap, ScrollText, Lock, Loader2 } from "lucide-react";
 import { UKRCompliance } from "@/components/UKRCompliance";
+import { PublicationOps } from "@/components/PublicationOps";
 
 const ICONS = { constitution: ScrollText, qbos: ShieldCheck, qeds: GraduationCap };
 
@@ -43,6 +44,7 @@ export default function GovernanceCenter() {
       </div>
 
       <UKRCompliance />
+      <PublicationOps />
 
       <div className="flex flex-wrap gap-2" data-testid="governance-tabs">
         {docs.map((d) => {

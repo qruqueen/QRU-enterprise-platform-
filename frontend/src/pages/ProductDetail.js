@@ -5,17 +5,25 @@ import { StatusBadge, Markdown } from "@/components/shared";
 import { normalizeProduct } from "@/lib/safeRender";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, CheckCircle2, Send, Archive, Wand2, Sparkles, FileText, BookOpen, Presentation, Image as ImageIcon, FileType2, Download, Eye, PackageCheck, Megaphone } from "lucide-react";
+import { DeliverablePreview } from "@/components/DeliverablePreview";
+import { downloadDeliverable } from "@/lib/deliverable";
+import { useAuth } from "@/context/AuthContext";
 
 const FMT_ICON = { pdf: FileText, epub: BookOpen, pptx: Presentation, png: ImageIcon, html: FileType2 };
+const SUPER_ROLES = ["Founder & CEO", "Administrator"];
 
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isSuper = SUPER_ROLES.includes(user?.role);
   const [p, setP] = useState(null);
   const [briefBusy, setBriefBusy] = useState(false);
   const [renderBusy, setRenderBusy] = useState(false);
   const [kit, setKit] = useState(null);
   const [kitBusy, setKitBusy] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [dlFmt, setDlFmt] = useState(null);
   const BACKEND = process.env.REACT_APP_BACKEND_URL;
   const abs = (u) => (u ? (u.startsWith("http") ? u : `${BACKEND}${u}`) : null);
   const load = () => api.get(`/products/${id}`).then((r) => setP(normalizeProduct(r.data))).catch(() => {});
@@ -36,6 +44,14 @@ export default function ProductDetail() {
     try {
       await api.patch(`/products/${id}/status`, { status });
       toast.success(`Product ${status}`);
+      load();
+    } catch (e) { toast.error(e.response?.data?.detail || "Failed"); }
+  };
+
+  const markQa = async (qa_status) => {
+    try {
+      await api.post(`/products/${id}/qa-status`, { qa_status: qa_status || null });
+      toast.success(qa_status ? `Marked as ${qa_status.toUpperCase()}` : "QA mark cleared");
       load();
     } catch (e) { toast.error(e.response?.data?.detail || "Failed"); }
   };
@@ -95,6 +111,16 @@ export default function ProductDetail() {
           <button data-testid="pd-archive-btn" onClick={() => setStatus("Archived")} className="flex items-center gap-2 border px-3 py-2 rounded-sm text-sm font-medium hover:border-destructive hover:text-destructive transition-colors">
             <Archive className="w-4 h-4" />
           </button>
+          {isSuper && (
+            <select data-testid="pd-qa-status" value={p.qa_status || ""} onChange={(e) => markQa(e.target.value)}
+              title="QA status — mark this as a test/qa/preview record for controlled cleanup"
+              className="border rounded-sm px-2 py-2 text-xs font-medium text-navy">
+              <option value="">QA: none</option>
+              <option value="test">QA: test</option>
+              <option value="qa">QA: qa</option>
+              <option value="preview">QA: preview</option>
+            </select>
+          )}
         </div>
       </div>
 
@@ -105,7 +131,12 @@ export default function ProductDetail() {
         const designApproved = cd?.design_approved ?? !p.design_review_required;
         const contentReviewRequired = cd?.customer_content_review_required ?? p.customer_content_review_required;
         const removedSections = cd?.removed_internal_sections || p.removed_internal_sections || [];
-        const dlHref = (f) => `${abs(f.url)}?download=1&name=${encodeURIComponent(p.title + " — " + p.product_type)}`;
+        const doDl = async (f) => {
+          setDlFmt(f.format);
+          try { await downloadDeliverable(p.id, f.format); }
+          catch (e) { toast.error(e?.response?.data?.detail || "Download failed."); }
+          finally { setDlFmt(null); }
+        };
         return (
           <div className="bg-card border rounded-md p-6 mb-6 max-w-4xl" data-testid="pd-review-copy">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -126,13 +157,14 @@ export default function ProductDetail() {
                   {cd.files.map((f, i) => {
                     const Icon = FMT_ICON[f.format] || FileText;
                     return (
-                      <a key={i} href={dlHref(f)} className="flex items-center gap-2 text-sm px-3 py-2 rounded-md border hover:border-primary hover:bg-primary/[0.03] transition-colors"
+                      <button key={i} onClick={() => doDl(f)} disabled={dlFmt === f.format}
+                        className="flex items-center gap-2 text-sm px-3 py-2 rounded-md border hover:border-primary hover:bg-primary/[0.03] transition-colors disabled:opacity-50 text-left"
                         data-testid={`pd-download-${f.format}`}>
                         <Icon className="w-4 h-4 text-primary shrink-0" />
                         <span className="flex-1">{f.label}</span>
                         <span className="text-[10px] text-muted-foreground">{Math.max(1, Math.round((f.bytes || 0) / 1024))} KB</span>
-                        <Download className="w-3.5 h-3.5 text-muted-foreground" />
-                      </a>
+                        {dlFmt === f.format ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5 text-muted-foreground" />}
+                      </button>
                     );
                   })}
                 </div>
@@ -154,9 +186,9 @@ export default function ProductDetail() {
                   </p>
                 )}
                 <div className="flex flex-wrap gap-2">
-                  {cd.preview_url && (
-                    <a data-testid="pd-open-reader" href={abs(cd.preview_url)} target="_blank" rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border hover:border-primary"><Eye className="w-4 h-4" /> Open Review Copy (read &amp; scroll)</a>
+                  {cd.files?.length > 0 && (
+                    <button data-testid="pd-open-reader" onClick={() => setShowPreview(true)}
+                      className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border hover:border-primary"><Eye className="w-4 h-4" /> Preview (read &amp; scroll — no download)</button>
                   )}
                   {(!designApproved || contentReviewRequired) && (
                     <button data-testid="pd-return-creative" onClick={enhance} disabled={briefBusy}
@@ -307,6 +339,7 @@ export default function ProductDetail() {
       <div className="bg-card border rounded-md p-8 max-w-4xl">
         <Markdown text={p.content} />
       </div>
+      <DeliverablePreview open={showPreview} product={p} onOpenChange={setShowPreview} />
     </div>
   );
 }

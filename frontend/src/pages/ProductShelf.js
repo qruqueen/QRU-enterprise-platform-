@@ -4,8 +4,10 @@ import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge } from "@/components/qru";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Search, Download, Headphones, ArrowRight, PackageOpen, BookText, Clapperboard, LayoutTemplate, FileText, Rocket, FileCheck2 } from "lucide-react";
+import { Loader2, Search, Download, Headphones, ArrowRight, PackageOpen, BookText, Clapperboard, LayoutTemplate, FileText, Rocket, FileCheck2, Eye } from "lucide-react";
 import { ManifestDialog } from "@/components/ManifestDialog";
+import { DeliverablePreview } from "@/components/DeliverablePreview";
+import { downloadDeliverable } from "@/lib/deliverable";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
 const ENGINES = [
@@ -24,6 +26,15 @@ export default function ProductShelf() {
   const [engine, setEngine] = useState("all");
   const [publishing, setPublishing] = useState(null);
   const [manifestFor, setManifestFor] = useState(null);
+  const [previewFor, setPreviewFor] = useState(null);
+  const [dlBusy, setDlBusy] = useState(null);
+
+  const doDownload = async (p) => {
+    setDlBusy(p.id);
+    try { await downloadDeliverable(p.id, "pdf"); }
+    catch (e) { toast.error(e?.response?.data?.detail || "Download failed."); }
+    finally { setDlBusy(null); }
+  };
 
   const publish = async (p) => {
     setPublishing(p.id);
@@ -111,9 +122,17 @@ export default function ProductShelf() {
                   {p.audiobook_url && (
                     <a href={`${BACKEND}${p.audiobook_url}`} target="_blank" rel="noreferrer" data-testid={`shelf-audio-${p.id}`} className="text-[10px] text-royal inline-flex items-center gap-1 hover:underline"><Headphones className="w-3 h-3" /> Audio</a>
                   )}
-                  {p.download && (
+                  {p.download && (p.download.includes("/api/rendering/asset/deliverable-") ? (
+                    <>
+                      <button onClick={() => setPreviewFor({ id: p.id, title: p.name, product_type: p.kind })} data-testid={`shelf-preview-${p.id}`}
+                        className="text-[10px] text-navy inline-flex items-center gap-1 hover:text-royal font-semibold"><Eye className="w-3 h-3" /> Preview</button>
+                      <button onClick={() => doDownload(p)} disabled={dlBusy === p.id} data-testid={`shelf-download-${p.id}`}
+                        className="text-[10px] text-royal inline-flex items-center gap-1 hover:underline disabled:opacity-50">
+                        {dlBusy === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />} Download</button>
+                    </>
+                  ) : (
                     <a href={`${BACKEND}${p.download}`} target="_blank" rel="noreferrer" data-testid={`shelf-download-${p.id}`} className="text-[10px] text-royal inline-flex items-center gap-1 hover:underline"><Download className="w-3 h-3" /> Download</a>
-                  )}
+                  ))}
                   {p.status !== "Published" && p.publishable && (
                     <button onClick={() => publish(p)} disabled={publishing === p.id} data-testid={`shelf-publish-${p.id}`}
                       className="text-[10px] font-semibold text-white bg-royal hover:bg-navy disabled:opacity-50 rounded-full px-2.5 py-1 inline-flex items-center gap-1 transition-colors">
@@ -137,6 +156,7 @@ export default function ProductShelf() {
         <ManifestDialog engine={manifestFor.engine} productId={manifestFor.id} name={manifestFor.name}
           open={!!manifestFor} onOpenChange={(o) => !o && setManifestFor(null)} />
       )}
+      <DeliverablePreview open={!!previewFor} product={previewFor} onOpenChange={(o) => !o && setPreviewFor(null)} />
     </div>
   );
 }
