@@ -39,6 +39,12 @@ with `allow_ai_cover=False` ($0 AI).
   200, frontend compiled.
 - **NOTE:** preview + production have separate DBs — run `POST /api/products/rerender-documents` in
   production after redeploy to upgrade live deliverables.
+- **✅ E2E TESTING AGENT PASS (iteration_84):** full Founder UI workflow verified for BOTH Workbook &
+  Teacher Guide from DEC-00013 (source KR-00048 Verified): create via CTA → land in My Products → shelf
+  item visible → DB (verified:true, KR-linked, decoder-linked, pdf present) → PDF (Title+Copyright+
+  Colophon, no factory chrome, no sanitization leftovers, content from decoder) → ZERO AI/LLM spend →
+  cleanup confirmed (2 products deleted, decoder $pull=0 lingering, KR products_created 4→2). No defects.
+  Minor observation: no super-admin product DELETE endpoint (cleanup used DB) — optional future add.
 
 
 ## ✅ Master Design Standard™ Phase 2 — QRU Publication Quality Standard™ (2026-07-19)
