@@ -1,0 +1,48 @@
+{
+  "summary": "Full Founder end-to-end verification of the Decoder→Create-Product bridge for TWO product families (Workbook + Teacher Guide). Logged in as demo.admin (super-admin), navigated to /decoder-engine, selected the Manufacturing Ready understanding DEC-00013 (Trading Battlefield Analogy, source KR-00048 Verified), used the create-product CTA (data-testid create-product-cta / create-product-type / create-product-btn) for each family, landed on /products (product-shelf-page), confirmed shelf-item-<id>. Verified DB persistence (verified=true, knowledge_record_id matches decoder.source_kr_ids[0].kr_id, source_decoder.decoder_id=DEC-00013, product_type correct, customer_deliverable.files contains a PDF; source KR verification_status=Verified). Opened each PDF via pypdf: Copyright + Colophon + Title page present; NO factory chrome ('Manufactured by QRU Factory','QRU Factory OS','Manufacturing Dashboard'); NO Publication Sanitization leftovers ('working title','TODO','TKTK','[PLACEHOLDER]','DRAFT ONLY'); body content spot-checks against decoder decoded understanding (definition/why_it_matters/analogy). Zero AI/LLM spend: create-product returned in <2s each; backend log delta showed no llm_generate / emergentintegrations / openai / gemini / anthropic / ensure_branded_assets calls during the create-product window. Cleanup executed and confirmed.",
+  "steps": {
+    "STEP 1 login + open /decoder-engine": "PASS",
+    "STEP 2 select Manufacturing Ready + Knowledge=PASS Inherits Verified KR": "PASS (DEC-00013 → KR-00048)",
+    "STEP 3 Workbook create via CTA": "PASS",
+    "STEP 4 landed /products with product-shelf-page": "PASS (Workbook)",
+    "STEP 5 shelf-item-<id> visible after shelf-search": "PASS (Workbook id=5d0a9a7b-54a8-40dc-b82a-f8e3b452984c)",
+    "STEP 6 DB verification (Workbook)": "PASS (verified=true, kr afbc9452..., decoder_id DEC-00013, product_type=Workbook, pdf in customer_deliverable.files)",
+    "STEP 7 PDF verification (Workbook)": "PASS (Copyright, Colophon, Title page, no factory chrome, no sanitization leftovers, content derives from decoder)",
+    "STEP 8 Zero AI/LLM spend": "PASS (deterministic, log delta contained no LLM markers)",
+    "STEP 9 Teacher Guide full repeat": "PASS (id=eb39f16d-707f-4a54-a28c-07bb692ff832; DB + PDF + zero-LLM all pass)",
+    "STEP 10 cleanup + confirmation": "PASS — 2 products deleted, DEC-00013.manufactured_products $pull leaves 0 lingering, KR products_created 4→2 (decremented by 2)"
+  },
+  "created_and_removed_product_ids": [
+    "5d0a9a7b-54a8-40dc-b82a-f8e3b452984c (Workbook)",
+    "eb39f16d-707f-4a54-a28c-07bb692ff832 (Teacher Guide)"
+  ],
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration84_decoder_bridge.py",
+    "/app/test_reports/ui_i84.py",
+    "/app/test_reports/verify_and_cleanup_i84.py",
+    "/app/test_reports/pytest/iteration84.xml",
+    "/app/test_reports/i84_Workbook.jpg",
+    "/app/test_reports/i84_Teacher_Guide.jpg"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "decoder_engine.create_product_from_decoder: correctly passes allow_ai_cover=False to deliverable_renderer.ensure_deliverable — zero AI cost path verified in log delta.",
+    "Products are inserted with verified=bool(kr and _is_verified(kr)); confirmed to be true when source KR verification_status=Verified. Knowledge-First™ inheritance is intact.",
+    "The bridge exposes GET /api/decoder/product-types/available; response confirmed to include Workbook, Teacher Guide, and Book — matches DOC_PRODUCT_TYPES.",
+    "There is no admin-authorized DELETE for /api/products, so throwaway-cleanup after test relies on direct MongoDB access. Not a defect for this scope, but if future testing must run without DB access, consider adding a super-admin delete endpoint."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration84_decoder_bridge.py (new)",
+    "/app/test_reports/ui_i84.py (new UI driver)",
+    "/app/test_reports/verify_and_cleanup_i84.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "demo.admin@qru.com / qru-demo-admin-2026 (from /app/backend/.env DEMO_ADMIN_PASSWORD)",
+  "seed_data_creation": "Created 2 UI-driven products (Workbook + Teacher Guide) from DEC-00013 → then FULLY removed (products deleted, decoder $pull, KR products_created decremented). No leftover throwaway data in preview DB.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Zero-LLM assertion checks backend log delta for 'llm_generate', 'emergentintegrations.llm', 'openai.com', 'generativelanguage.googleapis.com', 'anthropic.com', 'ensure_branded_assets'. The bridge posts to POST /api/decoder/{did}/create-product with {product_type}; requires role=Administrator or Founder (require_super_admin). Cleanup requires direct Mongo access; recreate the .i84_created.json workflow if you run this again.",
+  "rca of the issue": "No defects found — feature works as designed for the two audited product families."
+}

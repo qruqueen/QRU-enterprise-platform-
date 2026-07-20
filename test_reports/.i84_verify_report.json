@@ -1,0 +1,29 @@
+{
+  "products": [
+    {
+      "id": "5d0a9a7b-54a8-40dc-b82a-f8e3b452984c",
+      "product_type": "Workbook",
+      "title": "Trading Battlefield Analogy: Markets as a Tug-of-War Over Price Territory \u2014 Workbook",
+      "kr": "afbc9452-18ba-4bf1-adee-941aeb6d41f9",
+      "decoder_id": "DEC-00013",
+      "pdf": "/app/backend/rendered_assets/deliverable-pdf-12f9ebbb.pdf",
+      "pdf_pages": 10
+    },
+    {
+      "id": "eb39f16d-707f-4a54-a28c-07bb692ff832",
+      "product_type": "Teacher Guide",
+      "title": "Trading Battlefield Analogy: Markets as a Tug-of-War Over Price Territory \u2014 Teacher Guide",
+      "kr": "afbc9452-18ba-4bf1-adee-941aeb6d41f9",
+      "decoder_id": "DEC-00013",
+      "pdf": "/app/backend/rendered_assets/deliverable-pdf-43aa35d2.pdf",
+      "pdf_pages": 10
+    }
+  ],
+  "cleanup_confirmations": {
+    "products_deleted": 2,
+    "products_remaining": 0,
+    "decoder_DEC-00013_lingering": 0,
+    "kr_afbc9452-18ba-4bf1-adee-941aeb6d41f9_products_created_before": 4,
+    "kr_afbc9452-18ba-4bf1-adee-941aeb6d41f9_products_created_after": 2
+  }
+}
