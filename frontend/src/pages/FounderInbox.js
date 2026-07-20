@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
+import { downloadByFid, tokenizeIfProtected } from "@/lib/deliverable";
 import { PageHeader, EmptyState } from "@/components/shared";
 import { toast } from "sonner";
 import {
@@ -159,7 +160,7 @@ export default function FounderInbox() {
                     {/* Buttons */}
                     <div className="flex flex-wrap gap-2 mt-2">
                       {p.preview_url && <a data-testid={`inbox-preview-${p.product_code}`} href={`${BACKEND}/api/marketing/preview/${p.id}?fmt=html`} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1 border px-2 py-1 rounded-sm hover:border-primary"><Eye className="w-3.5 h-3.5" /> Open Preview</a>}
-                      {primary && <a data-testid={`inbox-customer-${p.product_code}`} href={`${abs(primary.url)}?download=1&name=${encodeURIComponent(p.title)}`} className="text-xs flex items-center gap-1 border px-2 py-1 rounded-sm hover:border-primary"><Download className="w-3.5 h-3.5" /> Customer Edition</a>}
+                      {primary && <button data-testid={`inbox-customer-${p.product_code}`} onClick={() => downloadByFid(primary.url)} className="text-xs flex items-center gap-1 border px-2 py-1 rounded-sm hover:border-primary"><Download className="w-3.5 h-3.5" /> Customer Edition</button>}
                       {p.preview_pdf_url && <a data-testid={`inbox-previewpdf-${p.product_code}`} href={`${BACKEND}/api/marketing/preview/${p.id}?fmt=pdf`} className="text-xs flex items-center gap-1 border px-2 py-1 rounded-sm hover:border-primary"><FileText className="w-3.5 h-3.5" /> Preview Edition</a>}
                       <button data-testid={`inbox-report-${p.product_code}`} onClick={() => viewReport(p.id)} className="text-xs flex items-center gap-1 border px-2 py-1 rounded-sm hover:border-primary"><Gauge className="w-3.5 h-3.5" /> Design Report</button>
                       <button data-testid={`inbox-evidence-${p.product_code}`} onClick={() => openEvidence(p.id)} className="text-xs flex items-center gap-1 bg-royal text-white px-2 py-1 rounded-sm hover:opacity-90"><FileSearch className="w-3.5 h-3.5" /> Review Evidence & Decide</button>
@@ -450,7 +451,7 @@ function EvidenceCenter({ ev, busy, onClose, onDecide }) {
                 }
                 if (pv.available && pv.url) {
                   return (
-                    <button key={pv.key} data-testid={`preview-${pv.key}`} onClick={() => setViewer({ url: abs(pv.url), title: pv.label })}
+                    <button key={pv.key} data-testid={`preview-${pv.key}`} onClick={async () => setViewer({ url: await tokenizeIfProtected(pv.url, "preview"), title: pv.label })}
                       className="flex items-center gap-2 border rounded-sm px-2 py-2 text-xs hover:border-primary text-left transition-colors" title={`Open ${pv.label}`}>
                       <Icon className="w-4 h-4 text-royal shrink-0" /><span className="flex-1 truncate">{pv.label}</span><Eye className="w-3.5 h-3.5 text-royal shrink-0" />
                     </button>
@@ -462,7 +463,7 @@ function EvidenceCenter({ ev, busy, onClose, onDecide }) {
                       <p className="flex items-center gap-2 mb-1"><Icon className="w-4 h-4 text-royal shrink-0" /><span className="truncate">{pv.label} ({files.length})</span></p>
                       <div className="flex flex-wrap gap-1">
                         {files.slice(0, 6).map((f, k) => (
-                          <button key={k} data-testid={`preview-${pv.key}-file-${k}`} onClick={() => setViewer({ url: abs(f.url), title: f.label || f.format || `${pv.label} ${k + 1}` })}
+                          <button key={k} data-testid={`preview-${pv.key}-file-${k}`} onClick={async () => setViewer({ url: await tokenizeIfProtected(f.url, "preview"), title: f.label || f.format || `${pv.label} ${k + 1}` })}
                             className="text-[10px] px-1.5 py-0.5 rounded bg-royal/10 text-royal hover:bg-royal/20 truncate max-w-[110px] inline-flex items-center gap-1">
                             <Eye className="w-3 h-3" />{f.label || f.format || `file ${k + 1}`}
                           </button>

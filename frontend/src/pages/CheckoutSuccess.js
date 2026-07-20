@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import api from "@/lib/api";
+import { downloadByFid } from "@/lib/deliverable";
 import { CheckCircle2, Loader2, XCircle, Download, AlertTriangle } from "lucide-react";
 
 export default function CheckoutSuccess() {
@@ -83,13 +84,13 @@ export default function CheckoutSuccess() {
             {delivery?.files?.length > 0 && (
               <div className="space-y-2" data-testid="delivery-files">
                 {delivery.files.map((f, i) => (
-                  <a key={i} href={`${BACKEND}${f.download_url}`} target="_blank" rel="noreferrer"
+                  <button key={i} onClick={() => downloadByFid(f.download_url || f.url)}
                     data-testid={`download-file-${f.format || i}`}
-                    className="flex items-center gap-2 border rounded-sm p-2.5 hover:bg-muted transition-colors">
+                    className="w-full text-left flex items-center gap-2 border rounded-sm p-2.5 hover:bg-muted transition-colors">
                     <Download className="w-4 h-4 text-gold shrink-0" />
                     <span className="text-sm font-medium text-navy flex-1">{f.label}</span>
                     <span className="text-xs text-royal">Download</span>
-                  </a>
+                  </button>
                 ))}
               </div>
             )}

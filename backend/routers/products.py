@@ -401,6 +401,29 @@ async def file_token(pid: str, data: FileTokenIn, user=Depends(get_current_user)
             "is_representation": bool(data.action == "preview" and requested and target is not requested)}
 
 
+class FidTokenIn(BaseModel):
+    fid: str
+    action: str = "preview"
+
+
+@router.post("/file-token-by-fid")
+async def file_token_by_fid(data: FidTokenIn, user=Depends(require_super_admin)):
+    """Mint a token for a specific protected deliverable file id (super-admin Factory tools that hold
+    raw asset ids, e.g. Founder Inbox). Only deliverable-* files are token-eligible."""
+    if data.action not in ("preview", "download"):
+        raise HTTPException(400, "action must be preview or download")
+    fid = (data.fid or "").split("/")[-1].split("?")[0]
+    if not fid.startswith("deliverable-"):
+        raise HTTPException(400, "Only deliverable files are token-protected.")
+    import deliverable_tokens as dt
+    from urllib.parse import quote
+    tok = dt.mint(fid, user["id"], data.action)
+    url = f"/api/rendering/asset/{fid}?token={tok}"
+    if data.action == "download":
+        url += f"&download=1&name={quote(fid)}"
+    return {"url": url, "action": data.action, "expires_in": 600}
+
+
 # --- QA Cleanup™ (super-admin, soft-delete to Trash, audit-logged) ---
 import qa_cleanup as qa
 

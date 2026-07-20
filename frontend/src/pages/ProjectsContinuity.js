@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { downloadByFid } from "@/lib/deliverable";
 import { PageHeader } from "@/components/shared";
 import { ManufacturingGPS } from "@/components/ManufacturingGPS";
 import { Panel, StatusChip, VerifiedBadge } from "@/components/qru";
@@ -214,10 +215,10 @@ export default function ProjectsContinuity() {
                               <p className="text-[10px] font-bold uppercase tracking-wide text-navy mb-1">Produced deliverables</p>
                               <div className="flex flex-wrap gap-1.5">
                                 {items[p.id].deliverables.map((d, i) => (
-                                  <a key={i} href={`${BACKEND}${d.url}`} target="_blank" rel="noreferrer" data-testid={`project-deliverable-${p.id}-${i}`}
+                                  <button key={i} onClick={() => downloadByFid(d.url)} data-testid={`project-deliverable-${p.id}-${i}`}
                                     className="inline-flex items-center gap-1 text-[10px] border border-navy/15 rounded-sm px-2 py-1 text-navy hover:border-royal">
                                     <Download className="w-3 h-3" /> {d.label}
-                                  </a>
+                                  </button>
                                 ))}
                               </div>
                             </div>
