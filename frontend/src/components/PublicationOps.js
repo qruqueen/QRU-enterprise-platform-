@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { RefreshCw, Loader2, Sparkles, Trash2, RotateCcw, AlertTriangle, ShieldAlert, FlaskConical } from "lucide-react";
 
 const SUPER = ["Founder & CEO", "Administrator"];
@@ -201,7 +201,8 @@ export function PublicationOps() {
       {/* Confirm upgrade */}
       <Dialog open={confirmUpgrade} onOpenChange={setConfirmUpgrade}>
         <DialogContent data-testid="ops-upgrade-confirm">
-          <DialogHeader><DialogTitle>Upgrade {status?.eligible_count ?? ""} document products?</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Upgrade {status?.eligible_count ?? ""} document products?</DialogTitle>
+            <DialogDescription>Re-render every eligible document deliverable with the Publication Quality Standard™.</DialogDescription></DialogHeader>
           <p className="text-sm text-muted-foreground">This re-renders every eligible document deliverable using the QRU Publication Quality Standard™. No AI/LLM/cover generation. Existing IDs, links, verification and versions are preserved. You can leave this page — the batch keeps running.</p>
           <DialogFooter>
             <button onClick={() => setConfirmUpgrade(false)} className="text-sm px-4 py-2 rounded-sm border">Cancel</button>
@@ -213,7 +214,8 @@ export function PublicationOps() {
       {/* Confirm soft delete */}
       <Dialog open={!!delTarget} onOpenChange={(o) => !o && setDelTarget(null)}>
         <DialogContent data-testid="qa-delete-confirm">
-          <DialogHeader><DialogTitle className="flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-amber-500" /> Move to Trash?</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-amber-500" /> Move to Trash?</DialogTitle>
+            <DialogDescription>Soft delete a test/qa/preview product to Trash (restorable).</DialogDescription></DialogHeader>
           {delTarget && (
             <div className="text-sm space-y-2">
               <p>You are moving this <b>{delTarget.qa_status}</b> product to Trash (soft delete, restorable):</p>
@@ -232,7 +234,8 @@ export function PublicationOps() {
       {/* Confirm permanent delete */}
       <Dialog open={!!permTarget} onOpenChange={(o) => !o && setPermTarget(null)}>
         <DialogContent data-testid="qa-perm-confirm">
-          <DialogHeader><DialogTitle className="flex items-center gap-2 text-red-600"><ShieldAlert className="w-5 h-5" /> Permanently delete?</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="flex items-center gap-2 text-red-600"><ShieldAlert className="w-5 h-5" /> Permanently delete?</DialogTitle>
+            <DialogDescription>This cannot be undone. Requires typing the exact product title.</DialogDescription></DialogHeader>
           {permTarget && (
             <div className="text-sm space-y-2">
               <p className="text-red-600 font-semibold">This cannot be undone. Type the exact product title to confirm:</p>

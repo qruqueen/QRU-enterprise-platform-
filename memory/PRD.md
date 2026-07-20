@@ -12,6 +12,39 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## ✅ Preview regression fix + signed deliverable tokens + Upgrade control + QA Cleanup™ (2026-07-20)
+**Root cause of Preview regression:** the deliverable asset route (`/api/rendering/asset/{fid}`) sent no
+`Content-Disposition` on the inline path and non-native primaries (EPUB/PPTX) opened raw → browsers
+downloaded. Separately the route was PUBLIC (paid files leak-able).
+**Fixes:**
+- **Signed tokens** (`deliverable_tokens.py`, JWT HS256): scoped to exact file + user + action
+  (preview|download) + ~10-min exp. `POST /api/products/{pid}/file-token` mints them (preview picks a
+  browser-renderable representation; EPUB/PPTX/DOCX → generated PDF). Asset route now GATES
+  `deliverable-*` files: requires a matching token → else 401 (expired) / 403 (missing/scope-mismatch).
+  Sets `Content-Disposition: inline` (preview) vs `attachment` (download) + `Cache-Control: private,
+  no-store` + `Referrer-Policy: no-referrer` + `X-Content-Type-Options: nosniff`. Brand/storefront
+  images (cover-/thumb-/store-/qr-) stay PUBLIC.
+- **Frontend:** `DeliverablePreview.js` (embedded viewer: PDF iframe / image / HTML5 audio+video /
+  PDF-representation for epub-pptx-docx + "Download original" + "Open in new tab") + `lib/deliverable.js`
+  token helpers. Wired into ProductShelf (Preview + tokenized Download), ProductDetail (pd-open-reader
+  → modal; tokenized downloads), FinalProductPreview. Preview never downloads/regenerates/AI-spends.
+- **Upgrade control** (`PublicationOps.js` on /governance, super-admin): shows eligible count, confirm
+  dialog, calls `POST /api/products/rerender-documents`, polls status (total/processed/succeeded/failed/
+  remaining/status), prevents duplicate starts, resumable (mongo `deliverable_rerender_jobs`),
+  completion report + failed IDs. Status endpoint returns `eligible_count`, `remaining`, `failed_ids`.
+- **QA Cleanup™** (`qa_cleanup.py` + endpoints, super-admin, audit-logged): explicit `qa_status`
+  (test|qa|preview|null) via ProductDetail `pd-qa-status`; eligibility requires marked AND not
+  published/production AND no paid order (never inferred from title/age/creator); soft-delete →
+  `products_trash` (full snapshot + refs; cleans decoder.manufactured_products + decrements KR
+  products_created; reconciliation); restore re-inserts + re-links; permanent-delete = second confirm
+  (exact-title) + re-asserts published/paid blockers. Audit collection `qa_cleanup_audit`.
+- **VERIFIED — testing agent iteration_85: 17/17 backend pytest + all desktop & mobile UI flows PASS.**
+  Inline-vs-attachment headers, no-token 403, action/file-scope 403, tampered→403, public storefront
+  intact, paid deliverable no-longer-public (403), batch 94/94/0-fail resumable, QA mark→trash→restore
+  →permanent-delete safeguards, published-protection, ZERO AI spend. Only cosmetic Radix a11y warning —
+  fixed with DialogDescription.
+
+
 ## ✅ Phase 3 — Generalized Decoder→Create-Product bridge + Production re-render endpoint (2026-07-19)
 **Generalized bridge (beyond Book):** `decoder_engine.create_product_from_decoder(d, product_type,...)`
 turns a Manufacturing Ready™ understanding into ANY document family. Book → the dedicated 7-button

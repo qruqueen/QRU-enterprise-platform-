@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { mintFileToken, downloadDeliverable } from "@/lib/deliverable";
 import { Loader2, Download, ExternalLink, FileText, Info } from "lucide-react";
 
@@ -52,7 +52,7 @@ export function DeliverablePreview({ open, onOpenChange, product }) {
       <DialogContent className="max-w-4xl max-h-[92vh] overflow-hidden flex flex-col" data-testid="deliverable-preview">
         <DialogHeader>
           <DialogTitle className="font-heading text-xl text-navy truncate">{product?.title || "Preview"}</DialogTitle>
-          <p className="text-xs text-muted-foreground">{product?.product_type} · Preview only — this never downloads or regenerates the product.</p>
+          <DialogDescription className="text-xs text-muted-foreground">{product?.product_type} · Preview only — this never downloads or regenerates the product.</DialogDescription>
         </DialogHeader>
 
         {previewableFormats.length > 1 && (
