@@ -12,7 +12,43 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
-## ✅ Preview regression fix + signed deliverable tokens + Upgrade control + QA Cleanup™ (2026-07-20)
+## ✅ Phase B — Durable Storage for covers/EPUBs/PDFs/deliverables/audio (2026-07-20)
+**Root problem:** the rendered-asset disk (`/app/backend/rendered_assets`, `generated_audiobooks`) is
+EPHEMERAL — every redeploy wipes covers/EPUBs/PDFs/deliverables/audio (recurring loss, 3rd time).
+Emergent support CONFIRMED: no SSH/exec/pre-deploy hook/snapshot — the OLD production container's
+files CANNOT be copied out before it is replaced. So the FIRST redeploy after this ships still loses
+current on-disk prod files (rebuilt deterministically post-redeploy); from then on nothing is lost.
+**Fix (mirror-on-write + materialize-on-read, one durable key = the fid):**
+- `storage.py`: `mirror_file(fid,data)` (best-effort, never raises), `ensure_local(fid,dest)`
+  (re-download from object storage if disk copy gone), `object_exists(fid)` (ranged 1-byte GET),
+  `content_type_for`, async wrappers. Durable path `qru-online/assets/{fid}`.
+- `rendering_engine._save()` now mirrors every non-`tmp` asset → covers/EPUBs/PDFs/HTML/wrap/deliverables
+  are durable at write time (one choke point covers the whole document pipeline).
+- Materialize-on-read wired into ALL serve routes: `routers/rendering.py asset`, `public_commerce`
+  EPUB download, `book_manufacturing` review-zip, `public_site` cover/thumb, `publishing` audiobook-file.
+  `deliverable_renderer` cover re-read also re-materializes (so re-render reuses cover, no AI regen).
+- `product_publishing._audiobook_job` mirrors the MP3 (`audiobook-{pid}.mp3`).
+- **`storage_audit.py` (new) + 6 super-admin endpoints under `/api/rendering/`:**
+  `storage-audit[/status]` (read-only: DB refs vs local+object, classifies missing as deterministic /
+  ai_art / ai_tts / book / other), `storage-recovery[/status]` (deterministic $0 re-render of missing
+  doc deliverables — resumable + idempotent; AI-art & audiobooks go to an APPROVAL list, never
+  auto-regenerated), `storage-backfill[/status]` (push existing on-disk library to object storage,
+  idempotent). Jobs: `storage_audit_reports`, `storage_recovery_jobs`, `storage_disk_backfill_jobs`.
+- **VERIFIED (preview, credit-free):** object round-trip byte-identical; live render → all 4 files
+  (HTML/EPUB/PDF/wrap) present in object storage; deleted local PDF → materialized byte-identical;
+  audit 231 products/12 books scanned (738 refs), classifications correct (poster→other, docs→
+  deterministic); recovery 99 docs run twice → 0 recovered / 99 skipped / 0 failed (idempotent, $0 AI);
+  new endpoints 401 without auth; storefront home/books/cover-thumb = 200. Stripe/orders untouched.
+- **⚠️ REDEPLOY SEQUENCE:** (1) redeploy this Phase B code — the SINGLE unavoidable file gap happens
+  here (old prod disk lost). (2) `POST /api/rendering/storage-audit` in PROD → read the REAL prod
+  missing counts by class. (3) `POST /api/rendering/storage-recovery` → rebuilds doc covers/EPUBs/PDFs
+  at $0. (4) Review the audit `ai_art`/`ai_tts` approval lists → Founder decides before ANY AI/TTS spend.
+  (5) re-audit → 0 missing; confirm a paid EPUB download resolves. Every future redeploy is now durable.
+- **NOTE:** Founder PREVIEW login (temp password `QruFounder2026!`) was REJECTED during this session —
+  verification was done via direct worker/DB calls + unauthenticated 401 checks. Flag if prod differs.
+
+
+
 **Root cause of Preview regression:** the deliverable asset route (`/api/rendering/asset/{fid}`) sent no
 `Content-Disposition` on the inline path and non-native primaries (EPUB/PPTX) opened raw → browsers
 downloaded. Separately the route was PUBLIC (paid files leak-able).

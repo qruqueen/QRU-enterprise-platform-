@@ -36,6 +36,9 @@ def _ensure_thumbnail(canonical_fname: str) -> str | None:
     Returns the thumbnail filename, or None if the master is unavailable."""
     src = os.path.join(re_engine.ASSET_DIR, canonical_fname)
     if not os.path.exists(src):
+        import storage
+        storage.ensure_local(canonical_fname, src)
+    if not os.path.exists(src):
         return None
     stem = canonical_fname.rsplit(".", 1)[0]
     thumb_fname = f"{_THUMB_PREFIX}{stem}.jpg"

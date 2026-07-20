@@ -309,7 +309,14 @@ async def ensure_deliverable(pid, actor="Manufacturing Director™", base_url=""
                 cover_bytes = f.read()
     # Reuse an existing premium hero-art cover (no AI spend); otherwise generate one.
     if cover_bytes is None and p.get("cover_url") and p.get("cover_has_hero_art"):
-        path = os.path.join(re_engine.ASSET_DIR, p["cover_url"].split("/")[-1])
+        fid = p["cover_url"].split("/")[-1]
+        path = os.path.join(re_engine.ASSET_DIR, fid)
+        if not os.path.exists(path):
+            try:
+                import storage
+                storage.ensure_local(fid, path)
+            except Exception:
+                pass
         if os.path.exists(path):
             with open(path, "rb") as f:
                 cover_bytes = f.read()

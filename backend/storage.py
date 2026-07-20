@@ -69,3 +69,88 @@ async def aput_object(path: str, data: bytes, content_type: str) -> dict:
 
 async def aget_object(path: str) -> bytes:
     return await asyncio.to_thread(get_object, path)
+
+
+# --------------------------------------------------------------------------- #
+# Phase B — Durable rendered-asset mirror.
+# The rendered-assets directory (/app/backend/rendered_assets) is EPHEMERAL. To
+# survive redeploys every rendered file (cover / EPUB / PDF / deliverable / audio)
+# is mirrored here under a durable `{APP_NAME}/assets/{fid}` object path. The
+# filename (fid) is globally unique, so it doubles as the durable key.
+# --------------------------------------------------------------------------- #
+ASSET_PREFIX = f"{APP_NAME}/assets"
+
+_MIME = {
+    "pdf": "application/pdf", "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
+    "html": "text/html", "epub": "application/epub+zip", "mp4": "video/mp4", "mp3": "audio/mpeg",
+    "zip": "application/zip", "json": "application/json", "txt": "text/plain",
+    "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+}
+
+
+def content_type_for(fid: str) -> str:
+    ext = fid.rsplit(".", 1)[-1].lower() if "." in fid else ""
+    return _MIME.get(ext, "application/octet-stream")
+
+
+def asset_object_path(fid: str) -> str:
+    return f"{ASSET_PREFIX}/{fid}"
+
+
+def object_exists(fid: str) -> bool:
+    """Cheap existence check for a durable asset (ranged 1-byte GET, no full download)."""
+    for attempt in range(2):
+        try:
+            key = init_storage(force=(attempt > 0))
+            resp = requests.get(f"{STORAGE_URL}/objects/{asset_object_path(fid)}",
+                                headers={"X-Storage-Key": key, "Range": "bytes=0-0"}, timeout=30)
+            if resp.status_code == 403 and attempt < 1:
+                continue
+            return resp.status_code in (200, 206)
+        except Exception as e:
+            logger.info("object_exists check failed for %s: %s", fid, e)
+            return False
+    return False
+
+
+def mirror_file(fid: str, data: bytes, content_type: str = None) -> bool:
+    """Best-effort durable mirror of a rendered asset. NEVER raises — a storage hiccup
+    must not fail a render. Returns True on success."""
+    try:
+        put_object(asset_object_path(fid), data, content_type or content_type_for(fid))
+        return True
+    except Exception as e:
+        logger.warning("asset mirror failed for %s: %s", fid, e)
+        return False
+
+
+def ensure_local(fid: str, dest_path: str) -> bool:
+    """Guarantee a rendered asset exists on the local disk, re-downloading it from durable
+    object storage if the ephemeral copy is gone. Returns True if the file is present locally."""
+    if os.path.exists(dest_path):
+        return True
+    try:
+        data = get_object(asset_object_path(fid))
+    except Exception as e:
+        logger.info("asset %s unavailable in durable storage: %s", fid, e)
+        return False
+    try:
+        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+        with open(dest_path, "wb") as f:
+            f.write(data)
+        return True
+    except Exception as e:
+        logger.warning("failed to write materialized asset %s: %s", fid, e)
+        return False
+
+
+async def amirror_file(fid: str, data: bytes, content_type: str = None) -> bool:
+    return await asyncio.to_thread(mirror_file, fid, data, content_type)
+
+
+async def aensure_local(fid: str, dest_path: str) -> bool:
+    return await asyncio.to_thread(ensure_local, fid, dest_path)
+
+
+async def aobject_exists(fid: str) -> bool:
+    return await asyncio.to_thread(object_exists, fid)

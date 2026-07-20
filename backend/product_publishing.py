@@ -251,6 +251,12 @@ async def _audiobook_job(product_id, voice, model, actor):
             parts.append(await tts.generate_speech(text=chunk, model=model, voice=voice))
         audio = _stitch_mp3(parts)
         (AUDIOBOOK_DIR / f"{product_id}.mp3").write_bytes(audio)
+        # Phase B — mirror the audiobook to durable object storage (survives redeploys).
+        try:
+            import storage
+            await storage.amirror_file(f"audiobook-{product_id}.mp3", audio, "audio/mpeg")
+        except Exception as _e:
+            pass
         est_seconds = int(len(body.split()) / 2.5)
         await db.products.update_one({"id": product_id}, {"$set": {"audiobook": {
             "status": "READY", "format": "mp3", "voice": voice, "bytes": len(audio),

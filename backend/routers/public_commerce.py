@@ -139,6 +139,9 @@ async def download(session_id: str):
     book = await db.book_records.find_one({"id": reserved["book_id"], **_PUBLISHED_QUERY}, {"_id": 0})
     epub = _epub_url(book) if book else None
     path = os.path.join(re_engine.ASSET_DIR, epub.rsplit("/", 1)[-1]) if epub else None
+    if path and not os.path.exists(path):
+        import storage
+        await storage.aensure_local(os.path.basename(path), path)
     if not path or not os.path.exists(path):
         # roll back the reserved slot since we couldn't deliver
         await db.book_purchases.update_one({"session_id": session_id}, {"$inc": {"download_count": -1}})

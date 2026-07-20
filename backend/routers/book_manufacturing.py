@@ -332,6 +332,9 @@ async def resolve_share(token: str):
     fid = s["package_url"].rstrip("/").split("/")[-1]
     path = os.path.join(re_engine.ASSET_DIR, fid)
     if not os.path.exists(path):
+        import storage
+        await storage.aensure_local(fid, path)
+    if not os.path.exists(path):
         return JSONResponse(status_code=404, content={"error": "Package file no longer available."})
     fname = "".join(c for c in s["book_title"] if c.isalnum() or c in " -_").strip().replace(" ", "_")
     return FileResponse(path, media_type="application/zip", filename=f"{fname}_Review_Copy.zip")

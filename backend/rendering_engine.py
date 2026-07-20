@@ -32,6 +32,13 @@ def _save(name_prefix, ext, data: bytes):
     fid = f"{name_prefix}-{gen_id()[:8]}.{ext}"
     with open(os.path.join(ASSET_DIR, fid), "wb") as f:
         f.write(data)
+    # Phase B — mirror durable rendered assets to object storage (skip scratch/tmp files).
+    if not name_prefix.startswith("tmp"):
+        try:
+            import storage
+            storage.mirror_file(fid, data)
+        except Exception as e:
+            logger.warning(f"durable mirror skipped for {fid}: {e}")
     return fid
 
 

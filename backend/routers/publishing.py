@@ -325,6 +325,9 @@ async def audiobook_status(pid: str, user=Depends(get_current_user)):
 async def audiobook_file(pid: str):
     path = ppub.audiobook_file_path(pid)
     if not os.path.exists(path):
+        import storage
+        await storage.aensure_local(f"audiobook-{pid}.mp3", str(path))
+    if not os.path.exists(path):
         raise HTTPException(404, "Audiobook not found — create it first.")
     return FileResponse(str(path), media_type="audio/mpeg", filename=f"{pid}-audiobook.mp3")
 
