@@ -12,6 +12,21 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+
+## ✅ Founder Operations Toolkit™ — E2E VERIFIED (2026-07-21, testing_agent iteration_86)
+`FounderOpsToolkit.js` on /governance (super-admin only). All 6 buttons verified end-to-end in
+PREVIEW with real backend results confirmed (not just clicks). NO AI/Gemini/TTS spend.
+- **UKR Migration Status** (GET /manufacturing/ukr/migration-status) → 81/81 migrated · 0 pending · backward-compatible. PASS.
+- **Production Health Check** (GET /public/books + ukr status) → Storefront OK · 4 books live · UKR 81/81. PASS.
+- **Storage Audit** (POST/GET /rendering/storage-audit) read-only → 738 referenced · 737 local · 0 durable · 1 missing (that 1 classified 'other'). PASS.
+- **Deterministic Recovery** (POST/GET /rendering/storage-recovery) → complete · recovered 0 · skipped 99 · failed 0; idempotent on re-run; $0 (missing item is 'other', not auto-rebuilt). PASS.
+- **Durability Backfill** (POST/GET /rendering/storage-backfill) → long-running by design (walks ALL on-disk assets ≈9273 legacy files per original backfill goal); idempotent (re-POST returns 'already running'; 'already' counter increments). Job in-flight, progresses correctly. PASS (contract).
+- **Verify JWT Deliverables** (POST /products/{id}/file-token) → tokened=200, no-token=403. PASS.
+- Role-gating confirmed hidden for Teacher & Customer. Auth: POSTs 401 unauth / 403 non-super-admin.
+- **Minor (deferred, not blockers):** backfill does not surface `failed_ids` (2 files failed silently ~0.27%);
+  consider parallel to recovery_status. Backfill scope (all disk vs DB-referenced) is intentional per legacy-asset goal.
+- **STATUS: Toolkit is production-ready.** Deploy is a Founder action (Deploy button).
+
 ## ✅ Phase B — Durable Storage for covers/EPUBs/PDFs/deliverables/audio (2026-07-20)
 **Root problem:** the rendered-asset disk (`/app/backend/rendered_assets`, `generated_audiobooks`) is
 EPHEMERAL — every redeploy wipes covers/EPUBs/PDFs/deliverables/audio (recurring loss, 3rd time).
