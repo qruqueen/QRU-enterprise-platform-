@@ -1,0 +1,57 @@
+{
+  "summary": "Iteration 86 — Full end-to-end verification of the Founder Operations Toolkit™ (6 buttons on /governance). Logged in as demo.admin@qru.com (Administrator = super-admin), confirmed the toolkit renders and is HIDDEN for Teacher and Customer roles. Every button was exercised against the live PREVIEW backend and the actual result rendered inside its data-testid element was captured (not just click confirmations). Auth gating on the three POST endpoints was cross-verified with curl (unauth=401, non-super-admin=403).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/rendering/storage-backfill", "issue": "Worker enumerates EVERY file under ASSET_DIR + audiobook dir (total=9273) rather than just the 738 DB-referenced assets. At the observed rate (~10 files / 3s poll) the job takes hours to reach 'complete'; during the ~10 min test window it advanced 540 → 730 done. The status endpoint correctly returns 'running' the entire time and idempotency is preserved (re-POST returns 'A disk backfill is already running.'), but the batch scope may be larger than intended."},
+      {"endpoint": "POST /api/rendering/storage-backfill", "issue": "2 files reported as 'failed' during upload to durable object storage (out of ~730 processed = ~0.27%). No details on which files; backend log warning is written but no failed_ids array is surfaced in status (unlike recovery, which returns failed_ids)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_86.json"
+  ],
+  "action_items": [
+    "Decide whether disk-backfill should include ALL files on disk (~9273) or only DB-referenced assets (~738). Current behaviour uploads every thumbnail/working file, which is likely wider than needed and makes the batch take hours in preview.",
+    "Consider surfacing failed_ids in /storage-backfill/status (parallel to recovery_status) so the founder can see WHICH 2 files failed rather than just the count.",
+    "Optional: throttle the frontend poll interval up to 5–10 s for backfill (currently 3s) — cosmetic; UI works fine."
+  ],
+  "critical_code_review_comments": [
+    "Auth gating is correct: /storage-audit, /storage-recovery, /storage-backfill POSTs all use require_super_admin (401 unauth, 403 non-super-admin verified via curl). GET status endpoints require get_current_user (any logged-in user), which is appropriate.",
+    "Idempotency is proven end-to-end: recovery run twice → identical result (complete · recovered 0 · skipped 99 · failed 0). Backfill re-POST while running returns 'A disk backfill is already running.' (no duplicate worker spawn).",
+    "Zero AI/Gemini/TTS spend: recovery worker classifies missing artefacts as deterministic/ai-art/ai_tts/other and only auto-rebuilds deterministic ones. In this run the single missing file was classified as 'other' → 0 recovered, 0 approval-needed for ai-art/audio. Audit is read-only. No LLM calls were triggered by any button.",
+    "JWT deliverable verification is a real security test: a signed file-token yields 200 and the raw URL without any token yields 403 (confirmed in browser AND via curl earlier). The FounderOpsToolkit does this from the browser context with fetch() bypassing the axios interceptor, correctly demonstrating the un-authenticated case.",
+    "Role-gate on the FE is correct: SUPER = ['Founder & CEO','Administrator']; component returns null otherwise. Teacher and Customer sessions on /governance render the page (or bounce for Customer) but never see founder-ops-toolkit — verified via query_selector returning null.",
+    "storage_audit.py:295-306 — the disk-backfill worker walks os.listdir(ASSET_DIR) plus AUDIOBOOK_DIR indiscriminately. Consider narrowing to files actually referenced in db (as the audit already computes) to avoid wasting object-storage puts on stale/tmp/one-off preview artefacts.",
+    "No leaked mongo _id in any of the JSON responses inspected (audit_status / recovery_status / disk_backfill_status all $set-projected without _id). Good."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% functional (all endpoints reachable and returning real data; auth gating correct)", "frontend": "100% (all six OpCards render, all six ops-*-result elements populated with real backend data)"},
+  "test_credentials": "demo.admin@qru.com / qru-demo-admin-2026 (Administrator = super-admin). Also verified role-gating with demo.instructor@qru.com (Teacher — no toolkit) and demo.student@qru.com (Customer — no toolkit, page blocked).",
+  "seed_data_creation": "None. Zero writes to product/knowledge data. The only side effect is that a durability-backfill job is currently in-flight (started 2026-07-21T01:57:39Z, still 'running' at time of report, uploading files to durable object storage — this is idempotent and safe).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All six data-testids confirmed live on /governance for super-admin: founder-ops-toolkit, ops-ukr-btn/result, ops-health-btn/result, ops-audit-btn/result, ops-recovery-btn/result, ops-backfill-btn/result, ops-jwt-btn/result. Backfill worker sums 9273 files (ASSET_DIR + audiobook dir). Recovery is fully done — repeat runs are safe & no-op. If you need to observe backfill 'complete' state, either wait ~4–5h or scope the worker to referenced files only.",
+  "detailed_results": {
+    "0_auth_login_admin": "PASS — POST /api/auth/login returned access_token; role='Administrator'.",
+    "1_toolkit_visibility_super_admin": "PASS — [data-testid=founder-ops-toolkit] renders; all 6 sub-cards (ops-ukr-card / ops-health-card / ops-audit-card / ops-recovery-card / ops-backfill-card / ops-jwt-card) present.",
+    "1b_toolkit_hidden_teacher": "PASS — logged in as demo.instructor@qru.com (Teacher); /governance renders, but query_selector('[data-testid=founder-ops-toolkit]') returned null.",
+    "1c_toolkit_hidden_customer": "PASS — logged in as demo.student@qru.com (Customer); /governance is blocked at page level (governance-page not visible) and no toolkit visible.",
+    "2_button1_ukr_migration_status": "PASS — GET /api/manufacturing/ukr/migration-status. ops-ukr-result rendered: '81/81 migrated · 0 pending · backward-compatible'. Real backend numbers (total=81, migrated=81, not_migrated=0, fully_backward_compatible=true).",
+    "3_button2_production_health_check": "PASS — Promise.all(GET /public/books, GET /manufacturing/ukr/migration-status). ops-health-result rendered: 'Storefront OK · 4 books live · UKR 81/81'. Real numbers.",
+    "4_button3_storage_audit": "PASS — POST /storage-audit → 200 {status:started}; polled /storage-audit/status until status=complete. ops-audit-result rendered: '738 referenced · 737 local · 0 durable · 1 missing — deterministic 0 · ai-art 0 · audio 0 · other 1'. Read-only. Zero AI spend.",
+    "5_button4_deterministic_recovery_run_1": "PASS — POST /storage-recovery → started; polled until complete. ops-recovery-result rendered: 'complete · recovered 0 · skipped 99 · failed 0 — approval needed — ai-art 0, audio 0'. No AI/Gemini/TTS spend — the single missing artefact is 'other' (not deterministic), so nothing was auto-rebuilt.",
+    "5b_button4_deterministic_recovery_run_2_idempotency": "PASS — Re-ran the button; ops-recovery-result identical: 'complete · recovered 0 · skipped 99 · failed 0'. Confirms idempotency (recovered=0, all skipped as required).",
+    "6_button5_durability_backfill_run_1": "OBSERVATION (per spec) — POST /storage-backfill → started; polled ops-backfill-result for 150s. Job is 'running · 730/9273 · uploaded 719 · already 9 · failed 2' and continued advancing but did NOT reach 'complete' inside the reasonable window. Total=9273 because the worker walks os.listdir(ASSET_DIR)+audiobook dir (all files on disk, not only the 738 DB-referenced ones). Result element populated with real, live progressing numbers — clearly not idle/blank. The 'already' counter (files already in durable storage) is incrementing correctly (0 → 9), which is the idempotency signal.",
+    "6b_button5_durability_backfill_run_2_idempotency": "PASS (backend-verified) — While run 1 is still in flight, a second POST /storage-backfill returned {'ok':true,'status':'running','message':'A disk backfill is already running.'} — no duplicate worker spawned. Combined with the incrementing 'already' counter this proves idempotency at both the job-level and the file-level.",
+    "7_button6_verify_jwt_deliverables": "PASS — ops-jwt-result rendered: 'AI Literacy — Printable PDF: tokened 200 (want 200), no-token 403 (want 403) — PASS'. Real paid deliverable (deliverable-*.pdf) verified: WITH signed token → 200, WITHOUT token → 403.",
+    "8_auth_enforcement_unauth": "PASS — curl POST /storage-audit=401, /storage-recovery=401, /storage-backfill=401 (no Authorization header).",
+    "8b_auth_enforcement_non_super_admin": "PASS — curl POST with Customer token → /storage-audit=403, /storage-recovery=403, /storage-backfill=403.",
+    "9_regression_governance_page_after_toolkit_runs": "PASS — /governance continues to render: 'Knowledge-First™ Compliance' panel (152/18/61/14), 'Total governed: 231 · enforcement is live in preview', 'Upgrade all documents' panel (Eligible=99), governance-tabs constitution/qbos/qeds, no JS errors after clicking every button. Only expected console error is the intentional 403 on the no-token JWT fetch — this is the toolkit's own test asserting the security control.",
+    "10_no_ai_spend": "PASS — Audit is read-only. Recovery classified 0 items as deterministic → no rebuilds triggered. Approval-needed lists (ai_art, ai_tts) were both empty. Backfill copies bytes from disk to object storage — no LLM/Gemini/TTS calls."
+  }
+}
