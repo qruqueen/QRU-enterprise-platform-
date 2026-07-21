@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import api, { formatApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared";
@@ -6,7 +7,7 @@ import { Panel, StatusChip, VerifiedBadge, MetricCard } from "@/components/qru";
 import {
   Loader2, Layers, ShieldCheck, Download, CheckCircle2, XCircle, Sparkles,
   BookOpen, Pencil, GraduationCap, Users, Presentation, ClipboardList, Image as ImageIcon,
-  LayoutTemplate, Clapperboard, Mic, Share2, RefreshCw, Clock,
+  LayoutTemplate, Clapperboard, Mic, Share2, RefreshCw,
 } from "lucide-react";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
@@ -71,7 +72,7 @@ export default function MediaDivision() {
           <MetricCard icon={ShieldCheck} label="Verified KRs Available" value={stats.verified_krs} testid="stat-verified" />
           <MetricCard icon={Layers} accent="gold" label="Catalog Formats" value={stats.formats} testid="stat-formats" />
           <MetricCard icon={Sparkles} label="Products From Division" value={stats.products_from_division} testid="stat-from-division" />
-          <MetricCard icon={Clock} accent="royal" label="Future Formats (Studios)" value={stats.future_formats} testid="stat-future" />
+          <MetricCard icon={Clapperboard} accent="royal" label="Studio Formats (Audio/Video)" value={stats.future_formats} testid="stat-future" />
         </div>
       )}
 
@@ -154,16 +155,27 @@ export default function MediaDivision() {
         </Panel>
       )}
 
-      {/* Future formats */}
-      <Panel title="Coming from the Studios (Stone 3)" icon={Clock} testid="md-future">
+      {/* Audio & video formats — live in the Studios */}
+      <Panel title="Audio & Video — made in the Studios" icon={Clapperboard} testid="md-future">
+        <p className="text-[12px] text-muted-foreground mb-3">
+          These formats are manufactured in the <span className="font-semibold text-navy">Story &amp; Cinema Studio™</span> and{" "}
+          <span className="font-semibold text-navy">Podcast Studio™</span> (audio &amp; video). Pick a verified Knowledge Record there and
+          the Factory renders a real MP3/MP4 — same verified knowledge, branding and governance as everything above.
+        </p>
         <div className="flex flex-wrap gap-2">
           {future.map((f) => (
-            <div key={f.id} data-testid={`future-${f.id}`} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-navy/20 bg-navy/[0.03] text-xs">
-              <Clock className="w-3 h-3 text-muted-foreground" /><span className="font-semibold text-navy">{f.name}</span>
+            <Link key={f.id} to="/cinema-studio" data-testid={`future-${f.id}`}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-royal/30 bg-royal/[0.04] text-xs hover:border-royal hover:bg-royal/[0.08] transition-colors">
+              {f.division === "Audio" ? <Mic className="w-3 h-3 text-royal" /> : <Clapperboard className="w-3 h-3 text-royal" />}
+              <span className="font-semibold text-navy">{f.name}</span>
               <span className="text-[10px] text-muted-foreground">· {f.by}</span>
-            </div>
+            </Link>
           ))}
         </div>
+        <Link to="/cinema-studio" data-testid="md-open-studios"
+          className="inline-flex items-center gap-1.5 mt-3 text-[12px] font-bold text-royal hover:underline">
+          Open the Studios <Clapperboard className="w-3.5 h-3.5" />
+        </Link>
       </Panel>
     </div>
   );
