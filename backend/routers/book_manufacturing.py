@@ -246,6 +246,8 @@ async def authorize(book_id: str, user=Depends(require_super_admin)):
 
 
 class PublicationDetailsReq(BaseModel):
+    title: Optional[str] = None
+    author: Optional[str] = None
     description: Optional[str] = None
     author_bio: Optional[str] = None
     include_blurb: Optional[bool] = None

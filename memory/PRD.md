@@ -13,7 +13,25 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - Language: English only (code, comments, UI).
 
 
-## ✅ Cover legibility + Quality-Gate clearing + Studios clarity (2026-07-21, testing_agent iteration_87 — 4/4 PASS)
+## ✅ Book title editor + audiobook "Chapter twice" fix (2026-07-21)
+Founder working on BOOK-0013 "Patterns of Intelligence FINAL": the file-name word "FINAL" printed on the
+cover and was spoken in the narration, and the narrator said "Chapter 1" twice on EVERY book.
+- **Title/author editor (new):** `POST /api/book-mfg/books/{id}/publication-details` now accepts `title` &
+  `author` (`set_publication_details`). Frontend: inline pencil-edit in the Book Manufacturing identity bar
+  (`edit-identity-btn` → `edit-title-input`/`edit-author-input` → `save-identity-btn`) with a tip to strip
+  file-name artifacts (FINAL/v2/DRAFT) and re-run Design & Audio. Verified: BOOK-0013 title → "Patterns of
+  Intelligence". ($0; existing cover/audio refresh on next Design/Audio run — no auto AI spend.)
+- **"Chapter 1 twice" narration bug (`render_audio_prototype`):** narration was
+  `"{title}. Chapter {n}. {chapter_title}."` but the parsed chapter title already began with "Chapter One:…",
+  so TTS said "Chapter 1. Chapter One…". Now: if the chapter title already starts with "Chapter", narrate it
+  as-is; else prepend "Chapter N.". Verified prefix now: "Patterns of Intelligence. Chapter One: The Question
+  Beneath the Question." — no duplication, no "FINAL".
+- **Audiobook "doesn't work" diagnosis:** OpenAI TTS engine works ($ verified, 45KB test + a real 175s Ch-1
+  prototype rendered for BOOK-0013). The perceived breakage was the double-"Chapter" + "FINAL" narration.
+  NOTE (V1 limitation, unchanged): Button 4 renders a Chapter-1 PROTOTYPE + a guided checklist — NOT yet a
+  full commercial audiobook. Full-book audio rendering remains a future item.
+
+
 Founder reported (on production qru-online.com): tiny unreadable cover titles, a confusing "Coming from the
 Studios" panel, products stuck "Paused" with no way to clear, and a spurious "Something went wrong" on cover-select.
 All fixed in PREVIEW ($0 AI):

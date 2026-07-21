@@ -625,10 +625,18 @@ async def render_audio_prototype(book_id, actor):
         if sum(len(x) for x in buf) > 2600:
             break
     excerpt = " ".join(buf)[:2800].strip() or ch1["title"]
+    # Build the spoken heading WITHOUT saying "Chapter" twice: many manuscripts parse a chapter
+    # title that already begins with "Chapter One:/Chapter 1:" — in that case narrate the title
+    # as-is instead of prepending a second "Chapter N."
+    ch_title = (ch1.get("title") or "").strip()
+    if ch_title.lower().lstrip().startswith("chapter"):
+        heading = ch_title
+    else:
+        heading = f"Chapter {ch1['number']}. {ch_title}".strip().rstrip(".")
     try:
         import cinema_studio
         import rendering_engine as re_engine
-        audio = await cinema_studio._tts_bytes(f"{b['title']}. Chapter {ch1['number']}. {ch1['title']}. {excerpt}")
+        audio = await cinema_studio._tts_bytes(f"{b['title']}. {heading}. {excerpt}")
         fid = re_engine._save("book-audio-prototype", "mp3", audio)
         dur = round(cinema_studio._duration_from_bytes(audio), 1)
     except Exception as e:
@@ -1298,6 +1306,14 @@ async def set_publication_details(book_id, fields, actor):
     if not b:
         return None
     upd = {"updated_at": _now()}
+    if "title" in fields:
+        new_title = (fields.get("title") or "").strip()
+        if new_title:
+            upd["title"] = new_title
+    if "author" in fields:
+        new_author = (fields.get("author") or "").strip()
+        if new_author:
+            upd["author"] = new_author
     if "description" in fields:
         upd["description"] = (fields.get("description") or "").strip()
     if "author_bio" in fields:

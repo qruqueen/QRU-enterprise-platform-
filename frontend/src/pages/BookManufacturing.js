@@ -6,7 +6,7 @@ import { Panel, StatusChip, VerifiedBadge, MetricCard } from "@/components/qru";
 import { ManifestDialog } from "@/components/ManifestDialog";
 import {
   Upload, SpellCheck, Palette, Mic, Video, Send, Activity, Loader2, CheckCircle2,
-  Lock, FileText, ShieldCheck, ChevronRight, BookOpen, AlertTriangle, Download, MapPin, Share2, Play, DollarSign, ClipboardCheck, Sparkles, FileCheck2,
+  Lock, FileText, ShieldCheck, ChevronRight, BookOpen, AlertTriangle, Download, MapPin, Share2, Play, DollarSign, ClipboardCheck, Sparkles, FileCheck2, Pencil, X,
 } from "lucide-react";
 
 const ICONS = { upload: Upload, "spell-check": SpellCheck, palette: Palette, mic: Mic, video: Video, send: Send, activity: Activity };
@@ -44,6 +44,9 @@ export default function BookManufacturing() {
   const [shareInfo, setShareInfo] = useState(null);
   const [allBooks, setAllBooks] = useState([]);
   const [systemTitle, setSystemTitle] = useState("QRU Product Manufacturing System™");
+  const [editIdentity, setEditIdentity] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [authorDraft, setAuthorDraft] = useState("");
 
   const loadBooks = async () => {
     const { data } = await api.get("/book-mfg/books");
@@ -103,6 +106,12 @@ export default function BookManufacturing() {
   const doSanitize = () => run(() => api.post(`/book-mfg/books/${book.id}/sanitize`, { base_url: A }), "Publication Sanitization Pass™ complete — clean retail edition prepared.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
   const doDraftBlurb = () => run(async () => { const { data } = await api.post(`/book-mfg/books/${book.id}/draft-blurb`); toast.message("Blurb drafted — review & approve.", { description: data.status }); });
   const doSavePublication = (fields, ok) => run(() => api.post(`/book-mfg/books/${book.id}/publication-details`, fields), ok || "Publication details saved.");
+  const openEditIdentity = () => { setTitleDraft(book.title || ""); setAuthorDraft(book.author || ""); setEditIdentity(true); };
+  const saveIdentity = async () => {
+    if (!titleDraft.trim()) { toast.error("Title cannot be empty."); return; }
+    await doSavePublication({ title: titleDraft.trim(), author: authorDraft.trim() }, "Title & author updated. Re-run Design & Audio to refresh the cover and narration.");
+    setEditIdentity(false);
+  };
   const doPrintWrap = (paperType) => run(() => api.post(`/book-mfg/books/${book.id}/print-wrap`, { paper_type: paperType }), "Print-ready cover wrap built.");
   const doUploadFile = async (file, meta) => {
     if (!file) return;
@@ -152,17 +161,49 @@ export default function BookManufacturing() {
       <div className="qru-card qru-goldline p-4 mb-5" data-testid="book-identity">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0">
-            <h2 className="font-heading text-xl font-bold text-navy" data-testid="book-title">{book.title}{book.subtitle ? ` — ${book.subtitle}` : ""}</h2>
-            <div className="flex items-center gap-2 flex-wrap mt-1">
-              <span className="text-[11px] text-muted-foreground">by {book.author || "—"}</span>
-              <span className="font-mono text-[10px] text-muted-foreground">{book.book_code}</span>
-              <StatusChip status={book.imprint} tone="royal" />
-            </div>
-            {allBooks.length > 1 && (
-              <select data-testid="book-switcher" value={book.id} onChange={(e) => selectBook(e.target.value)}
-                className="mt-2 text-[12px] border border-border rounded-md bg-card px-2 py-1 text-navy outline-none max-w-full">
-                {allBooks.map((bk) => <option key={bk.id} value={bk.id}>{bk.title} · {bk.book_code}</option>)}
-              </select>
+            {editIdentity ? (
+              <div className="space-y-2" data-testid="edit-identity-form">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-navy">Book Title</label>
+                  <input data-testid="edit-title-input" value={titleDraft} onChange={(e) => setTitleDraft(e.target.value)}
+                    className="w-full mt-0.5 border rounded-md p-2 text-sm font-heading text-navy" autoFocus />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-navy">Author</label>
+                  <input data-testid="edit-author-input" value={authorDraft} onChange={(e) => setAuthorDraft(e.target.value)}
+                    className="w-full mt-0.5 border rounded-md p-2 text-sm text-navy" />
+                </div>
+                <p className="text-[10px] text-muted-foreground">Tip: remove file-name artifacts like “FINAL”, “v2”, “DRAFT”. Re-run Design &amp; Audio afterward so the cover and narration pick up the new title.</p>
+                <div className="flex gap-2">
+                  <button onClick={saveIdentity} disabled={busy} data-testid="save-identity-btn"
+                    className="inline-flex items-center gap-1.5 bg-navy text-white px-3 py-1.5 rounded-md text-[12px] font-bold disabled:opacity-40">
+                    {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />} Save
+                  </button>
+                  <button onClick={() => setEditIdentity(false)} data-testid="cancel-identity-btn"
+                    className="inline-flex items-center gap-1.5 border border-navy/20 text-navy px-3 py-1.5 rounded-md text-[12px] font-bold">
+                    <X className="w-3.5 h-3.5" /> Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-heading text-xl font-bold text-navy" data-testid="book-title">{book.title}{book.subtitle ? ` — ${book.subtitle}` : ""}</h2>
+                  <button onClick={openEditIdentity} data-testid="edit-identity-btn" title="Edit title & author"
+                    className="text-muted-foreground hover:text-royal transition-colors shrink-0"><Pencil className="w-3.5 h-3.5" /></button>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap mt-1">
+                  <span className="text-[11px] text-muted-foreground">by {book.author || "—"}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground">{book.book_code}</span>
+                  <StatusChip status={book.imprint} tone="royal" />
+                </div>
+                {allBooks.length > 1 && (
+                  <select data-testid="book-switcher" value={book.id} onChange={(e) => selectBook(e.target.value)}
+                    className="mt-2 text-[12px] border border-border rounded-md bg-card px-2 py-1 text-navy outline-none max-w-full">
+                    {allBooks.map((bk) => <option key={bk.id} value={bk.id}>{bk.title} · {bk.book_code}</option>)}
+                  </select>
+                )}
+              </>
             )}
           </div>
           <div className="flex flex-col items-end gap-1">
