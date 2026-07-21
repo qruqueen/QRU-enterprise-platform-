@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 87 — Frontend-only verification of 4 QRU Factory fixes: (1) Quality Gates certify-treasure flow, (2) certify auth gating, (3) Media Division Studios panel copy/links, (4) Book cover select no-error regression. ALL FOUR PASS end-to-end against the live PREVIEW backend. Real mutation observed on the certify endpoint (PRD-00223 went Paused 88 → Cleared 95); summary counts updated (Paused 184→183, Cleared 47→48). No AI/Gemini/TTS spend triggered by any tested flow.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_87.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "GateDetail (ManufacturingInspection.js) — role gating is correct: SUPER=['Founder & CEO','Administrator'], panel/btn only render when isSuper && treasureFailing && d.subject. Confirmed at runtime that Administrator role sees the Founder sign-off panel and Customer role cannot even reach /inspection.",
+    "MediaDivision.js — 'coming soon' wording fully removed. Panel is titled 'Audio & Video — made in the Studios'. All 6 future-* chips are react-router-dom <Link to='/cinema-studio'> and md-open-studios link is present and navigates correctly.",
+    "BookManufacturing.js — doSelectCover now uses the single run() wrapper (one reload). No 'Something went wrong' spurious toast observed after selecting a successful AI-art cover on 'The Understanding Tree'. Success toast fires once with the correct copy 'Cover N selected — clean retail edition prepared.' Sonner may render an aria-live duplicate for a11y — that is expected sonner behaviour, not a duplicate emission from the callback.",
+    "Pre-existing (out of scope for this iteration): Console hydration warning in BookManufacturing.js line 164 — '<span> cannot be a child of <option>' in the book-switcher <select>. Caused by Emergent's dev-time <span x-*> instrumentation being injected inside <option>, not by product code. Harmless in production build but worth noting so it doesn't slip into a real bug later."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (per request)", "frontend": "100% — 4/4 flows PASS"},
+  "test_credentials": "Super-admin: demo.admin@qru.com / qru-demo-admin-2026 (Administrator). Customer: demo.student@qru.com / qru-demo-student-2026.",
+  "seed_data_creation": "Real data mutation: certified PRD-00223 (AI Literacy — Poster) via POST /api/inspection/product/{id}/certify-treasure — this is the actual feature under test, deterministic, and expected. Product moved from Paused (score 88) to Cleared (score 95). Cleared count 47→48, Paused 184→183. No writes triggered outside the certify endpoint; no AI/Gemini/TTS calls.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 4 fixes confirmed. When testing the certify flow, wait for auth context to hydrate (~2s after modal open) before asserting certify-treasure-panel visibility — is_visible immediately after opening modal can race the React auth context. Products blocked ONLY by Treasure Standard are plentiful (PRD-00220, 219, 221 still available for retesting after this iteration cleared 00223 and previously 00226). Customer role is blocked at the /inspection route entirely (page never renders inspection-filters), so certify-treasure-btn cannot even theoretically appear for non-super-admin.",
+  "detailed_results": {
+    "0_login_super_admin": "PASS — POST /api/auth/login as demo.admin@qru.com, token stored in localStorage['qru_token'], role='Administrator'.",
+    "1_certify_flow": "PASS — /inspection loaded, paused=184 initially. Clicked filter-paused, clicked inspection-row-PRD-00223 (blocked ONLY by 'Treasure Standard™ Compliance (88/90)'). Modal inspection-detail opened, certify-treasure-panel + certify-treasure-btn visible. Click certify-treasure-btn → success toast: 'Certified Treasure Standard™ — cleared to manufacture (score 95).' → inspection-cleared appeared ('Cleared to manufacture — all blocking gates passed.') → closed modal → paused stat went 184 → 183, cleared stat went 47 → 48 → reopened row: still shows inspection-cleared, gate=Cleared, treasure_standard now 100/90.",
+    "2_certify_auth_gating": "PASS — Logged in as demo.student@qru.com (Customer). /inspection page is blocked at the route level (no inspection-filters, no rows rendered), which is a stricter guarantee than 'button hidden' — the Customer never even sees the inspection UI. Combined with previously curl-verified 403 on POST /api/inspection/product/{id}/certify-treasure for Customer tokens, gating is airtight both server- and client-side.",
+    "3_media_division_studios_panel": "PASS — /media-division loaded, [data-testid=md-future] present, panel title is 'Audio & Video — made in the Studios' (matches spec exactly), no 'Coming from the Studios' or 'coming soon' wording remains. All 6 future-* chips (future-audiobook, future-podcast, future-motion_storybook, future-animated_episode, future-youtube_short, future-promo_video) are <A> tags with href='/cinema-studio'. [data-testid=md-open-studios] is an <A> tag with href='/cinema-studio' and text 'Open the Studios'. Clicking future-audiobook navigated to /cinema-studio.",
+    "4_book_cover_select_no_error": "PASS — /book-manufacturing loaded, 'The Understanding Tree' selected in book-switcher, Design tab entered, clicked a successful AI-art cover concept. Toast content: 'Cover 2 selected — clean retail edition prepared.' — success only. NO 'Something went wrong. Please try again.' spurious error toast appeared afterwards. The double-reload regression is fixed."
+  }
+}

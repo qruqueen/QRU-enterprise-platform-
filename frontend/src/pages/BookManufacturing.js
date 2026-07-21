@@ -87,7 +87,7 @@ export default function BookManufacturing() {
   const doSaveManuscript = (content) => run(async () => { const { data } = await api.post(`/book-mfg/books/${book.id}/manuscript`, { content }); setProof(data.report); }, "Manuscript saved & re-proofed.");
   const doApprove = () => run(() => api.post(`/book-mfg/books/${book.id}/approve-edition`), "Editorial edition locked.");
   const doDesign = () => run(() => api.post(`/book-mfg/books/${book.id}/design`, { base_url: A }), "Design drafted.");
-  const doSelectCover = (concept) => run(() => api.post(`/book-mfg/books/${book.id}/select-cover`, { concept, base_url: A }), `Cover ${concept} selected — clean retail edition prepared.`).then(() => reload(book.id));
+  const doSelectCover = (concept) => run(() => api.post(`/book-mfg/books/${book.id}/select-cover`, { concept, base_url: A }), `Cover ${concept} selected — clean retail edition prepared.`);
   const doAssemble = async () => {
     setBusy(true);
     try {

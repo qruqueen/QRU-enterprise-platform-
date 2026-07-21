@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
+import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 import { PageHeader } from "@/components/shared";
 import { MetricCard, Panel, ScoreBar, StatusChip } from "@/components/qru";
 import {
@@ -7,13 +9,38 @@ import {
 } from "lucide-react";
 
 const scoreColor = (s) => (s >= 90 ? "text-emerald-600" : s >= 70 ? "text-amber-600" : "text-red-600");
+const SUPER = ["Founder & CEO", "Administrator"];
 
-function GateDetail({ productId, onClose }) {
+function GateDetail({ productId, onClose, onCertified }) {
+  const { user } = useAuth();
+  const isSuper = SUPER.includes(user?.role);
   const [d, setD] = useState(null);
+  const [certifying, setCertifying] = useState(false);
   useEffect(() => {
     setD(null);
     api.get(`/inspection/product/${productId}`).then((r) => setD(r.data)).catch(() => setD(false));
   }, [productId]);
+
+  const treasureGate = d && d.gates ? d.gates.find((g) => g.key === "treasure_standard") : null;
+  const treasureFailing = treasureGate && !treasureGate.passed;
+
+  const certify = async () => {
+    setCertifying(true);
+    try {
+      const { data } = await api.post(`/inspection/product/${productId}/certify-treasure`);
+      setD(data.inspection);
+      if (data.cleared) {
+        toast.success(`Certified Treasure Standard™ — cleared to manufacture (score ${data.overall_score_after}).`);
+      } else {
+        toast.message(`Treasure Standard™ certified (score ${data.overall_score_after}). Still blocked by: ${data.remaining_blockers.join(", ")}.`);
+      }
+      onCertified && onCertified();
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Could not certify.");
+    } finally {
+      setCertifying(false);
+    }
+  };
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose} data-testid="inspection-detail">
       <div className="bg-card rounded-lg max-w-2xl w-full max-h-[88vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -41,6 +68,31 @@ function GateDetail({ productId, onClose }) {
                     <ul className="mt-1.5 space-y-1">
                       {d.director_report.missing_information.map((m, i) => <li key={i} className="text-[11px] text-red-800 flex gap-1.5"><span>•</span>{m}</li>)}
                     </ul>
+                  </div>
+                )}
+
+                {isSuper && treasureFailing && d.subject && (
+                  <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3" data-testid="certify-treasure-panel">
+                    <p className="text-xs font-semibold text-amber-900 flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5" /> Founder sign-off
+                    </p>
+                    <p className="text-[11px] text-amber-800 mt-1">
+                      This product is paused only because the <b>Treasure Standard™</b> gate awaits your certification.
+                      Certifying is the deliberate final Founder sign-off the gate is designed to require — it clears the
+                      product to manufacture (it is not a bypass; any other failing gate stays enforced).
+                    </p>
+                    <button onClick={certify} disabled={certifying} data-testid="certify-treasure-btn"
+                      className="mt-2.5 inline-flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-md text-[12px] font-bold disabled:opacity-40">
+                      {certifying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                      Certify Treasure Standard™
+                    </button>
+                  </div>
+                )}
+
+                {d.manufacturing_allowed && (
+                  <div className="mb-4 bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center gap-2" data-testid="inspection-cleared">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <p className="text-xs font-semibold text-emerald-800">Cleared to manufacture — all blocking gates passed.</p>
                   </div>
                 )}
 
@@ -76,7 +128,8 @@ export default function ManufacturingInspection() {
   const [active, setActive] = useState(null);
   const [filter, setFilter] = useState("all");
 
-  useEffect(() => { api.get("/inspection/summary").then((r) => setData(r.data)).catch(() => {}); }, []);
+  const loadSummary = () => api.get("/inspection/summary").then((r) => setData(r.data)).catch(() => {});
+  useEffect(() => { loadSummary(); }, []);
 
   if (!data) return <div className="flex justify-center py-32"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
 
@@ -130,7 +183,7 @@ export default function ManufacturingInspection() {
         </div>
       </Panel>
 
-      {active && <GateDetail productId={active} onClose={() => setActive(null)} />}
+      {active && <GateDetail productId={active} onClose={() => setActive(null)} onCertified={loadSummary} />}
     </div>
   );
 }

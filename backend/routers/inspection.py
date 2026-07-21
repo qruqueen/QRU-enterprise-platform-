@@ -1,8 +1,10 @@
 """QRU Manufacturing Inspection System™ (MO-001 / P4) — API surface. Deterministic ($0 AI)."""
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 
 from database import db
-from auth import get_current_user
+from auth import get_current_user, require_super_admin
+from org_activity import log_org
 import inspection_system as insp
 import connectors as cx
 
@@ -56,3 +58,40 @@ async def inspect_kr(kr_id: str, user=Depends(get_current_user)):
         raise HTTPException(404, "Knowledge Record not found")
     import product_automation as pa
     return insp.inspect_kr_for_manufacture(kr, None, pa.RECIPES)
+
+
+@router.post("/product/{product_id}/certify-treasure")
+async def certify_treasure(product_id: str, user=Depends(require_super_admin)):
+    """Founder Treasure Standard™ sign-off. This is the deliberate final certification the
+    Treasure Standard gate is designed to require — NOT a bypass. Certifying flips the
+    Treasure Standard component to 100, which clears the gate IF no OTHER blocking gate fails.
+    Refuses to certify a product that has no rendered customer deliverable (honest — never
+    certify an empty product). Super-admin only, audit-logged."""
+    p = await db.products.find_one({"id": product_id})
+    if not p:
+        raise HTTPException(404, "Product not found")
+    if not p.get("deliverable_ready"):
+        raise HTTPException(400, "Cannot certify Treasure Standard™ — this product has no rendered customer deliverable yet. Render its deliverable first.")
+    ops = await _operational_count()
+    before = insp.inspect_product(p, ops)
+    # Other blocking gates that certification will NOT clear (honest disclosure to the caller).
+    other_blockers = [g["label"] for g in before["gates"]
+                      if g["blocking"] and not g["passed"] and g["key"] != "treasure_standard"]
+    now = datetime.now(timezone.utc).isoformat()
+    await db.products.update_one({"id": product_id}, {"$set": {
+        "treasure_standard": True,
+        "treasure_standard_certified_by": user.get("name"),
+        "treasure_standard_certified_at": now,
+    }})
+    p = await db.products.find_one({"id": product_id})
+    after = insp.inspect_product(p, ops)
+    await log_org("Manufacturing Inspection™", "Governance",
+                  f"certified Treasure Standard™ for '{p.get('title')}'", p.get("product_code", product_id))
+    return {
+        "certified": True,
+        "cleared": after["manufacturing_allowed"],
+        "overall_score_before": before["overall_score"],
+        "overall_score_after": after["overall_score"],
+        "remaining_blockers": other_blockers,
+        "inspection": after,
+    }
