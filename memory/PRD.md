@@ -13,7 +13,25 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - Language: English only (code, comments, UI).
 
 
-## ✅ Publish Success Dashboard™ + auto DB-environment detection (2026-07-21, testing_agent iteration_89 — 5/5 PASS)
+## ✅ Content-integrity guard + cover legibility (2026-07-21, testing_agent iteration_90 — 4/4 PASS)
+Founder found (on production) a book titled "AI Literacy K-12" whose BODY was internal QRU Factory
+documentation (Product Manufacturing File, audit records, governed knowledge record) — the Book Recipe
+faithfully rendered the WRONG source KR (the Factory's own standard doc, which uses "AI Literacy K-12" as an example).
+- **Root cause:** `_decoder_to_manuscript` renders whatever Decoder/KR it's given. The source content was the
+  governance/standard document, not an educational AI-literacy KR. This is a content-SOURCING problem.
+- **Fix (code safeguard, Treasure Standard™ / STD-UKR-0001 Executable Completion Rule):** new
+  `book_manufacturing.content_integrity_check(title, subtitle, content)` — deterministic density scan of internal
+  Factory vocabulary; flags when body reads like Factory docs but the title is NOT about the Factory (Factory-titled
+  books are allowed). Surfaced in get_book as `content_integrity`, a red banner (`content-integrity-warning`) in
+  Book Manufacturing, and a FAILED QA stage on the Publish Success Dashboard. Verified: flags mismatched book,
+  no false positives on legit books, no regressions.
+- **Production remedy (Founder action):** the live "AI Literacy K-12" book must be rebuilt from the CORRECT
+  educational source KR (not the standard doc), then re-authorized. Its cover re-renders with the legibility fix.
+- **Cover legibility:** `design_studio.compose()` title auto-fit (large, bold, fills panel; enlarged subtitle/byline)
+  was shipped earlier this session and verified. EXISTING covers are baked images — they upgrade only on re-render
+  (regenerate cover / rebuild). Production covers will improve after re-render + redeploy.
+
+
 Founder reframed the goal: "can the Factory reliably DELIVER products to customers?" Built the definitive answer.
 - **Publish Success Dashboard™** (`shipping_status.py`, GET /api/publishing/shipping-status, page /shipping-status,
   linked from /distribution via 'open-publish-dashboard'): every product shows an 8-stage pipeline —
