@@ -13,7 +13,30 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - Language: English only (code, comments, UI).
 
 
-## ✅ Founder Operations Toolkit™ — E2E VERIFIED (2026-07-21, testing_agent iteration_86)
+## ✅ Cover legibility + Quality-Gate clearing + Studios clarity (2026-07-21, testing_agent iteration_87 — 4/4 PASS)
+Founder reported (on production qru-online.com): tiny unreadable cover titles, a confusing "Coming from the
+Studios" panel, products stuck "Paused" with no way to clear, and a spurious "Something went wrong" on cover-select.
+All fixed in PREVIEW ($0 AI):
+- **Cover title legibility (`design_studio.compose`)** — replaced the fixed 70/92/118px title cap with an
+  AUTO-FIT that grows the serif-bold title to fill the panel width (up to 3 lines), enlarged subtitle/byline,
+  recentred the legibility panel. Long titles (e.g. "AI Literacy K-12 — Parent / Family Guide") now render large
+  and bold instead of microscopic. Verified by direct render. NOTE: existing covers upgrade only on their next
+  re-render/regenerate-cover (no auto-regen — no silent AI spend).
+- **Quality Gates clear (`routers/inspection.py` + `ManufacturingInspection.js`)** — new
+  `POST /api/inspection/product/{id}/certify-treasure` (super-admin, audit-logged, refuses if no deliverable).
+  Certifying is the deliberate Founder Treasure Standard™ sign-off the gate is designed to require (NOT a bypass) —
+  it flips the Treasure component to 100 and clears the product IF no OTHER blocking gate fails (remaining blockers
+  reported honestly). New "Founder sign-off → Certify Treasure Standard™" panel appears in the gate-detail modal for
+  super-admin when the Treasure gate is failing. Verified: PRD-00223 Paused(88)→Cleared(95); Paused 184→183.
+- **Studios panel (`MediaDivision.js`)** — relabeled "Coming from the Studios (Stone 3)" → "Audio & Video — made in
+  the Studios"; each format chip is now a Link to /cinema-studio (Cinema/Podcast Studio are LIVE, not "coming soon").
+- **Cover-select error (`BookManufacturing.js`)** — removed a redundant double-reload in `doSelectCover` (run()
+  already reloads) that caused the spurious "Something went wrong" toast after a successful selection.
+- **DEPLOY:** these are PREVIEW code changes — Founder must click Deploy to see them on qru-online.com.
+- **OPEN / next:** Poster Studio visual-quality polish (keep factual/machine-rendered, improve typography) — approved,
+  not yet started. Books publish to qru-online automatically on "Authorize Release" (full Final Release Gate required).
+
+
 `FounderOpsToolkit.js` on /governance (super-admin only). All 6 buttons verified end-to-end in
 PREVIEW with real backend results confirmed (not just clicks). NO AI/Gemini/TTS spend.
 - **UKR Migration Status** (GET /manufacturing/ukr/migration-status) → 81/81 migrated · 0 pending · backward-compatible. PASS.
