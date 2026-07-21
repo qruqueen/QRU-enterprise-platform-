@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from auth import get_current_user, require_super_admin
 import decoder_engine as de
+import book_manufacturing as bm
 import media_division as md
 
 router = APIRouter(prefix="/api/decoder", tags=["decoder"])
@@ -98,6 +99,7 @@ async def certify_treasure(did: str, user=Depends(require_super_admin)):
 
 class CreateProductInput(BaseModel):
     product_type: Optional[str] = "Book"
+    override_source_gate: Optional[bool] = False
 
 
 @router.get("/product-types/available")
@@ -106,15 +108,36 @@ async def product_types_available(user=Depends(get_current_user)):
     return {"product_types": de.available_product_types()}
 
 
+@router.get("/{did}/verify-source")
+async def verify_source_gate(did: str, user=Depends(get_current_user)):
+    """QRU Source Verification Gate™ — preview the selected source + automatic title↔source match
+    verdict BEFORE manufacturing. A 'critical' verdict means the source does not match the intended
+    publication and manufacturing must not proceed without an explicit admin override."""
+    d = await de.get_decoder(did)
+    if not d:
+        raise HTTPException(404, "Understanding record not found.")
+    return await bm.verify_source(d)
+
+
 @router.post("/{did}/create-product")
 async def create_product(did: str, request: Request, data: CreateProductInput = CreateProductInput(),
                          user=Depends(require_super_admin)):
     """Create Product — the single bridge from a Manufacturing Ready™ understanding into a product.
     Book → the 7-button Book Manufacturing line; every other document family → the shared products
-    pipeline, inheriting the QRU Publication Quality Standard™ (Phase 2). Knowledge-First preserved."""
+    pipeline, inheriting the QRU Publication Quality Standard™ (Phase 2). Knowledge-First preserved.
+    Enforces the QRU Source Verification Gate™: a critical title↔source mismatch STOPS manufacturing
+    before the first page is generated, unless a super-admin explicitly overrides."""
     d = await de.get_decoder(did)
     if not d:
         raise HTTPException(404, "Understanding record not found.")
+    gate = await bm.verify_source(d)
+    if isinstance(gate, dict) and gate.get("match", {}).get("level") == "critical" and not data.override_source_gate:
+        raise HTTPException(status_code=409, detail={
+            "error": "source_verification_failed",
+            "message": ("🔴 Critical Manufacturing Error — the requested publication topic does not match the "
+                        "selected source. Manufacturing stopped before the first page. " + gate["match"]["reason"]),
+            "gate": gate,
+        })
     base_url = str(request.base_url).rstrip("/")
     res = await de.create_product_from_decoder(d, data.product_type or "Book",
                                                user.get("name", "Founder"), base_url)

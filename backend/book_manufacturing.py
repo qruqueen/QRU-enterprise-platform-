@@ -227,6 +227,74 @@ def _decoder_to_manuscript(d):
     return "\n".join(str(p) for p in parts)
 
 
+async def verify_source(d, requested_title=None):
+    """QRU Source Verification Gate™ — FIRST line of defense (before manufacturing).
+    Returns the selected source's identity + a content preview + an automatic title↔source match
+    verdict. A 'critical' verdict means the source content does not match the intended publication
+    and manufacturing must STOP (override only via explicit admin action). Deterministic, $0."""
+    if not d:
+        return {"error": "Source understanding not found."}
+    title = (requested_title or d.get("title") or "").strip()
+    objective = d.get("learning_objective") or ""
+    manuscript = _decoder_to_manuscript(d)
+    # First 3-5 paragraphs of the assembled source (skip the H1 title line).
+    body_paras = [p.strip() for p in manuscript.split("\n") if p.strip() and not p.strip().startswith("#")]
+    preview_paras = body_paras[:5]
+
+    # Pull the underlying Knowledge Record identities.
+    kr_ids = d.get("source_kr_ids", []) or []
+    kr_docs = []
+    if kr_ids:
+        kr_docs = await db["knowledge_records"].find({"id": {"$in": kr_ids}}, {"_id": 0, "id": 1, "title": 1, "status": 1, "version": 1}).to_list(20)
+
+    # Content-integrity: does the source body read like internal Factory docs under a non-Factory title?
+    ci = content_integrity_check(title, objective, manuscript)
+
+    # Does the underlying Knowledge Record itself look like a Factory/standard/governance record,
+    # while the requested publication is NOT about the Factory? (The exact "AI Literacy K-12 built from
+    # STD-UKR standard doc" failure.) This is a precise signal — no fragile keyword-overlap guessing.
+    title_factory = any(h in title.lower() for h in _FACTORY_SUBJECT_HINTS)
+    def _factoryish(s):
+        s = (s or "").lower()
+        return any(h in s for h in _FACTORY_SUBJECT_HINTS) or "std-ukr" in s
+    kr_factory = any(_factoryish(k.get("title")) for k in kr_docs)
+    source_is_factory_doc = kr_factory and not title_factory
+
+    critical = (not ci.get("ok", True)) or source_is_factory_doc
+    if not ci.get("ok", True):
+        reason = ci.get("message")
+    elif source_is_factory_doc:
+        reason = ("The selected Knowledge Record is an internal Factory/standard record, but the requested "
+                  "publication is not about the QRU Factory. This is almost certainly the wrong source.")
+    else:
+        reason = "Source matches the intended publication subject."
+
+    return {
+        "source": {
+            "decoder_id": d.get("decoder_id"), "title": d.get("title"),
+            "version": d.get("version") or "1.0",
+            "status": ("Gold Standard Verified" if d.get("treasure_standard") else (d.get("review_state") or "Draft")),
+            "department": d.get("domain") or d.get("department") or "—",
+            "last_verified": d.get("verified_at") or d.get("updated_at") or d.get("created_at"),
+            "knowledge_records": kr_docs,
+        },
+        "preview": {
+            "paragraphs": preview_paras,
+            "learning_objective": objective,
+            "audience": d.get("audience") or "General",
+            "product_family_tags": d.get("tags") or d.get("product_families") or [],
+        },
+        "requested_title": title,
+        "match": {
+            "ok": not critical,
+            "level": "critical" if critical else "ok",
+            "reason": reason,
+            "factory_term_density_per_1000w": ci.get("factory_term_density_per_1000w"),
+        },
+    }
+
+
+
 async def create_book_from_decoder(d, actor):
     """Create a Canonical Book Record from a Manufacturing Ready™ Decoder Record (Stone 2)."""
     if not d:

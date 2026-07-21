@@ -94,13 +94,27 @@ export default function DecoderEngine() {
   const [selected, setSelected] = useState(null);
   const [acting, setActing] = useState(false);
   const [productTypes, setProductTypes] = useState(["Book"]);
+  const [gate, setGate] = useState(null);
+  const [gateType, setGateType] = useState("Book");
   const navigate = useNavigate();
 
-  const createProduct = async (productType = "Book") => {
+  const openGate = async (productType = "Book") => {
+    if (!selected) return;
+    setGateType(productType);
+    setActing(true);
+    try {
+      const { data } = await api.get(`/decoder/${selected.id}/verify-source`);
+      setGate(data);
+    } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
+    finally { setActing(false); }
+  };
+
+  const confirmManufacture = async (override = false) => {
     if (!selected) return;
     setActing(true);
     try {
-      const { data } = await api.post(`/decoder/${selected.id}/create-product`, { product_type: productType });
+      const { data } = await api.post(`/decoder/${selected.id}/create-product`, { product_type: gateType, override_source_gate: override });
+      setGate(null);
       if (data.engine === "book" || data.book_id) {
         toast.success(`“${data.title}” created — opening the Book Manufacturing System™.`);
         navigate(`${data.route || "/book-manufacturing"}?book=${data.book_id}`);
@@ -108,9 +122,11 @@ export default function DecoderEngine() {
         toast.success(`“${data.title}” created${data.publication_quality_applied ? " with Publication Quality Standard™" : ""} — opening My Products.`);
         navigate(`${data.route || "/products"}?highlight=${data.id}`);
       }
-    } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
+    } catch (e) { toast.error(formatApiError(e.response?.data?.detail?.message || e.response?.data?.detail)); }
     finally { setActing(false); }
   };
+
+  const createProduct = openGate;
 
   const load = () => {
     api.get("/decoder/stats").then((r) => setStats(r.data)).catch(() => {});
@@ -280,6 +296,68 @@ export default function DecoderEngine() {
                 </div>
               )}
             </Panel>
+          </div>
+        </div>
+      )}
+
+      {gate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" data-testid="source-verification-gate" onClick={() => !acting && setGate(null)}>
+          <div className="bg-card rounded-xl max-w-lg w-full max-h-[88vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="p-5 border-b border-border flex items-center gap-2">
+              <ShieldQuestion className="w-5 h-5 text-royal" />
+              <div>
+                <p className="font-heading text-lg font-bold text-navy">QRU Source Verification Gate™</p>
+                <p className="text-[11px] text-muted-foreground">Confirm the source before the first page is manufactured.</p>
+              </div>
+            </div>
+            <div className="p-5 space-y-4">
+              {/* Verdict */}
+              {gate.match.level === "critical" ? (
+                <div className="rounded-lg border border-red-300 bg-red-50 p-3" data-testid="gate-critical">
+                  <p className="text-sm font-bold text-red-800">🔴 Critical Manufacturing Error</p>
+                  <p className="text-[12px] text-red-700 mt-1">{gate.match.reason}</p>
+                  <p className="text-[11px] text-red-600 mt-1">Manufacturing is stopped before the first page. Only a super-admin may override.</p>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-3" data-testid="gate-ok">
+                  <p className="text-sm font-bold text-emerald-800">✓ Source matches intended publication</p>
+                  <p className="text-[12px] text-emerald-700 mt-1">{gate.match.reason}</p>
+                </div>
+              )}
+              {/* Manufacturing confirmation */}
+              <div className="text-[12px]">
+                <p className="text-navy"><span className="text-muted-foreground">Book Title:</span> <b>{gate.requested_title}</b></p>
+                <p className="text-navy mt-1"><span className="text-muted-foreground">Source:</span> <b>{gate.source.title}</b> <span className="font-mono text-[10px] text-muted-foreground">{gate.source.decoder_id}</span></p>
+                <p className="text-navy mt-1"><span className="text-muted-foreground">Status:</span> {gate.source.status} · v{gate.source.version} · {gate.source.department}</p>
+                {gate.source.knowledge_records?.length > 0 && (
+                  <p className="text-navy mt-1"><span className="text-muted-foreground">Knowledge Record(s):</span> {gate.source.knowledge_records.map((k) => k.title).join("; ")}</p>
+                )}
+                <p className="text-navy mt-1"><span className="text-muted-foreground">Audience:</span> {gate.preview.audience}</p>
+              </div>
+              {/* Preview */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-royal mb-1">Source preview</p>
+                <div className="text-[11px] text-muted-foreground bg-muted/30 rounded-md p-2 max-h-40 overflow-y-auto space-y-1.5" data-testid="gate-preview">
+                  {gate.preview.learning_objective && <p className="italic">Objective: {gate.preview.learning_objective}</p>}
+                  {(gate.preview.paragraphs || []).map((p, i) => <p key={i}>{p}</p>)}
+                </div>
+              </div>
+            </div>
+            <div className="p-4 border-t border-border flex items-center justify-end gap-2">
+              <button onClick={() => setGate(null)} disabled={acting} data-testid="gate-cancel-btn"
+                className="px-4 py-2 rounded-md text-sm font-bold border border-navy/20 text-navy">Cancel</button>
+              {gate.match.level === "critical" ? (
+                <button onClick={() => confirmManufacture(true)} disabled={acting} data-testid="gate-override-btn"
+                  className="px-4 py-2 rounded-md text-sm font-bold bg-red-700 text-white disabled:opacity-40">
+                  {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Override & Manufacture Anyway"}
+                </button>
+              ) : (
+                <button onClick={() => confirmManufacture(false)} disabled={acting} data-testid="gate-confirm-btn"
+                  className="px-4 py-2 rounded-md text-sm font-bold bg-navy text-white disabled:opacity-40">
+                  {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm & Manufacture"}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
