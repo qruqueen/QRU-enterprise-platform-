@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge } from "@/components/qru";
 import { toast } from "sonner";
 import {
-  Loader2, Radio, Store, Youtube, Globe, HardDrive, Mail, ShoppingBag, BookText,
+  Loader2, Radio, Store, Youtube, Globe, HardDrive, Mail, ShoppingBag, BookText, PackageCheck,
   CheckCircle2, XCircle, RotateCw, ShieldCheck, BarChart3, ExternalLink, Send, Lock, Settings2, KeyRound, X,
 } from "lucide-react";
 
@@ -79,6 +79,18 @@ export default function DistributionCenter() {
         description="Manufacture once, publish everywhere — verified. Every destination implements one Connector SDK™; the Publishing, Delivery, Verification and Analytics engines run one consistent workflow: distribute → verify → store external IDs → analytics."
         actions={<VerifiedBadge label="Connector SDK™ · Treasure Standard™" testid="dist-badge" />}
       />
+
+      <button onClick={() => nav("/shipping-status")} data-testid="open-publish-dashboard"
+        className="w-full mb-6 flex items-center justify-between gap-3 rounded-lg border border-royal/30 bg-royal/[0.05] hover:bg-royal/[0.09] transition-colors p-4 text-left">
+        <div className="flex items-center gap-3">
+          <PackageCheck className="w-5 h-5 text-royal shrink-0" />
+          <div>
+            <p className="text-sm font-bold text-navy">Publish Success Dashboard™</p>
+            <p className="text-[11px] text-muted-foreground">The definitive 8-stage shipping status for every product — Knowledge → Manufacturing → QA → Authorized → Published → Store Sync → Purchase → Delivery.</p>
+          </div>
+        </div>
+        <ExternalLink className="w-4 h-4 text-royal shrink-0" />
+      </button>
 
       {/* Connectors grid */}
       <p className="overline text-royal mb-3 flex items-center gap-1.5"><Radio className="w-3.5 h-3.5" /> Connectors ({connectors.length})</p>

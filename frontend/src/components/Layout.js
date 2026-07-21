@@ -28,7 +28,7 @@ const ICON = {
   "/storyboard-studio": Clapperboard, "/cinema-studio": Film, "/little-legacy": Baby, "/flagship-showcase": Film, "/media-studio": Clapperboard,
   "/wis": UsersRound, "/media-library": Clapperboard, "/creative-studio": Palette, "/visual-studio": Eye, "/media-starter-kit": PackageCheck,
   "/poster-studio": LayoutTemplate, "/inspection": ShieldHalf,
-  "/store": Store, "/youtube": Youtube, "/connectors": UploadCloud, "/distribution": Radio,
+  "/store": Store, "/youtube": Youtube, "/connectors": UploadCloud, "/distribution": Radio, "/shipping-status": PackageCheck,
   "/constitution": Scale, "/governance": BrainIcon, "/trust": ShieldCheck, "/agents": UsersRound,
   "/product-protection": ShieldHalf, "/design-director": Gauge, "/design-intelligence": Sparkles,
   "/founder-inbox": Inbox, "/command-center": LayoutDashboard, "/evidence": Database, "/factory-health": Stethoscope,

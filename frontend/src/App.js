@@ -73,6 +73,7 @@ import KnowledgeRecord2 from "@/pages/KnowledgeRecord2";
 import ManufacturingDirector from "@/pages/ManufacturingDirector";
 import YouTubePublisher from "@/pages/YouTubePublisher";
 import DistributionCenter from "@/pages/DistributionCenter";
+import ShippingDashboard from "@/pages/ShippingDashboard";
 import FactoryAgents from "@/pages/FactoryAgents";
 import VisualStudio from "@/pages/VisualStudio";
 import MediaStarterKit from "@/pages/MediaStarterKit";
@@ -195,6 +196,7 @@ function EnterpriseRoutes() {
         <Route path="director" element={<ManufacturingDirector />} />
         <Route path="youtube" element={<YouTubePublisher />} />
         <Route path="distribution" element={<DistributionCenter />} />
+        <Route path="shipping-status" element={<ShippingDashboard />} />
         <Route path="agents" element={<FactoryAgents />} />
         <Route path="visual-studio" element={<VisualStudio />} />
         <Route path="media-starter-kit" element={<MediaStarterKit />} />

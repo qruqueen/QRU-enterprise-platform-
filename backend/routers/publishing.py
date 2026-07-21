@@ -16,12 +16,27 @@ from auth import get_current_user
 from database import db
 from models import gen_id, now_iso
 import publishing_standard as ps
+import shipping_status as ship
+from fastapi import Request
 
 router = APIRouter(prefix="/api/publishing", tags=["publishing"])
 
 COVER_DIR = Path(os.environ.get("QRU_COVER_DIR", "/app/backend/generated_covers"))
 COVER_DIR.mkdir(parents=True, exist_ok=True)
 COVER_STATES = ps.COVER_STANDARD["cover_states"]
+
+
+@router.get("/shipping-status")
+async def get_shipping_status(user=Depends(get_current_user)):
+    """Publish Success Dashboard™ — the definitive 8-stage shipping status for every product."""
+    return await ship.shipping_status()
+
+
+@router.get("/environment")
+async def get_environment(request: Request, user=Depends(get_current_user)):
+    """Auto-detect whether preview & production share a database (the Factory determines this itself)."""
+    host = request.headers.get("x-forwarded-host") or (request.url.hostname or "")
+    return await ship.environment_report(host)
 
 
 @router.get("/standard")
