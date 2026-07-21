@@ -13,7 +13,36 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - Language: English only (code, comments, UI).
 
 
-## ✅ Book-mfg fixes + full audiobook + STD-UKR-0001 freeze (2026-07-21)
+## ✅ Publish Success Dashboard™ + auto DB-environment detection (2026-07-21, testing_agent iteration_89 — 5/5 PASS)
+Founder reframed the goal: "can the Factory reliably DELIVER products to customers?" Built the definitive answer.
+- **Publish Success Dashboard™** (`shipping_status.py`, GET /api/publishing/shipping-status, page /shipping-status,
+  linked from /distribution via 'open-publish-dashboard'): every product shows an 8-stage pipeline —
+  Knowledge Record → Manufacturing → QA → Authorized → Published → Store Sync → Purchase Tested → Delivery Tested —
+  each green/grey from REAL data (purchases from book_purchases, delivery from download_count). All green = truly shipped.
+  Verified: 15 products, 1 fully shipped; BOOK-0013 'Patterns of Intelligence' = 6/8 (Published ✓ + Store Sync ✓;
+  only Purchase/Delivery ungreen) — confirming it published correctly; next='Purchase Tested'.
+- **Environment auto-detection** (GET /api/publishing/environment): each app host that touches THIS database writes a
+  beacon; if >1 distinct host → SHARED db, else single/separate. The Factory determines this itself (Founder no longer
+  asked implementation details). Current verdict: only preview host registered → preview & prod likely SEPARATE DBs;
+  auto-updates when production deploys and loads once.
+- Also fixed: Parts-vs-chapters, subtitle editor, always-editable pricing pencil (see prior entry).
+
+### Publish vs Deploy (clarified for Founder)
+- PUBLISH = Factory DB → product authorized (works; BOOK-0013 live on PREVIEW store).
+- DEPLOY = new app version → production website (qru-online.com). Last prod deploy FAILED (transient Cloud Build;
+  deployment_agent found NO code blockers, yarn build passes) → fix is re-Deploy.
+
+### Confirmed sequence (Founder 2026-07-21, revenue-first, stabilize-before-expand)
+0. [DONE] Publish Success Dashboard™ + auto DB detection.
+1. Stabilize publishing: prove Purchase + Delivery (run a test purchase → those stages go green).
+2. Audiobook on QRU-online: free Ch-1 sample (~3-5 min teaser) + purchasable full audiobook (own SKU + e-book bundle).
+3. Voice Asset Manufacturing Framework™ v1.0 — ElevenLabs cloning from day one (Founder provides key). Reuse
+   character_registry pattern; provider-agnostic; analyze→Voice DNA→samples→review→approve→registry→reuse.
+4. Posters (Founder uploads 3-4 gold refs) — factual/machine SVG, 300 DPI large-format + print-ready PDF.
+5. YouTube publisher (check existing auth) — simple (cover+audio MP4) default, rich optional.
+6. [Medium] Product Family Manufacturing Line™ (Universal Distribution Framework™) — AFTER publishing proven.
+
+
 - **Parts vs chapters:** new `book_structure.content_units()` robustly detects divisions — `## Chapter` books AND `# Part …` books (which previously parsed as 0 chapters). `parse_book` falls back to it; full-audiobook `_chapter_texts` uses it. Verified: a `# Part One/Two/Three` book → 3 units (book-title heading dropped); normal `## Chapter` books unchanged.
 - **Subtitle editor:** identity editor now edits Title + **Subtitle** + Author (`edit-subtitle-input`); backend publication-details accepts `subtitle`. Verified.
 - **Pricing pencil:** Publish panel price input is now pre-filled with current/estimated price and always editable (button "Approve Price" / "Update Price"), so the Founder can revise pricing anytime. The Pricing Advisor™ already provides the estimate.

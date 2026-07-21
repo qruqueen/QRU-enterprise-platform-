@@ -46,7 +46,7 @@ export default function ShippingDashboard() {
           <div>
             <p className="text-[12px] font-bold text-navy">Environment auto-detection</p>
             <p className="text-[11px] text-muted-foreground mt-0.5">{env.explanation}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">Known hosts: {env.distinct_hosts.join(", ")} · DB: {env.db_name}</p>
+            <p className="text-[10px] text-muted-foreground mt-1">Known hosts: {(env.distinct_hosts || []).join(", ") || "—"} · DB: {env.db_name || "—"}</p>
           </div>
         </div>
       )}
