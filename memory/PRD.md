@@ -13,7 +13,26 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - Language: English only (code, comments, UI).
 
 
-## ✅ Book title editor + audiobook "Chapter twice" fix (2026-07-21)
+## ✅ Book-mfg fixes + full audiobook + STD-UKR-0001 freeze (2026-07-21)
+- **Parts vs chapters:** new `book_structure.content_units()` robustly detects divisions — `## Chapter` books AND `# Part …` books (which previously parsed as 0 chapters). `parse_book` falls back to it; full-audiobook `_chapter_texts` uses it. Verified: a `# Part One/Two/Three` book → 3 units (book-title heading dropped); normal `## Chapter` books unchanged.
+- **Subtitle editor:** identity editor now edits Title + **Subtitle** + Author (`edit-subtitle-input`); backend publication-details accepts `subtitle`. Verified.
+- **Pricing pencil:** Publish panel price input is now pre-filled with current/estimated price and always editable (button "Approve Price" / "Update Price"), so the Founder can revise pricing anytime. The Pricing Advisor™ already provides the estimate.
+- **Full-length audiobook:** background job renders every chapter via chosen voice → ffmpeg (imageio-ffmpeg) concat → durable MP3 with chapter markers. Verified end-to-end.
+- **Narrator voice/speed/custom script** + **"Chapter twice" fix** + **title FINAL fix** + **clean-up-title** — all verified (iteration_88, 5/5).
+- **STD-UKR-0001 constitution** (Work Order items 1-6): items 1&6 already satisfied in code; added ownership rule, metadata-inclusion rule, two Gold gates, Executable Completion Rule + `governed_deficiency()`, standard renamed to "Executable Universal Knowledge Record™ Enterprise Standard", `frozen:true`. Endpoint GET /manufacturing/ukr/constitution + panel on /constitution. Verified.
+
+### Publish-to-qru-online clarification (2026-07-21)
+- Books publish to the storefront when `founder_authorization.authorized == True`. "Patterns of Intelligence" (BOOK-0013) IS authorized and DOES appear on the PREVIEW storefront ($5.99, 5 public books).
+- qru-online.com is PRODUCTION (separate deploy + likely separate DB). A preview-authorized book won't appear there. Latest production deploy FAILED (transient Cloud Build error — deployment_agent found NO code blockers; `yarn build` passes). Fix = re-Deploy. Open question for Founder: whether preview & prod share a DB (determines if the book appears after a successful deploy or must be authorized in prod).
+
+### Approved backlog / sequence (Founder, 2026-07-21)
+1. Audiobook on QRU-online: free Chapter-1 sample (first ~3-5 min teaser) + purchasable full audiobook (own SKU + e-book bundle upsell). [revenue-first]
+2. Voice Asset Manufacturing Framework™ v1.0 — Founder wants **ElevenLabs cloning from day one** (will provide API key). Reuse character_registry pattern; provider-agnostic; analyze→Voice DNA→samples→review→approve→registry→reuse; governance via existing audit/treasure/approval. NOT a new top-level dept.
+3. Posters (Founder to upload 3-4 gold-standard refs) — keep factual/machine SVG, 300 DPI large-format + print-ready PDF.
+4. YouTube publisher (check existing auth) — simple (cover+audio MP4) default, rich (slideshow+chapters) optional.
+- Also raised: "one product in → one publication package out" — generalize the book pipeline to all product families (Universal Distribution Framework™). Explanation given; build TBD.
+
+
 Founder working on BOOK-0013 "Patterns of Intelligence FINAL": the file-name word "FINAL" printed on the
 cover and was spoken in the narration, and the narrator said "Chapter 1" twice on EVERY book.
 - **Title/author editor (new):** `POST /api/book-mfg/books/{id}/publication-details` now accepts `title` &

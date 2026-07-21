@@ -1458,6 +1458,8 @@ async def set_publication_details(book_id, fields, actor):
         new_author = (fields.get("author") or "").strip()
         if new_author:
             upd["author"] = new_author
+    if "subtitle" in fields:
+        upd["subtitle"] = (fields.get("subtitle") or "").strip()
     if "description" in fields:
         upd["description"] = (fields.get("description") or "").strip()
     if "author_bio" in fields:

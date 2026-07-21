@@ -47,6 +47,7 @@ export default function BookManufacturing() {
   const [editIdentity, setEditIdentity] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const [authorDraft, setAuthorDraft] = useState("");
+  const [subtitleDraft, setSubtitleDraft] = useState("");
 
   const loadBooks = async () => {
     const { data } = await api.get("/book-mfg/books");
@@ -106,11 +107,11 @@ export default function BookManufacturing() {
   const doSanitize = () => run(() => api.post(`/book-mfg/books/${book.id}/sanitize`, { base_url: A }), "Publication Sanitization Pass™ complete — clean retail edition prepared.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
   const doDraftBlurb = () => run(async () => { const { data } = await api.post(`/book-mfg/books/${book.id}/draft-blurb`); toast.message("Blurb drafted — review & approve.", { description: data.status }); });
   const doSavePublication = (fields, ok) => run(() => api.post(`/book-mfg/books/${book.id}/publication-details`, fields), ok || "Publication details saved.");
-  const openEditIdentity = () => { setTitleDraft(book.title || ""); setAuthorDraft(book.author || ""); setEditIdentity(true); };
+  const openEditIdentity = () => { setTitleDraft(book.title || ""); setAuthorDraft(book.author || ""); setSubtitleDraft(book.subtitle || ""); setEditIdentity(true); };
   const applyCleanTitle = () => doSavePublication({ title: book.title_cleanup_suggestion }, `Title cleaned up to “${book.title_cleanup_suggestion}”.`);
   const saveIdentity = async () => {
     if (!titleDraft.trim()) { toast.error("Title cannot be empty."); return; }
-    await doSavePublication({ title: titleDraft.trim(), author: authorDraft.trim() }, "Title & author updated. Re-run Design & Audio to refresh the cover and narration.");
+    await doSavePublication({ title: titleDraft.trim(), author: authorDraft.trim(), subtitle: subtitleDraft.trim() }, "Title, subtitle & author updated. Re-run Design & Audio to refresh the cover and narration.");
     setEditIdentity(false);
   };
   const doPrintWrap = (paperType) => run(() => api.post(`/book-mfg/books/${book.id}/print-wrap`, { paper_type: paperType }), "Print-ready cover wrap built.");
@@ -168,6 +169,11 @@ export default function BookManufacturing() {
                   <label className="text-[10px] font-bold uppercase tracking-wide text-navy">Book Title</label>
                   <input data-testid="edit-title-input" value={titleDraft} onChange={(e) => setTitleDraft(e.target.value)}
                     className="w-full mt-0.5 border rounded-md p-2 text-sm font-heading text-navy" autoFocus />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-navy">Subtitle</label>
+                  <input data-testid="edit-subtitle-input" value={subtitleDraft} onChange={(e) => setSubtitleDraft(e.target.value)}
+                    placeholder="Optional — shown under the title on the cover" className="w-full mt-0.5 border rounded-md p-2 text-sm text-navy" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold uppercase tracking-wide text-navy">Author</label>
@@ -1316,7 +1322,7 @@ function FounderReleaseReview({ book, data, busy, doAuthorize }) {
 }
 
 function PublishPanel({ data, kdp, postPub, book, busy, doPricing, doAuthorize, doSanitize, doDraftBlurb, doSavePublication, doPrintWrap }) {
-  const [price, setPrice] = useState("");
+  const [price, setPrice] = useState(book?.pricing?.paperback_price || book?.pricing?.list_price || "");
   if (!data) return <Panel title="Publish" icon={Send}><p className="text-sm text-muted-foreground py-4">Loading…</p></Panel>;
   const g = data.final_release_gate;
   return (
@@ -1348,21 +1354,21 @@ function PublishPanel({ data, kdp, postPub, book, busy, doPricing, doAuthorize, 
           ))}
         </div>
 
-        {/* Pricing input */}
-        {!g.pricing_approved && (
-          <div className="mt-3 flex items-center gap-2" data-testid="pricing-input">
-            <DollarSign className="w-4 h-4 text-muted-foreground" />
-            <input type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)}
-              placeholder="List price (USD)" className="flex-1 px-2 py-1.5 text-sm border border-border rounded-md bg-card outline-none" />
-            <button data-testid="approve-pricing-btn" onClick={() => doPricing(price, "USD")} disabled={busy || !price}
-              className="bg-navy text-white px-3 py-1.5 rounded-md text-sm font-bold disabled:opacity-40">Approve Price</button>
-          </div>
-        )}
+        {/* Pricing input — always editable (the founder's pencil); pre-filled with the current/estimated price */}
+        <div className="mt-3 flex items-center gap-2" data-testid="pricing-input">
+          <DollarSign className="w-4 h-4 text-muted-foreground" />
+          <input type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)}
+            placeholder="List price (USD)" className="flex-1 px-2 py-1.5 text-sm border border-border rounded-md bg-card outline-none" />
+          <button data-testid="approve-pricing-btn" onClick={() => doPricing(price, "USD")} disabled={busy || !price}
+            className="bg-navy text-white px-3 py-1.5 rounded-md text-sm font-bold disabled:opacity-40">
+            {book?.pricing?.approved ? "Update Price" : "Approve Price"}
+          </button>
+        </div>
         {book?.pricing?.approved && (
           <p className="text-[12px] text-emerald-700 mt-2" data-testid="pricing-approved-text">
             Pricing approved: {book.pricing.ebook_price && book.pricing.paperback_price
               ? `eBook ${book.pricing.currency} ${book.pricing.ebook_price} · Paperback ${book.pricing.currency} ${book.pricing.paperback_price}`
-              : `${book.pricing.currency} ${book.pricing.list_price}`}
+              : `${book.pricing.currency} ${book.pricing.list_price}`} — edit above to change it.
           </p>
         )}
 
