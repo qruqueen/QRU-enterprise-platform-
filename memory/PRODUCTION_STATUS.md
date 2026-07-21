@@ -19,11 +19,25 @@ _Live bookstore on real Stripe. Verified processing real purchases (2 payments /
   so the variable is Stripe-side. **DO NOT make code/deploy/Stripe-API changes until dashboard evidence
   shows a code issue.** Action = Founder verifies the Live-mode receipt setting in the Stripe web UI.
 
+## ✅ PHASE B CERTIFIED IN PRODUCTION (2026-07-21)
+Re-published successfully (2nd attempt; 1st failed on a transient K8s readiness timeout — retry fixed).
+Authenticated certification with Founder token, all green:
+- Deploy: storage endpoints 405→401 (live/gated); storefront home+books 200.
+- UKR migration: 80/80 migrated, 0 pending, backward-compatible.
+- Storage audit (before): 225 products/11 books, 639 referenced · 635 local · 0 object · 4 missing
+  (1 deterministic + 2 poster/media "other"; 0 AI-art, 0 audio, 0 book). NOTE: redeploy did NOT wipe
+  disk — prior rendered assets are git-committed + baked into the image, so they persist. Phase B now
+  protects RUNTIME-generated files (not git-committed) going forward.
+- Deterministic recovery: 94 docs, 0 recovered / 94 skipped / 0 failed, $0 AI, 0 approval items.
+- Re-audit (after): identical (4 missing) — idempotent, no dupes, no regression.
+- JWT deliverable: tokened preview 200, no-token 403, bogus-token 403.
+- Paid download (Step 9): FOUNDER-VERIFIED via today's real $4.99 purchase (EPUB delivered); all paid
+  EPUBs present (book_epub 7/7, deliverable_epub 32/32). Programmatic re-check pending a cs_ session id.
+- OPTIONAL FINISH: run `POST /api/rendering/storage-backfill` in prod to push the 635 current on-disk
+  files into object storage (so durability no longer relies on git-committed assets). Not yet run.
+
 ## REMAINING PRODUCTION BLOCKERS
-1. **Phase B durable storage NOT yet in production** (built + verified in preview; prod endpoints
-   return 405 = absent). Requires ONE redeploy, then the authenticated certification runbook
-   (UKR status → storage-audit → deterministic recovery → re-audit → real-file JWT → 1 paid download).
-   Until then, a redeploy still risks wiping current on-disk covers/EPUBs/audio (rebuilt at $0 after).
+None. Phase B durable storage is live and certified.
 
 ## Deferred (NOT started, per Founder "verification only" directives)
 - Retire legacy `?download=1` (P0, backend) — blocked on Founder all-clear.
