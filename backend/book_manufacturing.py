@@ -695,31 +695,14 @@ AUDIOBOOK_JOBS = "book_audiobook_jobs"
 
 
 def _chapter_texts(content):
-    """Split raw manuscript into per-chapter spoken text. Robust for prose novels (no ### needed):
-    every '## ' starts a chapter; body = all following non-heading lines until the next '## '."""
-    lines = bs.strip_navigation(content or "").split("\n")
-    chapters, cur = [], None
-    for ln in lines:
-        st = ln.strip()
-        if st.startswith("## "):
-            if cur:
-                chapters.append(cur)
-            cur = {"title": st.lstrip("#").strip(), "body": []}
-            continue
-        if cur is None:
-            continue
-        if st.startswith("### "):
-            cur["body"].append(st.lstrip("#").strip())
-        elif st and st != "---" and not st.startswith("#"):
-            cur["body"].append(st)
-    if cur:
-        chapters.append(cur)
+    """Per-division spoken text for the full audiobook. Uses the robust unit detector so it
+    works for `## Chapter` books AND `# Part …` books (no more 0-chapter books)."""
     out = []
-    for i, c in enumerate(chapters, 1):
-        title = c["title"]
-        heading = title if title.lower().lstrip().startswith("chapter") else f"Chapter {i}. {title}"
-        body = " ".join(c["body"]).strip()
-        out.append({"number": i, "title": title, "text": f"{heading}. {body}".strip()})
+    for u in bs.content_units(content):
+        title = u["title"]
+        heading = title if title.lower().lstrip().startswith(("chapter", "part")) else f"{u.get('unit_word', 'Chapter')} {u['number']}. {title}"
+        body = u.get("body", "")
+        out.append({"number": u["number"], "title": title, "text": f"{heading}. {body}".strip()})
     return out
 
 

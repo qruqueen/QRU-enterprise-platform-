@@ -84,7 +84,69 @@ def parse_book(content):
                     introduction = title
                 elif kind == "back":
                     back_matter.append(title)
+    # Fallback: books structured with `# Part …` (or level-1 divisions) previously parsed as
+    # 0 chapters. Recover them as governed units so audio/timing/TOC all work.
+    if not chapters:
+        for u in content_units(content):
+            chapters.append({"number": u["number"], "title": u["title"], "sections": [],
+                             "unit_word": u["unit_word"]})
     return {"introduction": introduction, "chapters": chapters, "back_matter": back_matter}
+
+
+_UNIT_KEYWORDS = ("part", "chapter", "book", "section", "act", "volume",
+                  "movement", "unit", "module", "lesson", "phase", "stage", "chapters")
+
+
+def _unit_word(title):
+    """The structural noun a division is titled with, e.g. 'Part', 'Chapter', else None."""
+    t = _clean(title).lower()
+    for k in _UNIT_KEYWORDS:
+        if t == k or t.startswith(k + " ") or t.startswith(k + ":"):
+            return k.capitalize()
+    return None
+
+
+def content_units(content):
+    """Robustly detect the book's primary structural divisions and their body text.
+    Handles books built with `## Chapter` (default) AND books built with `# Part …` or
+    `## Part …` (which previously parsed as 0 chapters). Returns
+    [{number, title, unit_word, body}] where unit_word is 'Chapter'/'Part'/… .
+    - Prefer `## ` content headings (classified as chapter). If none exist, fall back to
+      `# ` level-1 divisions (dropping a lone leading book-title heading)."""
+    lines = strip_navigation(content or "").split("\n")
+
+    def collect(prefix):
+        units, cur = [], None
+        for line in lines:
+            st = line.strip()
+            if st.startswith(prefix + " ") and not st.startswith(prefix + "# "):
+                title = _clean(st)
+                if classify_heading(title) != "chapter":
+                    cur = None
+                    continue
+                cur = {"title": title, "body": []}
+                units.append(cur)
+            elif cur is not None and st and st != "---":
+                cur["body"].append(st.lstrip("#").strip() if st.startswith("#") else st)
+        return units
+
+    units = collect("##")
+    if not units:
+        u1 = collect("#")
+        unit_titled = [u for u in u1 if _unit_word(u["title"])]
+        if unit_titled:
+            # Explicit Part/Chapter/… divisions exist → use only those (drops the book-title heading).
+            u1 = unit_titled
+        elif u1:
+            # No explicit unit words → the first `# ` is the book title; the rest are divisions.
+            u1 = u1[1:]
+        units = u1
+
+    out = []
+    for i, u in enumerate(units, 1):
+        out.append({"number": i, "title": u["title"], "unit_word": _unit_word(u["title"]) or "Chapter",
+                    "body": " ".join(u["body"]).strip()})
+    return out
 
 
 def toc_entries(structure, front_matter_items):
