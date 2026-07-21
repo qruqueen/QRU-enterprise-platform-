@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api, { formatApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared";
@@ -764,14 +764,17 @@ function AudioPanel({ book, audio, busy, onRender }) {
 
   const [ab, setAb] = useState(book.artifacts?.audio?.full_audiobook || null);
   const [abJob, setAbJob] = useState(null);
+  const abTimer = useRef(null);
   const abRunning = abJob?.status === "running";
+  useEffect(() => () => { if (abTimer.current) clearInterval(abTimer.current); }, []);
   const pollAb = () => {
-    const t = setInterval(async () => {
+    if (abTimer.current) clearInterval(abTimer.current);
+    abTimer.current = setInterval(async () => {
       try {
         const { data } = await api.get(`/book-mfg/books/${book.id}/audiobook/status`);
         setAbJob(data);
         if (data.status !== "running") {
-          clearInterval(t);
+          clearInterval(abTimer.current); abTimer.current = null;
           if (data.status === "complete") {
             const { data: bk } = await api.get(`/book-mfg/books/${book.id}`);
             setAb(bk.artifacts?.audio?.full_audiobook || null);
@@ -780,7 +783,7 @@ function AudioPanel({ book, audio, busy, onRender }) {
             toast.error(`Audiobook render failed: ${data.error || "unknown error"}`);
           }
         }
-      } catch { clearInterval(t); }
+      } catch { clearInterval(abTimer.current); abTimer.current = null; }
     }, 3000);
   };
   const startAudiobook = async () => {
