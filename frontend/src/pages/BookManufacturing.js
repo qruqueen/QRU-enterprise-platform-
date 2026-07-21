@@ -210,6 +210,15 @@ export default function BookManufacturing() {
                     {allBooks.map((bk) => <option key={bk.id} value={bk.id}>{bk.title} · {bk.book_code}</option>)}
                   </select>
                 )}
+                {book.content_integrity && book.content_integrity.ok === false && (
+                  <div className="mt-2 flex items-start gap-2 bg-red-50 border border-red-300 rounded-md px-3 py-2" data-testid="content-integrity-warning">
+                    <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[11px] font-bold text-red-800">Content may be internal Factory documentation — not the book's subject</p>
+                      <p className="text-[10px] text-red-700 mt-0.5">{book.content_integrity.message}</p>
+                    </div>
+                  </div>
+                )}
                 {book.title_cleanup_suggestion && (
                   <div className="mt-2 flex items-center gap-2 flex-wrap bg-amber-50 border border-amber-200 rounded-md px-3 py-2" data-testid="title-cleanup-banner">
                     <AlertTriangle className="w-3.5 h-3.5 text-amber-700 shrink-0" />

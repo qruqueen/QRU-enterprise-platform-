@@ -61,6 +61,13 @@ async def _book_stages(b, purchases_by_book):
     authorized = bool((b.get("founder_authorization") or {}).get("authorized"))
     priced = bool((b.get("pricing") or {}).get("approved"))
     on_store = authorized  # public store gate is founder_authorization.authorized
+    # Content integrity — customer books must teach their title's topic, not internal Factory docs.
+    import book_manufacturing as _bm
+    ci = _bm.content_integrity_check(b.get("title"), b.get("subtitle"), content)
+    qa_ok = (bool(sanit) or b.get("editorial_locked")) and ci.get("ok", True)
+    qa_detail = ("Content mismatch — reads like internal Factory docs, not the title's subject"
+                 if not ci.get("ok", True) else
+                 ("Sanitized / editorial locked" if (sanit or b.get("editorial_locked")) else "Not sanitized"))
     purchases = purchases_by_book.get(bid, [])
     paid = [p for p in purchases if p.get("payment_status") == "paid"]
     delivered = [p for p in paid if (p.get("download_count") or 0) > 0]
@@ -68,7 +75,7 @@ async def _book_stages(b, purchases_by_book):
     stages = [
         _stage("Knowledge Record", bool(content), "Source manuscript present" if content else "No source content"),
         _stage("Manufacturing", has_deliverable, "Deliverables rendered" if has_deliverable else "No cover/edition yet"),
-        _stage("QA", bool(sanit) or b.get("editorial_locked"), "Sanitized / editorial locked" if (sanit or b.get("editorial_locked")) else "Not sanitized"),
+        _stage("QA", qa_ok, qa_detail),
         _stage("Authorized", authorized, "Founder authorized release" if authorized else "Awaiting Founder authorization"),
         _stage("Published", authorized and priced, "Live gate open" if (authorized and priced) else ("Priced but not authorized" if priced else "Not published")),
         _stage("Store Sync", on_store and priced, "Visible in storefront feed" if (on_store and priced) else "Not on storefront"),

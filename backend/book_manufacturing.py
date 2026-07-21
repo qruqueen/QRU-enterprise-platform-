@@ -142,6 +142,48 @@ async def create_book_record(payload, actor):
 # The reference "Create Product" pattern: a Manufacturing Ready™ Decoder Record flows directly into
 # the existing seven-button Book Manufacturing System™, pre-filled from the decoder's contract.
 # Reuses create_book_record (one owner for Canonical Book Records) — no duplicate capability.
+
+# Internal Factory vocabulary that must NOT dominate a customer-facing educational book
+# (unless the book is explicitly about the QRU Factory itself). Treasure Standard™ safeguard.
+_FACTORY_TERMS = [
+    "product manufacturing file", "product manifest", "product manufacturing standard",
+    "product manufacturing specification", "governed knowledge record", "knowledge record",
+    "executable universal knowledge record", "treasure standard", "manufacturing record",
+    "audit record", "audit history", "governance package", "decoder record", "quality gate",
+    "publication package", "manufacturing line", "manufactured product", "canonical book record",
+    "std-ukr", "factory constitution", "pmf™", "pms™", "ukr™", "the factory should",
+]
+_FACTORY_SUBJECT_HINTS = [
+    "qru factory", "factory", "manufacturing standard", "governance", "knowledge record",
+    "publishing standard", "operating system", "treasure standard", "ukr",
+]
+
+
+def content_integrity_check(title, subtitle, content):
+    """Detect when a book's BODY is internal QRU Factory documentation while its TITLE promises an
+    educational subject — the exact failure the Founder flagged. Returns a governed result; never
+    silently ships mismatched content. $0, deterministic."""
+    text = (content or "").lower()
+    if len(text.split()) < 60:
+        return {"ok": True, "factory_term_density_per_1000w": 0.0, "note": "Too short to assess."}
+    subject = f"{title or ''} {subtitle or ''}".lower()
+    about_factory = any(h in subject for h in _FACTORY_SUBJECT_HINTS)
+    hits = sum(text.count(t) for t in _FACTORY_TERMS)
+    per_1000 = round(hits / (len(text.split()) / 1000.0), 1)
+    mismatch = (not about_factory) and per_1000 >= 6.0
+    if mismatch:
+        return {
+            "ok": False,
+            "issue": "content_subject_mismatch",
+            "factory_term_density_per_1000w": per_1000,
+            "message": ("This book's content reads like INTERNAL QRU Factory documentation "
+                        "(manufacturing/governance/audit terminology) rather than the educational subject "
+                        "promised by its title. The source Knowledge Record is almost certainly the wrong one. "
+                        "Verify the source content teaches the title's topic before publishing."),
+        }
+    return {"ok": True, "factory_term_density_per_1000w": per_1000}
+
+
 def _decoder_to_manuscript(d):
     """Assemble a book manuscript (markdown) from a Decoder Record's verified understanding.
     No knowledge is invented here — every section is the decoded understanding already verified."""
@@ -2031,6 +2073,8 @@ async def get_book(book_id):
     suggestion = suggest_clean_title(out.get("title", ""))
     if suggestion:
         out["title_cleanup_suggestion"] = suggestion
+    content = (b.get("editorial_edition") or b.get("working_copy") or {}).get("content", "")
+    out["content_integrity"] = content_integrity_check(out.get("title"), out.get("subtitle"), content)
     return out
 
 

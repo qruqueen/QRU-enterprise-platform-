@@ -1,0 +1,26 @@
+{
+  "summary": "Frontend verification of the content-integrity guard for BOOK-0017 ('AI Literacy K-12 — Family Guide'). All four requested flows PASSED. (1) On /book-manufacturing?book=88fd4a90-2481-4ff5-adbe-dc2e3dcb2faf the data-testid='content-integrity-warning' banner renders in the identity area with the exact copy 'Content may be internal Factory documentation — not the book's subject' and body 'This book's content reads like INTERNAL QRU Factory documentation (manufacturing/governance/audit terminology) rather than the educational subject promised by its title. The source Knowledge Record is almost certainly the wrong one. Verify the source content teaches the title's topic before publishing.' (2) Switching to a legitimate book via the book-switcher (The Understanding Tree · BOOK-0001) removes the banner entirely — no false positive. (3) On /shipping-status, data-testid='shipping-row-BOOK-0017' shows the QA stage rendered as a grey lucide-circle (NOT circle-check) with the exact hover title 'QA: Content mismatch — reads like internal Factory docs, not the title's subject'. A comparison row (BOOK-0011 Shipped) shows all 8 stages green (circle-check), confirming the grey state is intentional and only fires for the mismatched book. Dashboard metrics remain intact: 1 Fully Shipped / 16 In Progress / 17 Total Products / Database=Single. Other rows (BOOK-0002 QA Test Book, BOOK-0005, BOOK-0015, BOOK-0003, etc.) still show QA green, so the guard is not a blanket downgrade. (4) Regression: /book-manufacturing still loads normally for BOOK-0017 — Upload / Proof & Polish / Design / Audio / Video / Publish / Monitor tabs all render, identity pencil is present, Assemble & Download Package button visible, book-switcher works. No JS runtime errors — only the pre-existing emergent visual-editor <span>-inside-<option> hydration warning from iteration_89.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "BookManufacturing book-switcher", "issues": ["Pre-existing (iteration_88/89) React hydration warning '<span> cannot be a child of <option>' from emergent visual-editor wrapper — non-blocking, preview-only."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "shipping_status.py imports book_manufacturing as _bm and recomputes content_integrity_check for every book on every dashboard load; the get_book endpoint already stores the verdict on out['content_integrity']. Consider caching on the book document (or reading the cached value) to avoid duplicating the density scan for 17+ books on every dashboard render.",
+    "BookManufacturing.js is now ~1400 lines (identity banner + content-integrity-warning + title_cleanup_banner + panels). Same recommendation as iteration_89 — split into panels/*.js modules.",
+    "The content-integrity banner is only shown near the title; the same information is not exposed on the /shipping-status row beyond a browser-native title tooltip. Consider showing a small red badge or aria-label on the QA stage cell so keyboard/mobile users can see the mismatch without hover."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only per request)", "frontend": "100% (4/4 flows)"},
+  "test_credentials": "demo.admin@qru.com / qru-demo-admin-2026 — verified working.",
+  "seed_data_creation": "None. No AI/audiobook/narration/design renders triggered as instructed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Content-integrity guard is live and correctly targets BOOK-0017 only. data-testid='content-integrity-warning' renders when book.content_integrity.ok === false (identity area of /book-manufacturing). On /shipping-status the QA stage becomes a grey lucide-circle for the flagged book with title 'QA: Content mismatch — reads like internal Factory docs, not the title's subject'. All other books' QA cells remain unchanged. 17 books total in switcher; BOOK-0001..BOOK-0017 all render.",
+  "rca of the issue": "n/a — no functional bugs found in this iteration. The fix (content_integrity_check density scan surfaced in get_book response + red banner in BookManufacturing.js + QA stage downgrade in shipping_status.py) works end-to-end for both the flagged book and legitimate books."
+}
