@@ -57,11 +57,11 @@ def _kr_context(kr):
             f"Memorable Line: {kr.get('memory_sentence','')}")
 
 
-async def _tts_bytes(text):
+async def _tts_bytes(text, voice="sage", speed=1.0):
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tf:
         path = tf.name
     try:
-        res = await _tts(text, path)
+        res = await _tts(text, path, voice=voice, speed=speed)
         if res is True and os.path.exists(path):
             return open(path, "rb").read()
         raise RuntimeError(res if isinstance(res, str) else "TTS produced no audio.")

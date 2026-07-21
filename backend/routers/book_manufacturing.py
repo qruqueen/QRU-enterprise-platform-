@@ -193,14 +193,48 @@ async def monitor(book_id: str, user=Depends(get_current_user)):
     return r
 
 
+class AudioPrototypeReq(BaseModel):
+    voice: Optional[str] = None
+    speed: Optional[float] = None
+    custom_script: Optional[str] = None
+
+
 @router.post("/books/{book_id}/audio-prototype")
-async def audio_prototype(book_id: str, user=Depends(require_super_admin)):
-    r = await bm.render_audio_prototype(book_id, user.get("name", "Founder"))
+async def audio_prototype(book_id: str, req: Optional[AudioPrototypeReq] = None, user=Depends(require_super_admin)):
+    req = req or AudioPrototypeReq()
+    r = await bm.render_audio_prototype(book_id, user.get("name", "Founder"),
+                                        voice=req.voice, speed=req.speed, custom_script=req.custom_script)
     if r is None:
         raise HTTPException(404, "Book Record not found.")
     if isinstance(r, dict) and r.get("error"):
         raise HTTPException(400, r["error"])
     return r
+
+
+@router.get("/voices")
+async def narration_voices(user=Depends(get_current_user)):
+    return {"voices": bm.VALID_VOICES, "default": "sage"}
+
+
+class FullAudiobookReq(BaseModel):
+    voice: Optional[str] = None
+    speed: Optional[float] = None
+
+
+@router.post("/books/{book_id}/audiobook")
+async def start_audiobook(book_id: str, req: Optional[FullAudiobookReq] = None, user=Depends(require_super_admin)):
+    req = req or FullAudiobookReq()
+    r = await bm.start_full_audiobook(book_id, user.get("name", "Founder"), voice=req.voice, speed=req.speed)
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    if isinstance(r, dict) and r.get("error"):
+        raise HTTPException(400, r["error"])
+    return r
+
+
+@router.get("/books/{book_id}/audiobook/status")
+async def audiobook_status(book_id: str, user=Depends(get_current_user)):
+    return await bm.full_audiobook_status(book_id)
 
 
 @router.get("/books/{book_id}/post-publish")

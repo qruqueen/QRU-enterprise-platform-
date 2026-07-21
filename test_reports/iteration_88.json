@@ -1,0 +1,30 @@
+{
+  "summary": "Frontend end-to-end verification of five features on BOOK-0002 (TEST_QA Throwaway) as super-admin demo.admin@qru.com: (1) title/author identity editor via pencil, (2) clean-up-title banner, (3) narrator voice/tone controls with custom short script (voice=fable, custom='This is a narration test.'), (4) full-length audiobook render on the 2-chapter small book, and (5) STD-UKR-0001 Frozen constitution panel on /constitution. ALL FIVE FLOWS PASSED — buttons clickable, backend calls 200, UI state updated, audio players received real signed asset URLs, cleanup stripped the 'FINAL' artifact, and the constitution panel showed the Frozen badge with EUKR/PMS/PMF ownership, both Gold gates, and the Executable Completion Rule.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "BookManufacturing (all pages that render the book-switcher <select>)", "issues": ["React hydration warning in console: '<span> cannot be a child of <option>'. Caused by an emergent visual-editor wrapper injecting a <span data-ve-dynamic style={display:contents}> inside each <option> in the book-switcher select. Non-blocking (dropdown still works and returns correct book ids), but pollutes the browser console with a hydration error on every page load and reload. Consider suppressing ve-dynamic wrapping for children of <option> or rendering plain string children."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(Optional / non-blocking) Suppress visual-editor <span> wrapper inside <option> in the book-switcher to eliminate the recurring React hydration console error."
+  ],
+  "critical_code_review_comments": [
+    "BookManufacturing.js is ~1000+ lines and hosts many sub-components (AudioPanel, ProofPanel, DesignPanel, SanitizationPanel, KdpChecklist, PricingAdvisorPanel, etc.). Split into per-panel files (e.g. panels/AudioPanel.js) to keep files <700 lines and reduce cognitive load.",
+    "AudioPanel.pollAb() creates a setInterval but only clears it inside the callback; if the component unmounts mid-render (e.g. user switches books via book-switcher while a job is running), the interval will keep firing on a stale component. Track the interval in a useRef and clear it in a useEffect cleanup on book.id / unmount.",
+    "The narration-voice <select> options list (NARRATION_VOICES) is hard-coded in the frontend even though the backend exposes GET /book-mfg/voices. Fetch from the API so voice list stays in sync with the backend.",
+    "In doRenderAudio the render() helper calls reload(book.id) after a successful audio-prototype POST, which triggers an additional /audio GET — the flow works but duplicates the round-trip; can be optimized by using the audio field already returned inline.",
+    "narration-speed slider stores speed as a string (from e.target.value) and casts to Number only on render; storing as Number in state would make the label formatting safer and avoid subtle NaN edge cases."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only run)", "frontend": "100% (5/5 flows)"},
+  "test_credentials": "demo.admin@qru.com / qru-demo-admin-2026 (super-admin) — verified working via /api/auth/login 200.",
+  "seed_data_creation": "Modified BOOK-0002 (9b9e22ed-1e75-4a6e-9564-1376ed08bfa3) title during testing: TEST_QA Throwaway → QA Test Book FINAL → QA Test Book (via cleanup). Also rendered a real fable-voice narration prototype AND a full audiobook (~0.5 min, 2 chapters) — these consumed OpenAI TTS credits as expected on the small test book. If a clean state is required for the next run, the main agent should reset BOOK-0002's title back to 'TEST_QA Throwaway'.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Book identity editor (edit-identity-btn → edit-identity-form → save-identity-btn), cleanup banner (title-cleanup-banner → apply-clean-title-btn), narrator controls (narration-voice/9 opts, narration-speed, narration-custom-toggle → narration-script, render-audio-btn → audio-player), full audiobook (full-audiobook-section → render-audiobook-btn → audiobook-progress → full-audiobook-player), and Constitution std-ukr-constitution panel (std-frozen-badge, EUKR/PMS/PMF, Knowledge Certified / Product Certified, Executable Completion Rule) are ALL WORKING end-to-end. Only cosmetic issue is a repeat React hydration warning about <span> inside <option> in the book-switcher (from an emergent visual-editor wrapper). Full audiobook completed on the 2-chapter BOOK-0002 in ~8s — safe/cheap to re-run there; DO NOT test full audiobook on larger books.",
+  "rca of the issue": "n/a — no functional bugs found. The single console warning is caused by the emergent visual-editor injecting a <span data-ve-dynamic style={display:contents}> child inside each <option> of the book-switcher <select>. React treats <span> as an invalid child of <option>, which triggers the hydration console error but does not affect the dropdown’s behavior."
+}

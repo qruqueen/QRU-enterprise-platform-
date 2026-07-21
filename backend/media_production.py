@@ -59,12 +59,15 @@ async def _download(url):
     return r.content
 
 
-async def _tts(text, path):
+async def _tts(text, path, voice="sage", speed=1.0):
     """Generate narration via OpenAI TTS (Emergent key). Returns True on success, else honest False."""
     try:
         from emergentintegrations.llm.openai import OpenAITextToSpeech
         tts = OpenAITextToSpeech(api_key=os.getenv("EMERGENT_LLM_KEY"))
-        audio = await tts.generate_speech(text=text, model="tts-1", voice="sage")
+        try:
+            audio = await tts.generate_speech(text=text, model="tts-1", voice=voice, speed=float(speed))
+        except TypeError:
+            audio = await tts.generate_speech(text=text, model="tts-1", voice=voice)
         with open(path, "wb") as f:
             f.write(audio)
         return os.path.getsize(path) > 1000

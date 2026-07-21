@@ -76,6 +76,12 @@ async def ukr_canonical_spec(user=Depends(get_current_user)):
     return ukr.canonical_spec()
 
 
+@router.get("/ukr/constitution")
+async def ukr_constitution(user=Depends(get_current_user)):
+    """STD-UKR-0001 constitutional refinements (Founder Work Order, frozen 2026-07-21)."""
+    return ukr.constitution()
+
+
 @router.get("/ukr/migration-status")
 async def ukr_migration_status(user=Depends(get_current_user)):
     """Factory-wide canonical migration status (read-only, backward-compatibility report)."""

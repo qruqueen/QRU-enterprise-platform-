@@ -198,6 +198,9 @@ def standard():
         "gold_standard_review_states": GOLD_STANDARD_STATES,
         "gold_standard_review_dimensions": REVIEW_DIMENSIONS,
         "validation_results": VALIDATION_RESULTS,
+        "standard_name": STANDARD_NAME,
+        "frozen": STANDARD_FROZEN,
+        "constitution": constitution(),
     }
 
 
@@ -214,6 +217,91 @@ def standard():
 
 CANONICAL_SPEC_NAME = "QRU UKR™ Standard v1.1 — Canonical Full Specification (24 Sections)"
 CANONICAL_SPEC_DATE = "2026-07-18"
+
+# =============================================================================
+# STD-UKR-0001 — CONSTITUTIONAL REFINEMENTS (Founder Work Order, 2026-07-21)
+# Additive-only. No schema migration. Freezes the standard after adoption.
+# =============================================================================
+STANDARD_NAME = "STD-UKR-0001 — QRU Executable Universal Knowledge Record™ Enterprise Standard"
+STANDARD_FROZEN = True
+CONSTITUTIONAL_VERSION = "STD-UKR-0001 · Constitutional Refinement (2026-07-21)"
+
+# Item 1 — enterprise artifact naming (already adopted in code): Standard + Manifest.
+ENTERPRISE_ARTIFACTS = {
+    "EUKR": {"name": "Executable Universal Knowledge Record™", "owns": "governed knowledge (truth, value, what is worth teaching)"},
+    "PMS": {"name": "Product Manufacturing Standard™", "abbr": "PMS™", "owns": "product-specific manufacturing requirements",
+            "formerly": "Product Manufacturing Specification™"},
+    "PMF": {"name": "Product Manifest™", "abbr": "PMF™", "owns": "manufacturing history, traceability, validations, approvals and audit",
+            "formerly": "Product Manufacturing File™"},
+}
+
+# Item 2 — Constitutional Ownership: One Responsibility. One Owner.
+CONSTITUTIONAL_OWNERSHIP_RULE = (
+    "One Responsibility. One Owner. No constitutional artifact may duplicate another artifact's "
+    "responsibility. The EUKR owns governed knowledge; the PMS™ owns product-specific manufacturing "
+    "requirements; the PMF™ owns manufacturing history and auditability."
+)
+
+# Item 3 — Metadata Inclusion Rule.
+METADATA_INCLUSION_RULE = [
+    "It supports at least one downstream Factory capability.",
+    "It has one responsible owner.",
+    "It is inherited by at least one governed Factory component.",
+]
+
+# Item 4 — Separate Gold Standard review: two gates → Final Gold.
+GOLD_STANDARD_GATES = {
+    "knowledge_gate": {"evaluates": "the Executable Universal Knowledge Record™", "output": "Knowledge Certified"},
+    "product_gate": {"evaluates": "manufactured products against their Product Manufacturing Standard™", "output": "Product Certified"},
+    "final_gold_rule": "Final Gold Certification requires BOTH gates to pass when applicable.",
+}
+
+# Item 5 — Executable Completion Rule.
+EXECUTABLE_COMPLETION_RULE = (
+    "An EUKR is complete when every authorized Factory capability can perform its assigned responsibility "
+    "using only: the EUKR, the applicable PMS™, and governed enterprise services — without requesting "
+    "additional knowledge from the Founder or inventing missing verified information. If additional "
+    "knowledge is required, the Factory shall return a GOVERNED DEFICIENCY rather than silently "
+    "manufacturing incomplete products."
+)
+
+
+def governed_deficiency(capability, missing, kr_id=None):
+    """Item 5 — the structured 'governed deficiency' a capability returns instead of silently
+    manufacturing an incomplete product. Honest failure surface (Treasure Standard™)."""
+    return {
+        "governed_deficiency": True,
+        "capability": capability,
+        "knowledge_record_id": kr_id,
+        "missing_information": missing if isinstance(missing, list) else [missing],
+        "rule": "STD-UKR-0001 Executable Completion Rule",
+        "message": "Manufacturing paused — required verified knowledge is missing. Nothing was faked or invented.",
+    }
+
+
+def constitution():
+    """The frozen STD-UKR-0001 constitutional refinements (Work Order 2026-07-21)."""
+    return {
+        "standard_id": STANDARD_ID,
+        "standard_name": STANDARD_NAME,
+        "frozen": STANDARD_FROZEN,
+        "constitutional_version": CONSTITUTIONAL_VERSION,
+        "enterprise_artifacts": ENTERPRISE_ARTIFACTS,
+        "constitutional_ownership_rule": CONSTITUTIONAL_OWNERSHIP_RULE,
+        "metadata_inclusion_rule": METADATA_INCLUSION_RULE,
+        "gold_standard_gates": GOLD_STANDARD_GATES,
+        "executable_completion_rule": EXECUTABLE_COMPLETION_RULE,
+        "success_criteria": [
+            "Existing functionality is preserved.",
+            "No migration of existing Knowledge Records is required unless necessary.",
+            "All future Knowledge Records automatically inherit these constitutional rules.",
+            "PMS™ and PMF™ inherit from the EUKR.",
+            "The Factory continues to manufacture products using one canonical knowledge source.",
+        ],
+        "founder_note": ("The Factory architecture is mature. This is a constitutional refinement for clarity, "
+                         "inheritance and long-term maintainability — not a redesign. STD-UKR-0001 is now frozen; "
+                         "future improvement comes from manufacturing real EUKRs, not from expanding the standard."),
+    }
 
 # 24 governed sections. `implemented` = Phase-1 mapping is wired to real data today.
 SECTIONS = [

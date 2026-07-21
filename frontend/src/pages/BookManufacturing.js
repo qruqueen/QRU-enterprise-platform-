@@ -100,13 +100,14 @@ export default function BookManufacturing() {
     } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
     finally { setBusy(false); }
   };
-  const doRenderAudio = () => run(async () => { await api.post(`/book-mfg/books/${book.id}/audio-prototype`); const { data } = await api.get(`/book-mfg/books/${book.id}/audio`); setAudio(data); }, "Narration prototype rendered.");
+  const doRenderAudio = (opts) => run(async () => { await api.post(`/book-mfg/books/${book.id}/audio-prototype`, opts || {}); const { data } = await api.get(`/book-mfg/books/${book.id}/audio`); setAudio(data); }, "Narration prototype rendered.");
   const doPricing = (price, currency) => run(() => api.post(`/book-mfg/books/${book.id}/pricing`, { list_price: parseFloat(price), currency }), "Pricing approved.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
   const doAuthorize = () => run(() => api.post(`/book-mfg/books/${book.id}/authorize`), "Release authorized — the Factory is manufacturing your publication assets.").then(() => { api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)); api.get(`/book-mfg/books/${book.id}/post-publish`).then((r) => setPostPub(r.data)).catch(() => {}); });
   const doSanitize = () => run(() => api.post(`/book-mfg/books/${book.id}/sanitize`, { base_url: A }), "Publication Sanitization Pass™ complete — clean retail edition prepared.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
   const doDraftBlurb = () => run(async () => { const { data } = await api.post(`/book-mfg/books/${book.id}/draft-blurb`); toast.message("Blurb drafted — review & approve.", { description: data.status }); });
   const doSavePublication = (fields, ok) => run(() => api.post(`/book-mfg/books/${book.id}/publication-details`, fields), ok || "Publication details saved.");
   const openEditIdentity = () => { setTitleDraft(book.title || ""); setAuthorDraft(book.author || ""); setEditIdentity(true); };
+  const applyCleanTitle = () => doSavePublication({ title: book.title_cleanup_suggestion }, `Title cleaned up to “${book.title_cleanup_suggestion}”.`);
   const saveIdentity = async () => {
     if (!titleDraft.trim()) { toast.error("Title cannot be empty."); return; }
     await doSavePublication({ title: titleDraft.trim(), author: authorDraft.trim() }, "Title & author updated. Re-run Design & Audio to refresh the cover and narration.");
@@ -202,6 +203,20 @@ export default function BookManufacturing() {
                     className="mt-2 text-[12px] border border-border rounded-md bg-card px-2 py-1 text-navy outline-none max-w-full">
                     {allBooks.map((bk) => <option key={bk.id} value={bk.id}>{bk.title} · {bk.book_code}</option>)}
                   </select>
+                )}
+                {book.title_cleanup_suggestion && (
+                  <div className="mt-2 flex items-center gap-2 flex-wrap bg-amber-50 border border-amber-200 rounded-md px-3 py-2" data-testid="title-cleanup-banner">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                    <span className="text-[11px] text-amber-900">
+                      Looks like a file-name artifact in the title. Clean up to <b>“{book.title_cleanup_suggestion}”</b>?
+                    </span>
+                    <button onClick={applyCleanTitle} disabled={busy} data-testid="apply-clean-title-btn"
+                      className="inline-flex items-center gap-1 bg-navy text-white px-2.5 py-1 rounded text-[11px] font-bold disabled:opacity-40">
+                      {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />} Clean up
+                    </button>
+                    <button onClick={openEditIdentity} data-testid="cleanup-edit-instead-btn"
+                      className="text-[11px] text-navy/70 underline">edit manually</button>
+                  </div>
                 )}
               </>
             )}
@@ -726,18 +741,94 @@ function DesignPanel({ book, busy, doDesign, doSelectCover }) {
   );
 }
 
+const NARRATION_VOICES = [
+  { id: "sage", label: "Sage — warm, calm (default)" },
+  { id: "alloy", label: "Alloy — neutral, clear" },
+  { id: "ash", label: "Ash — steady, grounded" },
+  { id: "coral", label: "Coral — bright, friendly" },
+  { id: "echo", label: "Echo — smooth, measured" },
+  { id: "fable", label: "Fable — expressive, storytelling" },
+  { id: "nova", label: "Nova — energetic, youthful" },
+  { id: "onyx", label: "Onyx — deep, authoritative" },
+  { id: "shimmer", label: "Shimmer — soft, gentle" },
+];
+
 function AudioPanel({ book, audio, busy, onRender }) {
   const proto = book.artifacts?.audio?.prototype || audio?.prototype;
   const timing = book.artifacts?.audio || {};
+  const [voice, setVoice] = useState(book.narration_voice || proto?.voice_id || "sage");
+  const [speed, setSpeed] = useState(book.narration_speed || proto?.speed || 1.0);
+  const [useCustom, setUseCustom] = useState(false);
+  const [script, setScript] = useState(proto?.custom_script || "");
+  const render = () => onRender({ voice, speed: Number(speed), custom_script: useCustom ? script : null });
+
+  const [ab, setAb] = useState(book.artifacts?.audio?.full_audiobook || null);
+  const [abJob, setAbJob] = useState(null);
+  const abRunning = abJob?.status === "running";
+  const pollAb = () => {
+    const t = setInterval(async () => {
+      try {
+        const { data } = await api.get(`/book-mfg/books/${book.id}/audiobook/status`);
+        setAbJob(data);
+        if (data.status !== "running") {
+          clearInterval(t);
+          if (data.status === "complete") {
+            const { data: bk } = await api.get(`/book-mfg/books/${book.id}`);
+            setAb(bk.artifacts?.audio?.full_audiobook || null);
+            toast.success(`Full audiobook ready — ${(bk.artifacts?.audio?.full_audiobook?.duration_min) || "?"} min.`);
+          } else if (data.status === "failed") {
+            toast.error(`Audiobook render failed: ${data.error || "unknown error"}`);
+          }
+        }
+      } catch { clearInterval(t); }
+    }, 3000);
+  };
+  const startAudiobook = async () => {
+    try {
+      const { data } = await api.post(`/book-mfg/books/${book.id}/audiobook`, { voice, speed: Number(speed) });
+      setAbJob({ status: "running", done: 0, total: data.total });
+      toast.message(`Rendering full audiobook (${data.total} chapters)… this runs in the background.`);
+      pollAb();
+    } catch (e) { toast.error(e?.response?.data?.detail || "Could not start audiobook render."); }
+  };
+
   return (
     <div data-testid="panel-audio">
       <Panel title="Audio" icon={Mic} accent="royal"
         right={
-          <button data-testid="render-audio-btn" onClick={onRender} disabled={busy}
+          <button data-testid="render-audio-btn" onClick={render} disabled={busy}
             className="inline-flex items-center gap-1.5 bg-navy text-white px-4 py-2 rounded-md text-sm font-bold disabled:opacity-60">
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} Render Narration Prototype
           </button>
         }>
+        {/* Voice & tone controls */}
+        <div className="mb-4 border border-border rounded-md p-3 bg-muted/20" data-testid="narration-controls">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-navy mb-2">Narrator voice &amp; pace</p>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-wide text-navy">Voice</label>
+              <select data-testid="narration-voice" value={voice} onChange={(e) => setVoice(e.target.value)}
+                className="w-full mt-0.5 border rounded-md p-2 text-sm text-navy bg-card">
+                {NARRATION_VOICES.map((v) => <option key={v.id} value={v.id}>{v.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-wide text-navy">Speed · {Number(speed).toFixed(2)}×</label>
+              <input type="range" min="0.5" max="1.5" step="0.05" value={speed} data-testid="narration-speed"
+                onChange={(e) => setSpeed(e.target.value)} className="w-full mt-2 accent-navy" />
+            </div>
+          </div>
+          <label className="flex items-center gap-2 text-[12px] text-navy mt-3">
+            <input type="checkbox" checked={useCustom} data-testid="narration-custom-toggle"
+              onChange={(e) => setUseCustom(e.target.checked)} /> Write my own narration text (instead of the auto Chapter-1 opening)
+          </label>
+          {useCustom && (
+            <textarea data-testid="narration-script" value={script} onChange={(e) => setScript(e.target.value)}
+              rows={5} placeholder="Type exactly what the narrator should read…"
+              className="w-full mt-2 border rounded-md p-2 text-sm text-navy" />
+          )}
+          <p className="text-[10px] text-muted-foreground mt-2">Voices are OpenAI TTS presets. Each render uses AI credits. Your choice is saved to this book.</p>
+        </div>
         {proto ? (
           <div className="mb-4 border border-gold/40 bg-gold/[0.06] rounded-md p-3" data-testid="audio-prototype">
             <p className="text-[12px] text-amber-800 font-semibold mb-2">{proto.label}</p>
@@ -747,6 +838,37 @@ function AudioPanel({ book, audio, busy, onRender }) {
         ) : (
           <p className="text-sm text-muted-foreground mb-4">Render a real AI narration prototype of Chapter 1's opening for pacing review. It is honestly labeled — not for commercial distribution.</p>
         )}
+
+        {/* Full-length audiobook */}
+        <div className="mb-4 border border-royal/30 bg-royal/[0.04] rounded-md p-3" data-testid="full-audiobook-section">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-[12px] font-bold text-navy flex items-center gap-1.5"><BookOpen className="w-3.5 h-3.5 text-royal" /> Full-length audiobook</p>
+            <button onClick={startAudiobook} disabled={abRunning} data-testid="render-audiobook-btn"
+              className="inline-flex items-center gap-1.5 bg-royal text-white px-3 py-1.5 rounded-md text-[12px] font-bold disabled:opacity-50">
+              {abRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+              {abRunning ? `Rendering ${abJob.done}/${abJob.total}…` : (ab ? "Re-render full audiobook" : "Render full audiobook")}
+            </button>
+          </div>
+          {abRunning && (
+            <div className="mt-2" data-testid="audiobook-progress">
+              <div className="h-1.5 bg-navy/10 rounded-full overflow-hidden">
+                <div className="h-full bg-royal transition-all" style={{ width: `${Math.round((abJob.done / Math.max(1, abJob.total)) * 100)}%` }} />
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">Narrating chapter {abJob.done} of {abJob.total}. This runs in the background — you can keep working.</p>
+            </div>
+          )}
+          {ab && !abRunning && (
+            <div className="mt-2" data-testid="full-audiobook-player">
+              <audio controls src={abs(ab.url)} className="w-full" />
+              <p className="text-[11px] text-muted-foreground mt-1">{ab.duration_min} min · {ab.chapters?.length || 0} chapters · voice {ab.voice_id}</p>
+              <p className="text-[10px] text-amber-700 mt-1">{ab.label}</p>
+            </div>
+          )}
+          {!ab && !abRunning && (
+            <p className="text-[11px] text-muted-foreground mt-1.5">Narrates every chapter in your chosen voice and stitches them into one MP3 (with chapter markers). Runs in the background; uses AI credits per run.</p>
+          )}
+        </div>
+
         {audio && renderAudio(audio)}
       </Panel>
     </div>

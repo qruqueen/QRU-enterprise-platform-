@@ -10,6 +10,7 @@ Principles enforced here:
 - Where a platform can't be fully automated: produce the complete package + honest guided checklist.
 """
 import io
+import os
 import hashlib
 import asyncio
 from datetime import datetime, timezone
@@ -600,43 +601,70 @@ async def audio_plan(book_id):
     }
 
 
-async def render_audio_prototype(book_id, actor):
-    """Button 4·A — Internal Narration Prototype. Renders a REAL TTS master of Chapter 1's opening.
-    Honestly labeled: AI voice, pacing/review only, NOT commercial. Never mislabeled 'Audible-ready'."""
+VALID_VOICES = ["alloy", "ash", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer"]
+
+
+def _clean_voice_settings(voice, speed):
+    v = (voice or "sage").strip().lower()
+    if v not in VALID_VOICES:
+        v = "sage"
+    try:
+        sp = float(speed)
+    except (TypeError, ValueError):
+        sp = 1.0
+    sp = max(0.5, min(2.0, round(sp, 2)))
+    return v, sp
+
+
+async def render_audio_prototype(book_id, actor, voice=None, speed=None, custom_script=None):
+    """Button 4·A — Internal Narration Prototype. Renders a REAL TTS master of Chapter 1's opening
+    (or a Founder-supplied custom narration script). Honestly labeled: AI voice, pacing/review only,
+    NOT commercial. Voice + speed are chosen by the Founder and remembered on the book."""
     b = await db[COLL].find_one({"id": book_id})
     if not b:
         return None
+    # Resolve voice/speed: explicit arg > stored book setting > default.
+    v, sp = _clean_voice_settings(
+        voice if voice is not None else b.get("narration_voice"),
+        speed if speed is not None else b.get("narration_speed"))
     content = (b.get("editorial_edition") or b.get("working_copy"))["content"]
     structure = bs.parse_book(content)
     if not structure["chapters"]:
         return {"error": "No chapters detected to narrate."}
     ch1 = structure["chapters"][0]
-    lines = bs.strip_navigation(content).split("\n")
-    grab, buf = False, []
-    for ln in lines:
-        st = ln.strip()
-        if st.startswith("## "):
-            if grab:
-                break
-            grab = True
-            continue
-        if grab and st and not st.startswith("#") and st != "---":
-            buf.append(st)
-        if sum(len(x) for x in buf) > 2600:
-            break
-    excerpt = " ".join(buf)[:2800].strip() or ch1["title"]
-    # Build the spoken heading WITHOUT saying "Chapter" twice: many manuscripts parse a chapter
-    # title that already begins with "Chapter One:/Chapter 1:" — in that case narrate the title
-    # as-is instead of prepending a second "Chapter N."
-    ch_title = (ch1.get("title") or "").strip()
-    if ch_title.lower().lstrip().startswith("chapter"):
-        heading = ch_title
+    custom = (custom_script or "").strip()
+    if custom:
+        spoken = custom[:6000]
+        excerpt_chars = len(spoken)
     else:
-        heading = f"Chapter {ch1['number']}. {ch_title}".strip().rstrip(".")
+        lines = bs.strip_navigation(content).split("\n")
+        grab, buf = False, []
+        for ln in lines:
+            st = ln.strip()
+            if st.startswith("## "):
+                if grab:
+                    break
+                grab = True
+                continue
+            if grab and st and not st.startswith("#") and st != "---":
+                buf.append(st)
+            if sum(len(x) for x in buf) > 2600:
+                break
+        excerpt = " ".join(buf)[:2800].strip() or ch1["title"]
+        # Build the spoken heading WITHOUT saying "Chapter" twice: many manuscripts parse a chapter
+        # title that already begins with "Chapter One:/Chapter 1:" — in that case narrate the title
+        # as-is instead of prepending a second "Chapter N."
+        ch_title = (ch1.get("title") or "").strip()
+        if ch_title.lower().lstrip().startswith("chapter"):
+            heading = ch_title
+        else:
+            heading = f"Chapter {ch1['number']}. {ch_title}".strip().rstrip(".")
+        spoken = f"{b['title']}. {heading}. {excerpt}"
+        excerpt_chars = len(excerpt)
     try:
         import cinema_studio
         import rendering_engine as re_engine
-        audio = await cinema_studio._tts_bytes(f"{b['title']}. {heading}. {excerpt}")
+        audio = await cinema_studio._tts_bytes(spoken, voice=v, speed=sp)
         fid = re_engine._save("book-audio-prototype", "mp3", audio)
         dur = round(cinema_studio._duration_from_bytes(audio), 1)
     except Exception as e:
@@ -646,18 +674,151 @@ async def render_audio_prototype(book_id, actor):
     artifacts = b.get("artifacts", {})
     artifacts["audio"] = {
         "prototype": {
-            "label": "Internal Narration Prototype™ (Chapter 1 opening) — AI voice 'sage', pacing/review ONLY. NOT for commercial distribution.",
-            "url": re_engine._asset_url(fid), "duration_sec": dur, "voice": "sage (OpenAI TTS-1)",
-            "excerpt_chars": len(excerpt), "generated_at": _now(),
+            "label": f"Internal Narration Prototype™ ({'custom script' if custom else 'Chapter 1 opening'}) — AI voice '{v}', pacing/review ONLY. NOT for commercial distribution.",
+            "url": re_engine._asset_url(fid), "duration_sec": dur, "voice": f"{v} (OpenAI TTS-1)",
+            "voice_id": v, "speed": sp, "custom_script": custom or None,
+            "excerpt_chars": excerpt_chars, "generated_at": _now(),
         },
         "full_book_estimate_min": round(total_words / 150, 1),
         "chapter_timing_map": chapter_map,
     }
-    await db[COLL].update_one({"id": book_id}, {"$set": {"artifacts": artifacts, "updated_at": _now()},
+    await db[COLL].update_one({"id": book_id}, {"$set": {
+        "artifacts": artifacts, "narration_voice": v, "narration_speed": sp, "updated_at": _now()},
         "$push": {"revision_history": {"stage": "Audio", "by": actor, "at": _now(),
-                                       "note": f"Narration prototype rendered ({dur}s)."}}})
+                                       "note": f"Narration prototype rendered ({dur}s, voice {v}, speed {sp})."}}})
     await log_org("Book Manufacturing™", "Manufacturing", f"rendered narration prototype for '{b['title']}'", b["book_code"], "success")
     return clean(await db[COLL].find_one({"id": book_id}))
+
+
+# ------------------------- FULL-LENGTH AUDIOBOOK (background job) -------------------------
+AUDIOBOOK_JOBS = "book_audiobook_jobs"
+
+
+def _chapter_texts(content):
+    """Split raw manuscript into per-chapter spoken text. Robust for prose novels (no ### needed):
+    every '## ' starts a chapter; body = all following non-heading lines until the next '## '."""
+    lines = bs.strip_navigation(content or "").split("\n")
+    chapters, cur = [], None
+    for ln in lines:
+        st = ln.strip()
+        if st.startswith("## "):
+            if cur:
+                chapters.append(cur)
+            cur = {"title": st.lstrip("#").strip(), "body": []}
+            continue
+        if cur is None:
+            continue
+        if st.startswith("### "):
+            cur["body"].append(st.lstrip("#").strip())
+        elif st and st != "---" and not st.startswith("#"):
+            cur["body"].append(st)
+    if cur:
+        chapters.append(cur)
+    out = []
+    for i, c in enumerate(chapters, 1):
+        title = c["title"]
+        heading = title if title.lower().lstrip().startswith("chapter") else f"Chapter {i}. {title}"
+        body = " ".join(c["body"]).strip()
+        out.append({"number": i, "title": title, "text": f"{heading}. {body}".strip()})
+    return out
+
+
+def _concat_mp3(paths, out_path):
+    """Concatenate same-codec MP3 chapter files into one MP3 via ffmpeg concat demuxer.
+    Uses the imageio-ffmpeg bundled binary (no system ffmpeg on this image)."""
+    import subprocess
+    import imageio_ffmpeg
+    ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+    listfile = out_path + ".txt"
+    with open(listfile, "w") as f:
+        for p in paths:
+            f.write(f"file '{p}'\n")
+    try:
+        subprocess.run([ffmpeg, "-y", "-f", "concat", "-safe", "0", "-i", listfile, "-c", "copy", out_path],
+                       check=True, capture_output=True, timeout=180)
+    finally:
+        if os.path.exists(listfile):
+            os.remove(listfile)
+
+
+async def start_full_audiobook(book_id, actor, voice=None, speed=None):
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return None
+    existing = await db[AUDIOBOOK_JOBS].find_one({"id": book_id})
+    if existing and existing.get("status") == "running":
+        return {"ok": True, "status": "running", "message": "A full audiobook render is already in progress."}
+    content = (b.get("editorial_edition") or b.get("working_copy") or {}).get("content", "")
+    chapters = _chapter_texts(content)
+    if not chapters:
+        return {"error": "No chapters detected to narrate."}
+    v, sp = _clean_voice_settings(voice if voice is not None else b.get("narration_voice"),
+                                  speed if speed is not None else b.get("narration_speed"))
+    await db[AUDIOBOOK_JOBS].update_one({"id": book_id}, {"$set": {
+        "id": book_id, "status": "running", "total": len(chapters), "done": 0, "voice": v, "speed": sp,
+        "started_at": _now(), "finished_at": None, "error": None, "url": None}}, upsert=True)
+    import asyncio
+    asyncio.create_task(_full_audiobook_worker(book_id, actor, v, sp, chapters))
+    return {"ok": True, "status": "started", "total": len(chapters), "message": "Full audiobook render started."}
+
+
+async def _full_audiobook_worker(book_id, actor, voice, speed, chapters):
+    import tempfile
+    import cinema_studio
+    import rendering_engine as re_engine
+    tmpdir = tempfile.mkdtemp(prefix="audiobook-")
+    paths, total_dur = [], 0.0
+    chapter_markers = []
+    try:
+        for idx, ch in enumerate(chapters, 1):
+            audio = await cinema_studio._tts_bytes(ch["text"], voice=voice, speed=speed)
+            cp = os.path.join(tmpdir, f"ch{idx:02d}.mp3")
+            with open(cp, "wb") as f:
+                f.write(audio)
+            paths.append(cp)
+            d = round(cinema_studio._duration_from_bytes(audio), 1)
+            chapter_markers.append({"number": ch["number"], "title": ch["title"],
+                                    "start_sec": round(total_dur, 1), "duration_sec": d})
+            total_dur += d
+            await db[AUDIOBOOK_JOBS].update_one({"id": book_id}, {"$set": {"done": idx}})
+        out_path = os.path.join(tmpdir, "audiobook.mp3")
+        _concat_mp3(paths, out_path)
+        with open(out_path, "rb") as f:
+            full_bytes = f.read()
+        fid = re_engine._save(f"audiobook-{book_id}", "mp3", full_bytes)
+        url = re_engine._asset_url(fid)
+        b = await db[COLL].find_one({"id": book_id})
+        artifacts = b.get("artifacts", {})
+        audio_art = artifacts.get("audio", {}) or {}
+        audio_art["full_audiobook"] = {
+            "label": f"Full Audiobook — AI voice '{voice}' (OpenAI TTS). Internal master for review; disclose AI narration before commercial distribution.",
+            "url": url, "duration_sec": round(total_dur, 1), "duration_min": round(total_dur / 60, 1),
+            "voice_id": voice, "speed": speed, "chapters": chapter_markers, "generated_at": _now(),
+        }
+        artifacts["audio"] = audio_art
+        await db[COLL].update_one({"id": book_id}, {"$set": {"artifacts": artifacts, "updated_at": _now()}})
+        await db[AUDIOBOOK_JOBS].update_one({"id": book_id}, {"$set": {
+            "status": "complete", "done": len(chapters), "finished_at": _now(),
+            "url": url, "duration_sec": round(total_dur, 1)}})
+        await log_org("Book Manufacturing™", "Manufacturing",
+                      f"rendered FULL audiobook for '{b['title']}' ({round(total_dur/60,1)} min)", b.get("book_code", book_id), "success")
+    except Exception as e:
+        await db[AUDIOBOOK_JOBS].update_one({"id": book_id}, {"$set": {
+            "status": "failed", "finished_at": _now(), "error": str(e)[:200]}})
+        await log_org("Book Manufacturing™", "Manufacturing", f"full audiobook render FAILED: {str(e)[:120]}", book_id, "warning")
+    finally:
+        import shutil
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+async def full_audiobook_status(book_id):
+    j = await db[AUDIOBOOK_JOBS].find_one({"id": book_id}, {"_id": 0})
+    if not j:
+        b = await db[COLL].find_one({"id": book_id}, {"artifacts.audio.full_audiobook": 1})
+        fa = ((b or {}).get("artifacts", {}).get("audio", {}) or {}).get("full_audiobook") if b else None
+        return {"status": "complete", "url": fa["url"], "duration_sec": fa["duration_sec"]} if fa else {"status": "idle"}
+    return j
+
 
 
 async def set_pricing(book_id, list_price, currency, actor, ebook_price=None, paperback_price=None):
@@ -1879,7 +2040,53 @@ async def assemble_master_package(book_id, actor):
 
 async def get_book(book_id):
     b = await db[COLL].find_one({"id": book_id}, {"_id": 0})
-    return clean(b) if b else None
+    if not b:
+        return None
+    out = clean(b)
+    suggestion = suggest_clean_title(out.get("title", ""))
+    if suggestion:
+        out["title_cleanup_suggestion"] = suggestion
+    return out
+
+
+_TITLE_ARTIFACT_TOKENS = [
+    "final", "finalized", "finalised", "draft", "working", "wip", "copy", "edit", "edited",
+    "revised", "revision", "rev", "master", "new", "old", "latest", "use this", "do not use",
+    "clean", "updated", "update", "fixed",
+]
+
+
+def suggest_clean_title(title):
+    """Detect file-name artifacts in a book title (FINAL, DRAFT, v2, copy, (1), .docx, dates…) and
+    return a cleaned suggestion — or None if the title is already clean. Conservative: only strips
+    known artifact tokens as WHOLE words, never mid-word content."""
+    import re
+    if not title:
+        return None
+    original = title.strip()
+    t = original
+    # strip file extensions
+    t = re.sub(r"\.(docx?|pdf|txt|md|rtf|pages|odt)$", "", t, flags=re.I)
+    # normalize underscores to spaces early so \b word boundaries catch tokens like Book_Working_Draft
+    t = t.replace("_", " ")
+    # strip trailing " - Copy", " copy 2", "(1)", "[final]" etc.
+    t = re.sub(r"[\s_\-–—]*\((?:\d+|copy|final|draft)\)\s*$", "", t, flags=re.I)
+    t = re.sub(r"[\s_\-–—]*\[[^\]]*\]\s*$", "", t)
+    # strip version markers: v2, v1.3, version 2
+    t = re.sub(r"\b(?:v|ver|version)\s*\.?\s*\d+(?:\.\d+)*\b", "", t, flags=re.I)
+    # strip standalone date stamps (2024, 2024-01-01, 1.2.24, 7.18.2026)
+    t = re.sub(r"\b\d{1,4}[.\-/]\d{1,2}[.\-/]\d{1,4}\b", "", t)
+    t = re.sub(r"\b(?:19|20)\d{2}\b", "", t)
+    # strip known artifact tokens as whole words (may repeat, e.g. FINAL FINAL)
+    token_re = re.compile(r"\b(?:" + "|".join(re.escape(w) for w in _TITLE_ARTIFACT_TOKENS) + r")\b", flags=re.I)
+    t = token_re.sub("", t)
+    # collapse leftover separators/whitespace
+    t = re.sub(r"[\s_]+", " ", t)
+    t = re.sub(r"[\s\-–—:.,]+$", "", t).strip()
+    t = re.sub(r"^[\s\-–—:.,]+", "", t).strip()
+    if t and t.lower() != original.lower() and len(t) >= 2:
+        return t
+    return None
 
 
 async def list_books():

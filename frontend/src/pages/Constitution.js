@@ -7,11 +7,13 @@ import { Loader2, Scale, Link2, Search } from "lucide-react";
 export default function Constitution() {
   const [doc, setDoc] = useState(null);
   const [bindings, setBindings] = useState(null);
+  const [std, setStd] = useState(null);
   const [q, setQ] = useState("");
 
   useEffect(() => {
     api.get("/governance/factory-constitution").then((r) => setDoc(r.data)).catch(() => setDoc(false));
     api.get("/governance/factory-constitution/bindings").then((r) => setBindings(r.data)).catch(() => {});
+    api.get("/manufacturing/ukr/constitution").then((r) => setStd(r.data)).catch(() => {});
   }, []);
 
   if (doc === null) return <div className="flex justify-center py-32"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
@@ -44,6 +46,34 @@ export default function Constitution() {
         </div>
 
         <div className="space-y-4">
+          {std?.frozen && (
+            <Panel title="STD-UKR-0001 (Frozen)" icon={Scale} accent="navy" testid="std-ukr-constitution">
+              <div className="flex items-center gap-2 mb-2">
+                <VerifiedBadge label="Frozen" testid="std-frozen-badge" />
+                <span className="text-[10px] text-muted-foreground">{std.constitutional_version}</span>
+              </div>
+              <p className="text-[11px] font-semibold text-navy leading-snug">{std.standard_name}</p>
+              <div className="mt-3 space-y-2.5">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-royal">One Responsibility · One Owner</p>
+                  {Object.values(std.enterprise_artifacts || {}).map((a) => (
+                    <p key={a.name} className="text-[10px] text-muted-foreground mt-0.5"><b className="text-navy">{a.abbr || a.name}</b> — {a.owns}</p>
+                  ))}
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-royal">Gold Standard — two gates</p>
+                  <p className="text-[10px] text-muted-foreground">Knowledge Gate → <b className="text-navy">Knowledge Certified</b></p>
+                  <p className="text-[10px] text-muted-foreground">Product Gate → <b className="text-navy">Product Certified</b></p>
+                  <p className="text-[9px] text-muted-foreground italic mt-0.5">{std.gold_standard_gates?.final_gold_rule}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-royal">Executable Completion Rule</p>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">{std.executable_completion_rule}</p>
+                </div>
+                <p className="text-[9px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-sm p-2">{std.founder_note}</p>
+              </div>
+            </Panel>
+          )}
           <Panel title="Governance Bindings" icon={Link2} accent="gold" testid="const-bindings">
             {!bindings ? <Loader2 className="w-4 h-4 animate-spin" /> : (
               <div className="space-y-2">
