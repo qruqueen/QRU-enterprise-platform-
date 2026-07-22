@@ -40,6 +40,17 @@ async def get_book(book_id: str, user=Depends(get_current_user)):
     return b
 
 
+@router.get("/books/{book_id}/inspection")
+async def book_inspection(book_id: str, user=Depends(get_current_user)):
+    """QRU Automated Pre-Review Inspection™ — read-only consolidated exception list. Never rewrites."""
+    import preflight_inspection as pi
+    res = await pi.inspect_book(book_id)
+    if res.get("error"):
+        raise HTTPException(404, res["error"])
+    return res
+
+
+
 @router.post("/upload")
 async def upload(payload: UploadPayload, user=Depends(require_super_admin)):
     return await bm.create_book_record(payload.dict(), user.get("name", "Founder"))

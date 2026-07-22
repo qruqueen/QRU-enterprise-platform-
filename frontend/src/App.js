@@ -102,6 +102,7 @@ import MediaDivision from "@/pages/MediaDivision";
 import CinemaStudio from "@/pages/CinemaStudio";
 import DecoderEngine from "@/pages/DecoderEngine";
 import BookManufacturing from "@/pages/BookManufacturing";
+import ProductFamily from "@/pages/ProductFamily";
 import ConsumerHome from "@/pages/consumer/ConsumerHome";
 import ConsumerLearn from "@/pages/consumer/ConsumerLearn";
 import ConsumerMyLearning from "@/pages/consumer/ConsumerMyLearning";
@@ -225,6 +226,7 @@ function EnterpriseRoutes() {
         <Route path="cinema-studio" element={<CinemaStudio />} />
         <Route path="decoder-engine" element={<DecoderEngine />} />
         <Route path="book-manufacturing" element={<BookManufacturing />} />
+        <Route path="product-family" element={<ProductFamily />} />
         <Route path="connectors" element={<Connectors />} />
         <Route path="ai-services" element={<AIServices />} />
         <Route path="notifications" element={<Notifications />} />

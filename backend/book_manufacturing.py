@@ -299,7 +299,8 @@ async def create_book_from_decoder(d, actor):
     """Create a Canonical Book Record from a Manufacturing Ready™ Decoder Record (Stone 2)."""
     if not d:
         return {"error": "Decoder Record not found."}
-    if d.get("review_state") != "Manufacturing Ready":
+    import decoder_engine as de
+    if d.get("review_state") not in de.MANUFACTURING_ELIGIBLE_STATES:
         return {"error": "This understanding is not Manufacturing Ready™ yet — the Factory is still finishing it."}
     content = _decoder_to_manuscript(d)
     gp = d.get("governance_package") or {}

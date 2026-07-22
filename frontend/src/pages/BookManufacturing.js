@@ -6,7 +6,7 @@ import { Panel, StatusChip, VerifiedBadge, MetricCard } from "@/components/qru";
 import { ManifestDialog } from "@/components/ManifestDialog";
 import {
   Upload, SpellCheck, Palette, Mic, Video, Send, Activity, Loader2, CheckCircle2,
-  Lock, FileText, ShieldCheck, ChevronRight, BookOpen, AlertTriangle, Download, MapPin, Share2, Play, DollarSign, ClipboardCheck, Sparkles, FileCheck2, Pencil, X,
+  Lock, FileText, ShieldCheck, ChevronRight, BookOpen, AlertTriangle, Download, MapPin, Share2, Play, DollarSign, ClipboardCheck, Sparkles, FileCheck2, Pencil, X, SearchCheck,
 } from "lucide-react";
 
 const ICONS = { upload: Upload, "spell-check": SpellCheck, palette: Palette, mic: Mic, video: Video, send: Send, activity: Activity };
@@ -45,6 +45,8 @@ export default function BookManufacturing() {
   const [allBooks, setAllBooks] = useState([]);
   const [systemTitle, setSystemTitle] = useState("QRU Product Manufacturing System™");
   const [editIdentity, setEditIdentity] = useState(false);
+  const [inspection, setInspection] = useState(null);
+  const [inspecting, setInspecting] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const [authorDraft, setAuthorDraft] = useState("");
   const [subtitleDraft, setSubtitleDraft] = useState("");
@@ -60,7 +62,7 @@ export default function BookManufacturing() {
     setProof(data.proofing_report || null);
     setPublish(null); setAudio(null); setVideo(null); setMonitor(null);
   };
-  const selectBook = async (id) => { setTab("upload"); setShareInfo(null); await reload(id); };
+  const selectBook = async (id) => { setTab("upload"); setShareInfo(null); setInspection(null); await reload(id); };
   useEffect(() => {
     api.get("/book-mfg/config").then((r) => { setButtons(r.data.buttons); if (r.data.system_title) setSystemTitle(r.data.system_title); }).catch(() => {});
     loadBooks().then((books) => {
@@ -83,6 +85,17 @@ export default function BookManufacturing() {
     try { await fn(); if (ok) toast.success(ok); await reload(book.id); }
     catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
     finally { setBusy(false); }
+  };
+
+  const doInspect = async () => {
+    setInspecting(true);
+    try {
+      const { data } = await api.get(`/book-mfg/books/${book.id}/inspection`);
+      setInspection(data);
+      toast[data.summary.clean ? "success" : "message"](
+        data.summary.clean ? "No exceptions — inspection clean." : `${data.summary.total_exceptions} exception(s) flagged for your review.`);
+    } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
+    finally { setInspecting(false); }
   };
 
   const doProof = () => run(async () => { const { data } = await api.post(`/book-mfg/books/${book.id}/proof`); setProof(data.report); }, "Proof & Polish complete.");
@@ -255,7 +268,68 @@ export default function BookManufacturing() {
         </div>
       </div>
 
-      {/* Share link box — always copyable (never a one-shot clipboard write) */}
+      {/* QRU Automated Pre-Review Inspection™ — read-only exception list (never rewrites) */}
+      <div className="qru-card p-4 mb-5 border-l-4 border-royal" data-testid="preview-inspection-panel">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div>
+            <p className="text-sm font-bold text-navy flex items-center gap-1.5">
+              <SearchCheck className="w-4 h-4 text-royal" /> Automated Pre-Review Inspection™
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Runs every automatable check and lists only exceptions — so you review what's flagged, never every word. It never rewrites your book.
+            </p>
+          </div>
+          <button data-testid="run-inspection-btn" onClick={doInspect} disabled={inspecting}
+            className="inline-flex items-center gap-1.5 bg-navy text-white px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50">
+            {inspecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <SearchCheck className="w-4 h-4" />} Run Inspection
+          </button>
+        </div>
+        {inspection && (
+          <div className="mt-3" data-testid="inspection-report">
+            <div className="flex items-center gap-2 flex-wrap mb-3">
+              {inspection.summary.clean ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1" data-testid="inspection-clean">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> No exceptions — clean
+                </span>
+              ) : (
+                <>
+                  <span className={`inline-flex items-center gap-1 text-[11px] font-bold rounded-full px-2.5 py-1 border ${inspection.summary.blocking ? "text-red-700 bg-red-50 border-red-200" : "text-emerald-700 bg-emerald-50 border-emerald-200"}`} data-testid="inspection-blocking">
+                    {inspection.summary.blocking} blocking
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1" data-testid="inspection-recommended">
+                    {inspection.summary.recommended} recommended
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-full px-2.5 py-1" data-testid="inspection-advisory">
+                    {inspection.summary.advisory} advisory
+                  </span>
+                  {inspection.summary.publish_ready && (
+                    <span className="text-[10px] text-emerald-700 font-semibold">No blocking issues — publish-ready</span>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="space-y-2">
+              {inspection.exceptions.map((e) => (
+                <div key={e.id} data-testid={`inspection-exc-${e.id}`}
+                  className={`rounded-md border px-3 py-2 ${e.severity === "blocking" ? "bg-red-50 border-red-200" : e.severity === "recommended" ? "bg-amber-50 border-amber-200" : "bg-muted/30 border-border"}`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[9px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 ${e.severity === "blocking" ? "bg-red-600 text-white" : e.severity === "recommended" ? "bg-amber-500 text-white" : "bg-slate-400 text-white"}`}>{e.severity}</span>
+                    <p className="text-[12px] font-bold text-navy">{e.label}</p>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">{e.detail}</p>
+                  {e.examples && e.examples.length > 0 && (
+                    <p className="text-[10px] text-muted-foreground/80 mt-1 font-mono truncate">{e.examples.slice(0, 6).join(" · ")}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground/70 mt-3 italic">
+              {inspection.note} Your judgment owns: {(inspection.founder_judgment || []).join(", ")}.
+            </p>
+          </div>
+        )}
+      </div>
+
       {shareInfo && (
         <div className="qru-card p-4 mb-5 border-l-4 border-royal" data-testid="share-box">
           <div className="flex items-center justify-between gap-2 mb-2">

@@ -23,6 +23,14 @@ REVIEW_STATES = ["Draft", "Automated Quality Review", "Verification Review", "Ed
                  "Founder Approved", "Treasure Standard Candidate", "Treasure Standard Certified",
                  "Published", "Superseded", "Archived"]
 
+# States from which a product may be manufactured — "Manufacturing Ready" AND every state above it
+# (Founder Approved / Treasure Standard Candidate / Treasure Standard Certified are MORE approved,
+# not less). Prevents the bug where a Founder-Approved understanding was wrongly blocked.
+MANUFACTURING_ELIGIBLE_STATES = {
+    "Manufacturing Ready", "Founder Approved",
+    "Treasure Standard Candidate", "Treasure Standard Certified",
+}
+
 # Governed shelving taxonomy (§27). Founder-authorized additions only.
 DOMAINS = ["AI Literacy", "Finance", "Trading", "Health", "Human Capability", "Emotions", "Life Skills",
            "Science", "Technology", "Leadership", "Faith and Philosophy", "Children", "Little Legacy Learners™", "General"]
@@ -316,7 +324,8 @@ async def needs_attention():
 
 
 async def get_decoder(did):
-    return await db[COLL].find_one({"id": did}, {"_id": 0})
+    return await db[COLL].find_one({"id": did}, {"_id": 0}) \
+        or await db[COLL].find_one({"decoder_id": did}, {"_id": 0})
 
 
 async def _transition(did, state, actor, note=""):
@@ -396,7 +405,7 @@ def available_product_types():
 async def create_product_from_decoder(d, product_type, actor, base_url=""):
     if not d:
         return {"error": "Understanding record not found."}
-    if d.get("review_state") != "Manufacturing Ready":
+    if d.get("review_state") not in MANUFACTURING_ELIGIBLE_STATES:
         return {"error": "This understanding is not Manufacturing Ready™ yet — the Factory is still finishing it."}
     product_type = product_type or "Book"
 
