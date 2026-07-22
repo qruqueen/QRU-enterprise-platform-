@@ -2135,7 +2135,8 @@ async def assemble_master_package(book_id, actor):
 
 
 async def get_book(book_id):
-    b = await db[COLL].find_one({"id": book_id}, {"_id": 0})
+    b = await db[COLL].find_one({"id": book_id}, {"_id": 0}) \
+        or await db[COLL].find_one({"book_code": book_id}, {"_id": 0})
     if not b:
         return None
     out = clean(b)

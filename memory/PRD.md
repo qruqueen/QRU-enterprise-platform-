@@ -13,6 +13,16 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - Language: English only (code, comments, UI).
 
 
+## ✅ Manufacturing Season — Pre-Review Inspection™ + Product Family Manufacturing™ (2026-06, testing_agent iteration_92 — 100% backend 10/10, 100% frontend 2/2, ZERO blocking issues)
+Founder recharged credits after a series of read-only consolidation assessments; approved building all three (reply "abc").
+- **(a) QRU Automated Pre-Review Inspection™** (`preflight_inspection.py`, STD-INSPECT-0001; `GET /api/book-mfg/books/{id}/inspection`): ONE read-only consolidated pass that lists ONLY exceptions (formatting, placeholders, repeated words, spacing, structure, front-matter, links, spelling via pyspellchecker offline, content-integrity, metadata completeness) with severity buckets (blocking/recommended/advisory). NEVER rewrites (Treasure Standard) — verified content/word-count byte-identical before/after. UI panel in BookManufacturing.js (`preview-inspection-panel` → `run-inspection-btn` → `inspection-report`). Founder-judgment items (voice, teaching, reader experience, pricing, final approval) explicitly kept human.
+- **(b) Product Family Manufacturing™** (`manufacturing_intents.py` + `family_assembly.py` + `routers/family.py`, page `/product-family`, in NAV_CORE): pick a Verified source (Manufacturing-eligible understanding) → pick a Manufacturing Intent™ (Consumer/Classroom/Homeschool/Professional/Corporate/Exam Prep) → confirm the pre-ticked family bundle → ONE action manufactures the family + one Family Package™. Pure ORCHESTRATION over the existing `create_product_from_decoder` bridge (no new engine). Source Verification Gate™ still blocks mismatches (DEC-GATETEST → 409). $0 AI for document families / Book-record creation.
+- **Eligibility fix:** `decoder_engine.MANUFACTURING_ELIGIBLE_STATES` now includes states ABOVE "Manufacturing Ready" (Founder Approved / Treasure Standard Candidate / Treasure Standard Certified). Previously a Founder-Approved understanding was wrongly blocked. `get_decoder` + `get_book` now resolve by id OR decoder_id/book_code.
+- **(c) AI Literacy rebuilt from the CORRECT source:** ran the Classroom family on DEC-00018 (decoded from Verified **KR-00080 "AI Literacy"**) → **BOOK-0018** (content-integrity CLEAN, not factory-docs) + Workbook PRD-00240 + Teacher Guide PRD-00241, all KR-00080-linked (FAM-5EA08F8F). BOOK-0018 cover intentionally NOT yet AI-rendered (Founder action in Book line to avoid AI spend).
+- Non-blocking follow-ups (optional): allow `GET /api/products/{code}` by product_code.
+
+
+
 ## ✅ Content-integrity guard + cover legibility (2026-07-21, testing_agent iteration_90 — 4/4 PASS)
 Founder found (on production) a book titled "AI Literacy K-12" whose BODY was internal QRU Factory
 documentation (Product Manufacturing File, audit records, governed knowledge record) — the Book Recipe
