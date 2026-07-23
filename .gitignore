@@ -194,3 +194,4 @@ frontend/node_modules/.cache/default-development/138.pack
 credentials.json
 *.key
 .credentials
+backend/rendered_assets/audiobook-209b8cf6-3799-49f6-bed6-1e3db0a6eb0a-7213f8c4.mp3
