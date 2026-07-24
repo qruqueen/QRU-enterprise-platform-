@@ -125,10 +125,31 @@ def _strip_md(text):
     return text.encode("latin-1", "replace").decode("latin-1")
 
 
+# Suffixes that are internal/format labels or redundant — never customer-facing on a title.
+_NONCUSTOMER_SUFFIXES = {
+    "book", "short-form content", "long-form content", "content", "article",
+    "publication", "document", "pdf", "ebook", "e-book",
+}
+
+
+def clean_customer_title(title):
+    """Strip a trailing ' - X' / ' — X' manufacturing/format suffix from a customer-facing title.
+    Removes redundant ('- Book') or internal ('- Short-form Content') labels while keeping meaningful
+    educational product names (Workbook, Teacher Guide, …) intact. Non-destructive display cleanup."""
+    t = (title or "").strip()
+    for sep in (" — ", " - ", " – "):
+        if sep in t:
+            base, _, suffix = t.rpartition(sep)
+            if base.strip() and suffix.strip().lower() in _NONCUSTOMER_SUFFIXES:
+                return base.strip()
+    return t
+
+
+
 def _make_pdf(product, kr, cover_bytes, qr_bytes):
     from fpdf import FPDF
 
-    title_txt = _strip_md(product.get("title", "QRU Product"))
+    title_txt = _strip_md(clean_customer_title(product.get("title", "QRU Product")))
     family_txt = _strip_md(product.get("family", ""))
     ptype_txt = _strip_md(product.get("product_type", ""))
 
@@ -212,9 +233,11 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
         pdf.set_text_color(*NAVY); pdf.set_font("Times", "B", 26)
         pdf.multi_cell(0, 12, title_txt)
         pdf.ln(2)
-        pdf.set_font("Times", "I", 12); pdf.set_text_color(90, 84, 110)
-        pdf.multi_cell(0, 7, _strip_md("Manufactured by QRU Factory(TM). QRU simplifies the path to understanding the truth."))
-        pdf.ln(6)
+        _sub = _strip_md(product.get("subtitle") or product.get("tagline") or "")
+        if _sub:
+            pdf.set_font("Times", "I", 12); pdf.set_text_color(90, 84, 110)
+            pdf.multi_cell(0, 7, _sub)
+            pdf.ln(6)
         pdf.set_draw_color(*GOLD); pdf.set_line_width(0.5)
         pdf.line(pdf.l_margin, pdf.get_y(), pdf.l_margin + 55, pdf.get_y())
 
@@ -400,7 +423,7 @@ async def ensure_branded_assets(pid, actor="Creative Studio™", allow_ai_hero_a
         try:
             import design_studio as ds
             ctx = {
-                "title": p.get("title", ""), "subtitle": p.get("subtitle", ""),
+                "title": clean_customer_title(p.get("title", "")), "subtitle": p.get("subtitle", ""),
                 "byline": p.get("author") or "", "imprint": p.get("imprint") or "QRU",
                 "genre": p.get("family") or p.get("category") or "",
                 "family": p.get("family", ""), "topic": p.get("topic", ""),

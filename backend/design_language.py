@@ -55,6 +55,24 @@ KEYWORDS = [
     ("children", ["kid", "child", "toddler", "young learner"]),
 ]
 
+
+_NONCUSTOMER_TITLE_SUFFIXES = {
+    "book", "short-form content", "long-form content", "content", "article",
+    "publication", "document", "pdf", "ebook", "e-book",
+}
+
+
+def _clean_cover_title(title):
+    """Strip an internal/redundant ' - X' / ' — X' manufacturing suffix from a customer-facing title."""
+    t = (title or "").strip()
+    for sep in (" — ", " - ", " – "):
+        if sep in t:
+            base, _, suffix = t.rpartition(sep)
+            if base.strip() and suffix.strip().lower() in _NONCUSTOMER_TITLE_SUFFIXES:
+                return base.strip()
+    return t
+
+
 import os as _os
 
 # Fonts are BUNDLED with the app (assets/fonts) so they ship with every deploy — production
@@ -242,7 +260,7 @@ def premium_cover(product, kr=None, hero_bytes=None):
     d.text((W - 60 - bw / 2, 491), ptype, font=_f(SANS_BOLD, 24), fill=QRU_NAVY, anchor="mm")
 
     # Title — large, publication-scale (auto-fit; higher floor so it never renders tiny)
-    title = p.get("title") or "Understanding"
+    title = _clean_cover_title(p.get("title") or "Understanding")
     font, lines, size = _fit_title(d, title, W - 150, 3, start=150, min_size=58)
     y = 600
     for ln in lines:
