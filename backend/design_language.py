@@ -212,10 +212,10 @@ def premium_cover(product, kr=None, hero_bytes=None):
     d.rounded_rectangle([W - 60 - bw, 470, W - 60, 512], radius=20, fill=accent)
     d.text((W - 60 - bw / 2, 491), ptype, font=_f(SANS_BOLD, 24), fill=QRU_NAVY, anchor="mm")
 
-    # Title
+    # Title — large, publication-scale (auto-fit; higher floor so it never renders tiny)
     title = p.get("title") or "Understanding"
-    font, lines, size = _fit_title(d, title, W - 200, 5)
-    y = 620
+    font, lines, size = _fit_title(d, title, W - 150, 3, start=150, min_size=58)
+    y = 600
     for ln in lines:
         d.text((W // 2, y), ln, font=font, fill=WHITE, anchor="mm")
         y += int(size * 1.12)
