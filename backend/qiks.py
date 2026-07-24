@@ -50,7 +50,9 @@ DIVISIONS = [
 
 
 def _std(sid, name, category, desc, purpose, related=None, agents=None, colleges=None,
-         products=None, recipes=None, impl="Implemented", refs=None, links=None):
+         products=None, recipes=None, impl="Implemented", refs=None, links=None,
+         standard_type="", designation="", inherits_from=None, implemented_by=None,
+         supersedes="", alias=""):
     return {
         "id": sid, "standard_id": sid, "name": name, "category": category,
         "description": desc, "purpose": purpose,
@@ -63,6 +65,13 @@ def _std(sid, name, category, desc, purpose, related=None, agents=None, colleges
         "related_colleges": colleges or [],
         "implementation_status": impl,
         "promotion_stage": "Institutional Knowledge™",
+        # Inheritance metadata (hierarchy view). Empty by default → existing standards unaffected.
+        "standard_type": standard_type,
+        "designation": designation,        # "Canonical Knowledge Standard" | "Supporting Implementation Standard"
+        "inherits_from": inherits_from or [],
+        "implemented_by": implemented_by or [],
+        "supersedes": supersedes,
+        "alias": alias,                    # backward-compatible alternate ID (e.g. STD-KR-0001)
         "change_history": [{
             "version": "1.0", "date": "2026-07-03",
             "reason": "Adopted as founding institutional standard.",
@@ -182,6 +191,61 @@ async def seed_qiks():
     for l in SEED_LESSONS:
         if not await LESSON_COL.find_one({"id": l["id"]}):
             await LESSON_COL.insert_one({**l})
+    await apply_kr_hierarchy()
+
+
+# ---- Knowledge Record Standards Hierarchy (Founder-approved 2026-06) ----
+# QRU Master Constitution™ (STD-00005)
+#   → STD-UKR-0001 Universal Knowledge Record™           (CANONICAL knowledge standard)
+#       → STD-00027 Knowledge Record Master Specification™ (alias STD-KR-0001, SUPPORTING)
+#           → STD-00030 Knowledge Record Template™          (alias STD-KR-0002, SUPPORTING)
+#               → KR-000001 … individual Knowledge Records
+# NON-DESTRUCTIVE: keeps existing standard_ids (backward compatibility) and ADDS inheritance metadata
+# + backward-compatible aliases. Idempotent — safe to run on every startup / redeploy.
+CANONICAL = "Canonical Knowledge Standard"
+SUPPORTING = "Supporting Implementation Standard"
+
+_UKR_CARD = _std(
+    "STD-UKR-0001", "Universal Knowledge Record™ (UKR™)", "Knowledge Record Architecture™",
+    "The canonical enterprise knowledge architecture: the permanent sections, Treasure Layer, "
+    "inheritance, evidence, versioning and governance that define what a Knowledge Record IS.",
+    "Serve as the single canonical Universal Knowledge Record standard from which every Knowledge "
+    "Record and its supporting specification and template inherit.",
+    related=["STD-00005", "STD-00027", "STD-00030"],
+    agents=["Knowledge Architect™", "Verification Lion™"],
+    refs=["ukr_standard.py", "/api/manufacturing/ukr/constitution"],
+    standard_type="Canonical Knowledge Architecture",
+    designation=CANONICAL,
+    inherits_from=["STD-00005"],
+    implemented_by=["STD-00027"],
+)
+
+# Metadata to patch onto the three existing standards (content untouched).
+_HIERARCHY_PATCH = {
+    "STD-00005": {"standard_type": "Enterprise Constitution", "designation": CANONICAL,
+                  "inherits_from": [], "implemented_by": ["STD-UKR-0001"]},
+    "STD-00027": {"name": "Knowledge Record Master Specification™",
+                  "standard_type": "Technical Specification", "designation": SUPPORTING,
+                  "alias": "STD-KR-0001", "inherits_from": ["STD-UKR-0001"],
+                  "implemented_by": ["STD-00030"],
+                  "related_standards": ["STD-UKR-0001", "STD-00030"]},
+    "STD-00030": {"name": "Knowledge Record Template™",
+                  "standard_type": "Working Template", "designation": SUPPORTING,
+                  "alias": "STD-KR-0002", "inherits_from": ["STD-00027"],
+                  "implemented_by": [], "related_standards": ["STD-00027"]},
+}
+
+
+async def apply_kr_hierarchy():
+    """Idempotently install the canonical UKR card + inheritance metadata (no content changes)."""
+    if not await STD_COL.find_one({"id": "STD-UKR-0001"}):
+        await STD_COL.insert_one({**_UKR_CARD})
+    for sid, patch in _HIERARCHY_PATCH.items():
+        doc = await STD_COL.find_one({"id": sid})
+        if doc:
+            await STD_COL.update_one({"id": sid}, {"$set": {**patch, "updated_at": _now()}})
+    return {"ok": True, "canonical": "STD-UKR-0001", "patched": list(_HIERARCHY_PATCH.keys())}
+
 
 
 def _clean(d):
@@ -208,7 +272,10 @@ async def list_standards(category=None, status=None, q=None):
 
 
 async def get_standard(sid):
-    return _clean(await STD_COL.find_one({"id": sid}))
+    # Resolve by canonical id OR backward-compatible alias (e.g. STD-KR-0001 → STD-00027).
+    return _clean(await STD_COL.find_one({"id": sid})
+                  or await STD_COL.find_one({"standard_id": sid})
+                  or await STD_COL.find_one({"alias": sid}))
 
 
 async def next_id():

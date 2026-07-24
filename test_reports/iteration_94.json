@@ -1,0 +1,41 @@
+{
+  "summary": "Frontend-only test of UKR Standards hierarchy metadata (non-destructive additive change) on /qiks (InstitutionalKnowledge). Logged in as demo.admin, navigated to Standards Registry, searched 'Knowledge Record'. All THREE target cards render with correct designation badges + inherits_from lines; UKR detail dialog shows Standard Type/Inherits From/Implemented By correctly. All three qiks tabs (standards, graph, memory) load without runtime errors. Test passes.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "InstitutionalKnowledge / qiks-category-filter", "issues": ["Pre-existing React hydration warning: <span> rendered as child of <option> in qiks-category-filter select (InstitutionalKnowledge.js line ~121). Not caused by this iteration but flagged for cleanup — options should only contain text, not span children."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "OPTIONAL: Remove nested <span> inside <option> in InstitutionalKnowledge.js category filter to fix React hydration warning (pre-existing, cosmetic console warning only).",
+    "Review request stated route '/institutional-knowledge' but actual mounted route is '/qiks' (App.js line 183). Update prompts/docs to reference '/qiks' to avoid future confusion."
+  ],
+  "critical_code_review_comments": [
+    "Route mismatch between review request ('/institutional-knowledge') and actual App.js route ('/qiks'). Not a bug, but a documentation inconsistency."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped per request)", "frontend": "100%"},
+  "test_credentials": "demo.admin@qru.com / qru-demo-admin-2026 → POST /api/auth/login returns {access_token, token_type, user}. Token stored in localStorage['qru_token'].",
+  "seed_data_creation": "None. Read-only verification.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "verified_assertions": {
+    "cards": {
+      "STD-UKR-0001": "⭐ Canonical badge present (data-testid std-designation-STD-UKR-0001='⭐ Canonical'); 'Inherits from: STD-00005' rendered on card.",
+      "STD-00027": "Supporting badge present; alias 'STD-KR-0001' rendered on card id line; 'Inherits from: STD-UKR-0001' present.",
+      "STD-00030": "Supporting badge present; alias 'STD-KR-0002' rendered on card id line; 'Inherits from: STD-00027' present."
+    },
+    "detail_dialog_UKR": {
+      "std-detail-designation": "⭐ CANONICAL KNOWLEDGE STANDARD",
+      "Standard Type": "Canonical Knowledge Architecture",
+      "Inherits From": "STD-00005",
+      "Implemented By": "STD-00027",
+      "Related Standards": "STD-00005, STD-00027, STD-00030"
+    },
+    "regression": "qiks-tab-standards / qiks-tab-graph / qiks-tab-memory all switch and render without console errors (only pre-existing hydration warning noted above)."
+  },
+  "context_for_next_testing_agent": "Route is /qiks not /institutional-knowledge. Login via POST /api/auth/login (not /api/enterprise/auth/login). Store token in localStorage key 'qru_token'. Standards tab is the default; search input data-testid=qiks-search. Detail dialog uses uppercase label headings (STANDARD TYPE, INHERITS FROM, IMPLEMENTED BY) — case-sensitive matching required."
+}

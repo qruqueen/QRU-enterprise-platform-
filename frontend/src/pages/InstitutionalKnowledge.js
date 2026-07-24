@@ -127,11 +127,20 @@ export default function InstitutionalKnowledge() {
               <button key={s.id} data-testid={`std-card-${s.id}`} onClick={() => setOpen(s)}
                 className="text-left rounded-md border border-border bg-card p-4 hover:border-gold hover:shadow-md transition-all group">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono text-muted-foreground">{s.standard_id} · v{s.version}</span>
+                  <span className="text-[10px] font-mono text-muted-foreground">{s.standard_id}{s.alias ? ` · ${s.alias}` : ""} · v{s.version}</span>
                   <span className={`text-[10px] rounded-full px-1.5 py-0.5 border ${s.status === "Active" ? "text-emerald-700 bg-emerald-50 border-emerald-200" : "text-amber-700 bg-amber-50 border-amber-200"}`}>{s.status}</span>
                 </div>
                 <p className="font-heading font-semibold text-navy text-[15px] mt-1">{s.name}</p>
                 <p className="text-[11px] text-gold mt-0.5">{s.category}</p>
+                {s.designation && (
+                  <span data-testid={`std-designation-${s.id}`}
+                    className={`inline-flex items-center gap-1 mt-2 text-[9px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 ${/canonical/i.test(s.designation) ? "bg-gold/20 text-gold-foreground text-navy border border-gold/40" : "bg-royal/10 text-royal border border-royal/30"}`}>
+                    {/canonical/i.test(s.designation) ? "⭐ Canonical" : "Supporting"}
+                  </span>
+                )}
+                {s.inherits_from?.length > 0 && (
+                  <p className="text-[10px] text-muted-foreground mt-1">Inherits from: <span className="font-mono">{s.inherits_from.join(", ")}</span></p>
+                )}
                 <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{s.description}</p>
                 <span className="mt-3 inline-flex items-center gap-1 text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">Open record <ArrowRight className="w-3 h-3" /></span>
               </button>
@@ -212,11 +221,21 @@ export default function InstitutionalKnowledge() {
                 <p className="overline text-gold text-[10px] font-semibold tracking-widest uppercase">{open.standard_id} · {open.category} · v{open.version}</p>
                 <DialogTitle className="font-heading text-2xl text-navy">{open.name}</DialogTitle>
                 <p className="text-sm text-muted-foreground">{open.status} · {open.implementation_status} · Founder Approved: {open.founder_approval ? "Yes" : "No"} · Stage: {open.promotion_stage}</p>
+                {open.designation && (
+                  <span data-testid="std-detail-designation"
+                    className={`inline-flex w-fit items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wide rounded px-2 py-0.5 ${/canonical/i.test(open.designation) ? "bg-gold/20 text-navy border border-gold/40" : "bg-royal/10 text-royal border border-royal/30"}`}>
+                    {/canonical/i.test(open.designation) ? "⭐ " : ""}{open.designation}
+                  </span>
+                )}
               </DialogHeader>
               <div className="grid sm:grid-cols-2 gap-x-8 mt-2">
                 <div>
                   <Field label="Description" value={open.description} />
                   <Field label="Purpose" value={open.purpose} />
+                  <Field label="Standard Type" value={open.standard_type} />
+                  <Field label="Inherits From" value={open.inherits_from} />
+                  <Field label="Implemented By" value={open.implemented_by} />
+                  <Field label="Alias (backward-compatible)" value={open.alias} />
                   <Field label="Related Standards" value={open.related_standards} />
                   <Field label="Related AI Agents" value={open.related_ai_agents} />
                   <Field label="Related Colleges" value={open.related_colleges} />
@@ -224,6 +243,7 @@ export default function InstitutionalKnowledge() {
                 <div>
                   <Field label="Enterprise References" value={open.enterprise_references} />
                   <Field label="Change History" value={open.change_history} />
+                  <Field label="Supersedes" value={open.supersedes} />
                   <Field label="Superseded Versions" value={open.superseded_versions?.map(v => `v${v.version} — archived ${(v.archived_at||'').slice(0,10)}`)} />
                   <Field label="Date Adopted" value={open.date_adopted} />
                   <Field label="Classification" value={open.classification} />
