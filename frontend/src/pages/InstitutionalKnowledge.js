@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Library, Loader2, Search, Network, Lightbulb, GitBranch, ShieldCheck, ArrowRight, CheckCircle2, FileText } from "lucide-react";
+import { Library, Loader2, Search, Network, Lightbulb, GitBranch, ShieldCheck, ArrowRight, CheckCircle2, FileText, Download, Archive } from "lucide-react";
 
 const TABS = [
   { key: "standards", label: "Standards Registry™", icon: ShieldCheck },
@@ -43,6 +43,23 @@ export default function InstitutionalKnowledge() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [auditFiles, setAuditFiles] = useState([]);
+
+  useEffect(() => {
+    api.get("/audit/exports").then(({ data }) => setAuditFiles(data.exports || [])).catch(() => {});
+  }, []);
+
+  const downloadAudit = async (f) => {
+    const { toast } = await import("sonner");
+    try {
+      const res = await api.get(f.download_url, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement("a");
+      a.href = url; a.download = f.filename; document.body.appendChild(a); a.click();
+      a.remove(); window.URL.revokeObjectURL(url);
+      toast.success(`Downloaded ${f.filename}`);
+    } catch { toast.error("Download failed"); }
+  };
 
   useEffect(() => {
     api.get("/qiks/overview").then(({ data }) => setOverview(data)).catch(() => {}).finally(() => setLoading(false));
@@ -110,6 +127,23 @@ export default function InstitutionalKnowledge() {
 
       {tab === "standards" && (
         <div className="space-y-4">
+          {auditFiles.length > 0 && (
+            <div className="qru-card p-4 border-l-4 border-gold" data-testid="audit-exports-panel">
+              <div className="flex items-center gap-2 mb-1">
+                <Archive className="w-4 h-4 text-gold" />
+                <p className="text-sm font-bold text-navy">Standards Audit™ — Preserved Baseline Snapshot</p>
+              </div>
+              <p className="text-[11px] text-muted-foreground mb-3">Read-only export of the current governance registry (iteration 94). Download for Founder review.</p>
+              <div className="flex flex-wrap gap-2">
+                {auditFiles.map((f) => (
+                  <button key={f.filename} data-testid={`audit-download-${f.filename}`} onClick={() => downloadAudit(f)}
+                    className="inline-flex items-center gap-1.5 border border-navy/30 text-navy hover:bg-navy/5 px-3 py-1.5 rounded-md text-[12px] font-semibold">
+                    <Download className="w-3.5 h-3.5" /> {f.filename} <span className="text-muted-foreground">({f.size_kb} KB)</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[220px] max-w-md">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />

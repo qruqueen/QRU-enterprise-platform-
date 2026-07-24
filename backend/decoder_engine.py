@@ -431,10 +431,9 @@ async def create_product_from_decoder(d, product_type, actor, base_url=""):
     kr = await _resolve_kr(kr_id) if kr_id else None
     count = await db.products.count_documents({})
     pid = gen_id()
-    import rendering_engine as _re
-    # Store a CLEAN customer-facing title (drops redundant/internal suffixes like '- Book',
-    # '- Short-form Content'); product_type still distinguishes family members internally.
-    title = _re.clean_customer_title(f"{d.get('title', 'Untitled')} — {product_type}")
+    # Stored title PRESERVES the internal manufacturing name (with product-type suffix) for backward
+    # compatibility. Customer-facing cleanup happens at DISPLAY/RENDER time only (clean_customer_title).
+    title = f"{d.get('title', 'Untitled')} — {product_type}"
     product = {
         "id": pid, "product_code": f"PRD-{count + 1:05d}", "title": title,
         "product_type": product_type,

@@ -13,6 +13,16 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - Language: English only (code, comments, UI).
 
 
+## ✅ Standards Audit preserved + Title Cleanup PREVIEW (2026-06, display-only, awaiting Founder approval for any data migration)
+Founder approved the read-only Standards Audit as the baseline snapshot and authorized display-only title cleanup (no registry changes, no permanent migration).
+- **Audit evidence preserved & Founder-accessible**: `/app/backend/audit_exports/` holds `QRU_Standards_Full_Export.json` (original preserved, not overwritten), `QRU_Standards_Inventory.csv` (39-standard CSV), `QRU_Standards_Audit_Findings.md` (header: audit date, iteration 94, 39 standards, 6 lessons, 23 recipes, 10 PMS; sections A–E: missing STD-EIP-0001, 15 orphans, code-equivalent unregistered capabilities, Founder-approved-not-found records, empty metadata). Served via `routers/audit_exports.py` (`GET /api/audit/exports` + `/exports/{file}`, super-admin). Download control added to Institutional Knowledge page (`audit-exports-panel`).
+- **REGISTRY HELD**: no STD-EIP-0001 created; no orphan links; no register/rename/merge/supersede/delete; no code→standard conversions. Awaiting Founder crosswalk approval.
+- **Title cleanup = DISPLAY-ONLY** (`rendering_engine.clean_customer_title` + `design_language._clean_cover_title`): strips redundant/internal suffixes ("- Book", "- Short-form Content") from rendered titles/covers and removed the "Manufactured by QRU Factory" chrome from product interior title pages (now shows the real subtitle). Reverted the earlier stored-title change → **DB titles, internal names, product IDs, slugs, URLs, purchases, files all UNCHANGED**. NO permanent title migration ran. 9/9 automated checks pass. Before/after e.g. "Love — Book" → display "Love"; "AI Literacy — Workbook" preserved.
+- **PAUSED for Founder approval** before any permanent title data migration.
+- Production sequence maintained: (1) redeploy+verify [Founder], (2) title cleanup [previewed], (3) Batch Upgrade Assets™ covers, (4) audiobook storefront, (5) Store Health view. Standards visual inheritance tree NOT added (per instruction).
+
+
+
 ## ✅ UKR Standards Hierarchy + inheritance metadata (2026-06, testing_agent iteration_94 — 100% frontend, API curl-verified)
 Founder-approved NON-DESTRUCTIVE hierarchy (existing IDs kept, aliases added, content untouched):
 QRU Master Constitution™ (STD-00005) → **STD-UKR-0001 Universal Knowledge Record™ (CANONICAL)** → STD-00027 **Knowledge Record Master Specification™** (alias STD-KR-0001, Supporting) → STD-00030 **Knowledge Record Template™** (alias STD-KR-0002, Supporting) → individual KRs.

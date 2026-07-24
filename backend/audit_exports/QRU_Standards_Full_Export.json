@@ -1,0 +1,1170 @@
+{
+  "total": 39,
+  "standards": [
+    {
+      "standard_id": "QRU-CON-0001",
+      "alias": null,
+      "name": "QRU Factory\u2122 Constitution",
+      "version": "1.0",
+      "category": "Enterprise Standards\u2122",
+      "purpose": "Provide a single protected authority binding every agent, workflow, interface, quality gate, and manufacturing pipeline to the QRU mission and values.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "STD-00001",
+        "STD-00005",
+        "STD-00003",
+        "STD-00016"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": null,
+      "updated_at": "2026-07-10T23:52:13.045120+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes",
+        "enterprise_references"
+      ]
+    },
+    {
+      "standard_id": "QRU-CON-0002",
+      "alias": null,
+      "name": "QRU Enterprise Publishing & Presentation Standard\u2122",
+      "version": "1.0",
+      "category": "Publishing / Design Governance",
+      "purpose": "Every QRU product looks professionally published and communicates manufactured understanding.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "QRU-CON-0001"
+      ],
+      "supersedes": null,
+      "implementation_status": null,
+      "enterprise_references": null,
+      "updated_at": null,
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes",
+        "implementation_status",
+        "enterprise_references",
+        "updated_at"
+      ]
+    },
+    {
+      "standard_id": "STD-00001",
+      "alias": null,
+      "name": "Treasure Standard\u2122",
+      "version": "1.0",
+      "category": "Treasure Standard\u2122",
+      "purpose": "Guarantee that nothing leaves QRU unless it is true, understandable, useful, complete, beautiful, memorable, and on-brand.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "STD-00002",
+        "STD-00008",
+        "STD-00010"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [
+        "constitution.py",
+        "product_protection.treasure_finalize"
+      ],
+      "updated_at": "2026-07-03T12:28:34.242375+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes"
+      ]
+    },
+    {
+      "standard_id": "STD-00002",
+      "alias": null,
+      "name": "The One Question Test\u2122",
+      "version": "1.0",
+      "category": "Enterprise Standards\u2122",
+      "purpose": "Keep the enterprise focused: no feature exists without a clear business reason.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "STD-00013"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [
+        "department_registry.py",
+        "/api/departments"
+      ],
+      "updated_at": "2026-07-03T12:28:34.242380+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes"
+      ]
+    },
+    {
+      "standard_id": "STD-00003",
+      "alias": null,
+      "name": "QRU Brand Operating System\u2122 (QBOS)",
+      "version": "1.0",
+      "category": "Brand Standards\u2122",
+      "purpose": "Ensure visual consistency and premium brand quality across all products and platforms.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "STD-00016",
+        "STD-00006"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [
+        "qbos.py",
+        "design_language.py"
+      ],
+      "updated_at": "2026-07-03T12:28:34.242385+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes"
+      ]
+    },
+    {
+      "standard_id": "STD-00004",
+      "alias": null,
+      "name": "QRU Educational Design System\u2122 (QEDS)",
+      "version": "1.0",
+      "category": "Educational Methodologies\u2122",
+      "purpose": "Ensure every product teaches effectively across child/consumer/student/professional/scientific modes.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "STD-00007"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [
+        "qeds.py"
+      ],
+      "updated_at": "2026-07-03T12:28:34.242389+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes"
+      ]
+    },
+    {
+      "standard_id": "STD-00005",
+      "alias": null,
+      "name": "QRU Master Constitution\u2122",
+      "version": "1.0",
+      "category": "Enterprise Standards\u2122",
+      "purpose": "Provide a single, protected authority for QRU's laws, mission, and values.",
+      "status": "Active",
+      "standard_type": "Enterprise Constitution",
+      "designation": "Canonical Knowledge Standard",
+      "inherits_from": [],
+      "implemented_by": [
+        "STD-UKR-0001"
+      ],
+      "related_standards": [
+        "STD-00001",
+        "STD-00002"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [
+        "constitution.py",
+        "/api/governance"
+      ],
+      "updated_at": "2026-07-24T23:13:35.797960+00:00",
+      "_empty_fields": [
+        "alias",
+        "inherits_from",
+        "supersedes"
+      ]
+    },
+    {
+      "standard_id": "STD-00006",
+      "alias": null,
+      "name": "Workforce Identity System\u2122 / Character Bible\u2122",
+      "version": "1.0",
+      "category": "Character Bible\u2122",
+      "purpose": "Guarantee visual, personality, and educational consistency of QRU characters across all products and generations.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "STD-00003"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [
+        "character_registry.py",
+        "/api/wis"
+      ],
+      "updated_at": "2026-07-03T12:28:34.242399+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes"
+      ]
+    },
+    {
+      "standard_id": "STD-00007",
+      "alias": null,
+      "name": "QRU Teaching Methodology\u2122 (11-part)",
+      "version": "1.0",
+      "category": "Educational Methodologies\u2122",
+      "purpose": "Make complex truth understandable without simplifying the truth itself.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "STD-00004"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [
+        "Knowledge Records\u2122 structure"
+      ],
+      "updated_at": "2026-07-03T12:28:34.242402+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes"
+      ]
+    },
+    {
+      "standard_id": "STD-00008",
+      "alias": null,
+      "name": "Verification Principles\u2122 (Kingdom Lion\u2122)",
+      "version": "1.0",
+      "category": "Verification Principles\u2122",
+      "purpose": "Protect QRU's credibility \u2014 understanding is worthless if it is wrong.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "STD-00001"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [
+        "verification_engine.py"
+      ],
+      "updated_at": "2026-07-03T12:28:34.242407+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes"
+      ]
+    },
+    {
+      "standard_id": "STD-00009",
+      "alias": null,
+      "name": "Manufacturing Recipes\u2122",
+      "version": "1.0",
+      "category": "Product Recipes\u2122",
+      "purpose": "Assemble products from verified fields consistently \u2014 research once, manufacture forever.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "STD-00010"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [
+        "product_automation.py",
+        "manufacturing2.py"
+      ],
+      "updated_at": "2026-07-03T12:28:34.242411+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes"
+      ]
+    },
+    {
+      "standard_id": "STD-00010",
+      "alias": null,
+      "name": "The QRU Thinking Model\u2122 (8-point)",
+      "version": "1.0",
+      "category": "Manufacturing Principles\u2122",
+      "purpose": "A single mental checklist that encodes QRU quality into every AI generation prompt.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "STD-00001"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [
+        "The QRU Mind\u2122 prompts"
+      ],
+      "updated_at": "2026-07-03T12:28:34.242415+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes"
+      ]
+    },
+    {
+      "standard_id": "STD-00011",
+      "alias": null,
+      "name": "Hands-Free Manufacturing\u2122 / Automation Rules\u2122",
+      "version": "1.0",
+      "category": "Automation Rules\u2122",
+      "purpose": "Scale production while keeping the Founder in control of exceptions only.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "STD-00009"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [
+        "orchestrator.py",
+        "workflow_engine.py"
+      ],
+      "updated_at": "2026-07-03T12:28:34.242420+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes"
+      ]
+    },
+    {
+      "standard_id": "STD-00012",
+      "alias": null,
+      "name": "Multi-Format Output\u2122 Standards",
+      "version": "1.0",
+      "category": "Publishing Standards\u2122",
+      "purpose": "Publish one verified product to every platform without losing brand fidelity.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "STD-00003"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [
+        "design_language.export_formats"
+      ],
+      "updated_at": "2026-07-03T12:28:34.242423+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes"
+      ]
+    },
+    {
+      "standard_id": "STD-00013",
+      "alias": null,
+      "name": "Software Architecture\u2122 (Modular Routers)",
+      "version": "1.0",
+      "category": "Software Architecture\u2122",
+      "purpose": "Keep the platform scalable, testable, and production-ready.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "STD-00014"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [
+        "server.py",
+        "routers/"
+      ],
+      "updated_at": "2026-07-03T12:28:34.242427+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes"
+      ]
+    },
+    {
+      "standard_id": "STD-00014",
+      "alias": null,
+      "name": "Database Architecture\u2122 (MongoDB)",
+      "version": "1.0",
+      "category": "Database Architecture\u2122",
+      "purpose": "Reliable, JSON-safe persistence across the enterprise.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "STD-00013"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [
+        "database.py"
+      ],
+      "updated_at": "2026-07-03T12:28:34.242430+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes"
+      ]
+    },
+    {
+      "standard_id": "STD-00015",
+      "alias": null,
+      "name": "Extend Before Expand\u2122",
+      "version": "1.0",
+      "category": "Leadership Principles\u2122",
+      "purpose": "Prevent sprawl and keep the enterprise coherent as it grows.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "STD-00002"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [
+        "evolution.py"
+      ],
+      "updated_at": "2026-07-03T12:28:34.242434+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes"
+      ]
+    },
+    {
+      "standard_id": "STD-00016",
+      "alias": null,
+      "name": "QRU Design Language\u2122 / Creative Standards\u2122",
+      "version": "1.0",
+      "category": "Creative Standards\u2122",
+      "purpose": "Compound design quality so every product is more beautiful than the last.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "STD-00003"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [
+        "design_language.py",
+        "design_intelligence.py"
+      ],
+      "updated_at": "2026-07-03T12:28:34.242438+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes"
+      ]
+    },
+    {
+      "standard_id": "STD-00017",
+      "alias": null,
+      "name": "Agent Training Guide",
+      "version": "1.0",
+      "category": "Agent Governance & Training\u2122",
+      "purpose": "of the QRU Agent Training Protocol\u2122",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [],
+      "updated_at": "2026-07-10T02:21:25.998170+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "related_standards",
+        "supersedes",
+        "enterprise_references"
+      ]
+    },
+    {
+      "standard_id": "STD-00018",
+      "alias": null,
+      "name": "Standard Registry",
+      "version": "1.0",
+      "category": "Standards Governance\u2122",
+      "purpose": "\u201cEnsure every QRU creation carries the same standard of truth, clarity, connection, and human",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [],
+      "updated_at": "2026-07-10T02:21:26.211754+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "related_standards",
+        "supersedes",
+        "enterprise_references"
+      ]
+    },
+    {
+      "standard_id": "STD-00019",
+      "alias": null,
+      "name": "Defense Portfolio Protection",
+      "version": "1.0",
+      "category": "Intellectual Property & Defense\u2122",
+      "purpose": "Transform raw information into verified understanding.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [],
+      "updated_at": "2026-07-10T02:21:26.561468+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "related_standards",
+        "supersedes",
+        "enterprise_references"
+      ]
+    },
+    {
+      "standard_id": "STD-00020",
+      "alias": null,
+      "name": "Methodology Manual",
+      "version": "1.0",
+      "category": "QRU Methodology\u2122",
+      "purpose": "QRU Methodology Manual\u2122 Version 1.0 The Operating System for Manufacturing Human Understanding\u2122 Document Classification: Core Intellectual Property Architecture Asset Type: Internal Methodology Standard Status: Founder A",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [],
+      "updated_at": "2026-07-10T02:21:26.855529+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "related_standards",
+        "supersedes",
+        "enterprise_references"
+      ]
+    },
+    {
+      "standard_id": "STD-00021",
+      "alias": null,
+      "name": "QRU Experience Design Architecture",
+      "version": "1.0",
+      "category": "Experience Design\u2122",
+      "purpose": "The QRU Factory\u2122 is not designed to create ordinary educational documents.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [],
+      "updated_at": "2026-07-10T02:21:27.138130+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "related_standards",
+        "supersedes",
+        "enterprise_references"
+      ]
+    },
+    {
+      "standard_id": "STD-00022",
+      "alias": null,
+      "name": "Intelligence Governance Charter",
+      "version": "1.0",
+      "category": "Intelligence Governance\u2122",
+      "purpose": "of the QRU Intelligence Governance",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [],
+      "updated_at": "2026-07-10T02:21:27.595506+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "related_standards",
+        "supersedes",
+        "enterprise_references"
+      ]
+    },
+    {
+      "standard_id": "STD-00023",
+      "alias": null,
+      "name": "Intelligence Growth Index",
+      "version": "1.0",
+      "category": "Intelligence Metrics\u2122",
+      "purpose": "of the QRU Intelligence Growth Index\u2122",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [],
+      "updated_at": "2026-07-10T02:21:27.994810+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "related_standards",
+        "supersedes",
+        "enterprise_references"
+      ]
+    },
+    {
+      "standard_id": "STD-00024",
+      "alias": null,
+      "name": "Ownership and Classification",
+      "version": "1.0",
+      "category": "Ownership & Classification\u2122",
+      "purpose": "of the QRU Intellectual Property Registry\u2122",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [],
+      "updated_at": "2026-07-10T02:21:28.485550+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "related_standards",
+        "supersedes",
+        "enterprise_references"
+      ]
+    },
+    {
+      "standard_id": "STD-00025",
+      "alias": null,
+      "name": "Product Assembly Blueprint",
+      "version": "1.0",
+      "category": "Manufacturing Blueprint\u2122",
+      "purpose": "The QRU Product Assembly Blueprint\u2122 defines the official process for converting a completed",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [],
+      "updated_at": "2026-07-10T02:21:28.892249+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "related_standards",
+        "supersedes",
+        "enterprise_references"
+      ]
+    },
+    {
+      "standard_id": "STD-00026",
+      "alias": null,
+      "name": "Factory Operations Blueprint",
+      "version": "1.0",
+      "category": "Factory Operations\u2122",
+      "purpose": "of the QRU Factory Operating Blueprint\u2122",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [],
+      "updated_at": "2026-07-10T02:21:29.300283+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "related_standards",
+        "supersedes",
+        "enterprise_references"
+      ]
+    },
+    {
+      "standard_id": "STD-00027",
+      "alias": "STD-KR-0001",
+      "name": "Knowledge Record Master Specification\u2122",
+      "version": "1.0",
+      "category": "Knowledge Record Architecture\u2122",
+      "purpose": "The QRU Knowledge Record\u2122 Master Specification defines the required structure for creating,",
+      "status": "Active",
+      "standard_type": "Technical Specification",
+      "designation": "Supporting Implementation Standard",
+      "inherits_from": [
+        "STD-UKR-0001"
+      ],
+      "implemented_by": [
+        "STD-00030"
+      ],
+      "related_standards": [
+        "STD-UKR-0001",
+        "STD-00030"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [],
+      "updated_at": "2026-07-24T23:13:35.798623+00:00",
+      "_empty_fields": [
+        "supersedes",
+        "enterprise_references"
+      ]
+    },
+    {
+      "standard_id": "STD-00028",
+      "alias": null,
+      "name": "Factory Agent Governance Manual",
+      "version": "1.0",
+      "category": "Agent Governance & Training\u2122",
+      "purpose": "The QRU Factory Agent Governance Manual\u2122 defines how QRU intelligence agents are:",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [],
+      "updated_at": "2026-07-10T02:21:47.962328+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "related_standards",
+        "supersedes",
+        "enterprise_references"
+      ]
+    },
+    {
+      "standard_id": "STD-00029",
+      "alias": null,
+      "name": "Research Intelligence",
+      "version": "1.0",
+      "category": "Research Intelligence\u2122",
+      "purpose": "1. Demonstrate QRU was built from serious research. 2. Show investors that the architecture is informed by validated disciplines. 3. Identify what QRU borrowed as principles versus what QRU uniquely created. 4. Strengthen credibility without weakening originality.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [],
+      "updated_at": "2026-07-10T02:21:48.314799+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "related_standards",
+        "supersedes",
+        "enterprise_references"
+      ]
+    },
+    {
+      "standard_id": "STD-00030",
+      "alias": "STD-KR-0002",
+      "name": "Knowledge Record Template\u2122",
+      "version": "1.0",
+      "category": "Knowledge Record Architecture\u2122",
+      "purpose": "Convert unfamiliar language into accessible understanding.",
+      "status": "Active",
+      "standard_type": "Working Template",
+      "designation": "Supporting Implementation Standard",
+      "inherits_from": [
+        "STD-00027"
+      ],
+      "implemented_by": [],
+      "related_standards": [
+        "STD-00027"
+      ],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [],
+      "updated_at": "2026-07-24T23:13:35.799175+00:00",
+      "_empty_fields": [
+        "implemented_by",
+        "supersedes",
+        "enterprise_references"
+      ]
+    },
+    {
+      "standard_id": "STD-00031",
+      "alias": null,
+      "name": "Factory Command Center Dashboard",
+      "version": "1.0",
+      "category": "Factory Operations\u2122",
+      "purpose": "The QRU Factory Command Center Dashboard\u2122 provides a centralized operating view of all",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [],
+      "updated_at": "2026-07-10T02:21:49.209835+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "related_standards",
+        "supersedes",
+        "enterprise_references"
+      ]
+    },
+    {
+      "standard_id": "STD-00032",
+      "alias": null,
+      "name": "QRU Visual Intelligence Studio",
+      "version": "1.0",
+      "category": "Visual Manufacturing\u2122",
+      "purpose": "Ensure every QRU product is engineered to help the learner Notice, Enter, Understand, Remember, Apply, Continue, and Share \u2014 Understanding should be made visible.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [],
+      "updated_at": "2026-07-10T18:25:51.780060+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "related_standards",
+        "supersedes",
+        "enterprise_references"
+      ]
+    },
+    {
+      "standard_id": "STD-00033",
+      "alias": null,
+      "name": "QRU Media Intelligence Division",
+      "version": "1.0",
+      "category": "Media Manufacturing\u2122",
+      "purpose": "Manufacture Gold Standard multimedia learning across audio & video with governed voice licensing, captions/transcripts, and performance analytics.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [],
+      "supersedes": null,
+      "implementation_status": "Implemented",
+      "enterprise_references": [],
+      "updated_at": "2026-07-10T18:38:42.773209+00:00",
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "related_standards",
+        "supersedes",
+        "enterprise_references"
+      ]
+    },
+    {
+      "standard_id": "STD-EIP-0002",
+      "alias": null,
+      "name": "QRU Enterprise Foundation Sprint A\u2122",
+      "version": "1.0",
+      "category": "Enterprise Architecture",
+      "purpose": "Every module belongs to a governed domain & layer; every page explains itself and knows its location.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "QRU-CON-0001",
+        "QRU-CON-0002",
+        "STD-MFG-0001",
+        "STD-EIP-0001"
+      ],
+      "supersedes": null,
+      "implementation_status": null,
+      "enterprise_references": null,
+      "updated_at": null,
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes",
+        "implementation_status",
+        "enterprise_references",
+        "updated_at"
+      ]
+    },
+    {
+      "standard_id": "STD-MFG-0001",
+      "alias": null,
+      "name": "QRU Universal Manufacturing Flow Engine\u2122",
+      "version": "1.0",
+      "category": "Production Orchestration",
+      "purpose": "No product exists outside the governed production flow; the Factory always knows what's next.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "QRU-CON-0001",
+        "QRU-CON-0002"
+      ],
+      "supersedes": null,
+      "implementation_status": null,
+      "enterprise_references": null,
+      "updated_at": null,
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes",
+        "implementation_status",
+        "enterprise_references",
+        "updated_at"
+      ]
+    },
+    {
+      "standard_id": "STD-RFN-0001",
+      "alias": null,
+      "name": "QRU Enterprise Refinement Initiative\u2122",
+      "version": "1.0",
+      "category": "Enterprise Refinement",
+      "purpose": "The simplest governed enterprise capable of producing extraordinary understanding.",
+      "status": "Active",
+      "standard_type": null,
+      "designation": null,
+      "inherits_from": null,
+      "implemented_by": null,
+      "related_standards": [
+        "QRU-CON-0001",
+        "QRU-CON-0002",
+        "STD-MFG-0001",
+        "STD-EIP-0001",
+        "STD-EIP-0002"
+      ],
+      "supersedes": null,
+      "implementation_status": null,
+      "enterprise_references": null,
+      "updated_at": null,
+      "_empty_fields": [
+        "alias",
+        "standard_type",
+        "designation",
+        "inherits_from",
+        "implemented_by",
+        "supersedes",
+        "implementation_status",
+        "enterprise_references",
+        "updated_at"
+      ]
+    },
+    {
+      "standard_id": "STD-UKR-0001",
+      "alias": "",
+      "name": "Universal Knowledge Record\u2122 (UKR\u2122)",
+      "version": "1.0",
+      "category": "Knowledge Record Architecture\u2122",
+      "purpose": "Serve as the single canonical Universal Knowledge Record standard from which every Knowledge Record and its supporting specification and template inherit.",
+      "status": "Active",
+      "standard_type": "Canonical Knowledge Architecture",
+      "designation": "Canonical Knowledge Standard",
+      "inherits_from": [
+        "STD-00005"
+      ],
+      "implemented_by": [
+        "STD-00027"
+      ],
+      "related_standards": [
+        "STD-00005",
+        "STD-00027",
+        "STD-00030"
+      ],
+      "supersedes": "",
+      "implementation_status": "Implemented",
+      "enterprise_references": [
+        "ukr_standard.py",
+        "/api/manufacturing/ukr/constitution"
+      ],
+      "updated_at": "2026-07-24T22:27:22.641189+00:00",
+      "_empty_fields": [
+        "alias",
+        "supersedes"
+      ]
+    }
+  ]
+}
