@@ -57,17 +57,52 @@ def _kr_context(kr):
             f"Memorable Line: {kr.get('memory_sentence','')}")
 
 
+def _chunk_for_tts(text, limit=3800):
+    """Split narration into <=limit-char chunks on sentence/paragraph boundaries (OpenAI TTS caps at 4096)."""
+    import re as _re
+    text = (text or "").strip()
+    if len(text) <= limit:
+        return [text] if text else []
+    # Prefer paragraph, then sentence boundaries.
+    pieces = _re.split(r"(?<=[.!?])\s+|\n+", text)
+    chunks, cur = [], ""
+    for p in pieces:
+        p = p.strip()
+        if not p:
+            continue
+        while len(p) > limit:  # a single monster sentence — hard split
+            if cur:
+                chunks.append(cur); cur = ""
+            chunks.append(p[:limit]); p = p[limit:]
+        if len(cur) + len(p) + 1 <= limit:
+            cur = (cur + " " + p).strip()
+        else:
+            if cur:
+                chunks.append(cur)
+            cur = p
+    if cur:
+        chunks.append(cur)
+    return chunks
+
+
 async def _tts_bytes(text, voice="sage", speed=1.0):
-    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tf:
-        path = tf.name
-    try:
-        res = await _tts(text, path, voice=voice, speed=speed)
-        if res is True and os.path.exists(path):
-            return open(path, "rb").read()
-        raise RuntimeError(res if isinstance(res, str) else "TTS produced no audio.")
-    finally:
-        if os.path.exists(path):
-            os.remove(path)
+    chunks = _chunk_for_tts(text)
+    if not chunks:
+        raise RuntimeError("No narration text to synthesize.")
+    audio_parts = []
+    for chunk in chunks:
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tf:
+            path = tf.name
+        try:
+            res = await _tts(chunk, path, voice=voice, speed=speed)
+            if res is True and os.path.exists(path):
+                audio_parts.append(open(path, "rb").read())
+            else:
+                raise RuntimeError(res if isinstance(res, str) else "TTS produced no audio.")
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
+    return b"".join(audio_parts)
 
 
 async def _make_audio(kr, spec):

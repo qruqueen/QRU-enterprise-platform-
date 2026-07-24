@@ -116,6 +116,13 @@ export default function BookManufacturing() {
   };
   const doRenderAudio = (opts) => run(async () => { await api.post(`/book-mfg/books/${book.id}/audio-prototype`, opts || {}); const { data } = await api.get(`/book-mfg/books/${book.id}/audio`); setAudio(data); }, "Narration prototype rendered.");
   const doPricing = (price, currency) => run(() => api.post(`/book-mfg/books/${book.id}/pricing`, { list_price: parseFloat(price), currency }), "Pricing approved.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
+  const doRemoveFromStore = () => {
+    if (!window.confirm("Remove this book from the storefront (qru-online.com)?\n\nIt will immediately stop appearing in the public store. Existing buyers keep their access, and nothing is deleted — you can re-list it any time.")) return;
+    const reason = window.prompt("Optional: reason for removing (for your records)", "") || "";
+    return run(() => api.post(`/book-mfg/books/${book.id}/remove-from-store`, { reason }), "Book removed from the storefront.");
+  };
+  const doRelist = () => run(() => api.post(`/book-mfg/books/${book.id}/relist-to-store`), "Book re-listed to the storefront.");
+
   const doAuthorize = () => run(() => api.post(`/book-mfg/books/${book.id}/authorize`), "Release authorized — the Factory is manufacturing your publication assets.").then(() => { api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)); api.get(`/book-mfg/books/${book.id}/post-publish`).then((r) => setPostPub(r.data)).catch(() => {}); });
   const doSanitize = () => run(() => api.post(`/book-mfg/books/${book.id}/sanitize`, { base_url: A }), "Publication Sanitization Pass™ complete — clean retail edition prepared.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
   const doDraftBlurb = () => run(async () => { const { data } = await api.post(`/book-mfg/books/${book.id}/draft-blurb`); toast.message("Blurb drafted — review & approve.", { description: data.status }); });
@@ -265,6 +272,32 @@ export default function BookManufacturing() {
             className="inline-flex items-center gap-1.5 border border-navy/30 text-navy px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50">
             <Share2 className="w-4 h-4" /> Share Link
           </button>
+        </div>
+
+        {/* Storefront listing control (qru-online.com) */}
+        <div className="mt-3 pt-3 border-t border-border/60 flex items-center justify-between gap-3 flex-wrap" data-testid="store-listing-row">
+          <div className="flex items-center gap-2">
+            {book.founder_authorization?.authorized ? (
+              <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-emerald-700" data-testid="store-status-live">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Live on the QRU store
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-muted-foreground" data-testid="store-status-off">
+                <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" /> Not on the store
+              </span>
+            )}
+          </div>
+          {book.founder_authorization?.authorized ? (
+            <button data-testid="remove-from-store-btn" onClick={doRemoveFromStore} disabled={busy}
+              className="inline-flex items-center gap-1.5 border border-red-300 text-red-700 hover:bg-red-50 px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50">
+              <AlertTriangle className="w-4 h-4" /> Remove from Store
+            </button>
+          ) : book.founder_authorization?.removed_from_store_at ? (
+            <button data-testid="relist-to-store-btn" onClick={doRelist} disabled={busy}
+              className="inline-flex items-center gap-1.5 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50">
+              <ShieldCheck className="w-4 h-4" /> Re-list to Store
+            </button>
+          ) : null}
         </div>
       </div>
 

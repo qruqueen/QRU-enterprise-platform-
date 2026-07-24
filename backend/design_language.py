@@ -55,17 +55,46 @@ KEYWORDS = [
     ("children", ["kid", "child", "toddler", "young learner"]),
 ]
 
-_FONT_DIR = "/usr/share/fonts/truetype/liberation/"
-SERIF_BOLD = _FONT_DIR + "LiberationSerif-Bold.ttf"
-SERIF = _FONT_DIR + "LiberationSerif-Regular.ttf"
-SANS_BOLD = _FONT_DIR + "LiberationSans-Bold.ttf"
-SANS = _FONT_DIR + "LiberationSans-Regular.ttf"
+import os as _os
+
+# Fonts are BUNDLED with the app (assets/fonts) so they ship with every deploy — production
+# containers do not always have system fonts installed, which previously caused PIL to fall back
+# to a ~10px bitmap and render every cover title tiny. Bundled first, system path as fallback.
+_BUNDLED_FONT_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "assets", "fonts")
+_SYSTEM_FONT_DIR = "/usr/share/fonts/truetype/liberation/"
+
+
+def _font_path(name):
+    bundled = _os.path.join(_BUNDLED_FONT_DIR, name)
+    if _os.path.exists(bundled):
+        return bundled
+    return _SYSTEM_FONT_DIR + name
+
+
+SERIF_BOLD = _font_path("LiberationSerif-Bold.ttf")
+SERIF = _font_path("LiberationSerif-Regular.ttf")
+SANS_BOLD = _font_path("LiberationSans-Bold.ttf")
+SANS = _font_path("LiberationSans-Regular.ttf")
 
 
 def _f(path, size):
     try:
         return ImageFont.truetype(path, size)
     except Exception:
+        # Last-resort: scan any available bundled/system TTF before the tiny bitmap fallback.
+        for d in (_BUNDLED_FONT_DIR, _SYSTEM_FONT_DIR, "/usr/share/fonts"):
+            try:
+                for root, _dirs, files in _os.walk(d):
+                    for fn in files:
+                        if fn.lower().endswith(".ttf"):
+                            try:
+                                return ImageFont.truetype(_os.path.join(root, fn), size)
+                            except Exception:
+                                continue
+            except Exception:
+                continue
+        import logging as _lg
+        _lg.getLogger("design").error("No TrueType font available — cover text will render tiny. Bundle fonts in assets/fonts.")
         return ImageFont.load_default()
 
 

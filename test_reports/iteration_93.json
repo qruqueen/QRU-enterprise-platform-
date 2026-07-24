@@ -1,0 +1,37 @@
+{
+  "summary": "Full backend + frontend testing of the Remove/Re-list from QRU Store feature. All acceptance criteria pass. Public book count correctly transitions 8 → 7 (remove) → 8 (relist). Frontend UI on /book-manufacturing correctly toggles between store-status-live/remove-from-store-btn and store-status-off/relist-to-store-btn. Regression: preview-inspection-panel and product-family-page still render. Public store restored to original state (8 live books).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Layout (App.js line 138)", "issues": ["React hydration warning: <span> cannot be a child of <option> (console error observed on multiple pages). Non-blocking but should be cleaned up."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional cleanup: fix React hydration warning about <span> inside <option> in Layout (App.js:138 area) — not blocking but pollutes console."
+  ],
+  "critical_code_review_comments": [
+    "remove-from-store uses window.confirm + window.prompt; consider replacing with shadcn Dialog for better UX and testability.",
+    "Backend correctly rejects relist for never-listed books with HTTP 400 and a clear message referencing Founder Release Review — good UX."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "demo.admin@qru.com / qru-demo-admin-2026 (Administrator).",
+  "seed_data_creation": "None. Test book 'The Understanding Tree' was removed then re-listed; store state restored to 8 live books.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Store remove/relist feature is fully verified. Public feed lives at /api/public/books. Remove endpoint: POST /api/book-mfg/books/{id}/remove-from-store (auth). Relist: POST /api/book-mfg/books/{id}/relist-to-store — returns 400 for never-listed books. Frontend testids: store-listing-row, store-status-live, store-status-off, remove-from-store-btn, relist-to-store-btn. Uses window.confirm + window.prompt so Playwright dialog handler required (accept both).",
+  "test_results_detail": {
+    "backend_remove": "PASS — book disappeared from /api/public/books (8→7)",
+    "backend_relist": "PASS — book restored (7→8)",
+    "backend_relist_never_listed": "PASS — HTTP 400 with message referencing Founder Release Review (book id 9b9e22ed…)",
+    "frontend_store_listing_row_visible": "PASS",
+    "frontend_status_live_initial": "PASS (store-status-live + remove-from-store-btn shown)",
+    "frontend_remove_flow": "PASS (after remove: store-status-off + relist-to-store-btn shown; public count = 7)",
+    "frontend_relist_flow": "PASS (after relist: store-status-live + remove-from-store-btn restored; public count = 8)",
+    "regression_preview_inspection_panel": "PASS",
+    "regression_product_family_page": "PASS"
+  }
+}

@@ -290,6 +290,29 @@ async def authorize(book_id: str, user=Depends(require_super_admin)):
     return r
 
 
+class RemoveFromStoreReq(BaseModel):
+    reason: Optional[str] = ""
+
+
+@router.post("/books/{book_id}/remove-from-store")
+async def remove_from_store(book_id: str, data: RemoveFromStoreReq = RemoveFromStoreReq(), user=Depends(require_super_admin)):
+    r = await bm.remove_from_store(book_id, user.get("name", "Founder"), (data.reason or "").strip())
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    return r
+
+
+@router.post("/books/{book_id}/relist-to-store")
+async def relist_to_store(book_id: str, user=Depends(require_super_admin)):
+    r = await bm.relist_to_store(book_id, user.get("name", "Founder"))
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    if isinstance(r, dict) and r.get("error"):
+        raise HTTPException(400, r["error"])
+    return r
+
+
+
 class PublicationDetailsReq(BaseModel):
     title: Optional[str] = None
     author: Optional[str] = None

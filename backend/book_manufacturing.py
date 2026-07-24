@@ -1184,6 +1184,54 @@ async def authorize_release(book_id, actor):
     return clean(await db[COLL].find_one({"id": book_id}))
 
 
+async def remove_from_store(book_id, actor, reason=""):
+    """Pull a book OFF the storefront (qru-online.com). Sets founder_authorization.authorized=False so
+    every public query stops serving it immediately. Reversible via relist_to_store. Does NOT delete the
+    book, its files, or any purchase/delivery records — existing buyers keep their access."""
+    b = await db[COLL].find_one({"id": book_id}) or await db[COLL].find_one({"book_code": book_id})
+    if not b:
+        return None
+    prior = dict(b.get("founder_authorization") or {})
+    await db[COLL].update_one({"id": b["id"]}, {"$set": {
+        "founder_authorization": {"authorized": False, "by": actor, "at": _now(),
+                                  "removed_from_store_at": _now(), "removed_reason": reason,
+                                  "prior_authorization": prior},
+        "publication_status": "Removed from store (unlisted by Founder)",
+        "updated_at": _now()},
+        "$push": {"revision_history": {"stage": "Removed from Store", "by": actor, "at": _now(),
+                                       "note": f"Founder removed book from storefront. {reason}".strip()}}})
+    # Also unpublish any linked storefront product listing, if one exists.
+    try:
+        await db.products.update_many(
+            {"$or": [{"book_id": b["id"]}, {"source_book_id": b["id"]}], "status": "Published"},
+            {"$set": {"status": "Unpublished", "updated_at": now_iso()}})
+    except Exception:
+        pass
+    await log_org("Book Manufacturing™", "Manufacturing", f"REMOVED FROM STORE: '{b['title']}'", b["book_code"], "warning")
+    return clean(await db[COLL].find_one({"id": b["id"]}))
+
+
+async def relist_to_store(book_id, actor):
+    """Re-list a previously REMOVED book to the storefront (restores Founder authorization). Only valid for
+    books that were properly authorized before removal — a never-listed book must go through the normal
+    Founder Release Review gate, not this shortcut."""
+    b = await db[COLL].find_one({"id": book_id}) or await db[COLL].find_one({"book_code": book_id})
+    if not b:
+        return None
+    fa = b.get("founder_authorization") or {}
+    if not fa.get("removed_from_store_at"):
+        return {"error": "This book was never listed — complete the Founder Release Review to publish it."}
+    await db[COLL].update_one({"id": b["id"]}, {"$set": {
+        "founder_authorization": {"authorized": True, "by": actor, "at": _now(), "relisted_at": _now()},
+        "publication_status": "Authorized for release (relisted by Founder)",
+        "updated_at": _now()},
+        "$push": {"revision_history": {"stage": "Re-listed to Store", "by": actor, "at": _now(),
+                                       "note": "Founder re-listed book to the storefront."}}})
+    await log_org("Book Manufacturing™", "Manufacturing", f"RE-LISTED to store: '{b['title']}'", b["book_code"], "success")
+    return clean(await db[COLL].find_one({"id": b["id"]}))
+
+
+
 SHARES = "book_shares"
 
 

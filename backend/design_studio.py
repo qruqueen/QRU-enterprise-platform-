@@ -100,10 +100,7 @@ def compose(hero_bytes, spec):
     d = ImageDraw.Draw(img)
 
     def font(path, size):
-        try:
-            return ImageFont.truetype(path, size)
-        except Exception:
-            return ImageFont.load_default()
+        return dl._f(path, size)  # bundled-font-aware loader (never silently tiny)
 
     def wrap(text, fnt, maxw):
         words, lines, cur = text.split(), [], ""
@@ -213,10 +210,7 @@ def compose_print_wrap(front_bytes, spec):
     d = ImageDraw.Draw(canvas)
 
     def font(path, size):
-        try:
-            return ImageFont.truetype(path, size)
-        except Exception:
-            return ImageFont.load_default()
+        return dl._f(path, size)  # bundled-font-aware loader (never silently tiny)
 
     def wrap(text, fnt, maxw):
         out, cur = [], ""
