@@ -13,6 +13,16 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - Language: English only (code, comments, UI).
 
 
+## ✅ UKR Standards Hierarchy + inheritance metadata (2026-06, testing_agent iteration_94 — 100% frontend, API curl-verified)
+Founder-approved NON-DESTRUCTIVE hierarchy (existing IDs kept, aliases added, content untouched):
+QRU Master Constitution™ (STD-00005) → **STD-UKR-0001 Universal Knowledge Record™ (CANONICAL)** → STD-00027 **Knowledge Record Master Specification™** (alias STD-KR-0001, Supporting) → STD-00030 **Knowledge Record Template™** (alias STD-KR-0002, Supporting) → individual KRs.
+- `qiks.py`: `_std()` extended with `standard_type / designation / inherits_from / implemented_by / supersedes / alias` (empty defaults → other 35 standards unaffected). Added canonical STD-UKR-0001 card. `apply_kr_hierarchy()` = idempotent patch called in `seed_qiks()` → applies on every startup/redeploy (so production gets it too). `get_standard()` resolves by id/standard_id/**alias** (backward compat: STD-KR-0001 → STD-00027).
+- Frontend `InstitutionalKnowledge.js`: cards show ⭐Canonical / Supporting designation badge + "Inherits from" + alias; detail dialog adds Standard Type, Inherits From, Implemented By, Alias, Supersedes.
+- Designations: UKR + Master Constitution = "Canonical Knowledge Standard"; Spec + Template = "Supporting Implementation Standard". Stops the "three competing UKRs" confusion.
+- Caution honored: no auto-rename of IDs; backward-compatible aliases; only these 4 docs patched (dependencies mapped — governance_binding.py references by NAME not ID, so no breakage).
+
+
+
 ## ✅ Production hardening: Cover fonts, Audiobook chunking, Store Remove/Re-list (2026-06, testing_agent iteration_93 — 100% backend + frontend, zero blocking)
 Founder is on PRODUCTION (https://qru-online.com). Reported: tiny cover fonts on all products, an unaddressable Book MFG error, and requested a way to remove a book from the store.
 - **ROOT CAUSE of tiny cover titles = missing system fonts in the PRODUCTION container.** PIL fell back to `ImageFont.load_default()` (~10px, ignores requested size) → every title collapsed to one tiny line. FIX: **bundled Liberation TTFs into `/app/backend/assets/fonts/`** and made `design_language._font_path`/`_f` + `design_studio.font()` prefer bundled fonts (system path fallback + scan-any-TTF + error log; never silently tiny). Proven: the exact long "Louisiana Contractor Business Law" title now renders large/3-line. Also enlarged `design_language.premium_cover` titles (start 150, min 58, max 3 lines). ⚠️ REQUIRES REDEPLOY; existing baked covers must be RE-RENDERED after redeploy to pick up the fix.
