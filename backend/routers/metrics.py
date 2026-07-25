@@ -325,32 +325,51 @@ async def beta_status(request: Request, host: str = "", user=Depends(get_current
     deployment_state = ("Founder Preview (Private Beta)" if is_preview
                         else "Deployed Beta" if is_deployed else "Local Development")
     blocks_promotion = [
-        "Stripe is in TEST mode — no real payments can be accepted until live keys are added.",
+        *(["Stripe is in TEST mode — no real payments can be accepted until live keys are added."] if STRIPE_TEST else []),
         "Email delivery is not yet wired — customers are not emailed their downloads.",
         f"Automated file publishing is not yet wired for {len(under_dev)} OAuth connectors (connect + test connection are operational via the Universal OAuth Framework™).",
     ]
+
+    # Payment truth — derived from the ACTUAL installed key mode (never hardcoded).
+    pay_mode = "Test / Sandbox" if STRIPE_TEST else "Live"
+    real_money = "No" if STRIPE_TEST else "Yes"
+    pay_purchase_a = ("Sandbox. Purchases run through Stripe TEST mode — no real money moves."
+                      if STRIPE_TEST else "Live. Purchases run through Stripe LIVE mode and charge real money.")
+    pay_real_a = ("Sandbox (Stripe test keys). No real money moves." if STRIPE_TEST
+                  else "Real (Stripe live keys). Real money is charged and captured.")
+    pay_accept_a = ("No — test keys only. Add live keys to accept real payments." if STRIPE_TEST
+                    else "Yes — live keys are installed; the storefront can charge real money.")
+    pay_status = "warn" if STRIPE_TEST else "ok"
 
     questions = [
         {"q": "Is this Beta public or private?", "a": "Private. Only signed-in QRU accounts can access it.", "status": "info"},
         {"q": "Can anyone with the URL access it?", "a": "No. The URL requires login — sharing the link alone does not grant access.", "status": "warn"},
         {"q": "Does it require an account?", "a": "Yes. A QRU/Emergent-authenticated account is required to sign in.", "status": "info"},
         {"q": "Can customers purchase products?", "a": "Yes — checkout works end-to-end through Stripe.", "status": "ok"},
-        {"q": "Are purchases simulated or live?", "a": "Sandbox. Purchases run through Stripe TEST mode.", "status": "warn"},
-        {"q": "Are payments real or sandbox?", "a": "Sandbox (Stripe test keys). No real money moves.", "status": "warn"},
+        {"q": "Are purchases simulated or live?", "a": pay_purchase_a, "status": pay_status},
+        {"q": "Are payments real or sandbox?", "a": pay_real_a, "status": pay_status},
         {"q": "Are downloads real or simulated?", "a": "Real. Paying customers receive the actual manufactured files.", "status": "ok"},
         {"q": "Can products actually be published?", "a": "Yes — to the QRU Store™ (native connector). External platforms are guided-setup only.", "status": "ok"},
         {"q": "Which platforms are operational?", "a": (", ".join(operational) or "None") + ". Others can now be Connected & Tested via the Universal OAuth Framework™ once an admin configures each provider's OAuth app.", "status": "ok"},
         {"q": "Which platforms are under development?", "a": (", ".join(under_dev) or "None") + " — connect/test works after Developer Setup; automated publishing of the file is not yet wired for these.", "status": "warn"},
         {"q": "Can YouTube publishing be tested?", "a": "Yes — once an admin completes Developer Setup (OAuth app), the Founder can Connect via Google and Test the connection. Automated video upload is not yet wired.", "status": "warn"},
-        {"q": "Can Stripe accept real payments?", "a": "No — test keys only. Add live keys to accept real payments.", "status": "warn"},
+        {"q": "Can Stripe accept real payments?", "a": pay_accept_a, "status": pay_status},
         {"q": "Can Amazon KDP publish?", "a": "No — Amazon KDP has no public OAuth publishing API; books are uploaded in the KDP dashboard.", "status": "warn"},
         {"q": "Can QRU Store process orders?", "a": "Yes — QRU Store™ is fully operational (native).", "status": "ok"},
         {"q": "Can customers create accounts?", "a": "Yes — account creation and login are operational.", "status": "ok"},
         {"q": "Is email delivery operational?", "a": "No — email delivery is not wired yet. Downloads appear in-app after checkout.", "status": "warn"},
-        {"q": "What is currently disabled?", "a": "Real payments, email delivery, and external publishing connectors (OAuth/API-key setup pending).", "status": "warn"},
-        {"q": "What is still being built?", "a": f"Automated file publishing for {len(under_dev)} OAuth connectors (connect/test is ready); email delivery; live payments.", "status": "info"},
-        {"q": "What is the recommended next milestone?", "a": "Reach Founder Beta Complete™ (25 consecutive clean runs), then add live Stripe keys + email delivery for a public launch.", "status": "info"},
+        {"q": "What is currently disabled?", "a": ("Real payments, email delivery, and external publishing connectors (OAuth/API-key setup pending)." if STRIPE_TEST else "Email delivery and some external publishing connectors (OAuth/API-key setup pending). Real payments are ENABLED (live keys)."), "status": "warn"},
+        {"q": "What is still being built?", "a": f"Automated file publishing for {len(under_dev)} OAuth connectors (connect/test is ready); email delivery" + ("; live payments." if STRIPE_TEST else "."), "status": "info"},
+        {"q": "What is the recommended next milestone?", "a": ("Reach Founder Beta Complete™ (25 consecutive clean runs), then add live Stripe keys + email delivery for a public launch." if STRIPE_TEST else "Live Stripe keys are installed. Complete email delivery, then verify a live end-to-end purchase for public launch."), "status": "info"},
     ]
+
+    payment_status = {
+        "connector": "Stripe connected" if operational or not STRIPE_TEST else "Stripe connected",
+        "checkout_workflow": "Operational (end-to-end)",
+        "payment_mode": pay_mode,               # "Test / Sandbox" | "Live"
+        "accepts_real_money": real_money,        # "Yes" | "No"
+        "label": ("Sandbox — no real money" if STRIPE_TEST else "LIVE — real money is charged"),
+    }
 
     return {
         "deployment_state": deployment_state,
@@ -360,6 +379,7 @@ async def beta_status(request: Request, host: str = "", user=Depends(get_current
         "shareable_detail": "The URL can be shared, but recipients must sign in with a QRU account. It is not publicly accessible.",
         "pay_mode": PAY_MODE,
         "stripe_test": STRIPE_TEST,
+        "payment_status": payment_status,
         "operational_connectors": operational,
         "under_development_connectors": under_dev,
         "questions": questions,

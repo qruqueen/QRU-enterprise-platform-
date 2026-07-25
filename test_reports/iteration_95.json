@@ -1,0 +1,20 @@
+{
+  "summary": "Iteration 95 regression: verified BUG FIX 1 (audit downloads on /qiks Standards tab) and BUG FIX 2 (beta-status LIVE Stripe wording, no contradiction). All 5 pytest cases passed; all 3 audit files downloaded successfully via UI with HTTP 200 and 'Downloaded ...' success toast (no 'Download failed').",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": ["/app/backend/tests/test_audit_and_beta_i95.py", "/app/test_reports/pytest/i95.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "NOTE (docs-only): review request referenced route '/institutional-knowledge', but the actual React route registered in /app/frontend/src/App.js is '/qiks'. The UI works at /qiks. Consider aligning docs or adding an alias route so shared founder links to /institutional-knowledge do not 404.",
+    "downloadAudit() catches all errors as a single generic 'Download failed' toast — consider logging the underlying error for future debugging.",
+    "beta_status endpoint payload is large and mostly static text; if wording continues to change, consider extracting the questions template into a small module keyed by STRIPE_TEST to simplify testing."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "demo.admin@qru.com / qru-demo-admin-2026 (Administrator, super-admin). Token key: qru_token; response field: access_token.",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Route for Institutional Knowledge / Standards Audit is /qiks (not /institutional-knowledge). Standards tab is default. audit-exports-panel is present with 3 buttons: audit-download-<filename>. Backend STRIPE_TEST is False (live keys) — beta-status pay_mode=LIVE, stripe_test=false, payment_status.payment_mode='Live', accepts_real_money='Yes', label contains 'LIVE'. Do NOT attempt a real Stripe checkout (live keys).",
+  "rca of the issue": "BUG 1 RCA: downloadAudit() previously called api.get(f.download_url) where download_url starts with '/api/audit/exports/...' and axios baseURL already ends with '/api', producing '/api/api/audit/exports/...' → 404. Fix: strip leading '/api' from download_url before calling api.get. Verified via network log: all download calls now hit /api/audit/exports/<file> with 200. BUG 2 RCA: beta-status previously produced Sandbox/TEST wording regardless of STRIPE_TEST. Fix in metrics.py derives pay_mode, real_money, and question answers from STRIPE_TEST; since STRIPE_API_KEY is sk_live_..., STRIPE_TEST=False and all wording says LIVE. Verified: no 'sandbox'/'test mode'/'test keys' strings in questions; payment_status.label='LIVE — real money is charged'."
+}

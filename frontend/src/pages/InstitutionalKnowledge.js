@@ -52,7 +52,10 @@ export default function InstitutionalKnowledge() {
   const downloadAudit = async (f) => {
     const { toast } = await import("sonner");
     try {
-      const res = await api.get(f.download_url, { responseType: "blob" });
+      // f.download_url is "/api/audit/exports/<file>"; the axios client base already ends in "/api",
+      // so strip the leading "/api" to avoid a doubled "/api/api/..." 404.
+      const path = f.download_url.replace(/^\/api/, "");
+      const res = await api.get(path, { responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const a = document.createElement("a");
       a.href = url; a.download = f.filename; document.body.appendChild(a); a.click();
