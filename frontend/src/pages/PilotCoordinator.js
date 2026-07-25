@@ -23,12 +23,29 @@ export default function PilotCoordinator() {
   const [charter, setCharter] = useState(null);
   const [report, setReport] = useState(null);
   const [running, setRunning] = useState(false);
+  const [post, setPost] = useState(null);
+  const [rerunning, setRerunning] = useState(false);
 
   const loadReport = () => api.get("/pilot/mfg-coordinator/readiness-report").then((r) => setReport(r.data)).catch(() => setReport(false));
+  const loadPost = () => api.get("/pilot/mfg-coordinator/post-render-report").then((r) => setPost(r.data?.empty ? false : r.data)).catch(() => setPost(false));
   useEffect(() => {
     api.get("/pilot/mfg-coordinator").then((r) => setCharter(r.data)).catch(() => {});
     loadReport();
+    loadPost();
   }, []);
+
+  const runRerender = async () => {
+    if (!window.confirm("Run the authorized RI-MFG-0002 batch re-render of the 8 books? Reuses existing cover art (no AI spend). Nothing is published or deployed.")) return;
+    setRerunning(true);
+    try {
+      const { data } = await api.post("/pilot/mfg-coordinator/batch-rerender");
+      setPost(data);
+      toast.success(`Batch re-render complete: ${data.total_succeeded}/${data.total_attempted} validated. Nothing deployed.`);
+    } catch {
+      toast.error("Batch re-render could not complete.");
+    }
+    setRerunning(false);
+  };
 
   const run = async () => {
     setRunning(true);
@@ -131,6 +148,72 @@ export default function PilotCoordinator() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* RI-MFG-0002 · Batch re-render */}
+      <div className="rounded-xl border-2 border-navy/20 bg-card p-5" data-testid="pilot-rerender-panel">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-royal font-semibold">RI-MFG-0002 · Authorized action</div>
+            <div className="font-semibold text-foreground mt-1">Governed batch re-render (8 books)</div>
+            <p className="text-xs text-muted-foreground mt-1 max-w-2xl">Re-renders EPUB interiors under the current Publication Quality Standard™, reusing existing cover art (no AI, no spend). Rollback-protected, validated. Never publishes or deploys.</p>
+          </div>
+          <button onClick={runRerender} disabled={rerunning} data-testid="pilot-rerender-btn"
+            className="inline-flex items-center gap-2 rounded-lg bg-navy text-white px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50">
+            {rerunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} Run authorized re-render
+          </button>
+        </div>
+
+        {post && (
+          <div className="mt-5 space-y-4" data-testid="pilot-postrender">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="rounded-lg border bg-card p-3"><div className="text-xl font-bold">{post.total_attempted}</div><div className="text-[11px] text-muted-foreground">Attempted</div></div>
+              <div className="rounded-lg border bg-emerald-50 p-3"><div className="text-xl font-bold text-emerald-700">{post.total_succeeded}</div><div className="text-[11px] text-emerald-700/80">Rendered & validated</div></div>
+              <div className="rounded-lg border bg-red-50 p-3"><div className="text-xl font-bold text-red-700">{post.total_failed}</div><div className="text-[11px] text-red-700/80">Failed</div></div>
+              <div className="rounded-lg border bg-card p-3"><div className="text-xl font-bold">{post.rollback_confirmation?.all_books_rollback_protected ? "✓" : "—"}</div><div className="text-[11px] text-muted-foreground">Rollback protected</div></div>
+            </div>
+
+            <div className="rounded-lg bg-navy/5 border border-navy/10 p-3 text-sm" data-testid="pilot-deploy-rec">
+              <span className="font-semibold text-navy">Deployment recommendation:</span> {post.deployment_recommendation}
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs" data-testid="pilot-postrender-table">
+                <thead><tr className="text-left text-muted-foreground border-b"><th className="py-2 pr-3">Book</th><th className="py-2 pr-3">Status</th><th className="py-2 pr-3">EPUB</th><th className="py-2 pr-3">Validated</th><th className="py-2 pr-3">Guards</th><th className="py-2 pr-3">Rollback</th><th className="py-2 pr-3">Purchases</th></tr></thead>
+                <tbody>
+                  {post.items?.map((i) => (
+                    <tr key={i.book_code} className="border-b last:border-0" data-testid={`postrender-row-${i.book_code}`}>
+                      <td className="py-2 pr-3"><span className="font-medium text-foreground">{i.book_code}</span> <span className="text-muted-foreground">{(i.title || "").slice(0, 20)}</span></td>
+                      <td className="py-2 pr-3">{i.status === "success" ? <span className="text-emerald-700 font-medium">success</span> : <span className="text-red-700">{i.status}</span>}</td>
+                      <td className="py-2 pr-3 text-muted-foreground">{i.after?.epub_bytes ? `${(i.after.epub_bytes / 1024).toFixed(0)} KB` : "—"}</td>
+                      <td className="py-2 pr-3">{i.validation?.passed ? "✓" : "✗"}</td>
+                      <td className="py-2 pr-3">{i.guards_passed ? "✓" : "✗"}</td>
+                      <td className="py-2 pr-3">{i.rollback?.all_present ? "✓" : "✗"}</td>
+                      <td className="py-2 pr-3 text-muted-foreground">{i.existing_purchase_relationships ?? 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-3 text-xs">
+              <div className="rounded-lg border p-3">
+                <div className="font-semibold text-foreground mb-1">Pilot metrics</div>
+                <div className="text-muted-foreground space-y-0.5">
+                  <div>Founder touches: <span className="text-foreground">{post.metrics?.founder_touches}</span></div>
+                  <div>Founder time: <span className="text-foreground">{post.metrics?.founder_time_minutes} min</span></div>
+                  <div>Classification accuracy: <span className="text-foreground">{post.metrics?.classification_accuracy?.accuracy_pct}%</span> ({post.metrics?.classification_accuracy?.rendered_successfully}/{post.metrics?.classification_accuracy?.predicted_ready})</div>
+                  <div>Missing-context rate: <span className="text-foreground">{post.metrics?.missing_context_rate?.pct}%</span></div>
+                  <div>Exception quality: <span className="text-foreground">{post.metrics?.exception_quality}</span></div>
+                </div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="font-semibold text-foreground mb-1">Governance</div>
+                <div className="text-muted-foreground">{post.governance_note}</div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="rounded-xl border bg-muted/30 p-4 text-xs text-muted-foreground flex gap-2" data-testid="pilot-governance-note">

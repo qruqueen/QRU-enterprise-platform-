@@ -1,5 +1,20 @@
 # QRU Factory™ — CHANGELOG
 
+## 2026-07-25d — RI-MFG-0002 governed batch re-render (executed in preview, NOT deployed)
+- pilot_coordinator.py: `batch_rerender()` acts ONLY on the 8 authorized book codes. Reuses existing cover art
+  (zero AI, zero spend); re-renders EPUB via deterministic `deliverable_renderer._render_epub`; rollback-copies
+  old EPUB/cover/interior to /rendered_assets/rollback/RI-MFG-0002 + snapshots old record to `pilot_rollbacks`;
+  validates each EPUB (opens, mimetype, container, opf, nav, content); guards pricing/source/KR/cover unchanged;
+  updates only artifacts.design.ebook.epub pointer + stamps rerender_provenance.
+- routers/pilot.py: POST /api/pilot/mfg-coordinator/batch-rerender, GET /post-render-report (super-admin).
+- Frontend PilotCoordinator.js: RI-MFG-0002 panel (run button + summary, per-book table, 5 metrics, deploy rec).
+- Result: 8/8 rendered, validated, rollback-protected, guards passed; metrics 100% classification accuracy,
+  0 founder touches, 0 missing-context; deploy recommendation = RECOMMEND DEPLOY (awaiting Founder approval).
+- STOP condition honored — nothing published/deployed. Fixed a false-negative guard (purchase count folded into bool).
+- Also answered QRU Learn evidence questions (Consumer Learning Platform): powered by products + knowledge_records
+  (+ consumer_enrollments/certificates); learning content composed live from linked KR; refresh = product status→Published.
+
+
 ## 2026-07-25c — PILOT-MFG-0001 Manufacturing Operations Coordinator™ (Shadow Mode, read-only)
 - New governed digital role (observe/evaluate only; cannot modify/publish/delete/spend/override). Deterministic ($0 AI).
 - Backend: `pilot_coordinator.py` (charter + RI-MFG-0001 store re-render readiness evaluator) + `routers/pilot.py`
