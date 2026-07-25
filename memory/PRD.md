@@ -13,6 +13,14 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - Language: English only (code, comments, UI).
 
 
+## ✅ Post-redeploy fixes: Audit download + Stripe wording (2026-06, testing_agent iteration_95 — 100% backend + frontend)
+- **Audit JSON download bug FIXED**: frontend `downloadAudit()` called `/api/audit/...` through an axios client whose base already ends in '/api' → doubled '/api/api/...' → 404 → "Download failed". Fix: strip leading '/api'. All 3 files download (HTTP 200).
+- **Stripe status contradiction FIXED**: `routers/metrics.py` beta-status hardcoded 'TEST mode/sandbox' while LIVE keys installed. Now derives from `STRIPE_TEST`; live → pay_mode='LIVE', accepts_real_money='Yes'; added `payment_status` object. No contradiction.
+- **INVESTIGATION ONLY (scores unchanged per Founder):** Manufacturing=0 → `max(0,100-not_manufactured*10-failed_jobs*15)` = 100−11×10−4×15 → floored 0 (backlog+4 failed jobs; Director agent active, workload 70). Creative Studio=22 → `max(0,100-13*6)` (13 products missing/Pending creative_status = old covers). Enterprise Health = equal average of 8 systems (confirmed; no zero-fill).
+- ⚠️ Fixes are in PREVIEW — production needs a REDEPLOY. Learning Center small-print covers = old baked images awaiting Batch Upgrade Assets™.
+
+
+
 ## ✅ Standards Audit preserved + Title Cleanup PREVIEW (2026-06, display-only, awaiting Founder approval for any data migration)
 Founder approved the read-only Standards Audit as the baseline snapshot and authorized display-only title cleanup (no registry changes, no permanent migration).
 - **Audit evidence preserved & Founder-accessible**: `/app/backend/audit_exports/` holds `QRU_Standards_Full_Export.json` (original preserved, not overwritten), `QRU_Standards_Inventory.csv` (39-standard CSV), `QRU_Standards_Audit_Findings.md` (header: audit date, iteration 94, 39 standards, 6 lessons, 23 recipes, 10 PMS; sections A–E: missing STD-EIP-0001, 15 orphans, code-equivalent unregistered capabilities, Founder-approved-not-found records, empty metadata). Served via `routers/audit_exports.py` (`GET /api/audit/exports` + `/exports/{file}`, super-admin). Download control added to Institutional Knowledge page (`audit-exports-panel`).
