@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
-import { Loader2, Mail, RefreshCw, CheckCircle2, AlertTriangle, MinusCircle, ShoppingBag } from "lucide-react";
+import { Loader2, Mail, RefreshCw, CheckCircle2, AlertTriangle, MinusCircle, ShoppingBag, Search } from "lucide-react";
 
 const EMAIL_BADGE = {
   "sent-to-provider": { label: "Sent", cls: "bg-emerald-100 text-emerald-700", Icon: CheckCircle2 },
@@ -24,6 +24,8 @@ function EmailBadge({ status }) {
 export default function QRUOnlineOrders() {
   const [data, setData] = useState(null);
   const [busy, setBusy] = useState(null);
+  const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const load = () => api.get("/public/orders").then((r) => setData(r.data)).catch(() => setData(false));
   useEffect(() => { load(); }, []);
@@ -46,7 +48,15 @@ export default function QRUOnlineOrders() {
   if (data === null) return <div className="flex justify-center py-32"><Loader2 className="w-6 h-6 animate-spin text-royal" /></div>;
   if (data === false) return <div className="p-8 text-sm text-muted-foreground">Could not load QRU Online orders.</div>;
 
-  const orders = data.orders || [];
+  const allOrders = data.orders || [];
+  const needle = q.trim().toLowerCase();
+  const orders = allOrders.filter((o) => {
+    if (statusFilter === "paid" && o.payment_status !== "paid") return false;
+    if (statusFilter === "pending" && o.payment_status === "paid") return false;
+    if (!needle) return true;
+    return [o.book_title, o.order_ref, o.customer_email, o.session_id]
+      .some((v) => (v || "").toLowerCase().includes(needle));
+  });
 
   return (
     <div className="space-y-6" data-testid="qru-online-orders">
@@ -68,6 +78,32 @@ export default function QRUOnlineOrders() {
         </button>
       </div>
 
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[240px]">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            data-testid="orders-search-input"
+            placeholder="Search by customer email, book title, or order reference…"
+            className="w-full rounded-lg border bg-card pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-royal/40"
+          />
+        </div>
+        <div className="inline-flex rounded-lg border bg-card p-0.5" data-testid="orders-status-filter">
+          {["all", "paid", "pending"].map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              data-testid={`orders-filter-${s}`}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md capitalize ${statusFilter === s ? "bg-navy text-white" : "text-muted-foreground hover:bg-muted"}`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+        <span className="text-xs text-muted-foreground" data-testid="orders-shown-count">Showing {orders.length} of {allOrders.length}</span>
+      </div>
+
       <div className="rounded-xl border bg-card overflow-x-auto">
         <table className="w-full text-sm" data-testid="orders-table">
           <thead>
@@ -83,7 +119,7 @@ export default function QRUOnlineOrders() {
           </thead>
           <tbody>
             {orders.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">No orders yet.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">{allOrders.length === 0 ? "No orders yet." : "No orders match your search."}</td></tr>
             )}
             {orders.map((o) => {
               const paid = o.payment_status === "paid";
