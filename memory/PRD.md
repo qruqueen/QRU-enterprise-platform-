@@ -12,6 +12,8 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## 🔎 CURRENT STATUS (2026-07-25): Purchase Confirmation email — Stage A+B done, awaiting Founder Stage-C approval before deploy. Full detail in CHANGELOG.md (top entry). Scope-held: Enterprise Health formulas, stale-job cleanup, Batch Upgrade Assets™, Audiobook Storefront, Store Health — all NOT started per Founder.
+
 
 ## ✅ Post-redeploy fixes: Audit download + Stripe wording (2026-06, testing_agent iteration_95 — 100% backend + frontend)
 - **Audit JSON download bug FIXED**: frontend `downloadAudit()` called `/api/audit/...` through an axios client whose base already ends in '/api' → doubled '/api/api/...' → 404 → "Download failed". Fix: strip leading '/api'. All 3 files download (HTTP 200).

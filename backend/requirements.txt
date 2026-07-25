@@ -146,3 +146,4 @@ websockets==16.0
 xlsxwriter==3.2.9
 yarl==1.24.2
 zipp==4.1.0
+resend==2.34.0

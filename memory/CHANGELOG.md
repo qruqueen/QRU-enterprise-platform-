@@ -1,5 +1,42 @@
 # QRU Factory™ — CHANGELOG
 
+## 2026-07-25 — QRU Purchase Confirmation + Secure Tokenized Delivery (Stage A+B, awaiting Founder review before deploy)
+
+**Investigation (read-only) that led here:** queried the LIVE Stripe account directly. 3 completed live
+purchases (all "The Heart as a Daily Circulation Pump", $4.99, same buyer minders.powers11@icloud.com).
+`receipt_email` is null on every PI/charge (app never set it; emergentintegrations `CheckoutSessionRequest`
+has no such field). Only the July 20 charge has a `receipt_number` (1100-1236) → the single Stripe receipt
+came from the account-level "Successful payments" toggle, most likely active only around that date (timeline
+evidence, not proof). Also found: preview process exports `STRIPE_API_KEY=sk_test_emergent` which OVERRIDES
+the `sk_live_…` in `.env` (load_dotenv doesn't override) → preview runs TEST mode; production uses live.
+
+**Stage A/B implementation (test-mode only, NOT deployed):**
+- New `order_access.py` — signed, expiring JWT (typ=ord) bound to a random `access_id` + `book_id`, action=download,
+  72h TTL. Customer URL never exposes the Stripe session id or file path.
+- New `qru_email.py` — Resend provider abstraction (async, key from env only, NEVER logged) + QRU-branded HTML
+  template (payment-success, product, amount, date, purchase ref, secure link, expiry, download cap, recovery,
+  support, "separate Stripe receipt may also be sent"). Missing key → status `skipped` (order still fulfilled).
+  Provider "accepted" recorded as `sent-to-provider` (NOT claimed as delivered).
+- `routers/public_commerce.py` — on the FIRST atomic transition to paid (`_fulfill` modified_count==1) sends ONE
+  confirmation via `_fulfill_and_notify` (shared by webhook + status poll); assigns `access_id` + `order_ref`
+  (QRU-XXXXXXXX); captures `customer_email` from Stripe. New order fields: `customer_email`, `order_ref`,
+  `access_id`, `confirmation_email{status, provider, provider_message_id, attempted_at, attempts, error}`.
+  New endpoints: `GET /api/public/order/{token}` (metadata), `GET /api/public/order/{token}/download` (secure EPUB),
+  `POST /api/public/orders/{session_id}/resend-confirmation` (super-admin; mints fresh token, no Stripe/charge).
+  Legacy `/download/{session_id}` kept working (success page).
+- Frontend `pages/public/QRUAccess.js` + route `/access/:token` — verifies token, shows title/ref/downloads-left/
+  expiry + Download; expired→410 / invalid→403 states show recovery + support contact.
+- `.env`: added non-secret `SENDER_EMAIL`, `SUPPORT_EMAIL`. `RESEND_API_KEY` intentionally NOT added (Founder).
+- `requirements.txt`: `resend==2.34.0`.
+- **VERIFIED (no live charge):** 24/24 in-process checks (send-once, replay idempotency, correct product, email
+  failure preserves order, resend increments attempts, token valid/tampered/expired, token has no session id,
+  unpaid blocked) + HTTP: metadata 200, token download 200 (epub 2.28MB), invalid 403, expired 410, cap 410,
+  legacy download 200, resend 401 unauth / 200 super-admin (skipped, no key) / 404 missing order. All test
+  artifacts + test order removed.
+- **PENDING Founder actions (Stage C):** approve Resend + provide `RESEND_API_KEY`; verify qru-online.com sending
+  domain (SPF/DKIM); confirm Stripe "Successful payments" toggle; then Deploy. NOT deployed; no live purchase run.
+
+
 ## 2026-06 — QRU Online™ public presentation layer (Iteration 1)
 
 **Architecture decision:** Option A — one deployment, one domain, one source of truth.

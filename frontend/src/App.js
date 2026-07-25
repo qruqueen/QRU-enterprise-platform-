@@ -114,6 +114,7 @@ import QRUHome from "@/pages/public/QRUHome";
 import QRUCatalog from "@/pages/public/QRUCatalog";
 import QRUBookPage from "@/pages/public/QRUBookPage";
 import QRUPurchaseSuccess from "@/pages/public/QRUPurchaseSuccess";
+import QRUAccess from "@/pages/public/QRUAccess";
 import QRUPrivacy from "@/pages/public/QRUPrivacy";
 import QRUTerms from "@/pages/public/QRUTerms";
 import QRURefunds from "@/pages/public/QRURefunds";
@@ -262,6 +263,7 @@ function PublicRoutes() {
         <Route path="catalog" element={<QRUCatalog />} />
         <Route path="book/:id" element={<QRUBookPage />} />
         <Route path="purchase/success" element={<QRUPurchaseSuccess />} />
+        <Route path="access/:token" element={<QRUAccess />} />
         <Route path="privacy" element={<QRUPrivacy />} />
         <Route path="terms" element={<QRUTerms />} />
         <Route path="refunds" element={<QRURefunds />} />
