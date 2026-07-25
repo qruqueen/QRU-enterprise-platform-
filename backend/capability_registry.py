@@ -185,6 +185,8 @@ DEFINITIONS = [
        "Let people buy what we make.", "Owned native marketplace + Stripe checkout.", moat=True),
     _c("qru-online-orders", "QRU Online Orders™", "distribution", "active", "routers/public_commerce.py", "/qru-online-orders",
        "See every real purchase and deliver it.", "Storefront orders with verified fulfillment + one-tap resend of the delivery email."),
+    _c("pilot-coordinator", "Mfg Operations Coordinator™ (Pilot)", "governance", "active", "routers/pilot.py", "/pilot-coordinator",
+       "Reduce Founder manufacturing administration.", "PILOT-MFG-0001 — a governed Shadow-Mode digital role that reviews store books for re-render readiness (observes only, changes nothing)."),
     _c("youtube", "YouTube Publisher™", "distribution", "active", "youtube_publisher.py", "/youtube",
        "Publish real videos to YouTube.", "Real resumable upload with verified Video ID."),
     _c("connectors", "Publishing Connectors™", "distribution", "active", "connectors.py", "/connectors",

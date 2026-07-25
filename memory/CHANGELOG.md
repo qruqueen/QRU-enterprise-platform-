@@ -1,5 +1,18 @@
 # QRU Factory™ — CHANGELOG
 
+## 2026-07-25c — PILOT-MFG-0001 Manufacturing Operations Coordinator™ (Shadow Mode, read-only)
+- New governed digital role (observe/evaluate only; cannot modify/publish/delete/spend/override). Deterministic ($0 AI).
+- Backend: `pilot_coordinator.py` (charter + RI-MFG-0001 store re-render readiness evaluator) + `routers/pilot.py`
+  (`GET /api/pilot/mfg-coordinator` charter, `GET .../readiness-report` read-only, `POST .../readiness-report/run`
+  files to the pilot's own `pilot_reports` evidence journal — no Factory records touched). Registered in server.py + nav.
+- Frontend: `pages/PilotCoordinator.js` + route `/pilot-coordinator` — charter (may / may-not), summary counts,
+  per-book classification with evidence chips, recommended route, governance note.
+- First report: 8 store books reviewed → 8 READY_FOR_BATCH_RERENDER, 0 CORRECTION, 0 FOUNDER_DECISION.
+  Advisories: none link a Knowledge Record (Founder-manuscript exception), no print-wrap despite paperback list
+  prices, several missing explicit ebook price (list-price fallback). Verified via curl (auth-gated 401); compiles clean.
+- STOP after report per directive; await Founder approval before any batch re-render.
+
+
 ## 2026-07-25b — QRU Online Orders console + one-tap Resend (preview, ready to deploy)
 - Backend: `GET /api/public/orders` (super-admin) lists storefront orders with fulfillment + email status;
   reuses existing `POST /api/public/orders/{sid}/resend-confirmation` (mints fresh token, no charge).

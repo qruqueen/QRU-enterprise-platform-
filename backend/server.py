@@ -90,6 +90,7 @@ from routers.family import router as family_router
 from routers.audit_exports import router as audit_exports_router
 from routers.public_site import router as public_site_router
 from routers.public_commerce import router as public_commerce_router
+from routers.pilot import router as pilot_router
 from routers.manufacturing_standards import router as manufacturing_standards_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
@@ -162,6 +163,7 @@ for r in [
     manufacturing_standards_router,
     public_site_router,
     public_commerce_router,
+    pilot_router,
 ]:
     app.include_router(r)
 

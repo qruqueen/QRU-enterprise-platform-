@@ -191,6 +191,7 @@ function EnterpriseRoutes() {
         <Route path="portability" element={<PortabilityCenter />} />
         <Route path="store" element={<Store />} />
         <Route path="qru-online-orders" element={<QRUOnlineOrders />} />
+        <Route path="pilot-coordinator" element={<PilotCoordinator />} />
         <Route path="checkout/success" element={<CheckoutSuccess />} />
         <Route path="command-center" element={<EnterpriseCommandCenter />} />
         <Route path="evidence" element={<EvidenceDashboard />} />
