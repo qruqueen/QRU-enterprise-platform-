@@ -1,5 +1,20 @@
 # QRU Factory™ — CHANGELOG
 
+## 2026-07-25e — RI-MFG-0002b production migration package (REVIEW ONLY, not executed)
+- Confirmed via support_agent: preview & production are SEPARATE MongoDB DBs; Deploy ships CODE only, not DATA;
+  preview cannot write to production. Root cause of "4 of 8 books live": the 4 newer books exist only in preview
+  (prod direct-id fetch = 404). Domain/DNS healthy (Cloudflare, valid cert, www→root); not a cache/CDN/DNS issue.
+- Built /app/migration_packages/RI-MFG-0002b/ : migrate_production.py (idempotent, dry-run default, Stage1 create 4
+  books + Stage2 EPUB pointer cutover for 8, asset-existence prereq checks, rollback), data_stage1_books.json,
+  data_stage2_pointers.json, MANIFEST.md. Dry-run evidence: preview re-run = all SKIP (idempotent); empty DB =
+  WOULD CREATE x4 assets-verified. NOT executed against production (no prod write authority).
+- Built /app/migration_packages/WORKSTREAM_C_containment/verify_and_hold_c.py : read-only classifier for the 5
+  unverified products + conditional governed hold (PRODUCTION_HOLD_REQUIRED only) + rollback. C cannot be scoped
+  from preview (prod consumer endpoints auth-gated, no prod DB access) → Support must run the verifier in production.
+- Workstream B: pilot unchanged; future RI reports to add execution/database environment, production applicability,
+  production data dependency, required deployment/migration path.
+
+
 ## 2026-07-25d — RI-MFG-0002 governed batch re-render (executed in preview, NOT deployed)
 - pilot_coordinator.py: `batch_rerender()` acts ONLY on the 8 authorized book codes. Reuses existing cover art
   (zero AI, zero spend); re-renders EPUB via deterministic `deliverable_renderer._render_epub`; rollback-copies
