@@ -223,6 +223,142 @@ async def book_cutover_rollback(apply: bool = False):
             "mode": "APPLY" if apply else "DRY_RUN", "at": _now(), "rows": rows}
 
 
+def _norm(s):
+    return " ".join((s or "").lower().split())
+
+
+async def _record_summary(rec):
+    if not rec:
+        return None
+    d = (rec.get("artifacts") or {}).get("design") or {}
+    return {
+        "id": rec.get("id"),
+        "title": rec.get("title"),
+        "subtitle": rec.get("subtitle"),
+        "author": rec.get("author"),
+        "book_code": rec.get("book_code"),
+        "publication_status": rec.get("publication_status") or rec.get("status"),
+        "approval_status": rec.get("approval_status"),
+        "editorial_locked": rec.get("editorial_locked"),
+        "epub": (d.get("ebook") or {}).get("epub"),
+        "cover": (d.get("selected_cover") or {}).get("url"),
+        "created_at": rec.get("created_at"),
+        "migrated_by": rec.get("_migrated_by"),
+        "purchases": await db.book_purchases.count_documents({"book_id": rec.get("id")}),
+    }
+
+
+async def inspect_book_conflicts():
+    """READ-ONLY. For each Stage-1 book_code, compare the incoming migration record with whatever
+    already exists in THIS database (by id and by book_code) and produce a governed recommendation.
+    Writes nothing."""
+    books = _load("data_stage1_books.json")
+    ptr_by_code = {p["book_code"]: p for p in _load("data_stage2_pointers.json")}
+    out = []
+    for b in books:
+        code, mid = b.get("book_code"), b.get("id")
+        design = (b.get("artifacts") or {}).get("design") or {}
+        incoming = {
+            "id": mid, "title": b.get("title"), "author": b.get("author"), "book_code": code,
+            "epub": (design.get("ebook") or {}).get("epub"),
+            "cover": (design.get("selected_cover") or {}).get("url"),
+        }
+        by_id = await db[COLL].find_one({"id": mid})
+        by_code = await db[COLL].find_one({"book_code": code, "id": {"$ne": mid}})
+        existing_by_id = await _record_summary(by_id)
+        existing_by_code = await _record_summary(by_code)
+        ptr = ptr_by_code.get(code)
+        rerender_epub_available = await _asset_ok(ptr["new_epub_file"]) if ptr else False
+
+        if by_id:
+            classification = "PRESENT_BY_ID"
+            recommendation = ("Already present under the same canonical id — no creation needed. "
+                              "Stage 2 will refresh its EPUB pointer to the re-rendered edition.")
+        elif by_code:
+            same_title = _norm(existing_by_code["title"]) == _norm(b.get("title"))
+            same_author = _norm(existing_by_code.get("author")) == _norm(b.get("author"))
+            if same_title and same_author:
+                classification = "ID_MISMATCH_SAME_BOOK"
+                recommendation = ("Same book, different internal id (this record was created directly in "
+                                  "production, so its id differs from preview's copy). SAFEST: ADOPT the existing "
+                                  "production record — do NOT insert a duplicate. Apply the re-rendered EPUB to "
+                                  "the EXISTING id via a governed remap. The existing record, its cover, pricing, "
+                                  "authorization and any purchases are preserved.")
+            elif same_title:
+                classification = "ID_MISMATCH_TITLE_MATCH_AUTHOR_DIFF"
+                recommendation = ("Titles match but author differs — likely the same book with a metadata "
+                                  "difference. FOUNDER REVIEW before adopting. Do not create a duplicate.")
+            else:
+                classification = "CODE_COLLISION_DIFFERENT_CONTENT"
+                recommendation = ("The existing production record under this book_code is a DIFFERENT title. "
+                                  "This is a code collision, not the same book. FOUNDER DECISION REQUIRED — do "
+                                  "not create, do not repoint. Investigate how the code was reused before any change.")
+        else:
+            classification = "ABSENT"
+            recommendation = "Truly missing in this database — safe to CREATE from the migration record (assets permitting)."
+
+        out.append({
+            "book_code": code,
+            "classification": classification,
+            "recommendation": recommendation,
+            "rerender_epub_available": rerender_epub_available,
+            "incoming": incoming,
+            "existing_by_id": existing_by_id,
+            "existing_by_code": existing_by_code,
+        })
+    return {"workstream": "A", "action": "inspect", "read_only": True, "at": _now(), "books": out}
+
+
+async def resolve_book_conflicts(apply: bool = False):
+    """Governed conflict resolution. ONLY for records classified ID_MISMATCH_SAME_BOOK
+    (same title AND author, existing under a different id because it was created directly in
+    production): ADOPT the existing production record and apply the re-rendered EPUB pointer to
+    its EXISTING id. Never creates a duplicate; never touches collisions or title/author mismatches;
+    never alters manuscript, cover, pricing, authorization, or purchases. Rollback-preserving."""
+    insp = await inspect_book_conflicts()
+    ptr_by_code = {p["book_code"]: p for p in _load("data_stage2_pointers.json")}
+    rows = []
+    for b in insp["books"]:
+        code, cls = b["book_code"], b["classification"]
+        if cls != "ID_MISMATCH_SAME_BOOK":
+            rows.append({"code": code, "outcome": "SKIP",
+                         "detail": f"{cls} — not an adopt-and-remap target"})
+            continue
+        existing = b["existing_by_code"]
+        ptr = ptr_by_code.get(code)
+        if not ptr:
+            rows.append({"code": code, "outcome": "SKIP", "detail": "no pointer mapping"})
+            continue
+        if not await _asset_ok(ptr["new_epub_file"]):
+            rows.append({"code": code, "outcome": "BLOCKED",
+                         "detail": f"target EPUB {ptr['new_epub_file']} not in durable storage"})
+            continue
+        rec = await db[COLL].find_one({"id": existing["id"]})
+        design = (rec.get("artifacts") or {}).get("design") or {}
+        cur = (design.get("ebook") or {}).get("epub")
+        if cur == ptr["new_epub_url"]:
+            rows.append({"code": code, "outcome": "SKIP",
+                         "detail": f"existing record {existing['id']} already points to re-rendered EPUB"})
+            continue
+        if apply:
+            ebook = dict(design.get("ebook") or {})
+            ebook.setdefault("epub_rollback", cur)
+            ebook["epub"] = ptr["new_epub_url"]
+            prov = design.get("rerender_provenance") or []
+            prov.append({"ri": MARK_A, "at": _now(), "adopt_remap": True,
+                         "resolved_book_code": code, "old_epub": cur, "new_epub": ptr["new_epub_url"],
+                         "standard": "Publication Quality Standard\u2122"})
+            await db[COLL].update_one({"id": existing["id"]}, {"$set": {
+                "artifacts.design.ebook": ebook, "artifacts.design.rerender_provenance": prov}})
+            rows.append({"code": code, "outcome": "ADOPTED_AND_REPOINTED",
+                         "detail": f"existing id {existing['id']} → {ptr['new_epub_file']} (rollback saved; no duplicate created)"})
+        else:
+            rows.append({"code": code, "outcome": "WOULD_ADOPT_AND_REPOINT",
+                         "detail": f"existing id {existing['id']} → {ptr['new_epub_file']} (rollback would be saved)"})
+    return {"workstream": "A", "action": "resolve_conflicts",
+            "mode": "APPLY" if apply else "DRY_RUN", "at": _now(), "rows": rows}
+
+
 # =========================================================================== #
 # WORKSTREAM C — QRU Learn Governance Containment
 # =========================================================================== #

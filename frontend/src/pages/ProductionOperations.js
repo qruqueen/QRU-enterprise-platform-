@@ -4,21 +4,28 @@ import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import {
   Loader2, Play, ShieldCheck, RotateCcw, CheckCircle2, AlertTriangle,
-  BookOpen, GraduationCap, Database, FileText, PauseOctagon,
+  BookOpen, GraduationCap, Database, FileText, PauseOctagon, Search, ArrowLeftRight,
 } from "lucide-react";
 
 const OUTCOME = {
   CREATED: "bg-emerald-100 text-emerald-700",
   UPDATED: "bg-emerald-100 text-emerald-700",
   HELD: "bg-emerald-100 text-emerald-700",
+  ADOPTED_AND_REPOINTED: "bg-emerald-100 text-emerald-700",
   RESTORED: "bg-blue-100 text-blue-700",
   WOULD_CREATE: "bg-amber-100 text-amber-700",
   WOULD_UPDATE: "bg-amber-100 text-amber-700",
   WOULD_HOLD: "bg-amber-100 text-amber-700",
   WOULD_RESTORE: "bg-amber-100 text-amber-700",
+  WOULD_ADOPT_AND_REPOINT: "bg-amber-100 text-amber-700",
   SKIP: "bg-muted text-muted-foreground",
   CONFLICT: "bg-orange-100 text-orange-700",
   BLOCKED: "bg-red-100 text-red-700",
+  PRESENT_BY_ID: "bg-emerald-100 text-emerald-700",
+  ID_MISMATCH_SAME_BOOK: "bg-blue-100 text-blue-700",
+  ID_MISMATCH_TITLE_MATCH_AUTHOR_DIFF: "bg-orange-100 text-orange-700",
+  CODE_COLLISION_DIFFERENT_CONTENT: "bg-red-100 text-red-700",
+  ABSENT: "bg-muted text-muted-foreground",
   PRODUCTION_HOLD_REQUIRED: "bg-red-100 text-red-700",
   NOT_PRESENT_IN_PRODUCTION: "bg-muted text-muted-foreground",
   NOT_LEARNER_ACCESSIBLE: "bg-muted text-muted-foreground",
@@ -68,6 +75,7 @@ export default function ProductionOperations() {
   const [busy, setBusy] = useState("");
   const [reportA, setReportA] = useState(null);
   const [reportC, setReportC] = useState(null);
+  const [inspect, setInspect] = useState(null);
 
   const loadSummary = () => api.get("/admin/migrations/summary").then((r) => setSummary(r.data)).catch(() => setSummary(false));
   useEffect(() => { loadSummary(); }, []);
@@ -84,6 +92,32 @@ export default function ProductionOperations() {
       loadSummary();
     } catch (e) {
       toast.error(e.response?.data?.detail || "Workstream A action failed.");
+    }
+    setBusy("");
+  };
+
+  const runInspect = async () => {
+    setBusy("A-inspect");
+    try {
+      const { data } = await api.get("/admin/migrations/book-cutover/inspect");
+      setInspect(data);
+      toast.success("Inspection complete (read-only).");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Inspection failed.");
+    }
+    setBusy("");
+  };
+
+  const runResolve = async (mode) => {
+    if (mode === "apply" && !window.confirm("Adopt the existing production records that are confirmed to be the SAME book (same title & author) and repoint their EPUB to the re-rendered edition? No duplicates are created; collisions are left untouched. Rollback-protected.")) return;
+    setBusy(`A-resolve-${mode}`);
+    try {
+      const { data } = await api.post("/admin/migrations/book-cutover/resolve-conflicts", { apply: mode === "apply" });
+      setReportA(data);
+      toast.success(mode === "apply" ? "Conflicts resolved (adopt & repoint)." : "Resolution dry run complete.");
+      loadSummary();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Resolution failed.");
     }
     setBusy("");
   };
@@ -154,16 +188,65 @@ export default function ProductionOperations() {
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
+          <button onClick={runInspect} disabled={!!busy} data-testid="a-inspect" className="inline-flex items-center gap-2 rounded-lg border border-navy/30 text-navy px-4 py-2 text-sm font-medium hover:bg-navy/5 disabled:opacity-50">
+            {busy === "A-inspect" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Inspect Records
+          </button>
           <button onClick={() => runA("dry")} disabled={!!busy} data-testid="a-dry-run" className="inline-flex items-center gap-2 rounded-lg border border-navy/30 text-navy px-4 py-2 text-sm font-medium hover:bg-navy/5 disabled:opacity-50">
             {busy === "A-dry" ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Run Dry Run
           </button>
           <button onClick={() => runA("apply")} disabled={!!busy} data-testid="a-apply" className="inline-flex items-center gap-2 rounded-lg bg-navy text-white px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50">
             {busy === "A-apply" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} Apply Migration
           </button>
+          <button onClick={() => runResolve("dry")} disabled={!!busy} data-testid="a-resolve-dry" className="inline-flex items-center gap-2 rounded-lg border border-blue-300 text-blue-700 px-4 py-2 text-sm font-medium hover:bg-blue-50 disabled:opacity-50">
+            {busy === "A-resolve-dry" ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowLeftRight className="w-4 h-4" />} Resolve Conflicts (preview)
+          </button>
+          <button onClick={() => runResolve("apply")} disabled={!!busy} data-testid="a-resolve-apply" className="inline-flex items-center gap-2 rounded-lg bg-blue-700 text-white px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50">
+            {busy === "A-resolve-apply" ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowLeftRight className="w-4 h-4" />} Apply Resolution
+          </button>
           <button onClick={() => runA("rollback")} disabled={!!busy} data-testid="a-rollback" className="inline-flex items-center gap-2 rounded-lg border border-red-200 text-red-700 px-4 py-2 text-sm font-medium hover:bg-red-50 disabled:opacity-50">
             {busy === "A-rollback" ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />} Rollback
           </button>
         </div>
+
+        {inspect && (
+          <div className="mt-4 space-y-3" data-testid="inspect-a">
+            <div className="text-xs text-muted-foreground flex items-center gap-1.5"><Search className="w-3.5 h-3.5" /> Read-only comparison — incoming migration record vs. what exists in this database.</div>
+            {inspect.books.map((b) => (
+              <div key={b.book_code} className="rounded-lg border p-4" data-testid={`inspect-book-${b.book_code}`}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold text-navy">{b.book_code}</span>
+                  <Badge v={b.classification} />
+                  {b.rerender_epub_available && <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">re-rendered EPUB available</span>}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">{b.recommendation}</p>
+                <div className="grid md:grid-cols-2 gap-3 mt-3 text-xs">
+                  <div className="rounded-md border bg-muted/30 p-3">
+                    <div className="font-semibold text-foreground mb-1">Incoming (migration)</div>
+                    <div className="space-y-0.5 text-muted-foreground">
+                      <div>id: <span className="font-mono text-[10px]">{b.incoming.id}</span></div>
+                      <div>title: <span className="text-foreground">{b.incoming.title}</span></div>
+                      <div>author: {b.incoming.author}</div>
+                    </div>
+                  </div>
+                  <div className="rounded-md border bg-card p-3">
+                    <div className="font-semibold text-foreground mb-1">Existing in this DB</div>
+                    {b.existing_by_id || b.existing_by_code ? (
+                      <div className="space-y-0.5 text-muted-foreground">
+                        <div>id: <span className="font-mono text-[10px]">{(b.existing_by_id || b.existing_by_code).id}</span></div>
+                        <div>title: <span className="text-foreground">{(b.existing_by_id || b.existing_by_code).title}</span></div>
+                        <div>author: {(b.existing_by_id || b.existing_by_code).author}</div>
+                        <div>status: {(b.existing_by_id || b.existing_by_code).publication_status || "—"}</div>
+                        <div>purchases: <span className="text-foreground">{(b.existing_by_id || b.existing_by_code).purchases}</span></div>
+                        <div>current EPUB: <span className="font-mono text-[10px]">{((b.existing_by_id || b.existing_by_code).epub || "—").split("/").pop()}</span></div>
+                      </div>
+                    ) : <div className="text-muted-foreground">Not present — safe to create.</div>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {reportA && (
           <div className="mt-4" data-testid="report-a">
             <div className="flex flex-wrap items-center gap-2 text-xs">

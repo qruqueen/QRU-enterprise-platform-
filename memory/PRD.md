@@ -12,6 +12,14 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## 🔍 Conflict handling added to Production Operations™ (2026-07-25)
+- Production dry-run of Workstream A returned CONFLICT for BOOK-0013 & BOOK-0016 (book_code exists in prod under a DIFFERENT internal id). This is the Stage-1 guardrail working — it refuses to insert a duplicate book_code.
+- Added READ-ONLY **Inspect Records** (`GET /api/admin/migrations/book-cutover/inspect`): side-by-side incoming-vs-existing (id, title, author, status, purchases, current EPUB) + auto-classification per book:
+  - PRESENT_BY_ID · ID_MISMATCH_SAME_BOOK (same title+author) · ID_MISMATCH_TITLE_MATCH_AUTHOR_DIFF · CODE_COLLISION_DIFFERENT_CONTENT · ABSENT.
+- Added governed **Resolve Conflicts** (`POST /api/admin/migrations/book-cutover/resolve-conflicts`, dry-run default): ONLY for ID_MISMATCH_SAME_BOOK → ADOPTS the existing production record and repoints its EPUB to the re-rendered edition by its EXISTING id (no duplicate, preserves cover/pricing/authorization/purchases, rollback-preserving). Collisions/author-mismatch are SKIPPED for founder decision.
+- Validated via scratch-DB simulation (`backend/tests/test_conflict_resolution.py`): same-book→adopt+repoint+rollback+purchases preserved; collision→untouched; absent→create. UI Inspect panel verified.
+- Requires redeploy to reach production. NO production data modified by the agent.
+
 ## 🏭 NEW CAPABILITY (2026-07-25): Production Operations™ — Founder-run governed migrations
 - **What**: Permanent, reusable Founder/Admin console (`/production-operations`, nav item in Core Capabilities) to run governed, idempotent data operations against the LIVE production DB with NO terminal, local scripts, Mongo commands, or Support intervention. Officially-recommended pattern (confirmed w/ platform): logic runs inside the deployed backend, which is the only env with production MONGO_URL.
 - **Backend**: `prod_migrations.py` (async port of the exact RI-MFG-0002b + Workstream C script logic) + `routers/migrations.py` (`/api/admin/migrations/*`, `require_super_admin`). Data ships in `backend/migrations_data/`.

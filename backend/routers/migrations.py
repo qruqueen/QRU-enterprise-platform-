@@ -43,6 +43,18 @@ async def book_cutover_rollback(body: ApplyInput, user=Depends(require_super_adm
     return await pm.book_cutover_rollback(apply=body.apply)
 
 
+@router.get("/book-cutover/inspect")
+async def book_cutover_inspect(user=Depends(require_super_admin)):
+    """Read-only comparison of incoming vs existing records for the Stage-1 book_codes."""
+    return await pm.inspect_book_conflicts()
+
+
+@router.post("/book-cutover/resolve-conflicts")
+async def book_cutover_resolve_conflicts(body: ApplyInput, user=Depends(require_super_admin)):
+    """Governed adopt-and-repoint for ID_MISMATCH_SAME_BOOK records (dry-run by default)."""
+    return await pm.resolve_book_conflicts(apply=body.apply)
+
+
 # ----- Workstream C -----
 @router.post("/learn-containment")
 async def learn_containment(body: ContainmentInput, user=Depends(require_super_admin)):
