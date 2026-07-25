@@ -119,6 +119,7 @@ import QRUPrivacy from "@/pages/public/QRUPrivacy";
 import QRUTerms from "@/pages/public/QRUTerms";
 import QRURefunds from "@/pages/public/QRURefunds";
 import QRUOnlineOrders from "@/pages/QRUOnlineOrders";
+import PilotCoordinator from "@/pages/PilotCoordinator";
 import { Loader2 } from "lucide-react";
 
 function ProtectedRoute({ children }) {
