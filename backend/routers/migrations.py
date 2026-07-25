@@ -1,0 +1,54 @@
+"""Founder Production Operations™ — governed migration endpoints (Founder/Admin only).
+
+DRY-RUN by default everywhere. Writes require an explicit apply flag AND run only against
+whatever database this backend is connected to — i.e. PRODUCTION when triggered on the
+deployed site. Reuses the exact idempotent logic in prod_migrations.py.
+"""
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+
+from auth import require_super_admin
+import prod_migrations as pm
+
+router = APIRouter(prefix="/api/admin/migrations", tags=["production-operations"])
+
+
+class BookCutoverInput(BaseModel):
+    stage: str = "all"   # "1" | "2" | "all"
+    apply: bool = False
+
+
+class ApplyInput(BaseModel):
+    apply: bool = False
+
+
+class ContainmentInput(BaseModel):
+    apply_hold: bool = False
+    apply: bool = False
+
+
+@router.get("/summary")
+async def summary(user=Depends(require_super_admin)):
+    return await pm.summary()
+
+
+# ----- Workstream A -----
+@router.post("/book-cutover")
+async def book_cutover(body: BookCutoverInput, user=Depends(require_super_admin)):
+    return await pm.book_cutover(stage=body.stage, apply=body.apply)
+
+
+@router.post("/book-cutover/rollback")
+async def book_cutover_rollback(body: ApplyInput, user=Depends(require_super_admin)):
+    return await pm.book_cutover_rollback(apply=body.apply)
+
+
+# ----- Workstream C -----
+@router.post("/learn-containment")
+async def learn_containment(body: ContainmentInput, user=Depends(require_super_admin)):
+    return await pm.learn_containment(apply_hold=body.apply_hold, apply=body.apply)
+
+
+@router.post("/learn-containment/rollback")
+async def learn_containment_rollback(body: ApplyInput, user=Depends(require_super_admin)):
+    return await pm.learn_containment_rollback(apply=body.apply)

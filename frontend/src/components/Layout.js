@@ -37,7 +37,7 @@ const ICON = {
   "/customers": Users, "/workforce": Bot, "/organization": Building2, "/asset-vault": Archive, "/command": MessageSquareText,
   "/enterprise-health": Activity, "/blueprint": BookOpenCheck, "/experience-lab": Eye,
   "/integration-hub": Plug, "/ai-services": Cpu, "/users": UserCog, "/portability": HardDriveDownload,
-  "/engineering-console": Cpu, "/settings": Settings,
+  "/engineering-console": Cpu, "/settings": Settings, "/production-operations": Database,
 };
 const iconFor = (route) => ICON[route] || Boxes;
 
@@ -123,6 +123,9 @@ export default function Layout() {
           {/* Core capabilities — the Founder Cockpit (8 items) */}
           <p className="overline text-white/40 px-3 pt-2 pb-1">Core Capabilities</p>
           {(model.core || []).map((item) => <NavItem key={item.id} item={item} onNavigate={close} />)}
+          {["Founder & CEO", "Administrator"].includes(user?.role) && (
+            <NavItem item={{ id: "production-operations", label: "Production Operations™", route: "/production-operations" }} onNavigate={close} />
+          )}
 
           {/* All Capabilities — every other working page, one click away (collapsed) */}
           {model.sections && model.sections.length > 0 && (

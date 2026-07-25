@@ -1,0 +1,217 @@
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import api from "@/lib/api";
+import { PageHeader } from "@/components/shared";
+import {
+  Loader2, Play, ShieldCheck, RotateCcw, CheckCircle2, AlertTriangle,
+  BookOpen, GraduationCap, Database, FileText, PauseOctagon,
+} from "lucide-react";
+
+const OUTCOME = {
+  CREATED: "bg-emerald-100 text-emerald-700",
+  UPDATED: "bg-emerald-100 text-emerald-700",
+  HELD: "bg-emerald-100 text-emerald-700",
+  RESTORED: "bg-blue-100 text-blue-700",
+  WOULD_CREATE: "bg-amber-100 text-amber-700",
+  WOULD_UPDATE: "bg-amber-100 text-amber-700",
+  WOULD_HOLD: "bg-amber-100 text-amber-700",
+  WOULD_RESTORE: "bg-amber-100 text-amber-700",
+  SKIP: "bg-muted text-muted-foreground",
+  CONFLICT: "bg-orange-100 text-orange-700",
+  BLOCKED: "bg-red-100 text-red-700",
+  PRODUCTION_HOLD_REQUIRED: "bg-red-100 text-red-700",
+  NOT_PRESENT_IN_PRODUCTION: "bg-muted text-muted-foreground",
+  NOT_LEARNER_ACCESSIBLE: "bg-muted text-muted-foreground",
+  FOUNDER_REVIEW_REQUIRED: "bg-amber-100 text-amber-700",
+};
+
+function Badge({ v }) {
+  return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${OUTCOME[v] || "bg-muted text-muted-foreground"}`}>{String(v).replace(/_/g, " ")}</span>;
+}
+
+function Stat({ label, value, tone = "default" }) {
+  const tones = {
+    default: "bg-card", ok: "bg-emerald-50 text-emerald-700", warn: "bg-amber-50 text-amber-700", bad: "bg-red-50 text-red-700",
+  };
+  return (
+    <div className={`rounded-lg border p-4 ${tones[tone]}`}>
+      <div className="text-2xl font-bold">{value}</div>
+      <div className="text-[11px] mt-1 opacity-80">{label}</div>
+    </div>
+  );
+}
+
+function EvidenceRows({ rows }) {
+  if (!rows?.length) return null;
+  return (
+    <div className="mt-4 overflow-x-auto rounded-lg border" data-testid="evidence-rows">
+      <table className="w-full text-xs">
+        <thead><tr className="text-left text-muted-foreground border-b bg-muted/40">
+          <th className="py-2 px-3">Record</th><th className="py-2 px-3">Outcome</th><th className="py-2 px-3">Detail</th>
+        </tr></thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i} className="border-b last:border-0" data-testid={`evidence-row-${r.code}`}>
+              <td className="py-2 px-3 font-medium text-foreground whitespace-nowrap">{r.code}</td>
+              <td className="py-2 px-3"><Badge v={r.outcome || r.classification} /></td>
+              <td className="py-2 px-3 text-muted-foreground">{r.detail || `${r.pub_status || ""} · KR: ${r.kr_status || ""}`}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export default function ProductionOperations() {
+  const [summary, setSummary] = useState(null);
+  const [busy, setBusy] = useState("");
+  const [reportA, setReportA] = useState(null);
+  const [reportC, setReportC] = useState(null);
+
+  const loadSummary = () => api.get("/admin/migrations/summary").then((r) => setSummary(r.data)).catch(() => setSummary(false));
+  useEffect(() => { loadSummary(); }, []);
+
+  const runA = async (mode) => {
+    if (mode === "apply" && !window.confirm("Apply Workstream A to THIS environment's database? Creates the 4 missing books and updates the 8 EPUB pointers. Idempotent and rollback-protected.")) return;
+    setBusy(`A-${mode}`);
+    try {
+      let data;
+      if (mode === "rollback") ({ data } = await api.post("/admin/migrations/book-cutover/rollback", { apply: true }));
+      else ({ data } = await api.post("/admin/migrations/book-cutover", { stage: "all", apply: mode === "apply" }));
+      setReportA(data);
+      toast.success(mode === "dry" ? "Dry run complete — no changes written." : mode === "apply" ? "Workstream A applied." : "Rollback complete.");
+      loadSummary();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Workstream A action failed.");
+    }
+    setBusy("");
+  };
+
+  const runC = async (mode) => {
+    if (mode === "hold" && !window.confirm("Place the qualifying lessons On Hold (Governance) in THIS environment? They leave the learner catalog immediately. Assets and purchases are preserved. One-tap rollback available.")) return;
+    setBusy(`C-${mode}`);
+    try {
+      let data;
+      if (mode === "rollback") ({ data } = await api.post("/admin/migrations/learn-containment/rollback", { apply: true }));
+      else ({ data } = await api.post("/admin/migrations/learn-containment", { apply_hold: mode === "hold", apply: mode === "hold" }));
+      setReportC(data);
+      toast.success(mode === "classify" ? "Classification complete (read-only)." : mode === "hold" ? "Governance hold applied." : "Hold rolled back.");
+      loadSummary();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Workstream C action failed.");
+    }
+    setBusy("");
+  };
+
+  if (summary === null) return <div className="flex justify-center py-32"><Loader2 className="w-6 h-6 animate-spin text-royal" /></div>;
+
+  const a = summary?.workstream_a || {};
+  const c = summary?.workstream_c || {};
+  const rowsA = reportA?.stages?.flatMap((s) => s.rows) || reportA?.rows || [];
+  const rowsC = reportC?.hold_actions || reportC?.rows || reportC?.classification || [];
+
+  return (
+    <div className="space-y-6" data-testid="production-operations">
+      <PageHeader
+        overline="FOUNDER OPERATIONS · PRODUCTION"
+        title="Production Operations™"
+        subtitle="Governed, idempotent data operations run against whichever database this environment is connected to — production when live. Dry-run first, review the evidence, then apply. Every action is rollback-protected."
+      />
+
+      <div className="rounded-xl border-2 border-navy/15 bg-gold/10 p-4 text-sm flex gap-3" data-testid="prod-ops-notice">
+        <ShieldCheck className="w-5 h-5 text-navy mt-0.5 shrink-0" />
+        <div className="text-navy/90">
+          <span className="font-semibold">You are operating on: this environment's database.</span> On <span className="font-mono">qru-online.com</span> that is production. Nothing is written until you press an <span className="font-semibold">Apply</span> action and confirm. All migrations are idempotent — safe to re-run.
+        </div>
+      </div>
+
+      {/* Migration Status overview */}
+      {summary && (
+        <div className="rounded-xl border bg-card p-5" data-testid="migration-status">
+          <div className="flex items-center gap-2 mb-4">
+            <Database className="w-4 h-4 text-royal" />
+            <h3 className="font-heading font-bold text-navy">Migration Status</h3>
+            <span className="ml-auto text-[11px] text-muted-foreground">refreshed {new Date(summary.at).toLocaleTimeString()}</span>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            <Stat label="Books to create" value={a.books_to_create} tone={a.books_to_create ? "warn" : "ok"} />
+            <Stat label="Pointers to update" value={a.pointers_to_update} tone={a.pointers_to_update ? "warn" : "ok"} />
+            <Stat label="Assets verified" value={a.assets_verified ? "Yes" : "No"} tone={a.assets_verified ? "ok" : "bad"} />
+            <Stat label="Lessons needing hold" value={c.hold_required} tone={c.hold_required ? "warn" : "ok"} />
+            <Stat label="Blocked" value={a.blocked} tone={a.blocked ? "bad" : "ok"} />
+          </div>
+        </div>
+      )}
+
+      {/* Workstream A */}
+      <section className="rounded-xl border bg-card p-5" data-testid="workstream-a">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-royal font-semibold">Workstream A · RI-MFG-0002b</div>
+            <div className="flex items-center gap-2 mt-1"><BookOpen className="w-4 h-4 text-navy" /><span className="font-heading font-bold text-navy">Book Data & EPUB Cutover</span></div>
+            <p className="text-xs text-muted-foreground mt-1 max-w-2xl">Creates the 4 missing book records and points all 8 books at their validated, re-rendered EPUBs. Verifies every asset exists in durable storage before touching a pointer; preserves the prior pointer for rollback. Never alters manuscripts, covers, pricing, authorization, or purchases.</p>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button onClick={() => runA("dry")} disabled={!!busy} data-testid="a-dry-run" className="inline-flex items-center gap-2 rounded-lg border border-navy/30 text-navy px-4 py-2 text-sm font-medium hover:bg-navy/5 disabled:opacity-50">
+            {busy === "A-dry" ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Run Dry Run
+          </button>
+          <button onClick={() => runA("apply")} disabled={!!busy} data-testid="a-apply" className="inline-flex items-center gap-2 rounded-lg bg-navy text-white px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50">
+            {busy === "A-apply" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} Apply Migration
+          </button>
+          <button onClick={() => runA("rollback")} disabled={!!busy} data-testid="a-rollback" className="inline-flex items-center gap-2 rounded-lg border border-red-200 text-red-700 px-4 py-2 text-sm font-medium hover:bg-red-50 disabled:opacity-50">
+            {busy === "A-rollback" ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />} Rollback
+          </button>
+        </div>
+        {reportA && (
+          <div className="mt-4" data-testid="report-a">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold ${reportA.ok === false ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
+                {reportA.ok === false ? <AlertTriangle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                {reportA.mode === "APPLY" ? "Applied" : reportA.action ? "Rollback" : "Dry run complete"}
+              </span>
+              {reportA.halted && <span className="text-red-700">{reportA.halted}</span>}
+            </div>
+            <EvidenceRows rows={rowsA} />
+            <details className="mt-2 text-[11px] text-muted-foreground"><summary className="cursor-pointer">Raw evidence report (JSON)</summary><pre className="mt-2 p-3 bg-muted rounded-lg overflow-x-auto">{JSON.stringify(reportA, null, 2)}</pre></details>
+          </div>
+        )}
+      </section>
+
+      {/* Workstream C */}
+      <section className="rounded-xl border bg-card p-5" data-testid="workstream-c">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-royal font-semibold">Workstream C · QRU Learn Governance</div>
+            <div className="flex items-center gap-2 mt-1"><GraduationCap className="w-4 h-4 text-navy" /><span className="font-heading font-bold text-navy">Learn Containment</span></div>
+            <p className="text-xs text-muted-foreground mt-1 max-w-2xl">Classifies 5 lessons that are Published to learners while their linked Knowledge Record is not yet Verified. Optionally places only those on a governed hold (removed from the learner catalog) — product, assets, and purchases fully preserved, with one-tap rollback.</p>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button onClick={() => runC("classify")} disabled={!!busy} data-testid="c-classify" className="inline-flex items-center gap-2 rounded-lg border border-navy/30 text-navy px-4 py-2 text-sm font-medium hover:bg-navy/5 disabled:opacity-50">
+            {busy === "C-classify" ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Classify (read-only)
+          </button>
+          <button onClick={() => runC("hold")} disabled={!!busy} data-testid="c-hold" className="inline-flex items-center gap-2 rounded-lg bg-navy text-white px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50">
+            {busy === "C-hold" ? <Loader2 className="w-4 h-4 animate-spin" /> : <PauseOctagon className="w-4 h-4" />} Apply Governance Hold
+          </button>
+          <button onClick={() => runC("rollback")} disabled={!!busy} data-testid="c-rollback" className="inline-flex items-center gap-2 rounded-lg border border-red-200 text-red-700 px-4 py-2 text-sm font-medium hover:bg-red-50 disabled:opacity-50">
+            {busy === "C-rollback" ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />} Rollback
+          </button>
+        </div>
+        {reportC && (
+          <div className="mt-4" data-testid="report-c">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold bg-emerald-100 text-emerald-700`}>
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                {reportC.action ? "Rollback" : reportC.hold_actions ? (reportC.mode === "APPLY" ? "Hold applied" : "Hold preview") : "Classification"}
+              </span>
+            </div>
+            <EvidenceRows rows={rowsC} />
+            <details className="mt-2 text-[11px] text-muted-foreground"><summary className="cursor-pointer">Raw evidence report (JSON)</summary><pre className="mt-2 p-3 bg-muted rounded-lg overflow-x-auto">{JSON.stringify(reportC, null, 2)}</pre></details>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}

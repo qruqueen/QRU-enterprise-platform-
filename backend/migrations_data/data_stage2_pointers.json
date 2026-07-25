@@ -1,0 +1,74 @@
+[
+ {
+  "book_code": "BOOK-0001",
+  "id": "8469bcc5-6d6b-4a35-bc5c-4dec82c114cb",
+  "title": "The Understanding Tree",
+  "new_epub_url": "/api/rendering/asset/book-ebook-0820cfee.epub",
+  "new_epub_file": "book-ebook-0820cfee.epub",
+  "cover_url": "/api/rendering/asset/bookcover-c1-03933202.png",
+  "cover_file": "bookcover-c1-03933202.png"
+ },
+ {
+  "book_code": "BOOK-0004",
+  "id": "ca481a45-3e75-4df8-aadf-a1371c1ddb72",
+  "title": "Ordinary Tuesdays (Factory Ready)",
+  "new_epub_url": "/api/rendering/asset/book-ebook-db0862b8.epub",
+  "new_epub_file": "book-ebook-db0862b8.epub",
+  "cover_url": "/api/rendering/asset/bookcover-ca481a45-3e75-4df8-aadf-a1371c1ddb72-c3-e8b5a773.png",
+  "cover_file": "bookcover-ca481a45-3e75-4df8-aadf-a1371c1ddb72-c3-e8b5a773.png"
+ },
+ {
+  "book_code": "BOOK-0009",
+  "id": "0dbd2b49-93fa-4cb4-aa13-b75db7b5b917",
+  "title": "Trading Battlefield Analogy: Markets as a Tug-of-War Over Price Territory",
+  "new_epub_url": "/api/rendering/asset/book-ebook-7da5406f.epub",
+  "new_epub_file": "book-ebook-7da5406f.epub",
+  "cover_url": "/api/rendering/asset/bookcover-0dbd2b49-93fa-4cb4-aa13-b75db7b5b917-c3-999e90a4.png",
+  "cover_file": "bookcover-0dbd2b49-93fa-4cb4-aa13-b75db7b5b917-c3-999e90a4.png"
+ },
+ {
+  "book_code": "BOOK-0011",
+  "id": "48405e16-6d2a-44e2-9239-c70b0ec58a3d",
+  "title": "The Heart as a Daily Circulation Pump",
+  "new_epub_url": "/api/rendering/asset/book-ebook-3d867c4f.epub",
+  "new_epub_file": "book-ebook-3d867c4f.epub",
+  "cover_url": "/api/rendering/asset/bookcover-48405e16-6d2a-44e2-9239-c70b0ec58a3d-c1-41afa32d.png",
+  "cover_file": "bookcover-48405e16-6d2a-44e2-9239-c70b0ec58a3d-c1-41afa32d.png"
+ },
+ {
+  "book_code": "BOOK-0013",
+  "id": "971ebe9e-32fa-4030-a7f4-73f0a51b3b3c",
+  "title": "Patterns of Intelligence",
+  "new_epub_url": "/api/rendering/asset/book-ebook-64648cfa.epub",
+  "new_epub_file": "book-ebook-64648cfa.epub",
+  "cover_url": "/api/rendering/asset/bookcover-971ebe9e-32fa-4030-a7f4-73f0a51b3b3c-c1-33ac0750.png",
+  "cover_file": "bookcover-971ebe9e-32fa-4030-a7f4-73f0a51b3b3c-c1-33ac0750.png"
+ },
+ {
+  "book_code": "BOOK-0016",
+  "id": "106edac5-de76-48a0-b641-93393b6509e6",
+  "title": "The brain as a changing network",
+  "new_epub_url": "/api/rendering/asset/book-ebook-8d5bbdaf.epub",
+  "new_epub_file": "book-ebook-8d5bbdaf.epub",
+  "cover_url": "/api/rendering/asset/bookcover-106edac5-de76-48a0-b641-93393b6509e6-c1-8a54aae4.png",
+  "cover_file": "bookcover-106edac5-de76-48a0-b641-93393b6509e6-c1-8a54aae4.png"
+ },
+ {
+  "book_code": "BOOK-0018",
+  "id": "92191d2e-10c5-42cf-8a58-8d850f116623",
+  "title": "AI Literacy: Using AI with Understanding and Judgment",
+  "new_epub_url": "/api/rendering/asset/book-ebook-1677d9b3.epub",
+  "new_epub_file": "book-ebook-1677d9b3.epub",
+  "cover_url": "/api/rendering/asset/bookcover-92191d2e-10c5-42cf-8a58-8d850f116623-c2-535b72fe.png",
+  "cover_file": "bookcover-92191d2e-10c5-42cf-8a58-8d850f116623-c2-535b72fe.png"
+ },
+ {
+  "book_code": "BOOK-0019",
+  "id": "5e3b079d-f869-4162-bb1d-41a6058a390c",
+  "title": "Love: A Biological Bond and a Relationship Practice",
+  "new_epub_url": "/api/rendering/asset/book-ebook-5f5f6079.epub",
+  "new_epub_file": "book-ebook-5f5f6079.epub",
+  "cover_url": "/api/rendering/asset/bookcover-5e3b079d-f869-4162-bb1d-41a6058a390c-c3-3699eb3f.png",
+  "cover_file": "bookcover-5e3b079d-f869-4162-bb1d-41a6058a390c-c3-3699eb3f.png"
+ }
+]

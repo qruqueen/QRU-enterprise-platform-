@@ -120,6 +120,7 @@ import QRUTerms from "@/pages/public/QRUTerms";
 import QRURefunds from "@/pages/public/QRURefunds";
 import QRUOnlineOrders from "@/pages/QRUOnlineOrders";
 import PilotCoordinator from "@/pages/PilotCoordinator";
+import ProductionOperations from "@/pages/ProductionOperations";
 import { Loader2 } from "lucide-react";
 
 function ProtectedRoute({ children }) {
@@ -193,6 +194,7 @@ function EnterpriseRoutes() {
         <Route path="store" element={<Store />} />
         <Route path="qru-online-orders" element={<QRUOnlineOrders />} />
         <Route path="pilot-coordinator" element={<PilotCoordinator />} />
+        <Route path="production-operations" element={<ProductionOperations />} />
         <Route path="checkout/success" element={<CheckoutSuccess />} />
         <Route path="command-center" element={<EnterpriseCommandCenter />} />
         <Route path="evidence" element={<EvidenceDashboard />} />

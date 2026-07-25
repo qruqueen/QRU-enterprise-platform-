@@ -12,6 +12,15 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## 🏭 NEW CAPABILITY (2026-07-25): Production Operations™ — Founder-run governed migrations
+- **What**: Permanent, reusable Founder/Admin console (`/production-operations`, nav item in Core Capabilities) to run governed, idempotent data operations against the LIVE production DB with NO terminal, local scripts, Mongo commands, or Support intervention. Officially-recommended pattern (confirmed w/ platform): logic runs inside the deployed backend, which is the only env with production MONGO_URL.
+- **Backend**: `prod_migrations.py` (async port of the exact RI-MFG-0002b + Workstream C script logic) + `routers/migrations.py` (`/api/admin/migrations/*`, `require_super_admin`). Data ships in `backend/migrations_data/`.
+- **Workstream A — Book Data & EPUB Cutover**: Stage 1 creates 4 missing books (BOOK-0013/0016/0018/0019); Stage 2 points all 8 books at validated re-rendered EPUBs. Asset-verified against durable object storage (auto-mirrors local→durable in preview); rollback-preserving; never touches manuscripts/covers/pricing/authorization/purchases.
+- **Workstream C — Learn Containment**: classifies 5 lessons (PRD-00130/196/201/202/205) Published w/ unverified KR; optional governed Hold (removes from learner catalog) preserving product/assets/purchases; one-tap rollback.
+- **Each op supports**: Dry Run · Review (evidence table + raw JSON) · Apply · Rollback. DRY-RUN default everywhere; writes need explicit apply + confirm.
+- **Verified (self-test in preview)**: summary + both dry-runs OK; C apply→verify(held)→rollback→verify(restored) clean; auth 403 (student) / 401 (anon); UI renders + dry-run evidence works, no console errors.
+- **Deploy note**: Requires Founder to click Deploy so production picks up the endpoints, then run from qru-online.com.
+
 ## 🛠️ P0 FIX (2026-07-25): Login white-screen crash — FIXED in code, deploy-ready
 - **Root cause**: `App.js` route `<Route path="pilot-coordinator" element={<PilotCoordinator />} />` (line ~194) referenced `PilotCoordinator` but the component was NEVER imported. Referencing the undefined identifier threw `ReferenceError` the instant `EnterpriseRoutes` rendered (i.e. right after a successful login), unmounting the app → white screen + red error. Public routes (logged-out) were unaffected, which is why the storefront worked for visitors but any logged-in Founder crashed at `/`.
 - **Fix**: added `import PilotCoordinator from "@/pages/PilotCoordinator";` in App.js.
