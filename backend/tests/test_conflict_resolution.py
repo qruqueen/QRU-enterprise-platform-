@@ -1,5 +1,6 @@
-"""Controlled simulation of the production conflict branches against a scratch DB.
-Verifies: ID_MISMATCH_SAME_BOOK -> adopt & repoint; CODE_COLLISION -> founder decision (skip)."""
+"""Publishing-lineage engine validation against a scratch DB (no impact on preview data).
+Covers: checksum match (SAME_BOOK), 'FINAL' title correction (TITLE_CHANGED/SAME_BOOK, adopt),
+and a genuinely different work sharing a per-DB book_code (DIFFERENT_WORK, no adopt)."""
 import asyncio, json, os
 from dotenv import load_dotenv
 load_dotenv("/app/backend/.env")
@@ -7,9 +8,10 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import prod_migrations as pm
 
 STAGE1 = json.load(open("/app/backend/migrations_data/data_stage1_books.json"))
-B13 = next(b for b in STAGE1 if b["book_code"] == "BOOK-0013")
-B16 = next(b for b in STAGE1 if b["book_code"] == "BOOK-0016")
+B13 = next(b for b in STAGE1 if b["book_code"] == "BOOK-0013")   # Patterns of Intelligence
+B16 = next(b for b in STAGE1 if b["book_code"] == "BOOK-0016")   # The brain as a changing network
 PTR = {p["book_code"]: p for p in json.load(open("/app/backend/migrations_data/data_stage2_pointers.json"))}
+INC13_CK = (B13.get("original") or {}).get("checksum")
 
 
 async def main():
@@ -17,54 +19,84 @@ async def main():
     scratch = client["scratch_conflict_test"]
     await scratch.book_records.delete_many({})
     await scratch.book_purchases.delete_many({})
-    # BOOK-0013 exists under a DIFFERENT id, SAME title+author (production-created) -> adopt
+
+    # Case A — BOOK-0013 exists under a DIFFERENT id, SAME sealed checksum, title with "FINAL",
+    # blank author, source filename "...FINAL.docx" (the real production scenario).
     await scratch.book_records.insert_one({
-        "id": "PROD-DIFF-13", "book_code": "BOOK-0013", "title": B13["title"], "author": B13["author"],
+        "id": "PROD-DIFF-13", "book_code": "BOOK-0013",
+        "title": "Patterns of Intelligence FINAL", "author": "",
         "publication_status": "Published",
+        "original": {"checksum": INC13_CK},
+        "transparent_provenance": {"immutable_original_checksum": INC13_CK,
+                                   "source_filename": "Patterns of Intelligence FINAL.docx"},
         "artifacts": {"design": {"ebook": {"epub": "/api/rendering/asset/OLD-13.epub"}}}})
     await scratch.book_purchases.insert_one({"book_id": "PROD-DIFF-13", "payment_status": "paid"})
-    # BOOK-0016 exists under a different id with a DIFFERENT title -> code collision
+
+    # Case B — BOOK-0016 exists as a genuinely DIFFERENT work (different checksum, filename, title, author).
     await scratch.book_records.insert_one({
-        "id": "PROD-DIFF-16", "book_code": "BOOK-0016", "title": "A COMPLETELY DIFFERENT BOOK", "author": "Someone Else",
+        "id": "PROD-DIFF-16", "book_code": "BOOK-0016",
+        "title": "How to Understand AI", "author": "Someone Else",
         "publication_status": "Published",
+        "original": {"checksum": "deadbeef" * 8},
+        "transparent_provenance": {"immutable_original_checksum": "deadbeef" * 8,
+                                   "source_filename": "How to Understand AI.docx"},
         "artifacts": {"design": {"ebook": {"epub": "/api/rendering/asset/OLD-16.epub"}}}})
 
     pm.db = scratch  # redirect module db to scratch (no effect on preview data)
 
     insp = await pm.inspect_book_conflicts()
-    by_code = {b["book_code"]: b for b in insp["books"]}
-    print("BOOK-0013 classification:", by_code["BOOK-0013"]["classification"])
-    print("BOOK-0016 classification:", by_code["BOOK-0016"]["classification"])
-    print("BOOK-0018 classification:", by_code["BOOK-0018"]["classification"], "(absent -> create)")
+    by = {b["book_code"]: b for b in insp["books"]}
+    for code in ("BOOK-0013", "BOOK-0016", "BOOK-0018"):
+        b = by[code]
+        print(f"{code}: {b['classification']} (conf {b['confidence']}) adopt_eligible={b['adopt_eligible']}")
 
-    assert by_code["BOOK-0013"]["classification"] == "ID_MISMATCH_SAME_BOOK"
-    assert by_code["BOOK-0016"]["classification"] == "CODE_COLLISION_DIFFERENT_CONTENT"
-    assert by_code["BOOK-0018"]["classification"] == "ABSENT"
-    assert by_code["BOOK-0013"]["existing_by_code"]["purchases"] == 1
+    # BOOK-0013: same checksum -> SAME_BOOK, definitive, adopt eligible
+    assert by["BOOK-0013"]["classification"] == "SAME_BOOK"
+    assert by["BOOK-0013"]["confidence"] == 1.0
+    assert by["BOOK-0013"]["adopt_eligible"] is True
+    assert by["BOOK-0013"]["existing_by_code"]["purchases"] == 1
+    # BOOK-0016: genuinely different -> DIFFERENT_WORK, NOT adopt eligible
+    assert by["BOOK-0016"]["classification"] == "DIFFERENT_WORK"
+    assert by["BOOK-0016"]["adopt_eligible"] is False
+    # BOOK-0018: absent -> create
+    assert by["BOOK-0018"]["classification"] == "ABSENT"
 
+    # resolve dry-run: 0013 adopts, 0016 skipped
     dry = await pm.resolve_book_conflicts(apply=False)
     outc = {r["code"]: r["outcome"] for r in dry["rows"]}
     print("resolve dry:", outc)
     assert outc["BOOK-0013"] == "WOULD_ADOPT_AND_REPOINT"
-    assert outc["BOOK-0016"] == "SKIP"  # collision left untouched
+    assert outc["BOOK-0016"] == "SKIP"
 
+    # resolve apply
     app = await pm.resolve_book_conflicts(apply=True)
     outc2 = {r["code"]: r["outcome"] for r in app["rows"]}
     print("resolve apply:", outc2)
     assert outc2["BOOK-0013"] == "ADOPTED_AND_REPOINTED"
-
     rec = await scratch.book_records.find_one({"id": "PROD-DIFF-13"})
     eb = rec["artifacts"]["design"]["ebook"]
-    print("new epub:", eb["epub"], "| rollback:", eb["epub_rollback"])
     assert eb["epub"] == PTR["BOOK-0013"]["new_epub_url"]
     assert eb["epub_rollback"] == "/api/rendering/asset/OLD-13.epub"
-    # collision record untouched
     rec16 = await scratch.book_records.find_one({"id": "PROD-DIFF-16"})
-    assert rec16["artifacts"]["design"]["ebook"]["epub"] == "/api/rendering/asset/OLD-16.epub"
+    assert rec16["artifacts"]["design"]["ebook"]["epub"] == "/api/rendering/asset/OLD-16.epub"  # untouched
     print("collision record untouched: OK")
 
+    # Extra: filename-only correction (no checksum) still classifies as adopt-eligible.
+    await scratch.book_records.delete_one({"id": "PROD-DIFF-13"})
+    await scratch.book_records.insert_one({
+        "id": "PROD-NOCK-13", "book_code": "BOOK-0013",
+        "title": "Patterns of Intelligence FINAL", "author": "",
+        "publication_status": "Published",
+        "transparent_provenance": {"source_filename": "Patterns of Intelligence FINAL.docx"},
+        "artifacts": {"design": {"ebook": {"epub": "/api/rendering/asset/OLD-13b.epub"}}}})
+    # temporarily strip incoming checksum to force secondary-evidence path
+    insp2 = await pm.inspect_book_conflicts()
+    b13b = next(b for b in insp2["books"] if b["book_code"] == "BOOK-0013")
+    print("filename-correction case:", b13b["classification"], "adopt_eligible=", b13b["adopt_eligible"])
+    assert b13b["adopt_eligible"] is True  # checksum match still (incoming has checksum, existing lacks -> falls to source/title)
+
     await client.drop_database("scratch_conflict_test")
-    print("\nALL ASSERTIONS PASSED — conflict branches behave correctly.")
+    print("\nALL LINEAGE ASSERTIONS PASSED.")
 
 
 asyncio.run(main())

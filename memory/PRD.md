@@ -12,6 +12,14 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## 🧬 Publishing Lineage engine (2026-07-25) — comparison intelligence upgrade
+- Replaced title-equality classification with a **publishing-lineage engine** (`_classify_lineage` in `prod_migrations.py`). Evidence order: (1) canonical immutable manuscript checksum (`original.checksum` / `transparent_provenance.immutable_original_checksum`) → definitive; (2) editorial-version checksum overlap; (3) source-document filename (normalised to strip cosmetic tokens like "FINAL"/"draft"/"vN"); (4) normalised title (equal / subset); (5) author (blank = compatible). Returns **classification + confidence score + reasoning chain + recommended action**.
+- Classifications: SAME_BOOK · TITLE_CHANGED · NEW_EDITION · DIFFERENT_WORK · POSSIBLE_COLLISION · PRESENT_BY_ID · ABSENT. adopt_eligible = {SAME_BOOK, TITLE_CHANGED}; resolver keys off this.
+- Inspect endpoint now returns confidence + reasoning + checksum/source_filename for both sides; UI renders the full **Publishing Lineage Inspector** (reasoning chain, confidence %, adopt-eligible badge).
+- KEY FINDING: `book_code` is assigned **per-database sequentially**, so preview's BOOK-00NN and production's BOOK-00NN can be different works — this is why BOOK-0016 collides. True identity = manuscript checksum, not book_code. Engine flags such cases DIFFERENT_WORK and blocks adoption; recommends re-keying to a fresh production code.
+- BOOK-0013 "FINAL" case = title correction (same source doc/checksum) → now SAME_BOOK (was a false-positive collision under the old title-only logic).
+- Validated (`backend/tests/test_conflict_resolution.py`): checksum-match→SAME_BOOK(adopt); FINAL filename correction→adopt-eligible; genuinely-different→DIFFERENT_WORK(no adopt); collision record untouched; rollback + purchases preserved.
+
 ## 🔍 Conflict handling added to Production Operations™ (2026-07-25)
 - Production dry-run of Workstream A returned CONFLICT for BOOK-0013 & BOOK-0016 (book_code exists in prod under a DIFFERENT internal id). This is the Stage-1 guardrail working — it refuses to insert a duplicate book_code.
 - Added READ-ONLY **Inspect Records** (`GET /api/admin/migrations/book-cutover/inspect`): side-by-side incoming-vs-existing (id, title, author, status, purchases, current EPUB) + auto-classification per book:

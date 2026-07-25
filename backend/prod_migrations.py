@@ -13,6 +13,7 @@ Design guarantees (Treasure Standard™):
 - No silent failures: every record's outcome is reported with evidence.
 """
 import os
+import re
 import asyncio
 import datetime
 import json
@@ -223,43 +224,161 @@ async def book_cutover_rollback(apply: bool = False):
             "mode": "APPLY" if apply else "DRY_RUN", "at": _now(), "rows": rows}
 
 
+COSMETIC_TOKENS = {"final", "draft", "copy", "new", "latest", "clean", "edited",
+                   "revised", "master", "fin", "ver", "version", "proof", "print", "ready"}
+_VER_RE = re.compile(r"^v\d+$")
+
+
 def _norm(s):
     return " ".join((s or "").lower().split())
+
+
+def _norm_title(s):
+    s = (s or "").lower()
+    s = re.sub(r"[™®©]", "", s)
+    s = re.sub(r"\.(docx?|pdf|epub|txt|md|rtf)$", "", s)
+    s = re.sub(r"[^a-z0-9 ]", " ", s)
+    toks = [t for t in s.split() if t and t not in COSMETIC_TOKENS and not _VER_RE.match(t)]
+    return " ".join(toks)
+
+
+def _lineage_signals(doc):
+    doc = doc or {}
+    tp = doc.get("transparent_provenance") or {}
+    orig = doc.get("original") or {}
+    sfh = doc.get("source_file_history") or []
+    ev = doc.get("editorial_versions") or []
+    pm = doc.get("publication_metadata") or {}
+    src = tp.get("source_filename") or (sfh[0].get("file") if sfh and isinstance(sfh[0], dict) else None)
+    checksum = orig.get("checksum") or tp.get("immutable_original_checksum")
+    src_files = [x.get("file") for x in sfh if isinstance(x, dict) and x.get("file")]
+    return {
+        "id": doc.get("id"),
+        "title": doc.get("title"),
+        "author": doc.get("author") or pm.get("author") or tp.get("rights_holder"),
+        "checksum": checksum,
+        "source_filename": src,
+        "source_files": src_files,
+        "version_checksums": [v.get("checksum") for v in ev if isinstance(v, dict) and v.get("checksum")],
+        "norm_title": _norm_title(doc.get("title")),
+        "norm_src": _norm_title(src),
+    }
 
 
 async def _record_summary(rec):
     if not rec:
         return None
     d = (rec.get("artifacts") or {}).get("design") or {}
+    sig = _lineage_signals(rec)
     return {
         "id": rec.get("id"),
         "title": rec.get("title"),
         "subtitle": rec.get("subtitle"),
-        "author": rec.get("author"),
+        "author": sig["author"],
         "book_code": rec.get("book_code"),
         "publication_status": rec.get("publication_status") or rec.get("status"),
         "approval_status": rec.get("approval_status"),
         "editorial_locked": rec.get("editorial_locked"),
         "epub": (d.get("ebook") or {}).get("epub"),
         "cover": (d.get("selected_cover") or {}).get("url"),
+        "checksum": sig["checksum"],
+        "source_filename": sig["source_filename"],
+        "source_files": sig["source_files"],
         "created_at": rec.get("created_at"),
         "migrated_by": rec.get("_migrated_by"),
         "purchases": await db.book_purchases.count_documents({"book_id": rec.get("id")}),
     }
 
 
+def _classify_lineage(inc_doc, exc_doc):
+    """Publishing-lineage comparison. Evaluates canonical manuscript identity, source-document
+    lineage, author and title history — NOT title equality alone. Returns a reasoning chain +
+    confidence score + recommended governed action."""
+    I, E = _lineage_signals(inc_doc), _lineage_signals(exc_doc)
+    chain = []
+
+    def note(check, result, detail):
+        chain.append({"check": check, "result": result, "detail": detail})
+
+    # 1) Canonical immutable manuscript checksum — the strongest identity signal.
+    if I["checksum"] and E["checksum"]:
+        if I["checksum"] == E["checksum"]:
+            note("Canonical manuscript checksum", "MATCH",
+                 f"Identical sealed immutable original ({I['checksum'][:12]}…). Definitive same manuscript.")
+            return {"classification": "SAME_BOOK", "confidence": 1.0, "reasoning": chain, "adopt_eligible": True,
+                    "recommended_action": "Adopt the existing production record and repoint its EPUB to the re-rendered edition (rollback-protected). Same manuscript, confirmed."}
+        note("Canonical manuscript checksum", "DIFFER",
+             f"Incoming {I['checksum'][:12]}… vs existing {E['checksum'][:12]}…")
+        if set(I["version_checksums"]) & set(E["version_checksums"]):
+            note("Editorial version lineage", "OVERLAP", "Shared editorial-version checksum — same work at a different edit stage.")
+            return {"classification": "SAME_BOOK", "confidence": 0.92, "reasoning": chain, "adopt_eligible": True,
+                    "recommended_action": "Adopt existing record and repoint EPUB. Shared editorial lineage indicates the same work."}
+    else:
+        note("Canonical manuscript checksum", "UNAVAILABLE", "One or both records lack a sealed checksum; using secondary evidence.")
+
+    # 2) Source-document lineage (filename, after removing cosmetic tokens like 'FINAL').
+    src_match = bool(I["norm_src"] and E["norm_src"] and I["norm_src"] == E["norm_src"])
+    src_vs_title = bool((I["norm_src"] and I["norm_src"] == E["norm_title"]) or (E["norm_src"] and E["norm_src"] == I["norm_title"]))
+    if src_match or src_vs_title:
+        note("Source document lineage", "MATCH",
+             f"Same source document after normalising cosmetic tokens (e.g. '{E.get('source_filename') or I.get('source_filename')}'). Indicates a title correction / republication.")
+    else:
+        note("Source document lineage", "DIFFER",
+             f"Incoming source '{I.get('source_filename')}' vs existing '{E.get('source_filename')}'.")
+
+    # 3) Title lineage.
+    ti, te = I["norm_title"], E["norm_title"]
+    title_equal = bool(ti and te and ti == te)
+    title_subset = bool(ti and te and (ti in te or te in ti))
+    if title_equal:
+        note("Normalised title", "MATCH", f"Both normalise to '{ti}'.")
+    elif title_subset:
+        note("Normalised title", "SUBSET", f"One title is the other plus a cosmetic token ('{ti}' vs '{te}') — a legitimate title edit.")
+    else:
+        note("Normalised title", "DIFFER", f"'{ti}' vs '{te}'.")
+
+    # 4) Author.
+    author_ok = (not I["author"]) or (not E["author"]) or _norm(I["author"]) == _norm(E["author"])
+    note("Author", "COMPATIBLE" if author_ok else "DIFFER",
+         f"Incoming '{I['author']}' vs existing '{E['author']}'" + (" (one blank — treated as compatible)" if (not I["author"] or not E["author"]) else ""))
+
+    # ---- verdict ----
+    if src_match or src_vs_title:
+        cls = "SAME_BOOK" if title_equal else "TITLE_CHANGED"
+        conf = 0.9 if title_equal else 0.85
+        return {"classification": cls, "confidence": conf, "reasoning": chain, "adopt_eligible": True,
+                "recommended_action": "Adopt the existing record and repoint its EPUB. Same source document — a title correction/republication, not a different work."}
+    if title_equal and author_ok:
+        return {"classification": "SAME_BOOK", "confidence": 0.8, "reasoning": chain, "adopt_eligible": True,
+                "recommended_action": "Adopt existing record and repoint EPUB. Same title and compatible author."}
+    if title_subset and author_ok:
+        return {"classification": "TITLE_CHANGED", "confidence": 0.82, "reasoning": chain, "adopt_eligible": True,
+                "recommended_action": "Adopt existing record and repoint EPUB. Title differs only by a cosmetic token (e.g. 'FINAL') — a legitimate edit."}
+    if title_equal and not author_ok:
+        return {"classification": "POSSIBLE_COLLISION", "confidence": 0.5, "reasoning": chain, "adopt_eligible": False,
+                "recommended_action": "Founder review: same title but different author and no shared manuscript. Confirm identity before any change."}
+    if I["checksum"] and E["checksum"]:  # both sealed, differ, nothing else matched
+        return {"classification": "DIFFERENT_WORK", "confidence": 0.9, "reasoning": chain, "adopt_eligible": False,
+                "recommended_action": "Do NOT adopt. Distinct works sharing a book_code. NOTE: book_code is assigned per-database sequentially, so the same code legitimately points to different works across preview and production. Re-key this migration book to a fresh production book_code, or have the Founder decide."}
+    return {"classification": "POSSIBLE_COLLISION", "confidence": 0.45, "reasoning": chain, "adopt_eligible": False,
+            "recommended_action": "Founder investigation: evidence inconclusive (missing checksums, differing titles). Do not modify until identity is confirmed."}
+
+
 async def inspect_book_conflicts():
-    """READ-ONLY. For each Stage-1 book_code, compare the incoming migration record with whatever
-    already exists in THIS database (by id and by book_code) and produce a governed recommendation.
-    Writes nothing."""
+    """READ-ONLY Publishing Lineage Inspector. For each Stage-1 book_code, compare the incoming
+    migration record against whatever exists in THIS database using publishing lineage (canonical
+    manuscript checksum, source document, author, title history) — not title equality — and produce
+    a classification, confidence score, reasoning chain and recommended governed action. Writes nothing."""
     books = _load("data_stage1_books.json")
     ptr_by_code = {p["book_code"]: p for p in _load("data_stage2_pointers.json")}
     out = []
     for b in books:
         code, mid = b.get("book_code"), b.get("id")
         design = (b.get("artifacts") or {}).get("design") or {}
+        sig = _lineage_signals(b)
         incoming = {
-            "id": mid, "title": b.get("title"), "author": b.get("author"), "book_code": code,
+            "id": mid, "title": b.get("title"), "author": sig["author"], "book_code": code,
+            "checksum": sig["checksum"], "source_filename": sig["source_filename"],
             "epub": (design.get("ebook") or {}).get("epub"),
             "cover": (design.get("selected_cover") or {}).get("url"),
         }
@@ -271,36 +390,25 @@ async def inspect_book_conflicts():
         rerender_epub_available = await _asset_ok(ptr["new_epub_file"]) if ptr else False
 
         if by_id:
-            classification = "PRESENT_BY_ID"
-            recommendation = ("Already present under the same canonical id — no creation needed. "
-                              "Stage 2 will refresh its EPUB pointer to the re-rendered edition.")
+            lineage = {"classification": "PRESENT_BY_ID", "confidence": 1.0, "adopt_eligible": False,
+                       "reasoning": [{"check": "Canonical id", "result": "MATCH",
+                                      "detail": "Record already present under the same canonical id."}],
+                       "recommended_action": "No creation needed. Stage 2 refreshes its EPUB pointer to the re-rendered edition."}
         elif by_code:
-            same_title = _norm(existing_by_code["title"]) == _norm(b.get("title"))
-            same_author = _norm(existing_by_code.get("author")) == _norm(b.get("author"))
-            if same_title and same_author:
-                classification = "ID_MISMATCH_SAME_BOOK"
-                recommendation = ("Same book, different internal id (this record was created directly in "
-                                  "production, so its id differs from preview's copy). SAFEST: ADOPT the existing "
-                                  "production record — do NOT insert a duplicate. Apply the re-rendered EPUB to "
-                                  "the EXISTING id via a governed remap. The existing record, its cover, pricing, "
-                                  "authorization and any purchases are preserved.")
-            elif same_title:
-                classification = "ID_MISMATCH_TITLE_MATCH_AUTHOR_DIFF"
-                recommendation = ("Titles match but author differs — likely the same book with a metadata "
-                                  "difference. FOUNDER REVIEW before adopting. Do not create a duplicate.")
-            else:
-                classification = "CODE_COLLISION_DIFFERENT_CONTENT"
-                recommendation = ("The existing production record under this book_code is a DIFFERENT title. "
-                                  "This is a code collision, not the same book. FOUNDER DECISION REQUIRED — do "
-                                  "not create, do not repoint. Investigate how the code was reused before any change.")
+            lineage = _classify_lineage(b, by_code)
         else:
-            classification = "ABSENT"
-            recommendation = "Truly missing in this database — safe to CREATE from the migration record (assets permitting)."
+            lineage = {"classification": "ABSENT", "confidence": 1.0, "adopt_eligible": False,
+                       "reasoning": [{"check": "book_code presence", "result": "ABSENT",
+                                      "detail": "No record with this id or book_code in this database."}],
+                       "recommended_action": "Truly missing — safe to CREATE from the migration record (assets permitting)."}
 
         out.append({
             "book_code": code,
-            "classification": classification,
-            "recommendation": recommendation,
+            "classification": lineage["classification"],
+            "confidence": lineage["confidence"],
+            "reasoning": lineage["reasoning"],
+            "recommendation": lineage["recommended_action"],
+            "adopt_eligible": lineage["adopt_eligible"],
             "rerender_epub_available": rerender_epub_available,
             "incoming": incoming,
             "existing_by_id": existing_by_id,
@@ -310,24 +418,24 @@ async def inspect_book_conflicts():
 
 
 async def resolve_book_conflicts(apply: bool = False):
-    """Governed conflict resolution. ONLY for records classified ID_MISMATCH_SAME_BOOK
-    (same title AND author, existing under a different id because it was created directly in
-    production): ADOPT the existing production record and apply the re-rendered EPUB pointer to
-    its EXISTING id. Never creates a duplicate; never touches collisions or title/author mismatches;
-    never alters manuscript, cover, pricing, authorization, or purchases. Rollback-preserving."""
+    """Governed conflict resolution driven by the lineage engine. Adopts the existing production
+    record and repoints its EPUB to the re-rendered edition ONLY for lineage-confirmed same works
+    (adopt_eligible: SAME_BOOK / TITLE_CHANGED). Never creates a duplicate; never touches
+    DIFFERENT_WORK / POSSIBLE_COLLISION; never alters manuscript, cover, pricing, authorization, or
+    purchases. Rollback-preserving."""
     insp = await inspect_book_conflicts()
     ptr_by_code = {p["book_code"]: p for p in _load("data_stage2_pointers.json")}
     rows = []
     for b in insp["books"]:
         code, cls = b["book_code"], b["classification"]
-        if cls != "ID_MISMATCH_SAME_BOOK":
+        if not b.get("adopt_eligible"):
             rows.append({"code": code, "outcome": "SKIP",
-                         "detail": f"{cls} — not an adopt-and-remap target"})
+                         "detail": f"{cls} (confidence {b.get('confidence')}) — not an adopt target"})
             continue
         existing = b["existing_by_code"]
         ptr = ptr_by_code.get(code)
-        if not ptr:
-            rows.append({"code": code, "outcome": "SKIP", "detail": "no pointer mapping"})
+        if not existing or not ptr:
+            rows.append({"code": code, "outcome": "SKIP", "detail": "no existing record / pointer mapping"})
             continue
         if not await _asset_ok(ptr["new_epub_file"]):
             rows.append({"code": code, "outcome": "BLOCKED",
@@ -345,18 +453,19 @@ async def resolve_book_conflicts(apply: bool = False):
             ebook.setdefault("epub_rollback", cur)
             ebook["epub"] = ptr["new_epub_url"]
             prov = design.get("rerender_provenance") or []
-            prov.append({"ri": MARK_A, "at": _now(), "adopt_remap": True,
-                         "resolved_book_code": code, "old_epub": cur, "new_epub": ptr["new_epub_url"],
+            prov.append({"ri": MARK_A, "at": _now(), "adopt_remap": True, "resolved_book_code": code,
+                         "classification": cls, "old_epub": cur, "new_epub": ptr["new_epub_url"],
                          "standard": "Publication Quality Standard\u2122"})
             await db[COLL].update_one({"id": existing["id"]}, {"$set": {
                 "artifacts.design.ebook": ebook, "artifacts.design.rerender_provenance": prov}})
             rows.append({"code": code, "outcome": "ADOPTED_AND_REPOINTED",
-                         "detail": f"existing id {existing['id']} → {ptr['new_epub_file']} (rollback saved; no duplicate created)"})
+                         "detail": f"{cls}: existing id {existing['id']} → {ptr['new_epub_file']} (rollback saved; no duplicate)"})
         else:
             rows.append({"code": code, "outcome": "WOULD_ADOPT_AND_REPOINT",
-                         "detail": f"existing id {existing['id']} → {ptr['new_epub_file']} (rollback would be saved)"})
+                         "detail": f"{cls}: existing id {existing['id']} → {ptr['new_epub_file']} (rollback would be saved)"})
     return {"workstream": "A", "action": "resolve_conflicts",
             "mode": "APPLY" if apply else "DRY_RUN", "at": _now(), "rows": rows}
+
 
 
 # =========================================================================== #

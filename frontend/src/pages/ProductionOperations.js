@@ -22,6 +22,11 @@ const OUTCOME = {
   CONFLICT: "bg-orange-100 text-orange-700",
   BLOCKED: "bg-red-100 text-red-700",
   PRESENT_BY_ID: "bg-emerald-100 text-emerald-700",
+  SAME_BOOK: "bg-emerald-100 text-emerald-700",
+  TITLE_CHANGED: "bg-blue-100 text-blue-700",
+  NEW_EDITION: "bg-blue-100 text-blue-700",
+  DIFFERENT_WORK: "bg-red-100 text-red-700",
+  POSSIBLE_COLLISION: "bg-orange-100 text-orange-700",
   ID_MISMATCH_SAME_BOOK: "bg-blue-100 text-blue-700",
   ID_MISMATCH_TITLE_MATCH_AUTHOR_DIFF: "bg-orange-100 text-orange-700",
   CODE_COLLISION_DIFFERENT_CONTENT: "bg-red-100 text-red-700",
@@ -210,22 +215,45 @@ export default function ProductionOperations() {
 
         {inspect && (
           <div className="mt-4 space-y-3" data-testid="inspect-a">
-            <div className="text-xs text-muted-foreground flex items-center gap-1.5"><Search className="w-3.5 h-3.5" /> Read-only comparison — incoming migration record vs. what exists in this database.</div>
+            <div className="text-xs text-muted-foreground flex items-center gap-1.5"><Search className="w-3.5 h-3.5" /> Publishing Lineage Inspector — identity is judged on canonical manuscript checksum, source document, author &amp; title history (not title equality alone).</div>
             {inspect.books.map((b) => (
               <div key={b.book_code} className="rounded-lg border p-4" data-testid={`inspect-book-${b.book_code}`}>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold text-navy">{b.book_code}</span>
                   <Badge v={b.classification} />
+                  {typeof b.confidence === "number" && (
+                    <span className="text-[10px] text-muted-foreground border rounded-full px-2 py-0.5" data-testid={`confidence-${b.book_code}`}>
+                      confidence {Math.round(b.confidence * 100)}%
+                    </span>
+                  )}
                   {b.rerender_epub_available && <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">re-rendered EPUB available</span>}
+                  {b.adopt_eligible && <span className="text-[10px] text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5">adopt-eligible</span>}
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">{b.recommendation}</p>
+                <p className="text-xs text-foreground mt-2"><span className="font-semibold">Recommended action:</span> {b.recommendation}</p>
+
+                {b.reasoning?.length > 0 && (
+                  <div className="mt-3 rounded-md border bg-muted/20 p-3" data-testid={`reasoning-${b.book_code}`}>
+                    <div className="text-[11px] font-semibold text-foreground mb-1.5">Reasoning chain</div>
+                    <ol className="space-y-1">
+                      {b.reasoning.map((r, i) => (
+                        <li key={i} className="text-[11px] text-muted-foreground flex gap-2">
+                          <span className={`shrink-0 font-semibold ${r.result === "MATCH" || r.result === "OVERLAP" || r.result === "COMPATIBLE" ? "text-emerald-700" : r.result === "DIFFER" ? "text-red-600" : "text-amber-600"}`}>{r.result}</span>
+                          <span><span className="text-foreground font-medium">{r.check}:</span> {r.detail}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+
                 <div className="grid md:grid-cols-2 gap-3 mt-3 text-xs">
                   <div className="rounded-md border bg-muted/30 p-3">
                     <div className="font-semibold text-foreground mb-1">Incoming (migration)</div>
                     <div className="space-y-0.5 text-muted-foreground">
                       <div>id: <span className="font-mono text-[10px]">{b.incoming.id}</span></div>
                       <div>title: <span className="text-foreground">{b.incoming.title}</span></div>
-                      <div>author: {b.incoming.author}</div>
+                      <div>author: {b.incoming.author || "—"}</div>
+                      <div>source: {b.incoming.source_filename || "—"}</div>
+                      <div>checksum: <span className="font-mono text-[10px]">{(b.incoming.checksum || "—").slice(0, 16)}</span></div>
                     </div>
                   </div>
                   <div className="rounded-md border bg-card p-3">
@@ -234,7 +262,9 @@ export default function ProductionOperations() {
                       <div className="space-y-0.5 text-muted-foreground">
                         <div>id: <span className="font-mono text-[10px]">{(b.existing_by_id || b.existing_by_code).id}</span></div>
                         <div>title: <span className="text-foreground">{(b.existing_by_id || b.existing_by_code).title}</span></div>
-                        <div>author: {(b.existing_by_id || b.existing_by_code).author}</div>
+                        <div>author: {(b.existing_by_id || b.existing_by_code).author || "—"}</div>
+                        <div>source: {(b.existing_by_id || b.existing_by_code).source_filename || "—"}</div>
+                        <div>checksum: <span className="font-mono text-[10px]">{((b.existing_by_id || b.existing_by_code).checksum || "—").slice(0, 16)}</span></div>
                         <div>status: {(b.existing_by_id || b.existing_by_code).publication_status || "—"}</div>
                         <div>purchases: <span className="text-foreground">{(b.existing_by_id || b.existing_by_code).purchases}</span></div>
                         <div>current EPUB: <span className="font-mono text-[10px]">{((b.existing_by_id || b.existing_by_code).epub || "—").split("/").pop()}</span></div>
