@@ -12,7 +12,7 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
-## 🔎 CURRENT STATUS (2026-07-25): Purchase Confirmation email — Stage A+B done, awaiting Founder Stage-C approval before deploy. Full detail in CHANGELOG.md (top entry). Scope-held: Enterprise Health formulas, stale-job cleanup, Batch Upgrade Assets™, Audiobook Storefront, Store Health — all NOT started per Founder.
+## 🔎 CURRENT STATUS (2026-07-25): Purchase Confirmation email — Stage A+B done + Resend key added (env-secret) & VALIDATED (real send to owner qru.education@gmail.com accepted, msg id captured; failure path confirms order preserved). Remaining Founder actions before customers can be emailed: verify sending domain qru-online.com in Resend (DNS), switch SENDER_EMAIL to receipts@qru-online.com, then Deploy. Domain NOT yet verified → testing mode only sends to qru.education@gmail.com. Full detail in CHANGELOG.md. Scope-held: Enterprise Health formulas, stale-job cleanup, Batch Upgrade Assets™, Audiobook Storefront, Store Health.
 
 
 ## ✅ Post-redeploy fixes: Audit download + Stripe wording (2026-06, testing_agent iteration_95 — 100% backend + frontend)
