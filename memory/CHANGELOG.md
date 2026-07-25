@@ -10,6 +10,7 @@
   endpoint 401 unauth / 200 super-admin; list returns 26 orders/4 paid; resend on an order with a customer
   email → `sent-to-provider` (msg id captured). Frontend compiles clean. Demo test order cleaned up.
 - Stripe "Successful payments" receipt = Dashboard-only toggle (cannot be set via API) → Founder action.
+- Added client-side **search** (email / title / order ref) + **status filter** (all/paid/pending) to the Orders console. deployment_agent scan = PASS (no hardcoded secrets, env handling correct, ready to deploy).
 
 
 ## 2026-07-25 — QRU Purchase Confirmation + Secure Tokenized Delivery (Stage A+B, awaiting Founder review before deploy)
