@@ -183,6 +183,8 @@ DEFINITIONS = [
     # ---------- DISTRIBUTION ----------
     _c("store", "QRU Store™", "distribution", "active", "commerce.py", "/store",
        "Let people buy what we make.", "Owned native marketplace + Stripe checkout.", moat=True),
+    _c("qru-online-orders", "QRU Online Orders™", "distribution", "active", "routers/public_commerce.py", "/qru-online-orders",
+       "See every real purchase and deliver it.", "Storefront orders with verified fulfillment + one-tap resend of the delivery email."),
     _c("youtube", "YouTube Publisher™", "distribution", "active", "youtube_publisher.py", "/youtube",
        "Publish real videos to YouTube.", "Real resumable upload with verified Video ID."),
     _c("connectors", "Publishing Connectors™", "distribution", "active", "connectors.py", "/connectors",

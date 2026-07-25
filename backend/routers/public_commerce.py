@@ -311,6 +311,37 @@ async def resend_confirmation(session_id: str, user=Depends(require_super_admin)
         "attempts": record["attempts"], "error": record.get("error")}}
 
 
+@router.get("/orders")
+async def list_orders(user=Depends(require_super_admin)):
+    """QRU Online storefront orders (super-admin) — powers the Founder console + one-tap resend."""
+    rows = await db.book_purchases.find({}, {"_id": 0}).sort("created_at", -1).to_list(300)
+    out = []
+    for o in rows:
+        ce = o.get("confirmation_email") or {}
+        paid_at, created = o.get("paid_at"), o.get("created_at")
+        att = ce.get("attempted_at")
+        out.append({
+            "session_id": o.get("session_id"),
+            "book_title": o.get("book_title"),
+            "order_ref": o.get("order_ref"),
+            "amount": o.get("amount"), "currency": o.get("currency"),
+            "payment_status": o.get("payment_status"),
+            "customer_email": o.get("customer_email"),
+            "paid_at": paid_at.isoformat() if hasattr(paid_at, "isoformat") else paid_at,
+            "created_at": created.isoformat() if hasattr(created, "isoformat") else created,
+            "download_count": o.get("download_count", 0),
+            "download_max": _DOWNLOAD_MAX,
+            "email_status": ce.get("status"),
+            "email_message_id": ce.get("provider_message_id"),
+            "email_attempts": ce.get("attempts", 0),
+            "email_attempted_at": att.isoformat() if hasattr(att, "isoformat") else att,
+            "email_error": ce.get("error"),
+        })
+    return {"orders": out, "total": len(out),
+            "paid": sum(1 for r in out if r["payment_status"] == "paid"),
+            "provider_configured": qru_email.provider_configured(), "sender": qru_email.sender()}
+
+
 @router.post("/webhook")
 async def stripe_webhook(request: Request, stripe_signature: str = Header(default=None)):
     """Stripe webhook with signature verification + idempotent fulfillment.

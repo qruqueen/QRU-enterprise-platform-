@@ -1,5 +1,17 @@
 # QRU Factory™ — CHANGELOG
 
+## 2026-07-25b — QRU Online Orders console + one-tap Resend (preview, ready to deploy)
+- Backend: `GET /api/public/orders` (super-admin) lists storefront orders with fulfillment + email status;
+  reuses existing `POST /api/public/orders/{sid}/resend-confirmation` (mints fresh token, no charge).
+- Registered capability `qru-online-orders` (distribution layer) → appears in Founder nav.
+- Frontend: `pages/QRUOnlineOrders.js` + route `/qru-online-orders` — orders table with payment/email-status
+  badges, provider-connected indicator, and a per-paid-order **Resend** button.
+- Resend now sends REAL emails (domain qru-online.com verified; sender receipts@qru-online.com). Verified:
+  endpoint 401 unauth / 200 super-admin; list returns 26 orders/4 paid; resend on an order with a customer
+  email → `sent-to-provider` (msg id captured). Frontend compiles clean. Demo test order cleaned up.
+- Stripe "Successful payments" receipt = Dashboard-only toggle (cannot be set via API) → Founder action.
+
+
 ## 2026-07-25 — QRU Purchase Confirmation + Secure Tokenized Delivery (Stage A+B, awaiting Founder review before deploy)
 
 **Investigation (read-only) that led here:** queried the LIVE Stripe account directly. 3 completed live
