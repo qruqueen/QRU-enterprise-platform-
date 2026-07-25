@@ -12,6 +12,13 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## 🛠️ P0 FIX (2026-07-25): Login white-screen crash — FIXED in code, deploy-ready
+- **Root cause**: `App.js` route `<Route path="pilot-coordinator" element={<PilotCoordinator />} />` (line ~194) referenced `PilotCoordinator` but the component was NEVER imported. Referencing the undefined identifier threw `ReferenceError` the instant `EnterpriseRoutes` rendered (i.e. right after a successful login), unmounting the app → white screen + red error. Public routes (logged-out) were unaffected, which is why the storefront worked for visitors but any logged-in Founder crashed at `/`.
+- **Fix**: added `import PilotCoordinator from "@/pages/PilotCoordinator";` in App.js.
+- **Verified**: (1) preview login → full Executive Command Center dashboard renders, no crash; (2) `grep` confirms every route element component is now imported; (3) `yarn build` compiles successfully (build ready to deploy).
+- **ACTION REQUIRED BY FOUNDER**: Production (`qru-online.com`) still runs the old broken build. Founder must click **Deploy** to push the fix live. Logged-in users were stuck because the cached token makes the root render the crashing dashboard on every visit.
+- Preview-only note: Founder temp password `QruFounder2026!` is rejected in PREVIEW DB (a permanent password was set there previously). Production Founder creds are unaffected. Demo admin (`demo.admin@qru.com` / `qru-demo-admin-2026`) works in preview for testing.
+
 ## 🔎 CURRENT STATUS (2026-07-25): Purchase Confirmation email — COMPLETE in preview & READY TO DEPLOY. Resend key in env-secret; domain qru-online.com VERIFIED (DKIM/MX/SPF/tracking); SENDER_EMAIL=receipts@qru-online.com. Real sends to owner AND non-owner recipients both succeeded (msg ids captured). Only remaining step = Founder clicks Deploy so production picks up code + env. Full detail in CHANGELOG.md. Scope-held: Enterprise Health formulas, stale-job cleanup, Batch Upgrade Assets™, Audiobook Storefront, Store Health.
 
 
