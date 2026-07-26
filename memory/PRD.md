@@ -12,6 +12,10 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+## ➕ Create-Under-Fresh-Code + registry registration (2026-07-25)
+- **Create Under Fresh Production Book Code** (`POST /api/admin/migrations/book-cutover/create-fresh-code`, dry-run default) + rollback: for DIFFERENT_WORK conflicts, creates the incoming distinct work under the next available `BOOK-####` (preserving its canonical id + assets + re-rendered EPUB), leaving the existing production work under that code untouched. Idempotent (skips once canonical id present). UI: "Different works sharing a code" control row in Workstream A. Validated in scratch test (BOOK-0016 → BOOK-0017, id preserved, collision untouched, idempotent, rollback removes when 0 purchases).
+- **Registered as permanent inherited capability**: `capability_registry.py` entry `production-operations` (governance layer, status **inherited**, inherited_from RI-MFG-0002b, moat=True). Excluded from the auto "All Capabilities" drawer (NAV_CORE_IDS) to avoid duplicating the founder-only core sidebar item. Appears in Factory Map as inherited.
+
 ## 🧬 Publishing Lineage engine (2026-07-25) — comparison intelligence upgrade
 - Replaced title-equality classification with a **publishing-lineage engine** (`_classify_lineage` in `prod_migrations.py`). Evidence order: (1) canonical immutable manuscript checksum (`original.checksum` / `transparent_provenance.immutable_original_checksum`) → definitive; (2) editorial-version checksum overlap; (3) source-document filename (normalised to strip cosmetic tokens like "FINAL"/"draft"/"vN"); (4) normalised title (equal / subset); (5) author (blank = compatible). Returns **classification + confidence score + reasoning chain + recommended action**.
 - Classifications: SAME_BOOK · TITLE_CHANGED · NEW_EDITION · DIFFERENT_WORK · POSSIBLE_COLLISION · PRESENT_BY_ID · ABSENT. adopt_eligible = {SAME_BOOK, TITLE_CHANGED}; resolver keys off this.

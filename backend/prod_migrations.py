@@ -468,6 +468,97 @@ async def resolve_book_conflicts(apply: bool = False):
 
 
 
+async def _next_book_code(reserved=None):
+    reserved = reserved or set()
+    nums = []
+    async for r in db[COLL].find({}, {"book_code": 1}):
+        m = re.match(r"BOOK-(\d+)$", r.get("book_code") or "")
+        if m:
+            nums.append(int(m.group(1)))
+    n = (max(nums) + 1) if nums else 1
+    while f"BOOK-{n:04d}" in reserved or await db[COLL].find_one({"book_code": f"BOOK-{n:04d}"}):
+        n += 1
+    return f"BOOK-{n:04d}"
+
+
+async def create_under_fresh_code(apply: bool = False):
+    """Governed creation for DIFFERENT_WORK conflicts: the incoming migration book is a legitimate
+    distinct work whose book_code is already taken in this database (book_code is per-DB sequential).
+    Create it under a FRESH next-available book_code, preserving its canonical id and assets, and
+    apply the re-rendered EPUB. Idempotent (skips once the canonical id exists). Asset-verified.
+    Never modifies the existing production work that currently holds the code."""
+    insp = await inspect_book_conflicts()
+    books_by_code = {b.get("book_code"): b for b in _load("data_stage1_books.json")}
+    ptr_by_code = {p["book_code"]: p for p in _load("data_stage2_pointers.json")}
+    rows = []
+    reserved = set()
+    for b in insp["books"]:
+        code, cls = b["book_code"], b["classification"]
+        if cls != "DIFFERENT_WORK":
+            rows.append({"code": code, "outcome": "SKIP", "detail": f"{cls} — not a create-under-new-code target"})
+            continue
+        mid = b["incoming"]["id"]
+        if await db[COLL].find_one({"id": mid}):
+            rows.append({"code": code, "outcome": "SKIP", "detail": f"canonical id {mid} already present — created previously"})
+            continue
+        src = books_by_code.get(code)
+        if not src:
+            rows.append({"code": code, "outcome": "SKIP", "detail": "no migration source record"})
+            continue
+        design = (src.get("artifacts") or {}).get("design") or {}
+        epub_f = _basename((design.get("ebook") or {}).get("epub"))
+        cover_f = _basename((design.get("selected_cover") or {}).get("url"))
+        if not (await _asset_ok(epub_f) and await _asset_ok(cover_f)):
+            rows.append({"code": code, "outcome": "BLOCKED", "detail": "prerequisite asset (epub/cover) missing in durable storage"})
+            continue
+        new_code = await _next_book_code(reserved)
+        reserved.add(new_code)
+        ptr = ptr_by_code.get(code)
+        if apply:
+            doc = dict(src)
+            doc["book_code"] = new_code
+            doc["_migrated_by"] = MARK_A
+            doc["_recoded_from"] = code
+            doc["_recoded_at"] = _now()
+            if ptr and await _asset_ok(ptr["new_epub_file"]):
+                arts = dict(doc.get("artifacts") or {})
+                design2 = dict(arts.get("design") or {})
+                ebook = dict(design2.get("ebook") or {})
+                ebook["epub"] = ptr["new_epub_url"]
+                design2["ebook"] = ebook
+                arts["design"] = design2
+                doc["artifacts"] = arts
+            await db[COLL].insert_one(doc)
+            rows.append({"code": code, "outcome": "CREATED_UNDER_NEW_CODE",
+                         "detail": f"'{src.get('title')}' created as {new_code} (canonical id {mid}); existing production work under {code} untouched"})
+        else:
+            rows.append({"code": code, "outcome": "WOULD_CREATE_UNDER_NEW_CODE",
+                         "detail": f"'{src.get('title')}' would be created as {new_code} (canonical id {mid}); existing {code} untouched"})
+    return {"workstream": "A", "action": "create_under_fresh_code",
+            "mode": "APPLY" if apply else "DRY_RUN", "at": _now(), "rows": rows}
+
+
+async def create_under_fresh_code_rollback(apply: bool = False):
+    """Remove ONLY records created by create_under_fresh_code (tagged _recoded_from) that have no
+    purchases. Never touches pre-existing records."""
+    rows = []
+    async for rec in db[COLL].find({"_migrated_by": MARK_A, "_recoded_from": {"$exists": True}}):
+        purchases = await db.book_purchases.count_documents({"book_id": rec.get("id")})
+        if purchases > 0:
+            rows.append({"code": rec.get("book_code"), "outcome": "SKIP",
+                         "detail": f"{purchases} purchase(s) — preserved, not removed"})
+            continue
+        if apply:
+            await db[COLL].delete_one({"id": rec.get("id")})
+            rows.append({"code": rec.get("book_code"), "outcome": "REMOVED",
+                         "detail": f"re-coded creation of {rec.get('_recoded_from')} removed (id {rec.get('id')})"})
+        else:
+            rows.append({"code": rec.get("book_code"), "outcome": "WOULD_REMOVE",
+                         "detail": f"would remove re-coded creation (id {rec.get('id')})"})
+    return {"workstream": "A", "action": "create_under_fresh_code_rollback",
+            "mode": "APPLY" if apply else "DRY_RUN", "at": _now(), "rows": rows}
+
+
 # =========================================================================== #
 # WORKSTREAM C — QRU Learn Governance Containment
 # =========================================================================== #

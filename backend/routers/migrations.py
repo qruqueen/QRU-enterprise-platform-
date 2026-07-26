@@ -55,6 +55,17 @@ async def book_cutover_resolve_conflicts(body: ApplyInput, user=Depends(require_
     return await pm.resolve_book_conflicts(apply=body.apply)
 
 
+@router.post("/book-cutover/create-fresh-code")
+async def book_cutover_create_fresh(body: ApplyInput, user=Depends(require_super_admin)):
+    """Create DIFFERENT_WORK migration books under a fresh production book_code (dry-run default)."""
+    return await pm.create_under_fresh_code(apply=body.apply)
+
+
+@router.post("/book-cutover/create-fresh-code/rollback")
+async def book_cutover_create_fresh_rollback(body: ApplyInput, user=Depends(require_super_admin)):
+    return await pm.create_under_fresh_code_rollback(apply=body.apply)
+
+
 # ----- Workstream C -----
 @router.post("/learn-containment")
 async def learn_containment(body: ContainmentInput, user=Depends(require_super_admin)):

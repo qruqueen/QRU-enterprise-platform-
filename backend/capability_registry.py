@@ -187,6 +187,10 @@ DEFINITIONS = [
        "See every real purchase and deliver it.", "Storefront orders with verified fulfillment + one-tap resend of the delivery email."),
     _c("pilot-coordinator", "Mfg Operations Coordinator™ (Pilot)", "governance", "active", "routers/pilot.py", "/pilot-coordinator",
        "Reduce Founder manufacturing administration.", "PILOT-MFG-0001 — a governed Shadow-Mode digital role that reviews store books for re-render readiness (observes only, changes nothing)."),
+    _c("production-operations", "Production Operations™", "governance", "inherited", "routers/migrations.py", "/production-operations",
+       "Run one-time migrations by hand / via Support.",
+       "Founder-run governed data operations against the live production database — Dry Run · Review · Apply · Rollback, all idempotent. Home of the Publishing Lineage Engine™ (canonical-manuscript-checksum identity, source-document lineage, reasoning chain + confidence) that every future Production Operation inherits to distinguish title corrections, new editions, republications and genuine collisions.",
+       inherited_from="RI-MFG-0002b", moat=True),
     _c("youtube", "YouTube Publisher™", "distribution", "active", "youtube_publisher.py", "/youtube",
        "Publish real videos to YouTube.", "Real resumable upload with verified Video ID."),
     _c("connectors", "Publishing Connectors™", "distribution", "active", "connectors.py", "/connectors",
@@ -430,6 +434,9 @@ NAV_CORE = [
      "hint": "The full registry and every internal page."},
 ]
 NAV_CORE_IDS = [c["id"] for c in NAV_CORE]
+# Production Operations™ is surfaced as a dedicated Founder/Admin-only core item in the sidebar,
+# so exclude it from the auto-generated "All Capabilities" drawer to avoid a duplicate entry.
+NAV_CORE_IDS.append("production-operations")
 
 # --- Self-cleaning sidebar (driven by the Registry) ---
 # Layers pinned to the top "Start Here" section (by capability id).

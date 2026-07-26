@@ -4,7 +4,7 @@ import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import {
   Loader2, Play, ShieldCheck, RotateCcw, CheckCircle2, AlertTriangle,
-  BookOpen, GraduationCap, Database, FileText, PauseOctagon, Search, ArrowLeftRight,
+  BookOpen, GraduationCap, Database, FileText, PauseOctagon, Search, ArrowLeftRight, FilePlus,
 } from "lucide-react";
 
 const OUTCOME = {
@@ -12,12 +12,16 @@ const OUTCOME = {
   UPDATED: "bg-emerald-100 text-emerald-700",
   HELD: "bg-emerald-100 text-emerald-700",
   ADOPTED_AND_REPOINTED: "bg-emerald-100 text-emerald-700",
+  CREATED_UNDER_NEW_CODE: "bg-emerald-100 text-emerald-700",
   RESTORED: "bg-blue-100 text-blue-700",
+  REMOVED: "bg-blue-100 text-blue-700",
   WOULD_CREATE: "bg-amber-100 text-amber-700",
   WOULD_UPDATE: "bg-amber-100 text-amber-700",
   WOULD_HOLD: "bg-amber-100 text-amber-700",
   WOULD_RESTORE: "bg-amber-100 text-amber-700",
   WOULD_ADOPT_AND_REPOINT: "bg-amber-100 text-amber-700",
+  WOULD_CREATE_UNDER_NEW_CODE: "bg-amber-100 text-amber-700",
+  WOULD_REMOVE: "bg-amber-100 text-amber-700",
   SKIP: "bg-muted text-muted-foreground",
   CONFLICT: "bg-orange-100 text-orange-700",
   BLOCKED: "bg-red-100 text-red-700",
@@ -127,6 +131,22 @@ export default function ProductionOperations() {
     setBusy("");
   };
 
+  const runCreateFresh = async (mode) => {
+    if (mode === "apply" && !window.confirm("Create the DIFFERENT_WORK migration book(s) under a FRESH production book_code? These are distinct works whose code is already used in production; the existing production works are left completely untouched. Rollback available.")) return;
+    setBusy(`A-fresh-${mode}`);
+    try {
+      let data;
+      if (mode === "rollback") ({ data } = await api.post("/admin/migrations/book-cutover/create-fresh-code/rollback", { apply: true }));
+      else ({ data } = await api.post("/admin/migrations/book-cutover/create-fresh-code", { apply: mode === "apply" }));
+      setReportA(data);
+      toast.success(mode === "dry" ? "Create-under-new-code dry run complete." : mode === "apply" ? "Created under a fresh code." : "New-code creations rolled back.");
+      loadSummary();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Action failed.");
+    }
+    setBusy("");
+  };
+
   const runC = async (mode) => {
     if (mode === "hold" && !window.confirm("Place the qualifying lessons On Hold (Governance) in THIS environment? They leave the learner catalog immediately. Assets and purchases are preserved. One-tap rollback available.")) return;
     setBusy(`C-${mode}`);
@@ -210,6 +230,19 @@ export default function ProductionOperations() {
           </button>
           <button onClick={() => runA("rollback")} disabled={!!busy} data-testid="a-rollback" className="inline-flex items-center gap-2 rounded-lg border border-red-200 text-red-700 px-4 py-2 text-sm font-medium hover:bg-red-50 disabled:opacity-50">
             {busy === "A-rollback" ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />} Rollback
+          </button>
+        </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-muted/30 border border-dashed p-2.5" data-testid="a-different-work-controls">
+          <span className="text-[11px] text-muted-foreground font-medium px-1">Different works sharing a code (DIFFERENT_WORK):</span>
+          <button onClick={() => runCreateFresh("dry")} disabled={!!busy} data-testid="a-fresh-dry" className="inline-flex items-center gap-2 rounded-lg border border-amber-300 text-amber-700 px-3 py-1.5 text-xs font-medium hover:bg-amber-50 disabled:opacity-50">
+            {busy === "A-fresh-dry" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FilePlus className="w-3.5 h-3.5" />} Create Under New Code (preview)
+          </button>
+          <button onClick={() => runCreateFresh("apply")} disabled={!!busy} data-testid="a-fresh-apply" className="inline-flex items-center gap-2 rounded-lg bg-amber-600 text-white px-3 py-1.5 text-xs font-medium hover:opacity-90 disabled:opacity-50">
+            {busy === "A-fresh-apply" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FilePlus className="w-3.5 h-3.5" />} Apply New Code
+          </button>
+          <button onClick={() => runCreateFresh("rollback")} disabled={!!busy} data-testid="a-fresh-rollback" className="inline-flex items-center gap-2 rounded-lg border border-red-200 text-red-700 px-3 py-1.5 text-xs font-medium hover:bg-red-50 disabled:opacity-50">
+            {busy === "A-fresh-rollback" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />} Undo
           </button>
         </div>
 

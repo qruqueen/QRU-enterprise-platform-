@@ -95,6 +95,30 @@ async def main():
     print("filename-correction case:", b13b["classification"], "adopt_eligible=", b13b["adopt_eligible"])
     assert b13b["adopt_eligible"] is True  # checksum match still (incoming has checksum, existing lacks -> falls to source/title)
 
+    # ---- create-under-fresh-code for the DIFFERENT_WORK case (BOOK-0016) ----
+    cf_dry = await pm.create_under_fresh_code(apply=False)
+    cfd = {r["code"]: r["outcome"] for r in cf_dry["rows"]}
+    print("create-fresh dry:", cfd)
+    assert cfd["BOOK-0016"] == "WOULD_CREATE_UNDER_NEW_CODE"
+    cf = await pm.create_under_fresh_code(apply=True)
+    cfa = {r["code"]: r["outcome"] for r in cf["rows"]}
+    print("create-fresh apply:", cfa)
+    assert cfa["BOOK-0016"] == "CREATED_UNDER_NEW_CODE"
+    newrec = await scratch.book_records.find_one({"id": B16["id"]})
+    assert newrec and newrec["book_code"] != "BOOK-0016" and newrec["_recoded_from"] == "BOOK-0016"
+    print("  new code:", newrec["book_code"], "| canonical id preserved:", newrec["id"])
+    # existing collision record untouched
+    assert (await scratch.book_records.find_one({"id": "PROD-DIFF-16"}))["title"] == "How to Understand AI"
+    # idempotent: re-run inspect -> BOOK-0016 now present by id
+    insp3 = await pm.inspect_book_conflicts()
+    b16b = next(b for b in insp3["books"] if b["book_code"] == "BOOK-0016")
+    assert b16b["classification"] == "PRESENT_BY_ID"
+    # rollback removes it (no purchases)
+    rb = await pm.create_under_fresh_code_rollback(apply=True)
+    assert any(r["outcome"] == "REMOVED" for r in rb["rows"])
+    assert await scratch.book_records.find_one({"id": B16["id"]}) is None
+    print("create-fresh-code + rollback: OK")
+
     await client.drop_database("scratch_conflict_test")
     print("\nALL LINEAGE ASSERTIONS PASSED.")
 
