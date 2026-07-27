@@ -184,19 +184,42 @@ def draw_shield(canvas, cx, top_y, w, h, accent, line=6):
     d.text((cx, top_y + int(h * 0.42)), "QRU", font=_f(SERIF_BOLD, fs), fill=accent, anchor="mm")
 
 
-def _wrap(draw, text, font, max_w):
-    words, lines, cur = text.split(), [], ""
-    for w in words:
-        test = (cur + " " + w).strip()
-        if draw.textlength(test, font=font) <= max_w:
-            cur = test
+def _break_token(draw, token, font, max_w):
+    """Hard-break a single token that is wider than max_w (e.g. long unbroken IDs/URLs)."""
+    if draw.textlength(token, font=font) <= max_w:
+        return [token]
+    parts, cur = [], ""
+    for ch in token:
+        if draw.textlength(cur + ch, font=font) <= max_w:
+            cur += ch
         else:
             if cur:
-                lines.append(cur)
-            cur = w
+                parts.append(cur)
+            cur = ch
+    if cur:
+        parts.append(cur)
+    return parts
+
+
+def _wrap(draw, text, font, max_w):
+    lines, cur = [], ""
+    for w in text.split():
+        # a single word longer than the column must be hard-broken so it never overflows
+        for piece in _break_token(draw, w, font, max_w):
+            test = (cur + " " + piece).strip()
+            if draw.textlength(test, font=font) <= max_w:
+                cur = test
+            else:
+                if cur:
+                    lines.append(cur)
+                cur = piece
     if cur:
         lines.append(cur)
     return lines
+
+
+def _fits(draw, lines, font, max_w):
+    return all(draw.textlength(ln, font=font) <= max_w for ln in lines)
 
 
 def _fit_title(draw, text, max_w, max_lines, start=88, min_size=44):
@@ -204,7 +227,8 @@ def _fit_title(draw, text, max_w, max_lines, start=88, min_size=44):
     while size >= min_size:
         font = _f(SERIF_BOLD, size)
         lines = _wrap(draw, text, font, max_w)
-        if len(lines) <= max_lines:
+        # require BOTH the line count AND every line's width to fit — never overflow horizontally
+        if len(lines) <= max_lines and _fits(draw, lines, font, max_w):
             return font, lines, size
         size -= 4
     font = _f(SERIF_BOLD, min_size)

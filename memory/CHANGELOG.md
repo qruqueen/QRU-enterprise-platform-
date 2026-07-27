@@ -1,5 +1,13 @@
 # QRU Factory™ — CHANGELOG
 
+## 2026-07-27b — Storefront covers tightened + fixed + full catalog sweep (all $0 except 3 storefront art regens)
+- **Tighten Trading Cover:** regenerated style-matched art (1 credit via image tool) + re-composited with hardened safe-band → long title now 4 tidy lines, full subtitle, no overlap. In place; id/slug/pricing/purchases preserved.
+- **Fix Factory Tag:** "Ordinary Tuesdays (Factory Ready)" → title cleaned to "Ordinary Tuesdays" + cover re-rendered with regenerated art (1 credit). Slug now `ordinary-tuesdays` (derived; old slug 404s — purchases key off UUID so unaffected). Verified via public API.
+- **Product cover renderer bug fixed ($0):** `design_language._wrap` now hard-breaks over-long tokens and `_fit_title` requires every line to fit the column width (was checking line-count only → long titles overflowed the frame horizontally, e.g. the poster test). 
+- **Catalog Cover Sweep ($0):** re-rendered all 90 published commerce products via `re_engine.ensure_branded_assets(allow_ai_hero_art=False)` → 89 deterministic branded covers (hardened, legible, no overflow) + 1 correctly preserved its Founder-selected Asset Vault cover. 90/90, 0 errors. (Gemini image is blocked on the current universal key, so $0 deterministic is also the only viable path for hero art right now.)
+- **Delivery:** re-rendered assets are git-tracked (`rendered_assets/`) AND durable-mirrored (shared `qru-online/assets` bucket), so they travel with the Founder's re-deploy; the hardened rules deploy as code. NOTE: DB pointer changes (cover_url/title) live in the preview DB — confirm production picks these up on re-deploy or via a production migration if the live store still shows old covers.
+- **Minor findings (content, not rendering — deferred):** many product titles carry a redundant "— <ProductType>" suffix + inconsistent casing (e.g. "how sleep consolidates memory — Poster"); the catalog also contains test products (UI_TEST_PROD/TEST_*).
+
 ## 2026-07-27 — Cover legibility: hardened rules + public-storefront fix (option C) + full store inventory
 - **RULES ($0, done):** `design_studio.compose()` — added a vertical SAFE BAND (30%–86%), ≤4-line title auto-fit, min-readable floor (46px), 2-line subtitle cap, guaranteed byline gap, block centered in band. Long titles no longer overflow/overlap. Applies to all future/re-rendered covers.
 - **Storefront scaling:** verified consistent — all storefront covers 1024×1536 (2:3), shown in 2:3 containers, thumbs 460×690 (2:3). No crop/stretch.
