@@ -41,12 +41,10 @@
 - **Recommended:** (a) — set explicit status; keep separate from digital workforce.
 - **Impact:** metadata only (governed edit, done via a future write-approved pass).
 
-### DQ-7 — Define one enforcement condition + status per standard (44 records)
-- **Matter:** `qiks_standards` (39) and `constitutional_registry` (5) records do not store an explicit `enforced` condition or lifecycle `status`. The completion standard requires "one defined enforcement condition" per approved capability/standard.
-- **Evidence:** sampled records show `enforced=None`, `status=None` (constitutional_registry).
-- **Options:** (a) Add an `enforced` (where/how it's checked) + `status` field to every standard; (b) accept current implicit enforcement via `governance_binding`.
-- **Recommended:** (a) — makes enforcement auditable and satisfies the completion standard. (Optional extension: register the **Publishing Lineage Engine™** as its own sub-capability.)
-- **Impact:** governed metadata pass across 44 records; no behavioral change.
+### DQ-7 — Define one enforcement condition + status per standard (44 records) — ✅ CLOSED (2026-07-27)
+- DQ-7 → DQ-7B (canonical design) → DQ-7C (execution). Executed in preview; production promotion delivered as an independent governed operation in the Production Operations™ panel (Preflight → Apply → Verify → Rollback), preview-verified.
+- Lifecycle=ADOPTED ×39; 11 evidence-backed enforcement (9 INHERITED + 2 GATE); 28 remain FOUNDER_DECISION_REQUIRED (intentionally untouched); constitutional_registry reduced to a projection (canonical_ref + projection:true). Additive-only, reversible.
+- **DQ-7 CLOSED.** Remaining optional follow-ups (resolve the 28, hydrate projection) are explicitly deferred — NOT part of DQ-7. Factory attention returns to product launch / storefront readiness / discoverability / customer acquisition.
 
 ### DQ-8 — Resolve the shared `/cinema-studio` route
 - **Matter:** `cinema-studio` and `podcast-studio` both map to route `/cinema-studio`.

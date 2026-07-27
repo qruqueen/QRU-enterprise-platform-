@@ -75,3 +75,19 @@ async def learn_containment(body: ContainmentInput, user=Depends(require_super_a
 @router.post("/learn-containment/rollback")
 async def learn_containment_rollback(body: ApplyInput, user=Depends(require_super_admin)):
     return await pm.learn_containment_rollback(apply=body.apply)
+
+
+# ----- DQ-7C Standards Metadata (independent governed operation) -----
+@router.get("/standards-metadata/preflight")
+async def standards_metadata_preflight(user=Depends(require_super_admin)):
+    return await pm.standards_metadata_preflight()
+
+
+@router.post("/standards-metadata/apply")
+async def standards_metadata_apply(body: ApplyInput, user=Depends(require_super_admin)):
+    return await pm.standards_metadata_apply(apply=body.apply)
+
+
+@router.post("/standards-metadata/rollback")
+async def standards_metadata_rollback(body: ApplyInput, user=Depends(require_super_admin)):
+    return await pm.standards_metadata_rollback(apply=body.apply)

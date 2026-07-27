@@ -665,3 +665,196 @@ async def summary():
         },
         "at": _now(),
     }
+
+
+# =========================================================================== #
+# DQ-7C — Standards Metadata Canonicalization (Founder-approved, additive, reversible)
+# One independent governed operation. Mirrors backend/_dq7c_execute.py exactly.
+# =========================================================================== #
+DQ7C_INH = {
+    "STD-00001": "MANUFACTURING_PROMISE.treasure_standard",
+    "STD-00005": "MANUFACTURING_PROMISE.constitutional_governance",
+    "QRU-CON-0001": "MANUFACTURING_PROMISE.constitutional_governance",
+    "STD-00008": "MANUFACTURING_PROMISE.verified_knowledge",
+    "STD-00009": "MANUFACTURING_PROMISE.enterprise_memory",
+    "STD-00027": "MANUFACTURING_PROMISE.verified_knowledge",
+    "STD-00030": "MANUFACTURING_PROMISE.verified_knowledge",
+    "STD-UKR-0001": "MANUFACTURING_PROMISE.verified_knowledge",
+    "STD-RFN-0001": "MANUFACTURING_PROMISE.continuous_craftsmanship",
+}
+DQ7C_GATE = {
+    "QRU-CON-0002": "rendering_engine/deliverable_renderer:Publication Quality Standard\u2122",
+    "STD-MFG-0001": "manufacturing_flow:Universal Manufacturing Flow gate",
+}
+DQ7C_CONST5 = {
+    "QRU-CON-0001": {"owner": "QRU", "verification_status": "Verified"},
+    "QRU-CON-0002": {"owner": "QRU Press\u2122", "verification_status": "Verified"},
+    "STD-MFG-0001": {"owner": "QRU", "verification_status": "Verified"},
+    "STD-EIP-0002": {"owner": "QRU", "verification_status": "Verified"},
+    "STD-RFN-0001": {"owner": "QRU", "verification_status": "Verified"},
+}
+DQ7C_EVIDENCE = set(DQ7C_INH) | set(DQ7C_GATE)  # 11
+DQ7C_EXPECTED_STD_IDS = (["STD-%05d" % i for i in range(1, 34)]
+                         + ["QRU-CON-0001", "QRU-CON-0002", "STD-EIP-0002",
+                            "STD-MFG-0001", "STD-RFN-0001", "STD-UKR-0001"])  # 39
+DQ7C_QIKS_META = ["lifecycle_status", "enforcement_condition", "enforcement_binding", "dq7_prepared_at", "dq7_evidence"]
+DQ7C_QIKS_CONST = ["owner", "verification_status", "dq7b_canonicalized_at"]
+DQ7C_PROJ = ["canonical_ref", "projection", "dq7b_indexed_at"]
+STD_COLL = "qiks_standards"
+CONST_COLL = "constitutional_registry"
+
+
+def _std_key(d):
+    return d.get("standard_id") or d.get("id")
+
+
+def _dq7c_plan_doc(doc):
+    """Return (planned_fields_absent, conflicts) for one qiks standard — additive only."""
+    sid = _std_key(doc)
+    planned, conflicts = {}, []
+    if sid in DQ7C_INH:
+        cls, binding = "INHERITED_ENFORCED", DQ7C_INH[sid]
+    elif sid in DQ7C_GATE:
+        cls, binding = "GATE_ENFORCED", DQ7C_GATE[sid]
+    else:
+        cls, binding = "FOUNDER_DECISION_REQUIRED", None
+    intended = {
+        "lifecycle_status": "ADOPTED",
+        "enforcement_condition": cls,
+        "enforcement_binding": binding,
+        "dq7_prepared_at": _now(),
+        "dq7_evidence": "evidence-backed" if sid in DQ7C_EVIDENCE else "unsupported->FOUNDER_DECISION_REQUIRED",
+    }
+    if sid in DQ7C_CONST5:
+        intended.update(DQ7C_CONST5[sid])
+        intended["dq7b_canonicalized_at"] = _now()
+    for f, v in intended.items():
+        if v is None:
+            continue  # None-valued fields (e.g. FDR binding) are intentionally not stored
+        cur = doc.get(f)
+        if cur in (None, "", []):
+            planned[f] = v
+        elif cur != v and f not in ("dq7_prepared_at", "dq7b_canonicalized_at"):
+            conflicts.append({"id": sid, "field": f, "existing": cur, "intended": v})
+    return sid, cls, planned, conflicts
+
+
+async def standards_metadata_preflight():
+    """Read-only production preflight + material differences vs the validated preview assumptions."""
+    q = [d async for d in db[STD_COLL].find({})]
+    c = [d async for d in db[CONST_COLL].find({})]
+    present = {_std_key(d) for d in q}
+    missing = sorted(set(DQ7C_EXPECTED_STD_IDS) - present)
+    unexpected = sorted(present - set(DQ7C_EXPECTED_STD_IDS))
+    # projection resolution
+    unresolved = []
+    for d in c:
+        n = sum(1 for x in q if _std_key(x) == d.get("id"))
+        if n != 1:
+            unresolved.append({"projection_id": d.get("id"), "resolves_to": n})
+    conflicts, need, already, counts = [], 0, 0, {"INHERITED_ENFORCED": 0, "GATE_ENFORCED": 0, "FOUNDER_DECISION_REQUIRED": 0}
+    for d in q:
+        sid, cls, planned, cf = _dq7c_plan_doc(d)
+        counts[cls] = counts.get(cls, 0) + 1
+        conflicts += cf
+        if planned:
+            need += 1
+        else:
+            already += 1
+    proj_need = sum(1 for d in c if not d.get("canonical_ref") or not d.get("projection"))
+    ready = (len(q) == 39 and len(c) == 5 and not conflicts and not unresolved and not missing)
+    return {
+        "operation": "DQ-7C Standards Metadata", "at": _now(),
+        "production_counts": {"qiks_standards": len(q), "constitutional_registry": len(c)},
+        "expected_counts": {"qiks_standards": 39, "constitutional_registry": 5},
+        "material_differences": {
+            "missing_standard_ids": missing, "unexpected_standard_ids": unexpected,
+            "unresolved_projections": unresolved, "field_conflicts": conflicts,
+            "canonical_records_needing_metadata": need, "canonical_records_already_applied": already,
+            "projection_records_needing_update": proj_need,
+        },
+        "enforcement_distribution": counts,
+        "evidence_backed_expected": 11,
+        "ready_to_apply": ready,
+        "block_reasons": ([] if ready else
+                          ([f"qiks count {len(q)}!=39"] if len(q) != 39 else [])
+                          + ([f"cons count {len(c)}!=5"] if len(c) != 5 else [])
+                          + ([f"{len(conflicts)} field conflict(s)"] if conflicts else [])
+                          + ([f"{len(unresolved)} unresolved projection(s)"] if unresolved else [])
+                          + ([f"{len(missing)} missing standard id(s)"] if missing else [])),
+    }
+
+
+async def standards_metadata_apply(apply: bool = False):
+    pf = await standards_metadata_preflight()
+    if apply and not pf["ready_to_apply"]:
+        return {"operation": "DQ-7C Standards Metadata", "mode": "BLOCKED", "at": _now(),
+                "reason": "Preflight not satisfied", "block_reasons": pf["block_reasons"], "preflight": pf}
+    q = [d async for d in db[STD_COLL].find({})]
+    c = [d async for d in db[CONST_COLL].find({})]
+    writes, counts = 0, {"INHERITED_ENFORCED": 0, "GATE_ENFORCED": 0, "FOUNDER_DECISION_REQUIRED": 0}
+    for d in q:
+        sid, cls, planned, cf = _dq7c_plan_doc(d)
+        counts[cls] += 1
+        if cf:
+            return {"operation": "DQ-7C Standards Metadata", "mode": "HALTED", "at": _now(),
+                    "reason": "field conflict — would overwrite", "conflicts": cf}
+        if planned and apply:
+            key = {"standard_id": sid} if await db[STD_COLL].find_one({"standard_id": sid}) else {"id": sid}
+            await db[STD_COLL].update_one(key, {"$set": planned})
+        writes += len(planned)
+    proj_writes = 0
+    for d in c:
+        cid = d.get("id")
+        fields = {}
+        if not d.get("canonical_ref"):
+            fields["canonical_ref"] = cid
+        if not d.get("projection"):
+            fields["projection"] = True
+        fields["dq7b_indexed_at"] = _now() if apply else None
+        setf = {k: v for k, v in fields.items() if v is not None}
+        if setf and apply:
+            await db[CONST_COLL].update_one({"id": cid}, {"$set": setf})
+        proj_writes += len([k for k in setf])
+    result = {"operation": "DQ-7C Standards Metadata", "mode": "APPLY" if apply else "DRY_RUN", "at": _now(),
+              "enforcement_distribution": counts, "canonical_field_writes": writes,
+              "projection_field_writes": proj_writes, "overwrites": 0, "deletes": 0, "renames": 0}
+    if apply:
+        result["verification"] = await _standards_metadata_verify()
+    return result
+
+
+async def _standards_metadata_verify():
+    q = [d async for d in db[STD_COLL].find({})]
+    c = [d async for d in db[CONST_COLL].find({})]
+    from collections import Counter
+    resolve_ok = all(sum(1 for x in q if _std_key(x) == d.get("canonical_ref")) == 1 for d in c)
+    return {
+        "qiks_count": len(q), "cons_count": len(c),
+        "lifecycle": dict(Counter(d.get("lifecycle_status") for d in q)),
+        "enforcement": dict(Counter(d.get("enforcement_condition") for d in q)),
+        "const5_owner_verification_present": sum(1 for d in q if _std_key(d) in DQ7C_CONST5 and d.get("owner") and d.get("verification_status")),
+        "all_projections_flagged": all(d.get("projection") and d.get("canonical_ref") for d in c),
+        "every_canonical_ref_resolves_to_exactly_one": resolve_ok,
+        "founder_approval_preserved": all(d.get("founder_approval") for d in q) if q else False,
+        "counts_stable": len(q) == 39 and len(c) == 5,
+    }
+
+
+async def standards_metadata_rollback(apply: bool = False):
+    rows = []
+    async for d in db[STD_COLL].find({"dq7_prepared_at": {"$exists": True}}):
+        sid = _std_key(d)
+        unset = {f: "" for f in DQ7C_QIKS_META}
+        if sid in DQ7C_CONST5 and d.get("dq7b_canonicalized_at"):
+            for f in DQ7C_QIKS_CONST:
+                unset[f] = ""
+        if apply:
+            await db[STD_COLL].update_one({"standard_id": sid} if await db[STD_COLL].find_one({"standard_id": sid}) else {"id": sid}, {"$unset": unset})
+        rows.append({"id": sid, "outcome": "UNSET" if apply else "WOULD_UNSET", "fields": sorted(unset)})
+    async for d in db[CONST_COLL].find({"dq7b_indexed_at": {"$exists": True}}):
+        if apply:
+            await db[CONST_COLL].update_one({"id": d.get("id")}, {"$unset": {f: "" for f in DQ7C_PROJ}})
+        rows.append({"id": d.get("id"), "outcome": "UNSET" if apply else "WOULD_UNSET", "fields": DQ7C_PROJ})
+    return {"operation": "DQ-7C Standards Metadata", "action": "rollback",
+            "mode": "APPLY" if apply else "DRY_RUN", "at": _now(), "rows": rows}

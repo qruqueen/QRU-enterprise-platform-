@@ -16,6 +16,12 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Create Under Fresh Production Book Code** (`POST /api/admin/migrations/book-cutover/create-fresh-code`, dry-run default) + rollback: for DIFFERENT_WORK conflicts, creates the incoming distinct work under the next available `BOOK-####` (preserving its canonical id + assets + re-rendered EPUB), leaving the existing production work under that code untouched. Idempotent (skips once canonical id present). UI: "Different works sharing a code" control row in Workstream A. Validated in scratch test (BOOK-0016 → BOOK-0017, id preserved, collision untouched, idempotent, rollback removes when 0 purchases).
 - **Registered as permanent inherited capability**: `capability_registry.py` entry `production-operations` (governance layer, status **inherited**, inherited_from RI-MFG-0002b, moat=True). Excluded from the auto "All Capabilities" drawer (NAV_CORE_IDS) to avoid duplicating the founder-only core sidebar item. Appears in Factory Map as inherited.
 
+## ✅ DQ-7 CLOSED (2026-07-27) — Standards metadata canonicalization delivered
+- DQ-7C production promotion added to Production Operations™ as ONE independent governed operation: `GET /standards-metadata/preflight`, `POST /standards-metadata/apply`, `POST /standards-metadata/rollback` (`prod_migrations.py` + `routers/migrations.py`). UI card "Standards Metadata Canonicalization" (Preflight → Dry Run → Apply → Rollback + completion report).
+- Preflight gates Apply: proceeds only when production has 39 canonical + 5 projections and 0 material conflicts. Additive-only, idempotent, rollback-preserving. Preview-verified (preflight Ready, apply idempotent no-op since preview already applied via DQ-7C).
+- 28 enforcement classes remain FOUNDER_DECISION_REQUIRED (untouched); projection NOT hydrated; not combined with Workstreams A/C — per Founder directive.
+- **Factory focus now returns to: product launch, storefront readiness, discoverability, customer acquisition.**
+
 ## ✅ DQ-7C executed (2026-07-26, PREVIEW DB) — standards metadata canonicalization
 - Applied approved DQ-7B design. Additive-only, guarded, reversible. Script `backend/_dq7c_execute.py` (EXECUTE flag), artifacts in `/app/memory/audit/`.
 - `qiks_standards` (39, canonical): `lifecycle_status=ADOPTED` ×39; enforcement = 9 INHERITED_ENFORCED + 2 GATE_ENFORCED (11 evidence-backed) + 28 FOUNDER_DECISION_REQUIRED; `owner`+`verification_status` added to the 5 constitutional-tier records.

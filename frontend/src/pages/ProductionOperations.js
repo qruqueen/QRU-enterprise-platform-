@@ -4,7 +4,7 @@ import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import {
   Loader2, Play, ShieldCheck, RotateCcw, CheckCircle2, AlertTriangle,
-  BookOpen, GraduationCap, Database, FileText, PauseOctagon, Search, ArrowLeftRight, FilePlus,
+  BookOpen, GraduationCap, Database, FileText, PauseOctagon, Search, ArrowLeftRight, FilePlus, Layers, ClipboardCheck,
 } from "lucide-react";
 
 const OUTCOME = {
@@ -85,6 +85,8 @@ export default function ProductionOperations() {
   const [reportA, setReportA] = useState(null);
   const [reportC, setReportC] = useState(null);
   const [inspect, setInspect] = useState(null);
+  const [stdPre, setStdPre] = useState(null);
+  const [reportD, setReportD] = useState(null);
 
   const loadSummary = () => api.get("/admin/migrations/summary").then((r) => setSummary(r.data)).catch(() => setSummary(false));
   useEffect(() => { loadSummary(); }, []);
@@ -143,6 +145,46 @@ export default function ProductionOperations() {
       loadSummary();
     } catch (e) {
       toast.error(e.response?.data?.detail || "Action failed.");
+    }
+    setBusy("");
+  };
+
+  const runStdPreflight = async () => {
+    setBusy("D-preflight");
+    try {
+      const { data } = await api.get("/admin/migrations/standards-metadata/preflight");
+      setStdPre(data);
+      toast.success("Production preflight complete.");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Preflight failed.");
+    }
+    setBusy("");
+  };
+
+  const runStdApply = async (mode) => {
+    if (mode === "apply" && !window.confirm("Apply the approved additive standards metadata to THIS environment (lifecycle=ADOPTED ×39, 11 evidence-backed enforcement, 28 FOUNDER_DECISION_REQUIRED, + projection tags on the 5)? Additive-only, rollback-protected. Proceeds only when 39 canonical + 5 projections exist and no material conflict is found.")) return;
+    setBusy(`D-${mode}`);
+    try {
+      const { data } = await api.post("/admin/migrations/standards-metadata/apply", { apply: mode === "apply" });
+      setReportD(data);
+      if (data.mode === "BLOCKED" || data.mode === "HALTED") toast.error(`Blocked: ${(data.block_reasons || [data.reason]).join(", ")}`);
+      else toast.success(mode === "apply" ? "Standards metadata applied." : "Apply dry run complete.");
+      loadSummary();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Apply failed.");
+    }
+    setBusy("");
+  };
+
+  const runStdRollback = async () => {
+    if (!window.confirm("Roll back DQ-7C standards metadata in THIS environment (unset the added fields)? Existing standards content is untouched.")) return;
+    setBusy("D-rollback");
+    try {
+      const { data } = await api.post("/admin/migrations/standards-metadata/rollback", { apply: true });
+      setReportD(data);
+      toast.success("Standards metadata rolled back.");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Rollback failed.");
     }
     setBusy("");
   };
@@ -355,6 +397,75 @@ export default function ProductionOperations() {
             </div>
             <EvidenceRows rows={rowsC} />
             <details className="mt-2 text-[11px] text-muted-foreground"><summary className="cursor-pointer">Raw evidence report (JSON)</summary><pre className="mt-2 p-3 bg-muted rounded-lg overflow-x-auto">{JSON.stringify(reportC, null, 2)}</pre></details>
+          </div>
+        )}
+      </section>
+
+      {/* DQ-7C Standards Metadata — independent governed operation */}
+      <section className="rounded-xl border bg-card p-5" data-testid="standards-metadata">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-royal font-semibold">DQ-7C · Governance Metadata</div>
+            <div className="flex items-center gap-2 mt-1"><Layers className="w-4 h-4 text-navy" /><span className="font-heading font-bold text-navy">Standards Metadata Canonicalization</span></div>
+            <p className="text-xs text-muted-foreground mt-1 max-w-2xl">Applies the Founder-approved, additive standards metadata: <span className="font-medium">lifecycle=ADOPTED</span> on all 39 canonical standards, the 11 evidence-backed enforcement classifications, <span className="font-medium">FOUNDER_DECISION_REQUIRED</span> on the remaining 28 (untouched), plus <span className="font-medium">owner/verification</span> on the 5 constitutional-tier records and <span className="font-medium">canonical_ref + projection</span> tags on the 5 constitutional projections. Additive-only; no overwrites, deletes or renames.</p>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button onClick={runStdPreflight} disabled={!!busy} data-testid="d-preflight" className="inline-flex items-center gap-2 rounded-lg border border-navy/30 text-navy px-4 py-2 text-sm font-medium hover:bg-navy/5 disabled:opacity-50">
+            {busy === "D-preflight" ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />} Production Preflight
+          </button>
+          <button onClick={() => runStdApply("dry")} disabled={!!busy} data-testid="d-dry" className="inline-flex items-center gap-2 rounded-lg border border-navy/30 text-navy px-4 py-2 text-sm font-medium hover:bg-navy/5 disabled:opacity-50">
+            {busy === "D-dry" ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Dry Run
+          </button>
+          <button onClick={() => runStdApply("apply")} disabled={!!busy || (stdPre && !stdPre.ready_to_apply)} data-testid="d-apply" className="inline-flex items-center gap-2 rounded-lg bg-navy text-white px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50" title={stdPre && !stdPre.ready_to_apply ? "Run Preflight — apply enabled only when 39 canonical + 5 projections and no conflict" : ""}>
+            {busy === "D-apply" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} Apply Metadata
+          </button>
+          <button onClick={runStdRollback} disabled={!!busy} data-testid="d-rollback" className="inline-flex items-center gap-2 rounded-lg border border-red-200 text-red-700 px-4 py-2 text-sm font-medium hover:bg-red-50 disabled:opacity-50">
+            {busy === "D-rollback" ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />} Rollback
+          </button>
+        </div>
+
+        {stdPre && (
+          <div className="mt-4 rounded-lg border p-4" data-testid="std-preflight">
+            <div className="flex flex-wrap items-center gap-2 text-xs mb-3">
+              <span className="font-semibold text-navy">Preflight</span>
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold ${stdPre.ready_to_apply ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                {stdPre.ready_to_apply ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+                {stdPre.ready_to_apply ? "Ready to apply" : "Not ready"}
+              </span>
+              {!stdPre.ready_to_apply && <span className="text-red-700">{(stdPre.block_reasons || []).join(" · ")}</span>}
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <Stat label="Canonical standards" value={`${stdPre.production_counts.qiks_standards}/39`} tone={stdPre.production_counts.qiks_standards === 39 ? "ok" : "bad"} />
+              <Stat label="Constitutional projections" value={`${stdPre.production_counts.constitutional_registry}/5`} tone={stdPre.production_counts.constitutional_registry === 5 ? "ok" : "bad"} />
+              <Stat label="Need metadata" value={stdPre.material_differences.canonical_records_needing_metadata} tone={stdPre.material_differences.canonical_records_needing_metadata ? "warn" : "ok"} />
+              <Stat label="Conflicts" value={stdPre.material_differences.field_conflicts.length} tone={stdPre.material_differences.field_conflicts.length ? "bad" : "ok"} />
+            </div>
+            <div className="mt-3 text-[11px] text-muted-foreground">
+              <span className="font-medium text-foreground">Material differences vs validated preview:</span>{" "}
+              missing: {stdPre.material_differences.missing_standard_ids.join(", ") || "none"} · unexpected: {stdPre.material_differences.unexpected_standard_ids.join(", ") || "none"} · unresolved projections: {stdPre.material_differences.unresolved_projections.length} · already applied: {stdPre.material_differences.canonical_records_already_applied}
+              <div className="mt-1">Enforcement: INH {stdPre.enforcement_distribution.INHERITED_ENFORCED} · GATE {stdPre.enforcement_distribution.GATE_ENFORCED} · FOUNDER_DECISION_REQUIRED {stdPre.enforcement_distribution.FOUNDER_DECISION_REQUIRED} (left untouched)</div>
+            </div>
+          </div>
+        )}
+
+        {reportD && (
+          <div className="mt-4" data-testid="report-d">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold ${["BLOCKED", "HALTED"].includes(reportD.mode) ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
+                {["BLOCKED", "HALTED"].includes(reportD.mode) ? <AlertTriangle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                {reportD.action === "rollback" ? "Rollback" : reportD.mode === "APPLY" ? "Applied" : reportD.mode === "DRY_RUN" ? "Dry run" : reportD.mode}
+              </span>
+              {reportD.canonical_field_writes !== undefined && <span className="text-muted-foreground">writes: {reportD.canonical_field_writes} canonical + {reportD.projection_field_writes} projection · overwrites 0 · deletes 0 · renames 0</span>}
+            </div>
+            {reportD.verification && (
+              <div className="mt-2 text-[11px] text-muted-foreground rounded-md border bg-muted/20 p-3">
+                <div className="font-semibold text-foreground mb-1">Post-apply verification</div>
+                counts stable: {String(reportD.verification.counts_stable)} · projections resolve 1:1: {String(reportD.verification.every_canonical_ref_resolves_to_exactly_one)} · founder_approval preserved: {String(reportD.verification.founder_approval_preserved)} · const-5 owner/verification present: {reportD.verification.const5_owner_verification_present}/5
+                <div>lifecycle: {JSON.stringify(reportD.verification.lifecycle)} · enforcement: {JSON.stringify(reportD.verification.enforcement)}</div>
+              </div>
+            )}
+            <details className="mt-2 text-[11px] text-muted-foreground"><summary className="cursor-pointer">Raw completion report (JSON)</summary><pre className="mt-2 p-3 bg-muted rounded-lg overflow-x-auto">{JSON.stringify(reportD, null, 2)}</pre></details>
           </div>
         )}
       </section>
