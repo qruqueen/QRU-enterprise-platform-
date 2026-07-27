@@ -2,13 +2,16 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Loader2, ShieldCheck } from "lucide-react";
 import { publicApi, assetUrl } from "./publicApi";
+import Seo from "./Seo";
+import TrustMarks from "./TrustMarks";
+import NewsletterSignup from "./NewsletterSignup";
 
 const HERO_IMG = "/qru-hero.png";
 
 function CoverCard({ book, large }) {
   return (
     <div>
-      <Link to={`/book/${book.id}`} data-testid={`featured-book-${book.id}`} className="group block">
+      <Link to={`/book/${book.slug || book.id}`} data-testid={`featured-book-${book.id}`} className="group block">
         <div className={`relative overflow-hidden rounded-md border border-[#E5E5E0] bg-[#EDEBE4] shadow-xl shadow-black/5 transition-transform duration-500 group-hover:-translate-y-2 group-hover:shadow-2xl ${large ? "aspect-[3/4]" : "aspect-[2/3]"}`}>
           {book.cover_url ? (
             <img src={assetUrl(book.thumb_url || book.cover_url)} alt={book.title} decoding="async"
@@ -40,6 +43,7 @@ export default function QRUHome() {
 
   return (
     <div data-testid="qru-home">
+      <Seo title="QRU Press™ — Books that make hard ideas easy" />
       {/* Hero — split layout: text on solid bone, image beside it (no overlays) */}
       <section className="grid lg:grid-cols-2 items-stretch" style={{ backgroundColor: "#FAFAF8" }}>
         <div className="flex items-center px-6 md:px-12 lg:pl-16 xl:pl-24 py-20 md:py-28 lg:py-36">
@@ -73,6 +77,8 @@ export default function QRUHome() {
         </div>
       </section>
 
+      <TrustMarks />
+
       {/* Featured */}
       <section className="max-w-7xl mx-auto px-6 md:px-10 py-20 md:py-28">
         <div className="flex items-end justify-between mb-12">
@@ -103,6 +109,8 @@ export default function QRUHome() {
           </div>
         )}
       </section>
+
+      <NewsletterSignup />
     </div>
   );
 }

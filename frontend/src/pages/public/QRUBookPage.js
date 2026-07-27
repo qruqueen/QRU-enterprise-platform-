@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowLeft, BookOpen, Loader2, ShieldCheck } from "lucide-react";
 import { publicApi, assetUrl } from "./publicApi";
+import Seo from "./Seo";
 
 function Meta({ label, value }) {
   if (!value) return null;
@@ -15,20 +16,21 @@ function Meta({ label, value }) {
 }
 
 export default function QRUBookPage() {
-  const { id } = useParams();
+  const { slug } = useParams();
   const [book, setBook] = useState(null);
   const [error, setError] = useState(false);
   const [buying, setBuying] = useState(false);
 
   useEffect(() => {
     setBook(null); setError(false);
-    publicApi.get(`/books/${id}`).then((r) => setBook(r.data)).catch(() => setError(true));
-  }, [id]);
+    publicApi.get(`/books/${slug}`).then((r) => setBook(r.data)).catch(() => setError(true));
+  }, [slug]);
 
   const buy = async () => {
+    if (!book) return;
     setBuying(true);
     try {
-      const { data } = await publicApi.post("/checkout", { book_id: id, origin_url: window.location.origin });
+      const { data } = await publicApi.post("/checkout", { book_id: book.id, origin_url: window.location.origin });
       window.location.href = data.checkout_url;
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Could not start checkout. Please try again.");
@@ -49,9 +51,12 @@ export default function QRUBookPage() {
 
   const priceVal = book.ebook_price ?? book.list_price ?? book.paperback_price ?? null;
   const price = priceVal != null ? `${book.currency === "USD" ? "$" : ""}${priceVal.toFixed(2)}` : null;
+  const seoDesc = (book.description || book.subtitle || `${book.title} by ${book.author} — published by QRU Press™.`).slice(0, 300);
+  const coverAbs = book.cover_url ? assetUrl(book.thumb_url || book.cover_url) : null;
 
   return (
     <div className="max-w-7xl mx-auto px-6 md:px-10 py-12 md:py-20" data-testid="qru-book-page">
+      <Seo title={`${book.title}${book.author ? ` — ${book.author}` : ""} · QRU Press™`} description={seoDesc} image={coverAbs} />
       <Link to="/catalog" data-testid="book-back" className="inline-flex items-center gap-2 text-sm text-[#575754] hover:text-[#C5A059] transition-colors mb-10">
         <ArrowLeft className="w-4 h-4" /> Catalog
       </Link>

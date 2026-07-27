@@ -267,7 +267,7 @@ function PublicRoutes() {
       <Route path="/" element={<PublicLayout />}>
         <Route index element={<QRUHome />} />
         <Route path="catalog" element={<QRUCatalog />} />
-        <Route path="book/:id" element={<QRUBookPage />} />
+        <Route path="book/:slug" element={<QRUBookPage />} />
         <Route path="purchase/success" element={<QRUPurchaseSuccess />} />
         <Route path="access/:token" element={<QRUAccess />} />
         <Route path="privacy" element={<QRUPrivacy />} />
