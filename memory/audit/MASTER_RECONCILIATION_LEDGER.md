@@ -9,15 +9,18 @@
 
 ## 0. Reconciliation Totals
 
-| Classification | Count | Domain |
+**Arithmetic correction (2026-07-26):** an earlier draft summed lifecycle categories to 102 against a 101-entry registry. Root cause: `inherited` is a **non-exclusive tag**, not a separate lifecycle bucket — `production-operations` was counted once in `registered_and_implemented` **and** again in `inherited`. Corrected mutually-exclusive lifecycle total = **83 + 9 + 1 + 8 = 101** ✓. `inherited (1)` is a sub-tag *within* the 83 implemented.
+
+| Classification (mutually exclusive) | Count | Domain |
 |---|---|---|
 | Registered **and** implemented | 83 | Capabilities |
-| Registered, owner file missing | **0** | Capabilities |
-| Registered, route without UI page | **0** | Capabilities |
 | Superseded / **merged** | 9 | Capabilities |
 | **Retired** / deprecated | 1 | Capabilities |
 | **Reserved** (future backlog) | 8 | Capabilities |
-| **Inherited** | 1 | Capabilities (production-operations) |
+| **TOTAL (unique registry entries)** | **101** | ✓ matches collection |
+| *Non-exclusive tag:* **inherited** | 1 | (production-operations, within the 83) |
+| Registered, owner file missing | **0** | Capabilities |
+| Registered, route without UI page | **0** | Capabilities |
 | Implemented, **not registered** (by design — public surface) | 21 routes | UI |
 | **Proposed** (awaiting build approval) | 1 | Governance proposals |
 | **Superseded** (replaced by newer capability) | 2 | Migration packages |
