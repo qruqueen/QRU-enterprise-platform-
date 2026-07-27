@@ -119,10 +119,15 @@ def compose(hero_bytes, spec):
         ef = font(dl.SANS_BOLD, int(30 * scale))
         d.text((W / 2, 70 * scale), imprint.upper(), font=ef, fill=_GOLD, anchor="mm")
     # --- Title / subtitle block: AUTO-FIT the title as LARGE as possible so it reads at full size
-    #     AND at retail-thumbnail scale, then draw a SOLID legibility panel behind it. ---
-    title_maxw = W - int(140 * scale)   # generous text column
+    #     AND at retail-thumbnail scale, constrained to a consistent vertical SAFE BAND (below the
+    #     imprint, above the byline) so long titles never overlap the byline or each other. ---
+    title_maxw = W - int(140 * scale)            # generous horizontal text column
+    band_top = H * 0.30                          # below the top imprint zone
+    band_bottom = H * 0.86                        # above the bottom byline zone
+    avail_h = band_bottom - band_top              # vertical budget for the whole block
+    min_title = int(46 * scale)                   # minimum readable title size (never smaller)
 
-    def fit_title(text, max_lines=3, hi=200, lo=54):
+    def fit_title(text, max_lines=4, hi=200, lo=46):
         """Largest serif-bold size where `text` wraps to <= max_lines within title_maxw."""
         s = int(hi * scale)
         floor = int(lo * scale)
@@ -135,23 +140,39 @@ def compose(hero_bytes, spec):
         f = font(dl.SERIF_BOLD, floor)
         return f, wrap(text, f, title_maxw), floor
 
-    tf, title_lines, size = fit_title(title.upper())
-    sub_size = max(int(34 * scale), int(size * 0.34))
-    sub_lines = []
-    if subtitle:
+    def _sub_lines(sub_size):
+        if not subtitle:
+            return []
         sf = font(dl.SERIF, sub_size)
-        # keep the front cover clean — a subtitle, never a full description paragraph (max 2 lines)
-        sub_lines = wrap(subtitle, sf, W - int(180 * scale))
-        if len(sub_lines) > 2:
-            sub_lines = sub_lines[:2]
-            sub_lines[-1] = sub_lines[-1].rstrip(".,;: ") + "…"
-    line_h = size * 1.1
-    rule_gap = int(size * 0.5)
-    sub_h = int(sub_size * 1.35)
-    block_h = len(title_lines) * line_h + (rule_gap if sub_lines else 0) + len(sub_lines) * sub_h
-    block_top = H * 0.60 - block_h / 2
+        lines = wrap(subtitle, sf, W - int(180 * scale))
+        if len(lines) > 2:                        # a subtitle, never a full paragraph
+            lines = lines[:2]
+            lines[-1] = lines[-1].rstrip(".,;: ") + "…"
+        return lines
+
+    def _measure(t_lines, t_size, s_lines, s_size):
+        line_h = t_size * 1.12
+        rule_gap = int(t_size * 0.5)
+        sub_h = int(s_size * 1.4)
+        block_h = len(t_lines) * line_h + (rule_gap if s_lines else 0) + len(s_lines) * sub_h
+        return block_h, line_h, rule_gap, sub_h
+
+    tf, title_lines, size = fit_title(title.upper())
+    sub_size = max(int(30 * scale), int(size * 0.34))
+    sub_lines = _sub_lines(sub_size)
+    block_h, line_h, rule_gap, sub_h = _measure(title_lines, size, sub_lines, sub_size)
+    # Vertical fit: shrink the block proportionally until it fits the safe band (guards long titles).
+    while block_h > avail_h and size > min_title:
+        size = max(min_title, int(size * 0.94))
+        tf = font(dl.SERIF_BOLD, size)
+        title_lines = wrap(title.upper(), tf, title_maxw)
+        sub_size = max(int(28 * scale), int(size * 0.34))
+        sub_lines = _sub_lines(sub_size)
+        block_h, line_h, rule_gap, sub_h = _measure(title_lines, size, sub_lines, sub_size)
+    # Center the block within the safe band → consistent placement across every cover.
+    block_top = band_top + max(0, (avail_h - block_h) / 2)
     # solid rounded panel behind the whole title block
-    pad_x, pad_y = int(56 * scale), int(52 * scale)
+    pad_x, pad_y = int(56 * scale), int(48 * scale)
     panel = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     ImageDraw.Draw(panel).rounded_rectangle(
         [pad_x, int(block_top - pad_y), W - pad_x, int(block_top + block_h + pad_y)],
