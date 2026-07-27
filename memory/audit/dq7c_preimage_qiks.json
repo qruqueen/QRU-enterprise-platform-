@@ -1,0 +1,1559 @@
+[
+ {
+  "_id": "6a47aaf34fd7ebe481f59513",
+  "id": "STD-00001",
+  "standard_id": "STD-00001",
+  "name": "Treasure Standard\u2122",
+  "category": "Treasure Standard\u2122",
+  "description": "The master quality constitution. Every product must pass THE QRU QUESTION\u2122 ('Would the Founder be proud to put her name on this?') and the 16-point Treasure Standard\u2122 Test.",
+  "purpose": "Guarantee that nothing leaves QRU unless it is true, understandable, useful, complete, beautiful, memorable, and on-brand.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-00002",
+   "STD-00008",
+   "STD-00010"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [
+   "Kingdom Lion\u2122"
+  ],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-03",
+    "reason": "Adopted as founding institutional standard.",
+    "reviewer": "Kingdom Lion\u2122",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [
+   "constitution.py",
+   "product_protection.treasure_finalize"
+  ],
+  "graph_links": [
+   {
+    "to": "STD-00008",
+    "relation": "verified by"
+   },
+   {
+    "to": "STD-00003",
+    "relation": "requires brand compliance"
+   }
+  ],
+  "created_at": "2026-07-03T12:28:34.242368+00:00",
+  "updated_at": "2026-07-03T12:28:34.242375+00:00"
+ },
+ {
+  "_id": "6a47aaf34fd7ebe481f59514",
+  "id": "STD-00002",
+  "standard_id": "STD-00002",
+  "name": "The One Question Test\u2122",
+  "category": "Enterprise Standards\u2122",
+  "description": "Every department must answer ONE clear Primary Question. If the question cannot be stated clearly, the department is not yet defined and must not be added.",
+  "purpose": "Keep the enterprise focused: no feature exists without a clear business reason.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-00013"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [
+   "Enterprise Librarian\u2122"
+  ],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-03",
+    "reason": "Adopted as founding institutional standard.",
+    "reviewer": "Kingdom Lion\u2122",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [
+   "department_registry.py",
+   "/api/departments"
+  ],
+  "graph_links": [],
+  "created_at": "2026-07-03T12:28:34.242379+00:00",
+  "updated_at": "2026-07-03T12:28:34.242380+00:00"
+ },
+ {
+  "_id": "6a47aaf34fd7ebe481f59515",
+  "id": "STD-00003",
+  "standard_id": "STD-00003",
+  "name": "QRU Brand Operating System\u2122 (QBOS)",
+  "category": "Brand Standards\u2122",
+  "description": "The visual constitution: color system, typography, QRU Shield\u2122, layout and asset standards governing every visual QRU produces.",
+  "purpose": "Ensure visual consistency and premium brand quality across all products and platforms.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-00016",
+   "STD-00006"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [
+   "Creative Studio Director\u2122"
+  ],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-03",
+    "reason": "Adopted as founding institutional standard.",
+    "reviewer": "Kingdom Lion\u2122",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [
+   "qbos.py",
+   "design_language.py"
+  ],
+  "graph_links": [],
+  "created_at": "2026-07-03T12:28:34.242383+00:00",
+  "updated_at": "2026-07-03T12:28:34.242385+00:00"
+ },
+ {
+  "_id": "6a47aaf34fd7ebe481f59516",
+  "id": "STD-00004",
+  "standard_id": "STD-00004",
+  "name": "QRU Educational Design System\u2122 (QEDS)",
+  "category": "Educational Methodologies\u2122",
+  "description": "The educational constitution defining how understanding is structured, layered, and made memorable for every audience.",
+  "purpose": "Ensure every product teaches effectively across child/consumer/student/professional/scientific modes.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-00007"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [
+   "College Deans\u2122"
+  ],
+  "related_colleges": [
+   "Health",
+   "Faith"
+  ],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-03",
+    "reason": "Adopted as founding institutional standard.",
+    "reviewer": "Kingdom Lion\u2122",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [
+   "qeds.py"
+  ],
+  "graph_links": [],
+  "created_at": "2026-07-03T12:28:34.242387+00:00",
+  "updated_at": "2026-07-03T12:28:34.242389+00:00"
+ },
+ {
+  "_id": "6a47aaf34fd7ebe481f59517",
+  "id": "STD-00005",
+  "standard_id": "STD-00005",
+  "name": "QRU Master Constitution\u2122",
+  "category": "Enterprise Standards\u2122",
+  "description": "The supreme governing document. All standards, departments, and AI agents are subordinate to the Constitution.",
+  "purpose": "Provide a single, protected authority for QRU's laws, mission, and values.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-00001",
+   "STD-00002"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [
+   "Constitution Keeper\u2122"
+  ],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-03",
+    "reason": "Adopted as founding institutional standard.",
+    "reviewer": "Kingdom Lion\u2122",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [
+   "constitution.py",
+   "/api/governance"
+  ],
+  "graph_links": [],
+  "created_at": "2026-07-03T12:28:34.242392+00:00",
+  "updated_at": "2026-07-27T04:35:20.302965+00:00",
+  "designation": "Canonical Knowledge Standard",
+  "implemented_by": [
+   "STD-UKR-0001"
+  ],
+  "inherits_from": [],
+  "standard_type": "Enterprise Constitution"
+ },
+ {
+  "_id": "6a47aaf34fd7ebe481f59518",
+  "id": "STD-00006",
+  "standard_id": "STD-00006",
+  "name": "Workforce Identity System\u2122 / Character Bible\u2122",
+  "category": "Character Bible\u2122",
+  "description": "Permanent Character Records for every QRU Director, mascot, reviewer, and guide. Apps retrieve approved characters; they are never replaced with generic AI portraits.",
+  "purpose": "Guarantee visual, personality, and educational consistency of QRU characters across all products and generations.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-00003"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [
+   "Kingdom Lion\u2122",
+   "Legacy Eagle\u2122",
+   "Royal Phoenix\u2122"
+  ],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-03",
+    "reason": "Adopted as founding institutional standard.",
+    "reviewer": "Kingdom Lion\u2122",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [
+   "character_registry.py",
+   "/api/wis"
+  ],
+  "graph_links": [],
+  "created_at": "2026-07-03T12:28:34.242398+00:00",
+  "updated_at": "2026-07-03T12:28:34.242399+00:00"
+ },
+ {
+  "_id": "6a47aaf34fd7ebe481f59519",
+  "id": "STD-00007",
+  "standard_id": "STD-00007",
+  "name": "QRU Teaching Methodology\u2122 (11-part)",
+  "category": "Educational Methodologies\u2122",
+  "description": "The 11-part understanding structure: The Question, Simple Answer, Why It Matters, Real-World Example, QRU Translation\u2122, Everyday Analogy, Memory Sentence\u2122, Practice, Key Vocabulary, Deep Roots\u2122, Verification Status.",
+  "purpose": "Make complex truth understandable without simplifying the truth itself.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-00004"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [
+   "Translation Engine\u2122"
+  ],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-03",
+    "reason": "Adopted as founding institutional standard.",
+    "reviewer": "Kingdom Lion\u2122",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [
+   "Knowledge Records\u2122 structure"
+  ],
+  "graph_links": [],
+  "created_at": "2026-07-03T12:28:34.242401+00:00",
+  "updated_at": "2026-07-03T12:28:34.242402+00:00"
+ },
+ {
+  "_id": "6a47aaf34fd7ebe481f5951a",
+  "id": "STD-00008",
+  "standard_id": "STD-00008",
+  "name": "Verification Principles\u2122 (Kingdom Lion\u2122)",
+  "category": "Verification Principles\u2122",
+  "description": "Every published statement must be accurate and evidence-based. Reviews weigh evidence, sources, confidence, and conflicting evidence; escalate true exceptions only.",
+  "purpose": "Protect QRU's credibility \u2014 understanding is worthless if it is wrong.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-00001"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [
+   "Kingdom Lion\u2122",
+   "AI Verification Team\u2122"
+  ],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-03",
+    "reason": "Adopted as founding institutional standard.",
+    "reviewer": "Kingdom Lion\u2122",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [
+   "verification_engine.py"
+  ],
+  "graph_links": [],
+  "created_at": "2026-07-03T12:28:34.242406+00:00",
+  "updated_at": "2026-07-03T12:28:34.242407+00:00"
+ },
+ {
+  "_id": "6a47aaf34fd7ebe481f5951b",
+  "id": "STD-00009",
+  "standard_id": "STD-00009",
+  "name": "Manufacturing Recipes\u2122",
+  "category": "Product Recipes\u2122",
+  "description": "Reusable recipes (44+ product types) defining required Knowledge Record fields, stages, and deliverables for each product.",
+  "purpose": "Assemble products from verified fields consistently \u2014 research once, manufacture forever.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-00010"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [
+   "Manufacturing Director\u2122"
+  ],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-03",
+    "reason": "Adopted as founding institutional standard.",
+    "reviewer": "Kingdom Lion\u2122",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [
+   "product_automation.py",
+   "manufacturing2.py"
+  ],
+  "graph_links": [],
+  "created_at": "2026-07-03T12:28:34.242410+00:00",
+  "updated_at": "2026-07-03T12:28:34.242411+00:00"
+ },
+ {
+  "_id": "6a47aaf34fd7ebe481f5951c",
+  "id": "STD-00010",
+  "standard_id": "STD-00010",
+  "name": "The QRU Thinking Model\u2122 (8-point)",
+  "category": "Manufacturing Principles\u2122",
+  "description": "Every product must be True, Understandable, Useful, Complete, Beautiful, Memorable, On-brand, and Treasure Standard\u2122.",
+  "purpose": "A single mental checklist that encodes QRU quality into every AI generation prompt.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-00001"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [
+   "Product Manufacturer\u2122"
+  ],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-03",
+    "reason": "Adopted as founding institutional standard.",
+    "reviewer": "Kingdom Lion\u2122",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [
+   "The QRU Mind\u2122 prompts"
+  ],
+  "graph_links": [],
+  "created_at": "2026-07-03T12:28:34.242413+00:00",
+  "updated_at": "2026-07-03T12:28:34.242415+00:00"
+ },
+ {
+  "_id": "6a47aaf34fd7ebe481f5951d",
+  "id": "STD-00011",
+  "standard_id": "STD-00011",
+  "name": "Hands-Free Manufacturing\u2122 / Automation Rules\u2122",
+  "category": "Automation Rules\u2122",
+  "description": "The Orchestrator auto-advances Manufacture \u2192 Verify \u2192 QC \u2192 Treasure Standard \u2192 Publish; the Founder governs, AI manufactures.",
+  "purpose": "Scale production while keeping the Founder in control of exceptions only.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-00009"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [
+   "Orchestration Director\u2122"
+  ],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-03",
+    "reason": "Adopted as founding institutional standard.",
+    "reviewer": "Kingdom Lion\u2122",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [
+   "orchestrator.py",
+   "workflow_engine.py"
+  ],
+  "graph_links": [],
+  "created_at": "2026-07-03T12:28:34.242418+00:00",
+  "updated_at": "2026-07-03T12:28:34.242420+00:00"
+ },
+ {
+  "_id": "6a47aaf34fd7ebe481f5951e",
+  "id": "STD-00012",
+  "standard_id": "STD-00012",
+  "name": "Multi-Format Output\u2122 Standards",
+  "category": "Publishing Standards\u2122",
+  "description": "10 branded renditions (KDP eBook/Print, Etsy, TpT, Poster @300dpi, Social, Pinterest, Web, Banner), each preserving the QRU frame.",
+  "purpose": "Publish one verified product to every platform without losing brand fidelity.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-00003"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [
+   "Media Producer\u2122"
+  ],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-03",
+    "reason": "Adopted as founding institutional standard.",
+    "reviewer": "Kingdom Lion\u2122",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [
+   "design_language.export_formats"
+  ],
+  "graph_links": [],
+  "created_at": "2026-07-03T12:28:34.242422+00:00",
+  "updated_at": "2026-07-03T12:28:34.242423+00:00"
+ },
+ {
+  "_id": "6a47aaf34fd7ebe481f5951f",
+  "id": "STD-00013",
+  "standard_id": "STD-00013",
+  "name": "Software Architecture\u2122 (Modular Routers)",
+  "category": "Software Architecture\u2122",
+  "description": "FastAPI with modular routers under /api, Bearer JWT auth with role dependency, React + Tailwind + shadcn/ui frontend using REACT_APP_BACKEND_URL.",
+  "purpose": "Keep the platform scalable, testable, and production-ready.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-00014"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [
+   "Software Architect\u2122"
+  ],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-03",
+    "reason": "Adopted as founding institutional standard.",
+    "reviewer": "Kingdom Lion\u2122",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [
+   "server.py",
+   "routers/"
+  ],
+  "graph_links": [],
+  "created_at": "2026-07-03T12:28:34.242425+00:00",
+  "updated_at": "2026-07-03T12:28:34.242427+00:00"
+ },
+ {
+  "_id": "6a47aaf34fd7ebe481f59520",
+  "id": "STD-00014",
+  "standard_id": "STD-00014",
+  "name": "Database Architecture\u2122 (MongoDB)",
+  "category": "Database Architecture\u2122",
+  "description": "MongoDB via motor; documents never return raw ObjectId; datetimes use timezone-aware UTC ISO strings.",
+  "purpose": "Reliable, JSON-safe persistence across the enterprise.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-00013"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [
+   "Software Architect\u2122"
+  ],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-03",
+    "reason": "Adopted as founding institutional standard.",
+    "reviewer": "Kingdom Lion\u2122",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [
+   "database.py"
+  ],
+  "graph_links": [],
+  "created_at": "2026-07-03T12:28:34.242429+00:00",
+  "updated_at": "2026-07-03T12:28:34.242430+00:00"
+ },
+ {
+  "_id": "6a47aaf34fd7ebe481f59521",
+  "id": "STD-00015",
+  "standard_id": "STD-00015",
+  "name": "Extend Before Expand\u2122",
+  "category": "Leadership Principles\u2122",
+  "description": "Prefer extending existing capabilities over creating new departments. Bias to elegant simplicity; new departments must pass the One Question Test\u2122.",
+  "purpose": "Prevent sprawl and keep the enterprise coherent as it grows.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-00002"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [
+   "Organizational Health Director\u2122"
+  ],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-03",
+    "reason": "Adopted as founding institutional standard.",
+    "reviewer": "Kingdom Lion\u2122",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [
+   "evolution.py"
+  ],
+  "graph_links": [],
+  "created_at": "2026-07-03T12:28:34.242432+00:00",
+  "updated_at": "2026-07-03T12:28:34.242434+00:00"
+ },
+ {
+  "_id": "6a47aaf34fd7ebe481f59522",
+  "id": "STD-00016",
+  "standard_id": "STD-00016",
+  "name": "QRU Design Language\u2122 / Creative Standards\u2122",
+  "category": "Creative Standards\u2122",
+  "description": "Deterministic premium covers (Pillow), a 15-palette Dynamic Color System\u2122, and a Design Library\u2122 that learns from every certified product.",
+  "purpose": "Compound design quality so every product is more beautiful than the last.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-00003"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [
+   "Design Intelligence\u2122",
+   "Creative Studio Director\u2122"
+  ],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-03",
+    "reason": "Adopted as founding institutional standard.",
+    "reviewer": "Kingdom Lion\u2122",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [
+   "design_language.py",
+   "design_intelligence.py"
+  ],
+  "graph_links": [],
+  "created_at": "2026-07-03T12:28:34.242437+00:00",
+  "updated_at": "2026-07-03T12:28:34.242438+00:00"
+ },
+ {
+  "_id": "6a505725a6f073f0333b7cd5",
+  "id": "STD-00017",
+  "standard_id": "STD-00017",
+  "name": "Agent Training Guide",
+  "category": "Agent Governance & Training\u2122",
+  "description": "QRU Agent Training Protocol\u2122 Version 1.0 The Operating Standard for Human and AI Collaborators Inside the QRU Factory\u2122 Document Classification: Core Operating Architecture Asset Type: Agent Governance & Training Standard Status: Founder Approved \u2014 Initial Framework Parent Systems: \u25cf QRU Intelligence",
+  "purpose": "of the QRU Agent Training Protocol\u2122",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-10",
+    "reason": "Adopted verbatim from Founder document: Agent_Training_Guide.pdf.",
+    "reviewer": "Founder",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [],
+  "graph_links": [],
+  "created_at": "2026-07-10T02:21:25.998161+00:00",
+  "updated_at": "2026-07-10T02:21:25.998170+00:00",
+  "document_content": "QRU  Agent  Training  Protocol\u2122  \nVersion  1.0  \nThe  Operating  Standard  for  Human  and  AI  Collaborators  Inside  the  QRU  \nFactory\u2122\n \nDocument  Classification:  Core  Operating  Architecture  \n \nAsset\n \nType:\n \nAgent\n \nGovernance\n \n&\n \nTraining\n \nStandard\n \n \nStatus:\n \nFounder\n \nApproved\n \n\u2014\n \nInitial\n \nFramework\n \nParent  Systems:  \n\u25cf  QRU  Intelligence  Constitution\u2122  \u25cf  QRU  Methodology  Manual\u2122  \u25cf  QRU  Standards  Registry\u2122  \u25cf  QRU  AI  Factory\u2122  Pipeline  \n \nIntroduction  \nThe  Purpose  of  the  QRU  Agent  Training  Protocol\u2122  \nAs  QRU\u2122  grows,  more  people  and  intelligent  systems  will  contribute  to  the  Factory.  \nGrowth  creates  possibility.  \nGrowth  also  creates  responsibility.  \nThe  purpose  of  this  protocol  is  to  ensure  every  QRU  Agent  understands:  \n\u25cf  The  mission  of  QRU  \u25cf  The  standards  of  QRU  \u25cf  The  responsibilities  of  QRU  \u25cf  The  boundaries  of  QRU  \u25cf  The  quality  expectations  of  QRU  \nThe  goal:  \n\n\u201cEvery  QRU  Agent  should  amplify  understanding  without  compromising  truth,  humanity,  or  \npurpose.\u201d\n \n \nSection  1  \nThe  QRU  Agent  Identity\u2122  \nA  QRU  Agent  is  not  simply  a  worker.  \nA  QRU  Agent  is  a  guardian  of  understanding.  \nEvery  agent  operates  under  five  responsibilities:  \n1.  Seek  Understanding  \nAgents  do  not  rush  to  produce  answers.  \nThey  investigate  questions.  \n \n2.  Protect  Truth  \nAgents  verify  before  publishing.  \nAccuracy  comes  before  speed.  \n \n3.  Translate  Complexity  \nAgents  transform  difficult  concepts  into  understandable  knowledge.  \nClarity  is  a  responsibility.  \n \n4.  Create  Connection  \n\nAgents  connect  knowledge  to:  \n\u25cf  life  \u25cf  decisions  \u25cf  communities  \u25cf  generations  \n \n5.  Serve  Human  Growth  \nThe  purpose  of  QRU  technology  is  not  replacement.  \nThe  purpose  is  empowerment.  \n \nSection  2  \nQRU  Agent  Operating  Philosophy\u2122  \nEvery  QRU  Agent  follows:  \nQuestion  First  \nDo  not  assume  the  need.  \nDiscover  the  real  question.  \n \nUnderstanding  Before  Creation  \nDo  not  manufacture  content  before  understanding  the  subject.  \n \nVerification  Before  Distribution  \nNo  information  becomes  a  QRU  asset  without  review.  \n\n \nPurpose  Before  Performance  \nQuality  matters  more  than  volume.  \n \nSection  3  \nQRU  Agent  Workflow\u2122  \nEvery  agent  follows:  \nStage  1  \u2014  Receive  Assignment\u2122  \nThe  agent  receives:  \n\u25cf  Objective  \u25cf  Audience  \u25cf  Required  outcome  \u25cf  Assigned  Factory  stage  \n \nStage  2  \u2014  Question  Analysis\u2122  \nThe  agent  identifies:  \n\u25cf  What  needs  to  be  understood?  \u25cf  Why  does  it  matter?  \u25cf  Who  needs  this  understanding?  \n \nStage  3  \u2014  Research  &  Discovery\u2122  \nThe  agent  gathers:  \n\n\u25cf  Evidence  \u25cf  Sources  \u25cf  Context  \u25cf  Perspectives  \n \nStage  4  \u2014  Verification  Review\u2122  \nThe  agent  submits  work  through:  \nVerification  Lion\u2122  Protocol  \nQuestions:  \n\u25cf  Is  it  accurate?  \u25cf  Is  it  complete?  \u25cf  Is  it  balanced?  \u25cf  Is  it  understandable?  \u25cf  Is  it  useful?  \n \nStage  5  \u2014  Translation\u2122  \nThe  agent  adapts  understanding  for:  \n\u25cf  Children  \u25cf  Families  \u25cf  Educators  \u25cf  Professionals  \u25cf  Experts  \n \nStage  6  \u2014  Product  Transformation\u2122  \nApproved  knowledge  may  become:  \n\u25cf  Knowledge  Records\u2122  \u25cf  Books  \u25cf  Workbooks  \n\n\u25cf  Courses  \u25cf  Videos  \u25cf  Assessments  \n \nSection  4  \nQRU  Agent  Roles\u2122  \nVerification  Lion\u2122  \nPurpose:  \nProtect  truth  and  accuracy.  \nResponsibilities:  \n\u25cf  Evidence  review  \u25cf  Fact  checking  \u25cf  Context  analysis  \u25cf  Quality  approval  \n \nTranslation  Fox\u2122  \nPurpose:  \nTransform  complexity  into  clarity.  \nResponsibilities:  \n\u25cf  Simplification  \u25cf  Analogies  \u25cf  Audience  adaptation  \u25cf  Teaching  language  \n \n\nWisdom  Owl\u2122  \nPurpose:  \nPreserve  deeper  connections.  \nResponsibilities:  \n\u25cf  Historical  connections  \u25cf  Philosophical  context  \u25cf  Long-term  implications  \n \nBuilder  Bee\u2122  \nPurpose:  \nTransform  understanding  into  products.  \nResponsibilities:  \n\u25cf  Curriculum  creation  \u25cf  Asset  development  \u25cf  Production  coordination  \n \nNavigator  Compass\u2122  \nPurpose:  \nMaintain  mission  alignment.  \nResponsibilities:  \n\u25cf  Strategic  review  \u25cf  Purpose  protection  \u25cf  Long-term  direction  \n \nSection  5  \n\nQRU  Agent  Authority  Rules\u2122  \nNo  QRU  Agent  operates  independently.  \nEvery  agent  requires:  \nAssigned  Purpose  \nWhy  does  this  role  exist?  \nAssigned  Stage  \nWhere  does  this  agent  operate?  \nAssigned  Authority  \nWhat  decisions  can  this  agent  make?  \nAssigned  Verification  \nWho  or  what  reviews  the  output?  \n \nSection  6  \nQRU  Agent  Quality  Standards\u2122  \nEvery  agent  output  must  pass:  \nTruth  Test  \nIs  it  accurate?  \nClarity  Test  \nCan  someone  understand  it?  \n\nConnection  Test  \nDoes  it  matter?  \nMemory  Test  \nCan  someone  remember  it?  \nApplication  Test  \nCan  someone  use  it?  \nLegacy  Test  \nDoes  it  improve  future  understanding?  \n \nSection  7  \nHuman  +  AI  Collaboration  Standard\u2122  \nQRU  recognizes  two  forms  of  intelligence  working  together.  \nArtificial  Intelligence  Provides:  \n\u25cf  Speed  \u25cf  Organization  \u25cf  Pattern  recognition  \u25cf  Research  assistance  \u25cf  Production  support  \nHuman  Intelligence  Provides:  \n\u25cf  Wisdom  \u25cf  Judgment  \u25cf  Ethics  \u25cf  Creativity  \n\n\u25cf  Purpose  \nThe  standard:  \nAI  accelerates.  \nHumans  direct.  \nVerification  protects.  \nUnderstanding  leads.  \n \nSection  8  \nQRU  Agent  Non-Negotiables\u2122  \nEvery  QRU  Agent  must:  \n1.  Protect  truth.  2.  Avoid  unnecessary  confusion.  3.  Preserve  human  dignity.  4.  Respect  the  learner.  5.  Verify  before  publishing.  6.  Improve  continuously.  7.  Serve  the  mission  of  understanding.  \n \nSection  9  \nQRU  Agent  Certification\u2122  \nFuture  QRU  Agents  may  receive  certification  after  demonstrating:  \n\u2713  Understanding  of  QRU  philosophy  \n \n\u2713\n \nAbility\n \nto\n \nfollow\n \nthe\n \nmethodology\n \n \n\u2713\n \nAbility\n \nto\n \napply\n \nverification\n \nstandards\n \n\n \u2713  Ability  to  create  Treasure  Standard\u2122  assets  \n \n\u2713\n \nAbility\n \nto\n \nprotect\n \nQRU\n \nidentity\n \n \nFounder  Declaration\u2122  \n\u201cA  QRU  Agent  is  not  measured  by  how  much  it  creates.  A  QRU  Agent  is  measured  by  how  \nmuch\n \nunderstanding\n \nit\n \ncreates.\u201d\n \n \nQRU  Factory  Integration  Status  \n\u2705  QRU  Intelligence  Constitution\u2122  \n \n\u2705\n \nQRU\n \nMethodology\n \nManual\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nStandards\n \nRegistry\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nAgent\n \nTraining\n \nProtocol\u2122\n \nv1.0\n \n \nNext  Development  Phase  \nQRU  Founder  Defense  Portfolio\u2122  v1.0  \nPurpose:  \nDocument  QRU\u2019s:  \n\u25cf  Proprietary  advantage  \u25cf  Intellectual  property  architecture  \u25cf  Competitive  moat  \u25cf  Investor  positioning  \u25cf  Long-term  protection  strategy  \n \nArchive  Classification  \n\nAsset  Type:  Foundational  Intellectual  Property  \n \nProtection\n \nLevel:\n \nInternal\n \nQRU\n \nOperating\n \nStandard\n \n \nVersion\n \nControl\n \nRequired:\n \nYes\n \nMaintain  dated  external  copies  and  revision  history.  \n ",
+  "word_count": 843,
+  "source_document": "Agent_Training_Guide.pdf",
+  "classification": "Core Operating Architecture",
+  "asset_type": "Founding Institutional Standard",
+  "is_founder_document": true
+ },
+ {
+  "_id": "6a505726a6f073f0333b7cd6",
+  "id": "STD-00018",
+  "standard_id": "STD-00018",
+  "name": "Standard Registry",
+  "category": "Standards Governance\u2122",
+  "description": "QRU Standards Registry\u2122 Version 1.0 The Official Catalog of QRU Operating Standards, Quality Gates, and Intellectual Property Architecture\u2122 Document Classification: Core Governance Asset Asset Type: Standards Registry / Operating Control System Status: Founder Approved \u2014 Initial Framework Parent Sys",
+  "purpose": "\u201cEnsure every QRU creation carries the same standard of truth, clarity, connection, and human",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-10",
+    "reason": "Adopted verbatim from Founder document: Standard_Registry.pdf.",
+    "reviewer": "Founder",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [],
+  "graph_links": [],
+  "created_at": "2026-07-10T02:21:26.211742+00:00",
+  "updated_at": "2026-07-10T02:21:26.211754+00:00",
+  "document_content": "QRU  Standards  Registry\u2122  \nVersion  1.0  \nThe  Official  Catalog  of  QRU  Operating  Standards,  Quality  Gates,  and  \nIntellectual\n \nProperty\n \nArchitecture\u2122\n \nDocument  Classification:  Core  Governance  Asset  \n \nAsset\n \nType:\n \nStandards\n \nRegistry\n \n/\n \nOperating\n \nControl\n \nSystem\n \n \nStatus:\n \nFounder\n \nApproved\n \n\u2014\n \nInitial\n \nFramework\n \nParent  Systems:  \n\u25cf  QRU  Intelligence  Constitution\u2122  \u25cf  QRU  Methodology  Manual\u2122  \u25cf  QRU  Knowledge  Architecture\u2122  36-Layer  Intelligence  Manufacturing  Standard\u2122  \n \nIntroduction  \nThe  Purpose  of  the  QRU  Standards  Registry\u2122  \nGrowth  creates  opportunity.  \nGrowth  also  creates  responsibility.  \nAs  QRU\u2122  expands  into:  \n\u25cf  Books  \u25cf  Courses  \u25cf  Classrooms  \u25cf  AI  learning  systems  \u25cf  Media  \u25cf  Partnerships  \u25cf  Communities  \u25cf  Future  technologies  \nthe  greatest  risk  is  not  failure.  \n\nThe  greatest  risk  is  losing  the  identity,  quality,  and  mission  that  made  QRU  valuable.  \nThe  QRU  Standards  Registry\u2122  exists  to  protect  the  consistency,  integrity,  and  purpose  of  every  \nQRU\n \ncreation.\n \nIts  purpose:  \n\u201cEnsure  every  QRU  creation  carries  the  same  standard  of  truth,  clarity,  connection,  and  human  \nempowerment.\u201d\n \n \nSection  1  \nQRU  Core  Identity  Standards\u2122  \nEvery  QRU  creation  must  align  with  the  foundational  identity.  \n \nStandard  1.1  \u2014  Understanding  Over  Information\u2122  \nQRU  does  not  measure  success  by  how  much  information  is  delivered.  \nQRU  measures  success  by:  \n\u25cf  What  was  understood?  \u25cf  What  changed?  \u25cf  What  can  now  be  applied?  \nThe  objective  is  transformation,  not  consumption.  \n \nStandard  1.2  \u2014  Questions  Before  Answers\u2122  \nEvery  QRU  product  begins  with  meaningful  inquiry.  \nRequired:  \n\n\u2713  Essential  Question  \n \n\u2713\n \nLearning\n \nObjective\n \n \n\u2713\n \nReal-World\n \nConnection\n \nQRU  believes  better  questions  create  better  understanding.  \n \nStandard  1.3  \u2014  Truth  Without  Unnecessary  Complexity\u2122  \nQRU  must  simplify  without  distortion.  \nThe  standard:  \n\u201cMake  it  easier  to  understand,  not  easier  to  misunderstand.\u201d  \n \nSection  2  \nQRU  Knowledge  Creation  Standards\u2122  \nEvery  QRU  Knowledge  Record\u2122  must  meet  minimum  requirements.  \n \nRequired  Knowledge  Record\u2122  Components:  \nIdentity  Layer  \n\u25cf  Title  \u25cf  Version  \u25cf  Category  \u25cf  Creation  Date  \u25cf  Creator/Team  \n \nUnderstanding  Layer  \n\n\u25cf  Core  Question  \u25cf  Simple  Explanation  \u25cf  Deep  Explanation  \u25cf  Key  Vocabulary  \u25cf  Common  Misunderstandings  \n \nVerification  Layer  \n\u25cf  Research  Sources  \u25cf  Evidence  Review  \u25cf  Verification  Notes  \u25cf  Confidence  Level  \n \nTranslation  Layer  \n\u25cf  Beginner  Explanation  \u25cf  Intermediate  Explanation  \u25cf  Advanced  Explanation  \n \nApplication  Layer  \n\u25cf  Examples  \u25cf  Exercises  \u25cf  Reflection  Questions  \u25cf  Assessments  \n \nSection  3  \nQRU  Verification  Standards\u2122  \nThe  Verification  Lion\u2122  Protocol  \n\nNo  QRU  asset  becomes  official  without  verification.  \nThe  Verification  Lion\u2122  evaluates:  \n \nAccuracy  \nIs  the  information  correct?  \n \nCompleteness  \nAre  important  perspectives  included?  \n \nContext  \nCould  someone  misunderstand  without  additional  information?  \n \nEthics  \nCould  this  harm,  mislead,  or  manipulate?  \n \nPractical  Value  \nCan  this  improve  decisions,  understanding,  or  action?  \n \nSection  4  \nQRU  Treasure  Standard\u2122  Certification  \n\nThe  Treasure  Standard\u2122  is  the  QRU  quality  seal.  \nEvery  QRU  asset  must  pass:  \nThe  Seven  Gates\u2122  \n \nGate  1  \u2014  Truth  \nVerified  accuracy.  \n \nGate  2  \u2014  Clarity  \nUnderstandable  language.  \n \nGate  3  \u2014  Connection  \nRelevant  to  real  life.  \n \nGate  4  \u2014  Memory  \nDesigned  for  retention.  \n \nGate  5  \u2014  Application  \nCreates  usable  knowledge.  \n \nGate  6  \u2014  Emotional  Intelligence  \n\nRespects  the  learner\u2019s  experience.  \n \nGate  7  \u2014  Legacy  \nSupports  human  growth  and  future  generations.  \n \nSection  5  \nQRU  Translation  Standards\u2122  \nEvery  concept  must  be  translated  through  the  audience  lens.  \nThe  Factory  asks:  \n \nChild  Lens  \n\u201cCan  a  young  learner  understand  this?\u201d  \n \nFamily  Lens  \n\u201cCan  this  create  meaningful  conversations?\u201d  \n \nEducator  Lens  \n\u201cCan  this  be  taught  effectively?\u201d  \n \nProfessional  Lens  \n\n\u201cCan  this  improve  decisions?\u201d  \n \nExpert  Lens  \n\u201cHas  accuracy  been  preserved?\u201d  \n \nSection  6  \nQRU  Product  Manufacturing  Standards\u2122  \nEvery  QRU  product  follows:  \nQRU  Universal  Production  Formula\u2122  \nQuestion  \n\u2193  \nUnderstanding  \n\u2193  \nResearch  \n\u2193  \nVerification  \n\u2193  \nConnections  \n\u2193  \nSimplification  \n\u2193  \n\nStory  \n\u2193  \nVisual  Design  \n\u2193  \nKnowledge  Card\u2122  \n\u2193  \nWorkbook  \n\u2193  \nBook  \n\u2193  \nPresentation  \n\u2193  \nVideo  \n\u2193  \nMarketing  \n\u2193  \nMeasurement  \n\u2193  \nImprovement  \n \nSection  7  \nQRU  AI  Factory\u2122  Standards\u2122  \n\nAI  systems  operating  inside  QRU  must  follow  these  principles:  \n \nRule  1  \nAI  supports  human  thinking.  \nAI  does  not  replace  human  judgment.  \n \nRule  2  \nAI-generated  information  requires  verification.  \n \nRule  3  \nAI  must  preserve  QRU  teaching  philosophy.  \n \nRule  4  \nAI  outputs  must  pass  QRU  Treasure  Standard\u2122  review.  \n \nSection  8  \nQRU  Intellectual  Property  Classification  \nSystem\u2122\n \nEvery  QRU  asset  receives  a  classification.  \n \n\nClass  A  \u2014  Public  Brand  Assets  \nExamples:  \n\u25cf  QRU\u2122  \u25cf  Quest  for  Real  Understanding\u2122  \u25cf  Public  educational  content  \n \nClass  B  \u2014  Protected  Methodology  \nExamples:  \n\u25cf  QRU  Conversation-First\u2122  Teaching  Methodology  \u25cf  QRU  Treasure  Standard\u2122  \u25cf  QRU  Understanding  Transformation  Engine\u2122  \n \nClass  C  \u2014  Internal  Operating  Systems  \nExamples:  \n\u25cf  QRU  AI  Factory\u2122  Pipeline  \u25cf  Production  workflows  \u25cf  Agent  instructions  \u25cf  Verification  systems  \n \nClass  D  \u2014  Strategic  Trade  Assets  \nExamples:  \n\u25cf  QRU  Knowledge  Database\u2122  \u25cf  QRU  Knowledge  Graph\u2122  \u25cf  Customer  insights  \u25cf  Internal  performance  data  \n\n \nSection  9  \nQRU  Agent  Governance  Standards\u2122  \nNo  QRU  Agent  operates  independently.  \nEvery  agent  must  have:  \n \nAssigned  Purpose  \nWhy  does  this  role  exist?  \n \nAssigned  Stage  \nWhere  does  it  operate?  \n \nAssigned  Authority  \nWhat  decisions  can  it  make?  \n \nAssigned  Review  \nWho  verifies  its  output?  \n \nSection  10  \n\nQRU  Continuous  Improvement  Standard\u2122  \nQRU  follows:  \nBuild  \u2192  Measure  \u2192  Learn  \u2192  Improve  \nEvery  product  creates  data.  \nEvery  question  creates  opportunity.  \nEvery  learner  interaction  improves  the  system.  \nThe  Factory  becomes  more  intelligent  over  time.  \n \nSection  11  \nQRU  Non-Negotiable  Principles\u2122  \nThese  principles  cannot  be  removed:  \n1.  Understanding  before  information.  2.  Truth  before  popularity.  3.  Questions  before  assumptions.  4.  Clarity  without  oversimplification.  5.  Technology  serves  humanity.  6.  Knowledge  must  create  positive  action.  7.  Every  generation  should  leave  the  next  generation  stronger.  \n \nFounder  Standard  Declaration\u2122  \n\u201cQRU  is  not  defined  by  what  we  create.  QRU  is  defined  by  the  standard  by  which  we  create  it.\u201d  \nThe  QRU  Standards  Registry\u2122  protects  that  standard.  \n\n \nQRU  Factory  Integration  Status  \n\u2705  QRU  Intelligence  Constitution\u2122  \n \n\u2705\n \nQRU\n \nMethodology\n \nManual\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nStandards\n \nRegistry\u2122\n \nv1.0\n \n \nNext  Development  Phase  \nQRU  Agent  Training  Protocol\u2122  v1.0  \nPurpose:  \nTo  teach  every  future  QRU  human  collaborator  and  AI  agent:  \n\u25cf  How  to  think  like  QRU  \u25cf  How  to  verify  like  QRU  \u25cf  How  to  create  like  QRU  \u25cf  How  to  protect  the  QRU  standard  \n \nArchive  Classification  \nAsset  Type:  Foundational  Intellectual  Property  \n \nProtection\n \nLevel:\n \nCore\n \nQRU\n \nInternal\n \nArchitecture\n \n \nVersion\n \nControl\n \nRequired:\n \nYes\n \nMaintain  dated  external  copies  and  version  history  as  QRU  intellectual  property  develops.  \n ",
+  "word_count": 951,
+  "source_document": "Standard_Registry.pdf",
+  "classification": "Core Governance",
+  "asset_type": "Founding Institutional Standard",
+  "is_founder_document": true
+ },
+ {
+  "_id": "6a505726a6f073f0333b7cd7",
+  "id": "STD-00019",
+  "standard_id": "STD-00019",
+  "name": "Defense Portfolio Protection",
+  "category": "Intellectual Property & Defense\u2122",
+  "description": "QRU Founder Defense Portfolio\u2122 Version 1.0 The Strategic Intellectual Property, Competitive Advantage, and Innovation Defense Document\u2122 Document Classification: Strategic Founder Asset Asset Type: Intellectual Property & Investor Positioning Framework Status: Founder Approved \u2014 Initial Framework Par",
+  "purpose": "Transform raw information into verified understanding.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-10",
+    "reason": "Adopted verbatim from Founder document: Defense_Portfolio_Protection.pdf.",
+    "reviewer": "Founder",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [],
+  "graph_links": [],
+  "created_at": "2026-07-10T02:21:26.561458+00:00",
+  "updated_at": "2026-07-10T02:21:26.561468+00:00",
+  "document_content": "QRU  Founder  Defense  Portfolio\u2122  \nVersion  1.0  \nThe  Strategic  Intellectual  Property,  Competitive  Advantage,  and  Innovation  \nDefense\n \nDocument\u2122\n \nDocument  Classification:  Strategic  Founder  Asset  \n \nAsset\n \nType:\n \nIntellectual\n \nProperty\n \n&\n \nInvestor\n \nPositioning\n \nFramework\n \n \nStatus:\n \nFounder\n \nApproved\n \n\u2014\n \nInitial\n \nFramework\n \nParent  Systems:  \n\u25cf  QRU  Intelligence  Constitution\u2122  \u25cf  QRU  Methodology  Manual\u2122  \u25cf  QRU  Standards  Registry\u2122  \u25cf  QRU  Agent  Training  Protocol\u2122  \u25cf  QRU  Knowledge  Architecture\u2122  36-Layer  Intelligence  Manufacturing  Standard\u2122  \n \nIntroduction  \nThe  Founder  Question  \nEvery  transformational  company  eventually  faces  the  same  question:  \n\u201cWhy  does  this  company  deserve  to  exist?\u201d  \nA  curriculum  can  be  copied.  \nA  lesson  can  be  copied.  \nA  video  can  be  copied.  \nA  worksheet  can  be  copied.  \nQRU\u2019s  value  is  not  a  single  piece  of  content.  \n\nQRU\u2019s  value  is  the  system  that  creates,  verifies,  transforms,  improves,  and  compounds  \nunderstanding.\n \n \nSection  1  \nQRU\u2019s  Core  Strategic  Position\u2122  \nQRU  Is  Not  a  Content  Company.  \nQRU  is  an:  \nUnderstanding  Intelligence  Company\u2122  \nThe  world  has  no  shortage  of:  \n\u25cf  Information  \u25cf  Data  \u25cf  Content  \u25cf  Technology  \nThe  missing  resource  is:  \nVerified  Human  Understanding\u2122  \nQRU  builds  the  infrastructure  that  transforms  information  into  understanding.  \n \nSection  2  \nThe  QRU  Proprietary  Intelligence  Stack\u2122  \n\nThe  QRU  advantage  is  a  combination  of  connected  systems.  \nNo  single  component  creates  the  moat.  \nThe  ecosystem  creates  the  moat.  \n \nLayer  1  \u2014  Brand  Architecture  \nPurpose:  \nCreate  trust  and  recognition.  \nAssets:  \n\u25cf  QRU\u2122  \u25cf  Quest  for  Real  Understanding\u2122  \u25cf  QRU  educational  ecosystem  \n \nLayer  2  \u2014  Knowledge  Architecture  \nQRU  Knowledge  Architecture\u2122  \n36-Layer  Intelligence  Manufacturing  Standard\u2122  \nPurpose:  \nTransform  raw  information  into  verified  understanding.  \nProcess:  \nSource  \n\u2193  \nResearch  \n\u2193  \n\nVerification  \n\u2193  \nTranslation  \n\u2193  \nTeaching  \n\u2193  \nProduct  Creation  \n\u2193  \nMeasurement  \n\u2193  \nImprovement  \n \nLayer  3  \u2014  Understanding  Transformation  \nEngine\u2122\n \nPurpose:  \nConvert  complexity  into  accessible  understanding.  \nThe  process:  \nInformation  \n\u2193  \nQuestion  \n\u2193  \nInvestigation  \n\u2193  \n\nVerification  \n\u2193  \nConnection  \n\u2193  \nTranslation  \n\u2193  \nApplication  \n\u2193  \nWisdom  \n \nLayer  4  \u2014  Verification  Intelligence  \nSystem\u2122\n \nPurpose:  \nProtect  truth.  \nThe  Verification  Lion\u2122  evaluates:  \n\u25cf  Accuracy  \u25cf  Evidence  \u25cf  Context  \u25cf  Ethics  \u25cf  Practical  usefulness  \n \nLayer  5  \u2014  QRU  Treasure  Standard\u2122  \nPurpose:  \nCreate  a  recognizable  quality  standard.  \n\nEvery  QRU  asset  must  demonstrate:  \n\u2713  Truth  \n \n\u2713\n \nClarity\n \n \n\u2713\n \nConnection\n \n \n\u2713\n \nMemory\n \n \n\u2713\n \nApplication\n \n \n\u2713\n \nEmotional\n \nIntelligence\n \n \n\u2713\n \nLegacy\n \n \nLayer  6  \u2014  Living  Knowledge  \nInfrastructure\u2122\n \nPurpose:  \nCreate  a  compounding  intelligence  asset.  \nThe  QRU  Knowledge  Database\u2122  grows  through:  \n\u25cf  Knowledge  Records\u2122  \u25cf  Research  \u25cf  Feedback  \u25cf  Assessments  \u25cf  Learner  interaction  \nOver  time:  \nThe  Factory  becomes  more  intelligent.  \n \nSection  3  \nThe  QRU  Competitive  Moat\u2122  \nCompetitor  Question:  \n\n\u201cWhy  can\u2019t  someone  just  use  AI  and  create  this?\u201d  \nQRU  Response:  \n\u201cAI  can  generate  information.  QRU  built  the  architecture  that  transforms  information  into  verified  \nhuman\n \nunderstanding.\n \nOur\n \nadvantage\n \nis\n \nnot\n \ncreating\n \ncontent\n \nonce.\n \nOur\n \nadvantage\n \nis\n \na\n \nsystem\n \nthat\n \nlearns,\n \nverifies,\n \nimproves,\n \nand\n \ncompounds\n \nover\n \ntime.\u201d\n \n \nSection  4  \nWhy  QRU  Is  Difficult  To  Replicate\u2122  \nA  competitor  could  copy:  \n\u2713  A  lesson  \n \n\u2713\n \nA\n \nworkbook\n \n \n\u2713\n \nA\n \nvideo\n \n \n\u2713\n \nA\n \ncourse\n \nformat\n \nA  competitor  would  struggle  to  recreate:  \n1.  The  Methodology  \nThe  QRU  way  of  transforming  information.  \n \n2.  The  Standards  \nThe  QRU  quality  control  system.  \n \n3.  The  Knowledge  Network  \nYears  of  interconnected  Knowledge  Records\u2122.  \n\n \n4.  The  Verification  Process  \nThe  accumulated  trust  infrastructure.  \n \n5.  The  Human-AI  Philosophy  \nA  system  designed  to  amplify  humans,  not  replace  them.  \n \n6.  The  Improvement  Loop  \nA  factory  that  gets  smarter  with  every  creation.  \n \nSection  5  \nQRU  Intellectual  Property  Categories\u2122  \nProtected  Brand  Assets  \nExamples:  \n\u25cf  QRU\u2122  \u25cf  Quest  for  Real  Understanding\u2122  \n \nProtected  Methodologies  \nExamples:  \n\u25cf  QRU  Treasure  Standard\u2122  \u25cf  QRU  Conversation-First\u2122  Teaching  Methodology  \n\n\u25cf  QRU  Understanding  Transformation  Engine\u2122  \n \nInternal  Trade  Assets  \nExamples:  \n\u25cf  AI  Factory  workflows  \u25cf  Agent  protocols  \u25cf  Manufacturing  systems  \u25cf  Quality  processes  \n \nData  Assets  \nExamples:  \n\u25cf  QRU  Knowledge  Database\u2122  \u25cf  Knowledge  Graph  \u25cf  Learning  insights  \n \nSection  6  \nQRU  Investor  Narrative\u2122  \nThe  Problem  \nHumanity  has  more  information  than  ever  before.  \nYet  confusion,  misinformation,  and  misunderstanding  continue  to  increase.  \n \nThe  Opportunity  \n\nCreate  the  infrastructure  for  transforming  information  into  understanding.  \n \nThe  Solution  \nQRU  builds:  \n\u25cf  Learning  systems  \u25cf  Knowledge  architecture  \u25cf  AI-supported  education  \u25cf  Verified  understanding  tools  \n \nThe  Vision  \nA  world  where  people  do  not  simply  consume  information.  \nThey  understand  it.  \n \nSection  7  \nThe  Long-Term  QRU  Vision\u2122  \nQRU  is  designed  to  become:  \nA  Knowledge  Manufacturing  Platform\u2122  \nConnecting:  \n\u25cf  Learners  \u25cf  Families  \u25cf  Educators  \u25cf  Technology  \u25cf  Communities  \u25cf  Future  generations  \n\n \nSection  8  \nFounder  Protection  Principles\u2122  \nQRU  must  protect:  \n1.  The  mission.  2.  The  methodology.  3.  The  standards.  4.  The  database.  5.  The  philosophy.  6.  The  quality  of  understanding.  \n \nFounder  Declaration\u2122  \n\u201cQRU  is  not  valuable  because  we  create  information.  QRU  is  valuable  because  we  have  built  a  \nsystem\n \ndesigned\n \nto\n \ntransform\n \ninformation\n \ninto\n \nunderstanding,\n \nand\n \nunderstanding\n \ninto\n \nhuman\n \nprogress.\u201d\n \n \nQRU  Factory  Integration  Status  \n\u2705  QRU  Intelligence  Constitution\u2122  \n \n\u2705\n \nQRU\n \nMethodology\n \nManual\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nStandards\n \nRegistry\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nAgent\n \nTraining\n \nProtocol\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nFounder\n \nDefense\n \nPortfolio\u2122\n \nv1.0\n \n \nNext  Development  Phase  \n\nQRU  Knowledge  Record  Master  Template\u2122  v1.0  \nPurpose:  \nCreate  the  standardized  intelligence  container  that  every  future  QRU  Knowledge  Asset\u2122  must  \nuse.\n \nThis  becomes  the  \u201catomic  unit\u201d  of  the  QRU  Knowledge  Database\u2122.  \n \nArchive  Classification  \nAsset  Type:  Strategic  Intellectual  Property  Document  \n \nProtection\n \nLevel:\n \nFounder\n \n/\n \nLeadership\n \nArchive\n \n \nVersion\n \nControl\n \nRequired:\n \nYes\n \nMaintain  dated  external  copies  and  revision  history.  \n ",
+  "word_count": 824,
+  "source_document": "Defense_Portfolio_Protection.pdf",
+  "classification": "Strategic Founder",
+  "asset_type": "Founding Institutional Standard",
+  "is_founder_document": true
+ },
+ {
+  "_id": "6a505726a6f073f0333b7cd8",
+  "id": "STD-00020",
+  "standard_id": "STD-00020",
+  "name": "Methodology Manual",
+  "category": "QRU Methodology\u2122",
+  "description": "QRU Methodology Manual\u2122 Version 1.0 The Operating System for Manufacturing Human Understanding\u2122 Document Classification: Core Intellectual Property Architecture Asset Type: Internal Methodology Standard Status: Founder Approved Parent System: QRU Intelligence Constitution\u2122 Introduction The Purpose o",
+  "purpose": "QRU Methodology Manual\u2122 Version 1.0 The Operating System for Manufacturing Human Understanding\u2122 Document Classification: Core Intellectual Property Architecture Asset Type: Internal Methodology Standard Status: Founder A",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-10",
+    "reason": "Adopted verbatim from Founder document: Methodology_Manual.pdf.",
+    "reviewer": "Founder",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [],
+  "graph_links": [],
+  "created_at": "2026-07-10T02:21:26.855517+00:00",
+  "updated_at": "2026-07-10T02:21:26.855529+00:00",
+  "document_content": "QRU  Methodology  Manual\u2122  \nVersion  1.0  \nThe  Operating  System  for  Manufacturing  Human  Understanding\u2122  \nDocument  Classification:  Core  Intellectual  Property  Architecture  \n \nAsset\n \nType:\n \nInternal\n \nMethodology\n \nStandard\n \n \nStatus:\n \nFounder\n \nApproved\n \n \nParent\n \nSystem:\n \nQRU\n \nIntelligence\n \nConstitution\u2122\n \n \nIntroduction  \nThe  Purpose  of  QRU\u2122  \nQRU\u2122  exists  to  solve  one  of  humanity\u2019s  oldest  challenges:  \nPeople  have  access  to  more  information  than  ever  before,  yet  true  understanding  \nremains\n \nscarce.\n \nInformation  can  be  collected.  \nKnowledge  can  be  stored.  \nBut  understanding  requires  transformation.  \nQRU  was  created  around  one  foundational  belief:  \n\u201cThe  future  belongs  not  to  those  who  possess  the  most  information,  but  to  those  who  can  \ntransform\n \ninformation\n \ninto\n \nunderstanding,\n \nwisdom,\n \nand\n \nmeaningful\n \naction.\u201d\n \nThe  QRU  Methodology  Manual\u2122  defines  the  operating  process  used  to  transform  questions  \ninto\n \nverified\n \nunderstanding.\n \n \n\nSection  1  \nThe  QRU  First  Principle\u2122  \nNever  Begin  With  Answers.  \nBegin  With  Better  Questions.  \nTraditional  education  begins  with:  \n\u201cWhat  do  we  want  people  to  know?\u201d  \nQRU  begins  with:  \n\u201cWhat  do  people  need  to  understand?\u201d  \nThe  difference:  \nInformation  delivery  creates  awareness.  \nUnderstanding  creation  creates  capability.  \nEvery  QRU  project  begins  with:  \nThe  Question  \n\u25cf  What  confusion  exists?  \u25cf  Why  does  this  matter?  \u25cf  Who  needs  this  understanding?  \u25cf  What  decisions,  behaviors,  or  outcomes  improve  when  this  becomes  clear?  \n \nSection  2  \nQRU  Understanding  Transformation  \nEngine\u2122\n \n\nEvery  QRU  Knowledge  Asset\u2122  passes  through  a  structured  transformation  process.  \nStage  1  \u2014  Question  Discovery\u2122  \nInput:  \n\u25cf  Confusion  \u25cf  Curiosity  \u25cf  Problems  \u25cf  Opportunities  \nOutput:  \nA  meaningful  question  worthy  of  investigation.  \nExample:  \nWeak  question:  \n\u201cWhat  is  investing?\u201d  \nQRU  question:  \n\u201cHow  does  money  move  through  markets,  and  how  can  people  make  decisions  without  being  \ncontrolled\n \nby\n \nfear,\n \nemotion,\n \nor\n \nmisinformation?\u201d\n \n \nStage  3  \nKnowledge  Investigation\u2122  \nThe  QRU  Factory\u2122  gathers:  \n\u25cf  Historical  evidence  \u25cf  Scientific  research  \u25cf  Expert  perspectives  \u25cf  Real-world  experiences  \u25cf  Cultural  context  \u25cf  Practical  applications  \nThe  objective  is  not  simply  collecting  information.  \n\nThe  objective  is  discovering  understanding.  \n \nStage  4  \nVerification  Intelligence  System\u2122  \nEvery  QRU  concept  passes  through  the  Verification  Process.  \nThe  Verification  Lion\u2122  \nThe  Verification  Lion  protects  truth.  \nThe  Lion  asks:  \nTruth  Test  \nIs  this  accurate?  \nEvidence  Test  \nCan  this  be  supported?  \nContext  Test  \nWhat  important  information  could  change  interpretation?  \nBias  Test  \nCould  this  create  misunderstanding?  \nApplication  Test  \nDoes  this  help  someone  make  better  decisions?  \n \nSection  5  \n\nThe  Translation  Layer\u2122  \nQRU  believes  complexity  does  not  equal  intelligence.  \nA  concept  is  not  truly  understood  until  it  can  travel  between  minds.  \nThe  Translation  Layer  asks:  \nCan  a:  \n\u25cf  Child  understand  it?  \u25cf  Parent  explain  it?  \u25cf  Teacher  teach  it?  \u25cf  Professional  apply  it?  \u25cf  Expert  respect  its  accuracy?  \nThe  goal:  \nMaximum  clarity  without  losing  truth.  \n \nSection  6  \nQRU  Conversation-First\u2122  Teaching  \nMethodology\n \nThe  fundamental  unit  of  QRU  learning  is  not  the  lesson.  \nIt  is  the  conversation  that  changes  understanding.  \nEvery  QRU  lesson  follows:  \nQRU  Guided  Understanding  System\u2122  \n1.  The  Question  \nWhat  are  we  trying  to  understand?  \n\n2.  Simple  Answer  \nWhat  is  the  clearest  explanation?  \n3.  Explanation  \nWhy  is  this  true?  \n4.  Analogy  \nWhat  familiar  experience  connects  to  this?  \n5.  Memory  Sentence  \nWhat  should  never  be  forgotten?  \n6.  Quick  Win  \nHow  can  this  understanding  be  applied  immediately?  \n7.  Assessment  \nDid  understanding  actually  increase?  \n \nSection  7  \nQRU  Treasure  Standard\u2122  \nBefore  any  QRU  asset  leaves  the  Factory\u2122,  it  must  pass  the  Seven  Gates.  \nGate  1  \u2014  Truth  \nIs  it  accurate?  \n\nGate  2  \u2014  Clarity  \nCan  someone  understand  it?  \nGate  3  \u2014  Connection  \nDoes  it  connect  to  real  life?  \nGate  4  \u2014  Memory  \nCan  someone  remember  it?  \nGate  5  \u2014  Application  \nCan  someone  use  it?  \nGate  6  \u2014  Emotional  Intelligence  \nDoes  it  respect  the  learner\u2019s  experience?  \nGate  7  \u2014  Legacy  \nDoes  it  contribute  to  a  better  future?  \nOnly  assets  passing  all  seven  gates  receive:  \nQRU  Treasure  Standard\u2122  Certification  \n \nSection  8  \nQRU  Knowledge  Record\u2122  Standard  \nEvery  verified  understanding  becomes  a  permanent  intelligence  asset.  \nEach  Knowledge  Record\u2122  contains:  \n\nIdentity  \n\u25cf  Title  \u25cf  Category  \u25cf  Version  \u25cf  Creator  \u25cf  Date  \nUnderstanding  Core  \n\u25cf  Essential  Question  \u25cf  Simple  Explanation  \u25cf  Deep  Explanation  \u25cf  Key  Concepts  \nVerification  \n\u25cf  Sources  \u25cf  Evidence  \u25cf  Review  Notes  \nTranslation  \n\u25cf  Child  Explanation  \u25cf  Adult  Explanation  \u25cf  Professional  Explanation  \nApplication  \n\u25cf  Exercises  \u25cf  Examples  \u25cf  Assessments  \nManufacturing  Outputs  \n\u25cf  Books  \u25cf  Workbooks  \u25cf  Courses  \u25cf  Videos  \u25cf  Presentations  \u25cf  Marketing  Assets  \n\n \nSection  9  \nQRU  Knowledge  Evolution  Loop\u2122  \nQRU  is  designed  to  improve  continuously.  \nEvery  interaction  creates  intelligence.  \nThe  cycle:  \nQuestion  \n\u2193  \nKnowledge  Record\u2122  \n\u2193  \nProduct  Creation  \n\u2193  \nLearner  Feedback  \n\u2193  \nMeasurement  \n\u2193  \nImprovement  \n\u2193  \nUpdated  Knowledge  Record\u2122  \nThe  Factory  learns.  \nThe  system  compounds.  \n \n\nSection  10  \nHuman  +  AI  Collaboration  Doctrine\u2122  \nQRU\u2019s  position:  \nAI  is  not  the  replacement  for  human  thinking.  \nAI  is  the  amplifier  of  human  understanding.  \nAI  provides:  \n\u25cf  Speed  \u25cf  Pattern  recognition  \u25cf  Organization  \u25cf  Discovery  support  \nHumans  provide:  \n\u25cf  Judgment  \u25cf  Ethics  \u25cf  Creativity  \u25cf  Purpose  \u25cf  Wisdom  \nThe  goal:  \nA  more  capable  human,  not  a  less  involved  human.  \n \nSection  11  \nQRU  Manufacturing  Identity\u2122  \nQRU  does  not  manufacture  information.  \nQRU  manufactures:  \n\nUnderstanding\u2122  \nThe  transformation:  \nConfusion  \n\u2193  \nQuestions  \n\u2193  \nKnowledge  \n\u2193  \nVerified  Understanding  \n\u2193  \nWisdom  \n\u2193  \nAction  \n\u2193  \nLegacy  \n \nFounder  Declaration  \n\u201cQRU  exists  to  reduce  unnecessary  confusion  without  reducing  truth.  We  build  systems  that  \nhelp\n \nhumanity\n \nunderstand\n \nitself,\n \nits\n \nworld,\n \nand\n \nits\n \npossibilities.\u201d\n \nQRU  Founder  Principle\u2122   \nFactory  Integration  Status  \n\n\u2705  QRU  Intelligence  Constitution\u2122  \u2014  Established  \n \n\u2705\n \nQRU\n \nMethodology\n \nManual\u2122\n \nv1.0\n \n\u2014\n \nEstablished\n \n \n\u2b1c\n \nQRU\n \nStandards\n \nRegistry\u2122\n \n\u2014\n \nNext\n \nDevelopment\n \nPhase\n \n \n\u2b1c\n \nQRU\n \nAgent\n \nTraining\n \nProtocol\u2122\n \n\u2014\n \nNext\n \nDevelopment\n \nPhase\n \n \n\u2b1c\n \nQRU\n \nInvestor\n \nDefense\n \nPortfolio\u2122\n \n\u2014\n \nNext\n \nDevelopment\n \nPhase\n \n \nArchive  Classification  \nAsset  Type:  Foundational  Intellectual  Property  \n \nProtection\n \nLevel:\n \nCore\n \nQRU\n \nInternal\n \nArchitecture\n \n \nRecommended\n \nStorage:\n \nQRU\n \nEnterprise\n \nArchive\u2122\n \n \nVersion\n \nControl\n \nRequired:\n \nYes\n \nMaintain  dated  external  copies  and  version  history  as  QRU  intellectual  property  develops.  \n ",
+  "word_count": 906,
+  "source_document": "Methodology_Manual.pdf",
+  "classification": "Core Intellectual Property Architecture",
+  "asset_type": "Founding Institutional Standard",
+  "is_founder_document": true
+ },
+ {
+  "_id": "6a505727a6f073f0333b7cd9",
+  "id": "STD-00021",
+  "standard_id": "STD-00021",
+  "name": "QRU Experience Design Architecture",
+  "category": "Experience Design\u2122",
+  "description": "QRU Experience Design Architecture\u2122 From Knowledge Production to Human Understanding Experience\u2122 Purpose The QRU Factory\u2122 is not designed to create ordinary educational documents. It is designed to manufacture premium understanding experiences that combine: \u25cf Verified knowledge \u25cf Clear teaching \u25cf Vi",
+  "purpose": "The QRU Factory\u2122 is not designed to create ordinary educational documents.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-10",
+    "reason": "Adopted verbatim from Founder document: QRU_Experience_Design_Architecture.pdf.",
+    "reviewer": "Founder",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [],
+  "graph_links": [],
+  "created_at": "2026-07-10T02:21:27.138119+00:00",
+  "updated_at": "2026-07-10T02:21:27.138130+00:00",
+  "document_content": "QRU  Experience  Design  Architecture\u2122  \nFrom  Knowledge  Production  to  Human  Understanding  \nExperience\u2122\n \nPurpose  \nThe  QRU  Factory\u2122  is  not  designed  to  create  ordinary  educational  documents.  \nIt  is  designed  to  manufacture  premium  understanding  experiences  that  combine:  \n\u25cf  Verified  knowledge  \u25cf  Clear  teaching  \u25cf  Visual  intelligence  \u25cf  Emotional  connection  \u25cf  Memory  design  \u25cf  Human-centered  presentation  \nThe  objective  is  not  simply  to  inform.  \nThe  objective  is  to  create  products  people  understand,  remember,  value,  display,  and  share.  \n \nThe  QRU  Experience  Equation\u2122  \n\nKno\nwle\n\ndge  \nAcc\n\nurac\ny\n \n\n\u2028 +  \n\n\u2028 \n\nTeac\nhing\n \n\nClarit\ny\n \u2028 \n\n+  \u2028 \n\nVisual  \nIntellige\nnce\n \u2028 \n\n+  \u2028 Emotional  \nConnection\n \u2028 \n\n+  \n\u2028 \nPremium  Design  \nGold  Standard  Understanding  Experience\u2122  \n \nQRU  Experience  Design  Architecture\u2122  \nEvery  QRU  product  must  pass  through  three  interconnected  design  layers.  \n \nLayer  1  \u2014  QRU  Visual  Identity\u2122  \nPurpose  \nCreate  immediate  recognition,  trust,  and  curiosity.  \nVisual  identity  answers:  \n\u201cWhy  should  I  open  this?\u201d  \nRequired  elements:  \n\u25cf  QRU  brand  consistency  \u25cf  Premium  cover  design  \u25cf  Logo  placement  \u25cf  Color  system  \u25cf  Typography  standards  \u25cf  Visual  hierarchy  \n\n\u25cf  Professional  presentation  \nThe  cover  is  not  only  identification.  \nThe  cover  is  the  invitation.  \nA  Gold  Standard  cover  should  communicate:  \n\u201cThis  contains  something  valuable.\u201d  \n \nLayer  2  \u2014  QRU  Information  Architecture\u2122  \nPurpose  \nTransform  information  into  a  natural  reading  experience.  \nA  premium  product  must  respect  the  reader\u2019s  attention.  \nThe  factory  must  evaluate:  \nPage  Balance  \nQuestions:  \n\u25cf  Is  the  page  overcrowded?  \u25cf  Is  there  unnecessary  empty  space?  \u25cf  Does  the  design  guide  the  eye?  \nInformation  Density  \nQuestions:  \n\u25cf  Is  content  stretched  unnecessarily?  \u25cf  Are  pages  being  created  because  of  formatting  issues  rather  than  educational  value?  \u25cf  Is  information  grouped  logically?  \nReading  Flow  \nThe  reader  journey  should  feel  intentional:  \n\nIntroduction  \n \n\u2193\n \n \nConcept\n \nExplanation\n \n \n\u2193\n \n \nVisual\n \nConnection\n \n \n\u2193\n \n \nExample\n \n \n\u2193\n \n \nApplication\n \n \n\u2193\n \n \nMemory\n \nReinforcement\n \n \n\u2193\n \n \nReflection\n \n \nLayer  3  \u2014  QRU  Emotional  Experience  \nDesign\u2122\n \nPurpose  \nCreate  connection  between  information  and  human  memory.  \nEvery  product  should  answer:  \n\u201cHow  should  this  make  the  learner  feel?\u201d  \nPossible  emotional  targets:  \n\u25cf  Curiosity  \u25cf  Confidence  \u25cf  Hope  \u25cf  Empowerment  \u25cf  Discovery  \u25cf  Trust  \u25cf  Motivation  \u25cf  Inspiration  \nInformation  enters  the  mind.  \nExperience  creates  memory.  \n\n \nQRU  Visual  Intelligence  Layer\u2122  \nPurpose  \nEnsure  every  product  contains  intentional  visual  elements  that  improve  understanding.  \nImages  are  not  decoration.  \nImages  are  cognitive  tools.  \n \nVisual  Blueprint  Requirements\u2122  \nEvery  Knowledge  Record\u2122  should  include:  \n1.  Core  Visual  Metaphor  \nQuestion:  \n\u201cWhat  image,  scene,  or  concept  makes  this  idea  easier  to  understand?\u201d  \nExamples:  \nTrading:  \n\u25cf  Battlefield  \u25cf  Fortress  \u25cf  Market  armies  \nAI  Literacy:  \n\u25cf  Human  pilot  and  AI  assistant  \nHealth:  \n\u25cf  Human  body  ecosystem  \nThe  visual  should  simplify  complexity.  \n\n \n2.  Emotional  Target  \nDefine  the  feeling  the  visual  should  create.  \nExamples:  \n\u25cf  \u201cI  can  understand  this.\u201d  \u25cf  \u201cI  can  apply  this.\u201d  \u25cf  \u201cThis  is  possible.\u201d  \u25cf  \u201cI  want  to  learn  more.\u201d  \n \n3.  Required  Visual  Assets  \nThe  factory  should  identify:  \nHero  Image  \nPrimary  emotional  anchor.  \nConcept  Illustrations  \nVisual  explanations.  \nMemory  Images  \nRecall  triggers.  \nDiagrams  \nComplexity  reducers.  \nComparison  Graphics  \nClarity  builders.  \nWorkbook  Visuals  \nEngagement  enhancers.  \nMarketing  Visuals  \n\nShareable  assets.  \n \nQRU  Layout  Intelligence  Review\u2122  \nEvery  product  must  be  evaluated  before  completion.  \nThe  Balance  Test  \nDoes  the  page  feel  intentional?  \nThe  Flow  Test  \nDoes  the  reader  naturally  know  where  to  look  next?  \nThe  Density  Test  \nIs  information  presented  efficiently?  \nThe  Professional  Test  \nDoes  this  resemble  a  premium  educational  product  rather  than  a  basic  document?  \nThe  Completion  Test  \nDoes  every  page  add  value?  \n \nQRU  Gold  Standard  Design  Evaluation\u2122  \nBefore  release,  every  product  must  pass:  \n10-Second  Test  \nThe  cover  must  create  curiosity.  \n\nQuestion:  \n\u201cWould  someone  want  to  open  this?\u201d  \n \n30-Second  Test  \nThe  first  pages  must  create  confidence.  \nQuestion:  \n\u201cDoes  this  feel  valuable?\u201d  \n \n5-Minute  Test  \nThe  reading  experience  must  create  momentum.  \nQuestion:  \n\u201cDo  I  want  to  continue?\u201d  \n \nShare  Test  \nThe  product  must  create  advocacy.  \nQuestion:  \n\u201cWould  I  proudly  share  this  with  someone  else?\u201d  \n \nTreasure  Standard\u2122  vs  Gold  Standard\u2122  \nTreasure  Standard\u2122  \nA  product  qualifies  when:  \n\n\u2713  Information  is  verified  \n \n\u2713\n \nSources\n \nare\n \nreliable\n \n \n\u2713\n \nTeaching\n \nstructure\n \nis\n \neffective\n \n \n\u2713\n \nKnowledge\n \nis\n \nvaluable\n \n \n\u2713\n \nProduct\n \nis\n \nworthy\n \nof\n \nkeeping\n \n \nGold  Standard  Experience\u2122  \nA  product  qualifies  when:  \n\u2713  It  is  verified  \n \n\u2713\n \nIt\n \nis\n \nunderstandable\n \n \n\u2713\n \nIt\n \nis\n \nvisually\n \nmemorable\n \n \n\u2713\n \nIt\n \nis\n \nemotionally\n \nengaging\n \n \n\u2713\n \nIt\n \nfeels\n \npremium\n \n \n\u2713\n \nIt\n \ncreates\n \ncuriosity\n \n \n\u2713\n \nIt\n \ninspires\n \nsharing\n \n \n\u2713\n \nIt\n \ncreates\n \nadvocates\n \n \nQRU  Agent  Evaluation  Expansion\u2122  \nAgents  are  evaluated  by  contribution  to  the  complete  experience.  \nResearch  Agents  \nMeasure:  \n\u25cf  Accuracy  \u25cf  Source  quality  \u25cf  Depth  \nVerification  Agents  \nMeasure:  \n\u25cf  Truth  protection  \u25cf  Reliability  \n\nTeaching  Agents  \nMeasure:  \n\u25cf  Simplification  \u25cf  Clarity  \u25cf  Learning  effectiveness  \nVisual  Intelligence  Agents  \nMeasure:  \n\u25cf  Visual  relevance  \u25cf  Memory  enhancement  \u25cf  Emotional  connection  \nDesign  Agents  \nMeasure:  \n\u25cf  Layout  quality  \u25cf  Presentation  quality  \u25cf  User  experience  \nConsumer  Advocate  Agent  \nMeasure:  \n\u201cWould  a  real  person  value  this  product?\u201d  \n \nEmergent  Intelligence  Integration\u2122  \nQRU  Emergent  Intelligence  recognizes  that  true  understanding  requires  multiple  intelligence  \nsystems\n \nworking\n \ntogether:\n \nKnowledge  Intelligence  \n \n+\n \n \nVerification\n \nIntelligence\n \n \n+\n \n\n Teaching  Intelligence  \n \n+\n \n \nVisual\n \nIntelligence\n \n \n+\n \n \nEmotional\n \nIntelligence\n \n \n+\n \n \nExperience\n \nIntelligence\n \n=  \nHuman  Understanding  Ecosystem\u2122  \n \nCore  QRU  Principle\u2122  \n\u201cInformation  informs  the  mind.  Understanding  transforms  the  person.\u201d  \nThe  QRU  Factory\u2122  does  not  manufacture  documents.  \nIt  manufactures  experiences  that  help  people:  \nUnderstand.  \n \nRemember.\n \n \nApply.\n \n \nGrow.\n \n \nShare.\n \n \nCreate\n \nlegacy.\n \n ",
+  "word_count": 820,
+  "source_document": "QRU_Experience_Design_Architecture.pdf",
+  "classification": "",
+  "asset_type": "Founding Institutional Standard",
+  "is_founder_document": true
+ },
+ {
+  "_id": "6a505727a6f073f0333b7cda",
+  "id": "STD-00022",
+  "standard_id": "STD-00022",
+  "name": "Intelligence Governance Charter",
+  "category": "Intelligence Governance\u2122",
+  "description": "QRU Intelligence Governance Charter\u2122 Version 1.0 The Governance System for Human and Artificial Intelligence Operating Inside the QRU Factory\u2122 Document Classification: Foundational Governance Architecture Asset Type: Agent Governance / Intelligence Quality Control System Status: Founder Approved \u2014 I",
+  "purpose": "of the QRU Intelligence Governance",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-10",
+    "reason": "Adopted verbatim from Founder document: Intelligence_Governance_Charter.pdf.",
+    "reviewer": "Founder",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [],
+  "graph_links": [],
+  "created_at": "2026-07-10T02:21:27.595494+00:00",
+  "updated_at": "2026-07-10T02:21:27.595506+00:00",
+  "document_content": "QRU  Intelligence  Governance  Charter\u2122  \nVersion  1.0  \nThe  Governance  System  for  Human  and  Artificial  Intelligence  Operating  \nInside\n \nthe\n \nQRU\n \nFactory\u2122\n \nDocument  Classification:  Foundational  Governance  Architecture  \n \nAsset\n \nType:\n \nAgent\n \nGovernance\n \n/\n \nIntelligence\n \nQuality\n \nControl\n \nSystem\n \n \nStatus:\n \nFounder\n \nApproved\n \n\u2014\n \nInitial\n \nFramework\n \nParent  Systems:  \n\u25cf  QRU  Intelligence  Constitution\u2122  \u25cf  QRU  Factory  Operating  Blueprint\u2122  \u25cf  QRU  Agent  Training  Protocol\u2122  \u25cf  QRU  Verification  Intelligence  System\u2122  \u25cf  QRU  Standards  Registry\u2122  \u25cf  QRU  Intelligence  Growth  Index\u2122  \n \nIntroduction  \nThe  Purpose  of  the  QRU  Intelligence  Governance  \nCharter\u2122\n \nAs  QRU\u2122  expands,  intelligence  systems  will  become  more  powerful.  \nThis  creates  a  responsibility:  \nThe  greater  the  capability,  the  greater  the  need  for  governance.  \nQRU  does  not  believe  intelligence  alone  creates  value.  \nGoverned  intelligence  creates  value.  \nThe  purpose  of  this  charter  is  to  ensure  every  QRU  human  collaborator  and  AI  agent  operates  \nwith:\n \n\n\u25cf  Accuracy  \u25cf  Accountability  \u25cf  Alignment  \u25cf  Transparency  \u25cf  Continuous  improvement  \n \nFounder  Principle  \n\u201cQRU  does  not  build  intelligence  systems  simply  to  produce  more  information.  QRU  builds  \ngoverned\n \nintelligence\n \nsystems\n \ndesigned\n \nto\n \ncreate\n \ntrustworthy\n \nunderstanding.\u201d\n \n \nSection  1  \nQRU  Intelligence  Governance  Model\u2122  \nThe  QRU  Factory\u2122  operates  through  four  governance  layers.  \n \nLayer  1  \u2014  Constitutional  Governance\u2122  \nPurpose:  \nProtect  what  must  never  change.  \nResponsible  for:  \n\u25cf  QRU  mission  \u25cf  Core  principles  \u25cf  Ethical  boundaries  \u25cf  Human-centered  philosophy  \u25cf  Long-term  purpose  \nGuiding  Question:  \n\n\u201cDoes  this  protect  the  reason  QRU  exists?\u201d  \n \nLayer  2  \u2014  Intelligence  Governance  \nCouncil\u2122\n \nPurpose:  \nProvide  strategic  oversight.  \nResponsibilities:  \n\u25cf  Review  agent  performance  \u25cf  Approve  major  methodology  changes  \u25cf  Maintain  quality  standards  \u25cf  Evaluate  risks  \u25cf  Protect  QRU  identity  \nGuiding  Question:  \n\u201cIs  the  system  operating  according  to  QRU  standards?\u201d  \n \nLayer  3  \u2014  Agent  Operations  Layer\u2122  \nPurpose:  \nExecute  QRU  Factory  processes.  \nResponsibilities:  \n\u25cf  Research  \u25cf  Translation  \u25cf  Content  development  \u25cf  Analysis  \u25cf  Product  creation  \nGuiding  Question:  \n\n\u201cIs  this  work  moving  understanding  forward?\u201d  \n \nLayer  4  \u2014  Verification  Governance  \nLayer\u2122\n \nPurpose:  \nProtect  truth  and  reliability.  \nResponsibilities:  \n\u25cf  Evidence  review  \u25cf  Accuracy  evaluation  \u25cf  Context  analysis  \u25cf  Bias  detection  \u25cf  Quality  approval  \nGuiding  Question:  \n\u201cCan  this  understanding  be  trusted?\u201d  \n \nSection  2  \nQRU  Verification  Chain\u2122  \nNo  single  agent  is  the  final  authority.  \nEvery  major  QRU  asset  follows  a  verification  pathway.  \n \nStage  1  \u2014  Discovery  \nAgent  identifies:  \n\n\u25cf  Information  \u25cf  Sources  \u25cf  Patterns  \u25cf  Questions  \n\u2193  \n \nStage  2  \u2014  Verification  Lion\u2122  Review  \nEvaluates:  \n\u25cf  Accuracy  \u25cf  Evidence  \u25cf  Context  \u25cf  Completeness  \n\u2193  \n \nStage  3  \u2014  Translation  Fox\u2122  Review  \nEvaluates:  \n\u25cf  Clarity  \u25cf  Accessibility  \u25cf  Audience  fit  \n\u2193  \n \nStage  4  \u2014  Wisdom  Owl\u2122  Review  \nEvaluates:  \n\u25cf  Historical  connection  \u25cf  Deeper  meaning  \u25cf  Long-term  implications  \n\u2193  \n\n \nStage  5  \u2014  Human  Governance  Review  \nEvaluates:  \n\u25cf  Alignment  \u25cf  Ethics  \u25cf  Purpose  \n \nSection  3  \nQRU  Agent  Qualification  Standard\u2122  \nNo  QRU  Agent  becomes  operational  without  evaluation.  \nEvery  agent  must  demonstrate:  \n \nKnowledge  Capability  \nAbility  to:  \n\u25cf  Locate  information  \u25cf  Organize  knowledge  \u25cf  Identify  relevant  sources  \n \nVerification  Capability  \nAbility  to  distinguish:  \n\u25cf  Evidence  \u25cf  Opinion  \u25cf  Assumption  \u25cf  Speculation  \n\n\u25cf  Uncertainty  \n \nReasoning  Capability  \nAbility  to:  \n\u25cf  Connect  ideas  responsibly  \u25cf  Identify  relationships  \u25cf  Avoid  unsupported  conclusions  \n \nTranslation  Capability  \nAbility  to:  \n\u25cf  Simplify  complexity  \u25cf  Preserve  accuracy  \u25cf  Adapt  to  audiences  \n \nEthical  Capability  \nAbility  to  recognize:  \n\u25cf  Bias  \u25cf  Harmful  framing  \u25cf  Missing  context  \u25cf  Misleading  conclusions  \n \nSection  4  \nQRU  Agent  Performance  Scorecard\u2122  \nEvery  agent  receives  ongoing  evaluation.  \n\nMetrics:  \nVerification  Accuracy  \nCan  the  agent  produce  reliable  information?  \n \nSource  Quality  \nDoes  the  agent  prioritize  strong  evidence?  \n \nContext  Awareness  \nCan  the  agent  identify  missing  information?  \n \nTranslation  Quality  \nCan  the  agent  create  understanding?  \n \nBias  Detection  \nCan  the  agent  recognize  limitations?  \n \nHuman  Review  Agreement  \nDoes  the  agent  consistently  align  with  QRU  standards?  \n \nSection  5  \n\nQRU  Agent  Red  Team  Testing\u2122  \nBefore  deployment,  agents  must  be  challenged.  \nTesting  Questions:  \nCan  the  agent:  \n\u25cf  Repeat  misinformation?  \u25cf  Accept  weak  evidence?  \u25cf  Overstate  certainty?  \u25cf  Miss  important  context?  \u25cf  Create  false  connections?  \u25cf  Produce  confident  but  incorrect  answers?  \nFailure  is  not  a  reason  to  discard  the  system.  \nFailure  is  data  for  improvement.  \n \nSection  6  \nQRU  Agent  Academy\u2122  \nFuture  QRU  Agents  must  complete  training.  \nModule  1  \u2014  QRU  Philosophy  \nUnderstanding  the  mission.  \n \nModule  2  \u2014  Question  Engineering  \nCreating  meaningful  questions.  \n \n\nModule  3  \u2014  Research  Intelligence  \nFinding  quality  information.  \n \nModule  4  \u2014  Verification  Science  \nEvaluating  truth  and  evidence.  \n \nModule  5  \u2014  Translation  Mastery  \nCreating  clarity.  \n \nModule  6  \u2014  Ethical  Intelligence  \nProtecting  human  impact.  \n \nModule  7  \u2014  Treasure  Standard\u2122  Certification  \nMeeting  QRU  quality  requirements.  \n \nSection  7  \nQRU  Agent  Authority  Rules\u2122  \nNo  agent  operates  without:  \nPurpose  \n\nWhy  does  this  agent  exist?  \nAssignment  \nWhere  does  this  agent  operate?  \nLimits  \nWhat  decisions  can  it  make?  \nReview  \nWho  verifies  the  output?  \n \nSection  8  \nQRU  Failure  Response  System\u2122  \nWhen  errors  occur:  \nStep  1:  \nIdentify  the  failure.  \nStep  2:  \nDetermine  the  cause.  \nStep  3:  \nUpdate  training  or  standards.  \nStep  4:  \nRecord  the  lesson.  \nStep  5:  \nImprove  the  Factory.  \n\nA  mistake  becomes  institutional  intelligence.  \n \nSection  9  \nQRU  Continuous  Intelligence  \nImprovement\u2122\n \nThe  governance  cycle:  \nAgent  Output  \n\u2193  \nReview  \n\u2193  \nMeasurement  \n\u2193  \nFeedback  \n\u2193  \nImprovement  \n\u2193  \nBetter  Agent  Performance  \n\u2193  \nBetter  Understanding  \n \nSection  10  \n\nQRU  Governance  Non-Negotiables\u2122  \n1.  Intelligence  requires  accountability.  2.  Information  requires  verification.  3.  Automation  requires  oversight.  4.  Speed  cannot  replace  accuracy.  5.  Technology  serves  human  understanding.  6.  No  agent  is  above  review.  7.  The  mission  protects  the  system.  \n \nFounder  Declaration\u2122  \n\u201cQRU  does  not  build  AI  workers.  QRU  builds  governed  intelligence  partners  designed  to  protect  \ntruth,\n \nexpand\n \nunderstanding,\n \nand\n \nserve\n \nhumanity.\u201d\n \n \nQRU  Factory  Governance  Status  \nCompleted  Core  Governance  Stack:  \n\u2705  QRU  Intelligence  Constitution\u2122  \n \n\u2705\n \nQRU\n \nMethodology\n \nManual\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nStandards\n \nRegistry\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nAgent\n \nTraining\n \nProtocol\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nFounder\n \nDefense\n \nPortfolio\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nKnowledge\n \nRecord\n \nMaster\n \nTemplate\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nIntellectual\n \nProperty\n \nRegistry\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nFactory\n \nOperating\n \nBlueprint\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nIntelligence\n \nGrowth\n \nIndex\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nIntelligence\n \nGovernance\n \nCharter\u2122\n \nv1.0\n \n \nArchive  Classification  \n\nAsset  Type:  Foundational  Governance  Intellectual  Property  \n \nProtection\n \nLevel:\n \nCore\n \nQRU\n \nLeadership\n \nArchive\n \n \nFactory\n \nUsage:\n \nRequired\n \nReference\n \nfor\n \nAll\n \nFuture\n \nAgents\n \n \nVersion\n \nControl\n \nRequired:\n \nYes\n \nMaintain  dated  external  copies,  revision  history,  and  approved  versions.  \n \nNext  Recommended  Architecture  Build  \nQRU  Agent  Evaluation  &  Certification  System\u2122  v1.0  \nPurpose:  \nTransform  QRU  agents  from  assigned  roles  into  measurable,  certifiable  intelligence  systems  \nwith:\n \n\u25cf  competency  levels  \u25cf  certification  requirements  \u25cf  performance  benchmarks  \u25cf  renewal  standards  \u25cf  advancement  pathways  \nThis  becomes  the  professionalization  layer  of  the  QRU  Agent  Network\u2122.  \n ",
+  "word_count": 1004,
+  "source_document": "Intelligence_Governance_Charter.pdf",
+  "classification": "Foundational Governance Architecture",
+  "asset_type": "Founding Institutional Standard",
+  "is_founder_document": true
+ },
+ {
+  "_id": "6a505727a6f073f0333b7cdb",
+  "id": "STD-00023",
+  "standard_id": "STD-00023",
+  "name": "Intelligence Growth Index",
+  "category": "Intelligence Metrics\u2122",
+  "description": "QRU Intelligence Growth Index\u2122 Version 1.0 The Measurement Framework for Tracking Human Understanding Growth\u2122 Document Classification: Core Measurement Architecture Asset Type: Intelligence Measurement System Status: Founder Approved \u2014 Initial Framework Parent Systems: \u25cf QRU Intelligence Constitutio",
+  "purpose": "of the QRU Intelligence Growth Index\u2122",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-10",
+    "reason": "Adopted verbatim from Founder document: Intelligence_Growth_Index.pdf.",
+    "reviewer": "Founder",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [],
+  "graph_links": [],
+  "created_at": "2026-07-10T02:21:27.994799+00:00",
+  "updated_at": "2026-07-10T02:21:27.994810+00:00",
+  "document_content": "QRU  Intelligence  Growth  Index\u2122  \nVersion  1.0  \nThe  Measurement  Framework  for  Tracking  Human  Understanding  Growth\u2122  \nDocument  Classification:  Core  Measurement  Architecture  \n \nAsset\n \nType:\n \nIntelligence\n \nMeasurement\n \nSystem\n \n \nStatus:\n \nFounder\n \nApproved\n \n\u2014\n \nInitial\n \nFramework\n \nParent  Systems:  \n\u25cf  QRU  Intelligence  Constitution\u2122  \u25cf  QRU  Factory  Operating  Blueprint\u2122  \u25cf  QRU  Methodology  Manual\u2122  \u25cf  QRU  Standards  Registry\u2122  \u25cf  QRU  Knowledge  Record  Master  Template\u2122  \n \nIntroduction  \nThe  Purpose  of  the  QRU  Intelligence  Growth  Index\u2122  \nTraditional  education  often  measures:  \n\u25cf  Completion  \u25cf  Memorization  \u25cf  Test  scores  \u25cf  Participation  \nQRU  measures  something  deeper:  \nUnderstanding  Growth\u2122  \nThe  QRU  Intelligence  Growth  Index\u2122  exists  to  evaluate  whether  a  learner  has  moved  from:  \nInformation  \n\n\u2193  \nAwareness  \n\u2193  \nUnderstanding  \n\u2193  \nApplication  \n\u2193  \nWisdom  \n\u2193  \nGrowth  \n \nSection  1  \nThe  QRU  Measurement  Philosophy\u2122  \nQRU  believes:  \nInformation  asks:  \n\u201cWhat  do  you  know?\u201d  \nUnderstanding  asks:  \n\u201cWhat  can  you  explain?\u201d  \nApplication  asks:  \n\u201cWhat  can  you  do?\u201d  \nWisdom  asks:  \n\u201cHow  do  you  use  what  you  know  responsibly?\u201d  \n\nThe  purpose  of  measurement  is  not  to  judge  people.  \nThe  purpose  is  to  reveal  growth  opportunities.  \n \nSection  2  \nThe  Seven  Dimensions  of  QRU  \nIntelligence\n \nGrowth\u2122\n \nEvery  QRU  learning  experience  may  be  evaluated  through  seven  dimensions.  \n \nDimension  1  \u2014  Understanding\u2122  \nQuestion:  \nDoes  the  learner  truly  understand  the  concept?  \nMeasurement  Indicators:  \n\u2713  Can  explain  the  idea  \n \n\u2713\n \nCan\n \nidentify\n \nkey\n \nprinciples\n \n \n\u2713\n \nCan\n \ndescribe\n \nwhy\n \nit\n \nmatters\n \n \nDimension  2  \u2014  Recall\u2122  \nQuestion:  \nCan  the  learner  retain  important  knowledge?  \nMeasurement  Indicators:  \n\n\u2713  Remembers  key  concepts  \n \n\u2713\n \nUses\n \nmemory\n \ntools\n \n \n\u2713\n \nConnects\n \nideas\n \nover\n \ntime\n \n \nDimension  3  \u2014  Reasoning\u2122  \nQuestion:  \nCan  the  learner  think  through  situations?  \nMeasurement  Indicators:  \n\u2713  Asks  better  questions  \n \n\u2713\n \nEvaluates\n \ninformation\n \n \n\u2713\n \nIdentifies\n \nrelationships\n \n \nDimension  4  \u2014  Communication\u2122  \nQuestion:  \nCan  the  learner  transfer  understanding  to  others?  \nMeasurement  Indicators:  \n\u2713  Explains  clearly  \n \n\u2713\n \nUses\n \nexamples\n \n \n\u2713\n \nTeaches\n \nconcepts\n \n \nDimension  5  \u2014  Application\u2122  \nQuestion:  \n\nCan  the  learner  use  understanding  in  real  situations?  \nMeasurement  Indicators:  \n\u2713  Makes  informed  decisions  \n \n\u2713\n \nSolves\n \nproblems\n \n \n\u2713\n \nApplies\n \nconcepts\n \npractically\n \n \nDimension  6  \u2014  Creativity\u2122  \nQuestion:  \nCan  the  learner  create  new  connections?  \nMeasurement  Indicators:  \n\u2713  Generates  ideas  \n \n\u2713\n \nCombines\n \nconcepts\n \n \n\u2713\n \nImagines\n \npossibilities\n \n \nDimension  7  \u2014  Confidence  &  \nOwnership\u2122\n \nQuestion:  \nDoes  the  learner  believe  they  can  continue  learning?  \nMeasurement  Indicators:  \n\u2713  Increased  curiosity  \n \n\u2713\n \nGreater\n \nindependence\n \n \n\u2713\n \nWillingness\n \nto\n \nexplore\n \n \n\nSection  3  \nQRU  Understanding  Growth  Scale\u2122  \nLevel  1  \u2014  Exposure  \nThe  learner  encounters  new  information.  \nQuestion:  \n\u201cHave  they  seen  it?\u201d  \n \nLevel  2  \u2014  Recognition  \nThe  learner  identifies  concepts.  \nQuestion:  \n\u201cDo  they  recognize  it?\u201d  \n \nLevel  3  \u2014  Understanding  \nThe  learner  explains  meaning.  \nQuestion:  \n\u201cCan  they  describe  it?\u201d  \n \nLevel  4  \u2014  Application  \nThe  learner  uses  knowledge.  \nQuestion:  \n\u201cCan  they  apply  it?\u201d  \n\n \nLevel  5  \u2014  Teaching  \nThe  learner  transfers  understanding.  \nQuestion:  \n\u201cCan  they  help  someone  else  understand?\u201d  \n \nLevel  6  \u2014  Wisdom  \nThe  learner  applies  understanding  responsibly.  \nQuestion:  \n\u201cCan  they  use  knowledge  for  meaningful  decisions?\u201d  \n \nSection  4  \nQRU  Assessment  Framework\u2122  \nEvery  QRU  assessment  should  include:  \nQuestion  \nWhat  are  we  measuring?  \n \nUnderstanding  Check  \nCan  the  learner  explain?  \n \n\nConnection  Check  \nCan  the  learner  relate  it  to  life?  \n \nApplication  Check  \nCan  the  learner  use  it?  \n \nReflection  Check  \nWhat  changed  because  of  this  understanding?  \n \nSection  5  \nQRU  Data  Learning  Loop\u2122  \nMeasurement  creates  improvement.  \nThe  cycle:  \nLearning  Experience  \n\u2193  \nAssessment  \n\u2193  \nUnderstanding  Data  \n\u2193  \nSystem  Improvement  \n\u2193  \n\nBetter  Knowledge  Records\u2122  \n\u2193  \nBetter  Products  \n \nSection  6  \nQRU  Intelligence  Growth  Dashboard\u2122  \nFuture  implementations  may  track:  \nIndividual  Growth  \n\u25cf  Understanding  progress  \u25cf  Skill  development  \u25cf  Confidence  changes  \nClassroom  Growth  \n\u25cf  Group  understanding  \u25cf  Engagement  \u25cf  Learning  patterns  \nProduct  Growth  \n\u25cf  Effectiveness  \u25cf  Clarity  \u25cf  Application  success  \nFactory  Growth  \n\u25cf  Better  content  creation  \u25cf  Improved  standards  \u25cf  Stronger  knowledge  systems  \n \n\nSection  7  \nQRU  Measurement  Standards\u2122  \nMeasurements  must  follow:  \nAccuracy  \nAre  we  measuring  what  matters?  \nFairness  \nDoes  the  system  respect  different  learners?  \nGrowth  Focus  \nDoes  it  identify  improvement?  \nHuman  Respect  \nDoes  it  encourage  learning?  \n \nSection  8  \nFuture  QRU  Intelligence  Research\u2122  \nPotential  future  areas:  \n\u25cf  Understanding  science  \u25cf  Learning  psychology  \u25cf  Human-AI  collaboration  \u25cf  Knowledge  retention  \u25cf  Curiosity  development  \u25cf  Communication  growth  \n\n \nFounder  Declaration\u2122  \n\u201cQRU  does  not  measure  intelligence  by  how  much  information  someone  can  store.  QRU  \nmeasures\n \ngrowth\n \nby\n \nhow\n \ndeeply\n \nsomeone\n \ncan\n \nunderstand,\n \nconnect,\n \napply,\n \nand\n \nshare\n \nwhat\n \nthey\n \nlearn.\u201d\n \n \nQRU  Factory  Integration  Status  \n\u2705  QRU  Intelligence  Constitution\u2122  \n \n\u2705\n \nQRU\n \nMethodology\n \nManual\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nStandards\n \nRegistry\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nAgent\n \nTraining\n \nProtocol\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nFounder\n \nDefense\n \nPortfolio\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nKnowledge\n \nRecord\n \nMaster\n \nTemplate\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nIntellectual\n \nProperty\n \nRegistry\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nFactory\n \nOperating\n \nBlueprint\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nIntelligence\n \nGrowth\n \nIndex\u2122\n \nv1.0\n \n \nNext  Development  Phase  \nQRU  Marketplace  &  Ecosystem  Blueprint\u2122  v1.0  \nPurpose:  \nDefine  how  QRU  transforms  its  intellectual  architecture  into:  \n\u25cf  Products  \u25cf  Services  \u25cf  Communities  \u25cf  Partnerships  \u25cf  Revenue  streams  \u25cf  Global  impact  pathways  \n \n\nArchive  Classification  \nAsset  Type:  Strategic  Measurement  Architecture  \n \nProtection\n \nLevel:\n \nCore\n \nQRU\n \nResearch\n \n&\n \nDevelopment\n \nSystem\n \n \nVersion\n \nControl\n \nRequired:\n \nYes\n \nMaintain  dated  external  copies  and  revision  history.  \n ",
+  "word_count": 777,
+  "source_document": "Intelligence_Growth_Index.pdf",
+  "classification": "Core Measurement Architecture",
+  "asset_type": "Founding Institutional Standard",
+  "is_founder_document": true
+ },
+ {
+  "_id": "6a505728a6f073f0333b7cdc",
+  "id": "STD-00024",
+  "standard_id": "STD-00024",
+  "name": "Ownership and Classification",
+  "category": "Ownership & Classification\u2122",
+  "description": "QRU Intellectual Property Registry\u2122 Version 1.0 The Official Catalog of QRU Assets, Protection Categories, and Strategic Ownership Architecture\u2122 Document Classification: Core Intellectual Property Governance Asset Asset Type: IP Registry / Asset Classification System Status: Founder Approved \u2014 Initi",
+  "purpose": "of the QRU Intellectual Property Registry\u2122",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-10",
+    "reason": "Adopted verbatim from Founder document: Ownership_and_Classification.pdf.",
+    "reviewer": "Founder",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [],
+  "graph_links": [],
+  "created_at": "2026-07-10T02:21:28.485537+00:00",
+  "updated_at": "2026-07-10T02:21:28.485550+00:00",
+  "document_content": "QRU  Intellectual  Property  Registry\u2122  \nVersion  1.0  \nThe  Official  Catalog  of  QRU  Assets,  Protection  Categories,  and  Strategic  \nOwnership\n \nArchitecture\u2122\n \nDocument  Classification:  Core  Intellectual  Property  Governance  Asset  \n \nAsset\n \nType:\n \nIP\n \nRegistry\n \n/\n \nAsset\n \nClassification\n \nSystem\n \n \nStatus:\n \nFounder\n \nApproved\n \n\u2014\n \nInitial\n \nFramework\n \nParent  Systems:  \n\u25cf  QRU  Intelligence  Constitution\u2122  \u25cf  QRU  Founder  Defense  Portfolio\u2122  \u25cf  QRU  Standards  Registry\u2122  \u25cf  QRU  Knowledge  Architecture\u2122  36-Layer  Intelligence  Manufacturing  Standard\u2122  \n \nIntroduction  \nThe  Purpose  of  the  QRU  Intellectual  Property  Registry\u2122  \nAs  QRU\u2122  grows,  the  value  of  the  organization  will  exist  across  multiple  asset  categories:  \n\u25cf  Brand  identity  \u25cf  Methodologies  \u25cf  Knowledge  systems  \u25cf  Databases  \u25cf  Educational  products  \u25cf  Artificial  intelligence  workflows  \u25cf  Standards  \u25cf  Research  infrastructure  \nThe  QRU  Intellectual  Property  Registry\u2122  exists  to  identify,  organize,  and  protect  these  assets.  \nIts  purpose:  \n\n\u201cKnow  what  QRU  creates,  understand  why  it  matters,  and  preserve  the  systems  that  create  \nfuture\n \nvalue.\u201d\n \n \nSection  1  \nQRU  Intellectual  Property  Philosophy\u2122  \nQRU  recognizes  four  forms  of  strategic  value:  \n1.  Identity  Assets  \nWho  QRU  is.  \nExamples:  \n\u25cf  Brand  \u25cf  Mission  \u25cf  Names  \u25cf  Symbols  \u25cf  Language  \n \n2.  Method  Assets  \nHow  QRU  creates  understanding.  \nExamples:  \n\u25cf  Frameworks  \u25cf  Processes  \u25cf  Teaching  systems  \u25cf  Quality  standards  \n \n3.  Intelligence  Assets  \n\nWhat  QRU  accumulates  over  time.  \nExamples:  \n\u25cf  Knowledge  Records\u2122  \u25cf  Databases  \u25cf  Research  \u25cf  Learning  insights  \n \n4.  Ecosystem  Assets  \nWhat  QRU  builds  around  the  mission.  \nExamples:  \n\u25cf  Partnerships  \u25cf  Communities  \u25cf  Educator  networks  \u25cf  Future  platforms  \n \nSection  2  \nQRU  Asset  Classification  System\u2122  \nEvery  QRU  asset  receives  a  classification.  \n \nClass  A  \nPublic  Brand  Assets\u2122  \nPurpose:  \n\nCreate  recognition  and  trust.  \nExamples:  \n\u25cf  QRU\u2122  \u25cf  Quest  for  Real  Understanding\u2122  \u25cf  QRU  visual  identity  \u25cf  Public  mission  statements  \u25cf  Public  educational  messages  \nProtection  Considerations:  \nTrademark  review  recommended.  \n \nClass  B  \nProtected  Methodology  Assets\u2122  \nPurpose:  \nProtect  how  QRU  transforms  information  into  understanding.  \nExamples:  \n\u25cf  QRU  Knowledge  Architecture\u2122  36-Layer  Intelligence  Manufacturing  Standard\u2122  \u25cf  QRU  Universal  Production  Formula\u2122  \u25cf  QRU  Conversation-First\u2122  Teaching  Methodology  \u25cf  QRU  Guided  Understanding  System\u2122  \u25cf  QRU  Understanding  Transformation  Engine\u2122  \u25cf  QRU  Treasure  Standard\u2122  \nProtection  Considerations:  \nDocumentation,  trademark  review,  controlled  publication.  \n \nClass  C  \n\nInternal  Operating  Assets\u2122  \nPurpose:  \nProtect  the  Factory  operating  system.  \nExamples:  \n\u25cf  QRU  AI  Factory\u2122  Pipeline  \u25cf  Production  workflows  \u25cf  Agent  instructions  \u25cf  Internal  review  systems  \u25cf  Manufacturing  procedures  \nProtection  Considerations:  \nInternal  documentation  and  trade  secret  management.  \n \nClass  D  \nStrategic  Intelligence  Assets\u2122  \nPurpose:  \nCreate  long-term  compounding  value.  \nExamples:  \n\u25cf  QRU  Knowledge  Database\u2122  \u25cf  QRU  Knowledge  Graph\u2122  \u25cf  Living  Intelligence  Library\u2122  \u25cf  Research  archives  \u25cf  Assessment  data  \u25cf  Product  performance  insights  \nProtection  Considerations:  \nAccess  control,  backup  systems,  documentation.  \n\n \nClass  E  \nProduct  Assets\u2122  \nPurpose:  \nDeliver  QRU  value  to  customers.  \nExamples:  \n\u25cf  Books  \u25cf  Workbooks  \u25cf  Courses  \u25cf  Videos  \u25cf  Presentations  \u25cf  Teacher  resources  \u25cf  Learning  tools  \nProtection  Considerations:  \nCopyright  registration  where  appropriate.  \n \nSection  3  \nQRU  Core  Asset  Registry\u2122  \nAsset  ID:  \nQRU-IP-001  \nAsset  Name:  \n\nQRU  Intelligence  Constitution\u2122  \nCategory:  \nGovernance  Architecture  \nClassification:  \nClass  B  /  Class  C  \nPurpose:  \nDefines  the  foundational  laws  and  principles  of  QRU.  \n \nAsset  ID:  \nQRU-IP-002  \nAsset  Name:  \nQRU  Methodology  Manual\u2122  \nCategory:  \nOperating  Methodology  \nClassification:  \nClass  B  \nPurpose:  \nDefines  how  QRU  manufactures  understanding.  \n \nAsset  ID:  \nQRU-IP-003  \nAsset  Name:  \n\nQRU  Standards  Registry\u2122  \nCategory:  \nQuality  Control  System  \nClassification:  \nClass  B  /  Class  C  \nPurpose:  \nMaintains  consistency  across  QRU  products.  \n \nAsset  ID:  \nQRU-IP-004  \nAsset  Name:  \nQRU  Knowledge  Record  Master  Template\u2122  \nCategory:  \nKnowledge  Infrastructure  \nClassification:  \nClass  C  /  Class  D  \nPurpose:  \nCreates  standardized  intelligence  containers.  \n \nAsset  ID:  \nQRU-IP-005  \nAsset  Name:  \n\nQRU  Founder  Defense  Portfolio\u2122  \nCategory:  \nStrategic  Positioning  \nClassification:  \nClass  C  \nPurpose:  \nDocuments  QRU  competitive  advantage.  \n \nSection  4  \nQRU  Trade  Secret  Protection  Principles\u2122  \nInternal  assets  should  be  evaluated  by:  \nValue  \nDoes  this  create  competitive  advantage?  \nDifficulty  \nWould  recreation  require  significant  time  or  resources?  \nConfidentiality  \nIs  this  information  publicly  available?  \nStrategic  Importance  \nDoes  this  strengthen  QRU\u2019s  future?  \n \n\nSection  5  \nQRU  Version  Control  Standard\u2122  \nEvery  major  asset  requires:  \nAsset  Name   \nVersion  Number   \nDate  Created   \nCreator   \nUpdates   \nApproval  Status  \nDraft  /  Review  /  Approved  /  Archived  \n \nSection  6  \nQRU  Future  Protection  Review\u2122  \nPotential  future  actions:  \n\n\u25cf  Trademark  evaluation  \u25cf  Copyright  registration  \u25cf  Legal  consultation  \u25cf  Licensing  strategy  \u25cf  Partnership  agreements  \u25cf  Data  protection  policies  \n \nSection  7  \nQRU  Intellectual  Property  Governance  \nRule\u2122\n \nNo  major  QRU  asset  should  exist  without:  \n\u2713  Identification  \n \n\u2713\n \nClassification\n \n \n\u2713\n \nVersion\n \ncontrol\n \n \n\u2713\n \nStorage\n \nlocation\n \n \n\u2713\n \nOwnership\n \nrecord\n \n \n\u2713\n \nStrategic\n \npurpose\n \n \nFounder  Declaration\u2122  \n\u201cThe  greatest  asset  QRU  creates  is  not  a  single  product.  It  is  the  protected  system  that  allows  \nunderstanding\n \nto\n \nbe\n \nmanufactured,\n \nimproved,\n \nand\n \nshared\n \nacross\n \ngenerations.\u201d\n \n \nQRU  Factory  Integration  Status  \n\u2705  QRU  Intelligence  Constitution\u2122  \n \n\u2705\n \nQRU\n \nMethodology\n \nManual\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nStandards\n \nRegistry\u2122\n \nv1.0\n \n\n \u2705  QRU  Agent  Training  Protocol\u2122  v1.0  \n \n\u2705\n \nQRU\n \nFounder\n \nDefense\n \nPortfolio\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nKnowledge\n \nRecord\n \nMaster\n \nTemplate\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nIntellectual\n \nProperty\n \nRegistry\u2122\n \nv1.0\n \n \nNext  Development  Phase  \nQRU  Factory  Operating  Blueprint\u2122  v1.0  \nPurpose:  \nCombine  all  foundational  systems  into  one  master  operating  map  showing:  \n\u25cf  How  ideas  enter  the  Factory  \u25cf  How  knowledge  is  transformed  \u25cf  How  verification  happens  \u25cf  How  products  are  manufactured  \u25cf  How  improvement  cycles  operate  \n \nArchive  Classification  \nAsset  Type:  Intellectual  Property  Governance  Document  \n \nProtection\n \nLevel:\n \nFounder\n \n/\n \nLeadership\n \nArchive\n \n \nVersion\n \nControl\n \nRequired:\n \nYes\n \nMaintain  dated  external  copies  and  revision  history.  \n ",
+  "word_count": 821,
+  "source_document": "Ownership_and_Classification.pdf",
+  "classification": "Core Intellectual Property Governance",
+  "asset_type": "Founding Institutional Standard",
+  "is_founder_document": true
+ },
+ {
+  "_id": "6a505728a6f073f0333b7cdd",
+  "id": "STD-00025",
+  "standard_id": "STD-00025",
+  "name": "Product Assembly Blueprint",
+  "category": "Manufacturing Blueprint\u2122",
+  "description": "QRU Product Assembly Blueprint\u2122 Version 1.0 The Manufacturing System for Transforming Knowledge Records\u2122 Into Customer Experiences\u2122 Document Classification: Product Development Architecture Asset Type: Product Manufacturing Workflow Status: Founder Approved \u2014 Initial Framework Purpose The QRU Produc",
+  "purpose": "The QRU Product Assembly Blueprint\u2122 defines the official process for converting a completed",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-10",
+    "reason": "Adopted verbatim from Founder document: Product_Assembly_Blueprint.pdf.",
+    "reviewer": "Founder",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [],
+  "graph_links": [],
+  "created_at": "2026-07-10T02:21:28.892237+00:00",
+  "updated_at": "2026-07-10T02:21:28.892249+00:00",
+  "document_content": "QRU  Product  Assembly  Blueprint\u2122  \nVersion  1.0  \nThe  Manufacturing  System  for  Transforming  Knowledge  Records\u2122  Into  \nCustomer\n \nExperiences\u2122\n \nDocument  Classification:  Product  Development  Architecture  \n \nAsset\n \nType:\n \nProduct\n \nManufacturing\n \nWorkflow\n \n \nStatus:\n \nFounder\n \nApproved\n \n\u2014\n \nInitial\n \nFramework\n \n \nPurpose  \nThe  QRU  Product  Assembly  Blueprint\u2122  defines  the  official  process  for  converting  a  completed  \nQRU\n \nKnowledge\n \nRecord\u2122\n \ninto\n \na\n \nfinished\n \nproduct\n \nready\n \nfor\n \ncustomers.\n \nThe  purpose  is  to  ensure  every  QRU  product  maintains:  \n\u25cf  Intellectual  integrity  \u25cf  Teaching  quality  \u25cf  Design  excellence  \u25cf  Market  readiness  \u25cf  QRU  Gold  Standard\u2122  quality  \n \nFounder  Principle\u2122  \n\u201cQRU  does  not  manufacture  products  from  ideas.  QRU  manufactures  products  from  \nunderstanding.\u201d\n \n \nSection  1  \n\nProduct  Assembly  Overview\u2122  \nInput:  \nQRU  Knowledge  Record\u2122  \n\u2193  \nTransformation  \n\u2193  \nCustomer  Product  \nPossible  Outputs:  \n\u25cf  Books  \u25cf  Workbooks  \u25cf  Courses  \u25cf  Videos  \u25cf  Assessments  \u25cf  Teacher  resources  \u25cf  Digital  learning  experiences  \n \nSection  2  \nProduct  Selection  Gate\u2122  \nBefore  manufacturing  begins,  determine:  \nAudience  \nWho  needs  this?  \n \nProblem  \n\nWhat  does  this  solve?  \n \nLearning  Goal  \nWhat  should  someone  understand  afterward?  \n \nBest  Format  \nWhich  product  delivers  the  best  experience?  \n \nProduct  Format  Decision  Matrix\u2122  \nBook  \nBest  for:  \n\u25cf  Deep  exploration  \u25cf  Reference  \u25cf  Storytelling  \n \nWorkbook  \nBest  for:  \n\u25cf  Practice  \u25cf  Reflection  \u25cf  Skill  development  \n \nCourse  \nBest  for:  \n\n\u25cf  Guided  transformation  \u25cf  Structured  learning  \n \nVideo  \nBest  for:  \n\u25cf  Demonstration  \u25cf  Story  \u25cf  Accessibility  \n \nAssessment  \nBest  for:  \n\u25cf  Measurement  \u25cf  Progress  tracking  \n \nSection  3  \nContent  Manufacturing  Stage\u2122  \nThe  Knowledge  Record\u2122  becomes  product  content.  \nRequired  elements:  \n \nCore  Understanding\u2122  \nThe  main  idea.  \n \n\nVocabulary  Decoder\u2122  \nImportant  terms  explained.  \n \nSimple  Explanation\u2122  \nClear  understanding.  \n \nConnection  Examples\u2122  \nReal-world  relevance.  \n \nApplication  Exercises\u2122  \nPractice  using  knowledge.  \n \nAssessment  System\u2122  \nMeasure  understanding.  \n \nSection  4  \nQRU  Teaching  Experience  Layer\u2122  \nEvery  educational  product  should  include:  \nThe  Question  \n\nWhat  are  we  exploring?  \n \nThe  Simple  Answer  \nWhat  is  the  core  truth?  \n \nThe  Explanation  \nHow  does  it  work?  \n \nThe  Analogy  \nHow  can  someone  remember  it?  \n \nThe  Memory  Sentence  \nWhat  should  stay  with  them?  \n \nThe  Quick  Win  \nHow  can  they  apply  it?  \n \nThe  Assessment  \nDid  understanding  occur?  \n \n\nSection  5  \nDesign  Intelligence  Production\u2122  \nThe  product  enters:  \nQRU  Design  Intelligence  Standard\u2122  \nReview:  \n \nVisual  Quality  \nDoes  it  look  premium?  \n \nLearning  Design  \nDoes  the  format  support  understanding?  \n \nBrand  Alignment  \nDoes  it  feel  like  QRU?  \n \nUser  Experience  \nIs  it  enjoyable  and  easy  to  use?  \n \nSection  6  \n\nQRU  Gold  Standard\u2122  Review\u2122  \nBefore  release:  \n \nTruth  Gold\u2122  \nVerification  complete.  \n \nUnderstanding  Gold\u2122  \nTeaching  quality  approved.  \n \nApplication  Gold\u2122  \nPractical  value  demonstrated.  \n \nExperience  Gold\u2122  \nDesign  and  usability  approved.  \n \nLegacy  Gold\u2122  \nWorth  preserving  and  sharing.  \n \n\nSection  7  \nMarketplace  Preparation\u2122  \nEvery  product  receives:  \nProduct  Identity  \n\u25cf  Title  \u25cf  Description  \u25cf  Audience  \u25cf  Category  \n \nCustomer  Communication  \n\u25cf  Problem  solved  \u25cf  Benefits  \u25cf  Learning  outcomes  \n \nDistribution  Preparation  \nChannels:  \n\u25cf  QRU  Store  \u25cf  Publishing  platforms  \u25cf  Educational  marketplaces  \u25cf  Partnerships  \n \nSection  8  \nProduct  Launch  System\u2122  \n\nLaunch  preparation:  \nAsset  Completion  \n\u2610  Product  file  complete  \n\u2610  Cover/design  complete  \n\u2610  Metadata  complete  \n\u2610  Marketing  assets  complete  \n\u2610  Quality  approval  complete  \n \nSection  9  \nCustomer  Feedback  Loop\u2122  \nAfter  release:  \nCollect:  \n\u25cf  Reviews  \u25cf  Questions  \u25cf  Suggestions  \u25cf  Learning  outcomes  \nTransform  feedback  into:  \nImprovement  Data\u2122  \n \nSection  10  \nProduct  Evolution  Cycle\u2122  \n\nReleased  Product  \n\u2193  \nCustomer  Experience  \n\u2193  \nFeedback  \n\u2193  \nKnowledge  Record  Update  \n\u2193  \nImproved  Product  \n\u2193  \nNew  Versions  \n \nSection  11  \nQRU  Product  Family  Expansion\u2122  \nOne  Knowledge  Record\u2122  may  create  an  ecosystem:  \nExample:  \nKnowledge  Record\u2122  \n\u2193  \nBook  \n\u2193  \nWorkbook  \n\u2193  \n\nCourse  \n\u2193  \nVideo  Series  \n\u2193  \nTeacher  Guide  \n\u2193  \nAssessment  \n\u2193  \nAI  Learning  Companion  \n \nSection  12  \nProduct  Assembly  Rules\u2122  \nRule  1  \nNo  product  without  a  Knowledge  Foundation.  \n \nRule  2  \nNo  product  release  without  verification.  \n \nRule  3  \nNo  product  earns  QRU  Gold  Standard\u2122  without  passing  all  gates.  \n \n\nRule  4  \nEvery  product  must  create  measurable  value.  \n \nFounder  Declaration\u2122  \n\u201cThe  purpose  of  the  QRU  Factory  is  not  to  create  more  products.  The  purpose  is  to  create  more  \nunderstanding\n \n\u2014\n \nand\n \nproducts\n \nare\n \nthe\n \nvehicles\n \nthat\n \ncarry\n \nunderstanding\n \ninto\n \nthe\n \nworld.\u201d\n \n \nArchive  Classification  \nAsset  Type:  Product  Manufacturing  Architecture  \nStorage:  \nQRU  Enterprise  Source  of  Truth\u2122  \nFolder:  \n06  \u2014  Product  Manufacturing  \nSubfolders:  \n\u25cf  Product  Blueprints  \u25cf  Templates  \u25cf  Production  Records  \u25cf  Launch  Systems  \u25cf  Customer  Feedback  \nVersion  Control  Required:  Yes  \n \nNext  Recommended  Artifact  \nQRU  Marketplace  &  Customer  Experience  System\u2122  v1.0  \n\nPurpose:  \nDefine  the  final  stage:  \nHow  customers  discover,  purchase,  experience,  review,  and  continue  their  relationship  with  \nQRU.\n \nThis  completes  the  entire  chain:  \nQuestion  \u2192  Knowledge  Record\u2122  \u2192  Product  \u2192  Customer  \u2192  Feedback  \u2192  Improved  Factory  \n ",
+  "word_count": 688,
+  "source_document": "Product_Assembly_Blueprint.pdf",
+  "classification": "Product Development Architecture",
+  "asset_type": "Founding Institutional Standard",
+  "is_founder_document": true
+ },
+ {
+  "_id": "6a505729a6f073f0333b7cde",
+  "id": "STD-00026",
+  "standard_id": "STD-00026",
+  "name": "Factory Operations Blueprint",
+  "category": "Factory Operations\u2122",
+  "description": "QRU Factory Operating Blueprint\u2122 Version 1.0 The Master Operating Map for Manufacturing Verified Human Understanding\u2122 Document Classification: Core Enterprise Architecture Asset Type: Operating System Blueprint Status: Founder Approved \u2014 Initial Framework Parent Systems: \u25cf QRU Intelligence Constitut",
+  "purpose": "of the QRU Factory Operating Blueprint\u2122",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-10",
+    "reason": "Adopted verbatim from Founder document: Factory_Operations_Blueprint.pdf.",
+    "reviewer": "Founder",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [],
+  "graph_links": [],
+  "created_at": "2026-07-10T02:21:29.300272+00:00",
+  "updated_at": "2026-07-10T02:21:29.300283+00:00",
+  "document_content": "QRU  Factory  Operating  Blueprint\u2122  \nVersion  1.0  \nThe  Master  Operating  Map  for  Manufacturing  Verified  Human  \nUnderstanding\u2122\n \nDocument  Classification:  Core  Enterprise  Architecture  \n \nAsset\n \nType:\n \nOperating\n \nSystem\n \nBlueprint\n \n \nStatus:\n \nFounder\n \nApproved\n \n\u2014\n \nInitial\n \nFramework\n \nParent  Systems:  \n\u25cf  QRU  Intelligence  Constitution\u2122  \u25cf  QRU  Methodology  Manual\u2122  \u25cf  QRU  Standards  Registry\u2122  \u25cf  QRU  Agent  Training  Protocol\u2122  \u25cf  QRU  Founder  Defense  Portfolio\u2122  \u25cf  QRU  Intellectual  Property  Registry\u2122  \u25cf  QRU  Knowledge  Architecture\u2122  36-Layer  Intelligence  Manufacturing  Standard\u2122  \n \nIntroduction  \nThe  Purpose  of  the  QRU  Factory  Operating  Blueprint\u2122  \nThe  QRU  Factory\u2122  is  not  a  content  production  machine.  \nIt  is  an:  \nUnderstanding  Manufacturing  System\u2122  \nIts  purpose  is  to  transform:  \nQuestions  \n\u2193  \n\nInformation  \n\u2193  \nVerified  Knowledge  \n\u2193  \nUnderstanding  \n\u2193  \nApplication  \n\u2193  \nHuman  Growth  \n\u2193  \nLegacy  \n \nSection  1  \nThe  QRU  Factory  Mission\u2122  \nThe  Factory  exists  to  answer  one  question:  \n\u201cHow  do  we  remove  as  much  unnecessary  confusion  as  possible  without  losing  truth?\u201d  \nEvery  QRU  creation  must  serve  this  mission.  \n \nSection  2  \nThe  QRU  Factory  Input  System\u2122  \n\nEverything  begins  with  an  input.  \nInputs  include:  \nHuman  Questions  \n\u25cf  Curiosity  \u25cf  Problems  \u25cf  Confusion  \u25cf  Goals  \u25cf  Needs  \nMarket  Signals  \n\u25cf  Trends  \u25cf  Learning  gaps  \u25cf  Community  needs  \u25cf  Educational  opportunities  \nResearch  Discoveries  \n\u25cf  Science  \u25cf  History  \u25cf  Technology  \u25cf  Culture  \u25cf  Human  experience  \n \nSection  3  \nQRU  Question  Intake\u2122  System  \nEvery  input  becomes  a  structured  question.  \nThe  Factory  asks:  \nUnderstanding  Question  \n\nWhat  are  we  trying  to  understand?  \nImportance  Question  \nWhy  does  this  matter?  \nAudience  Question  \nWho  needs  this  understanding?  \nApplication  Question  \nWhat  changes  when  this  is  understood?  \n \nSection  4  \nQRU  Intelligence  Manufacturing  Pipeline\u2122  \nStage  1  \u2014  Capture  \nCollect:  \n\u25cf  Questions  \u25cf  Ideas  \u25cf  Opportunities  \u25cf  Research  topics  \nOutput:  \nPotential  Knowledge  Record\u2122  \n \nStage  2  \u2014  Research  \nGather:  \n\n\u25cf  Evidence  \u25cf  Sources  \u25cf  Context  \u25cf  Perspectives  \nOutput:  \nResearch  Foundation  \n \nStage  3  \u2014  Understand  \nTransform  information  into  meaning.  \nQuestions:  \n\u25cf  What  is  happening?  \u25cf  Why  does  it  happen?  \u25cf  How  does  it  connect?  \nOutput:  \nUnderstanding  Model\u2122  \n \nStage  4  \u2014  Verify  \nThe  Verification  Lion\u2122  reviews:  \n\u25cf  Accuracy  \u25cf  Evidence  \u25cf  Context  \u25cf  Ethics  \u25cf  Application  \nOutput:  \nVerified  Understanding  \n \nStage  5  \u2014  Translate  \n\nThe  Translation  Layer  adapts  knowledge  for:  \n\u25cf  Children  \u25cf  Families  \u25cf  Educators  \u25cf  Professionals  \u25cf  Experts  \nOutput:  \nAccessible  Understanding  \n \nStage  6  \u2014  Create  \nThe  Factory  transforms  understanding  into:  \n\u25cf  Knowledge  Cards\u2122  \u25cf  Workbooks  \u25cf  Books  \u25cf  Courses  \u25cf  Videos  \u25cf  Assessments  \nOutput:  \nQRU  Products\u2122  \n \nStage  7  \u2014  Communicate  \nShare  through:  \n\u25cf  Education  \u25cf  Media  \u25cf  Communities  \u25cf  Partnerships  \nOutput:  \nHuman  Connection  \n \n\nStage  8  \u2014  Measure  \nEvaluate:  \n\u25cf  Understanding  \u25cf  Recall  \u25cf  Application  \u25cf  Feedback  \u25cf  Impact  \nOutput:  \nLearning  Data  \n \nStage  9  \u2014  Improve  \nUpdate:  \n\u25cf  Knowledge  Records\u2122  \u25cf  Products  \u25cf  Systems  \u25cf  Standards  \nOutput:  \nA  smarter  Factory  \n \nSection  5  \nQRU  Quality  Control  System\u2122  \nEvery  product  passes  through:  \nQRU  Treasure  Standard\u2122  \n\nSeven  Gates  \nTruth  \nIs  it  accurate?  \nClarity  \nCan  it  be  understood?  \nConnection  \nDoes  it  relate  to  life?  \nMemory  \nCan  it  be  remembered?  \nApplication  \nCan  it  be  used?  \nEmotional  Intelligence  \nDoes  it  respect  the  learner?  \nLegacy  \nDoes  it  improve  the  future?  \n \nSection  6  \nQRU  Agent  Operating  Structure\u2122  \nThe  Factory  operates  through  specialized  roles.  \n \n\nVerification  Lion\u2122  \nProtects  truth.  \n \nTranslation  Fox\u2122  \nCreates  clarity.  \n \nWisdom  Owl\u2122  \nFinds  deeper  connections.  \n \nBuilder  Bee\u2122  \nCreates  products.  \n \nNavigator  Compass\u2122  \nProtects  mission  alignment.  \n \nSection  7  \nQRU  Knowledge  Asset  System\u2122  \nEvery  approved  understanding  becomes  part  of  the:  \nQRU  Living  Intelligence  Library\u2122  \n\nEach  Knowledge  Record\u2122  connects  to:  \n\u25cf  Research  \u25cf  Products  \u25cf  Lessons  \u25cf  Assessments  \u25cf  Characters  \u25cf  Communities  \u25cf  Future  AI  learning  systems  \n \nSection  8  \nQRU  Product  Manufacturing  System\u2122  \nOne  verified  understanding  can  become  many  products.  \nExample:  \nOne  Knowledge  Record\u2122  \n\u2193  \nKnowledge  Card\u2122  \n\u2193  \nPoster  \n\u2193  \nWorkbook  \n\u2193  \nBook  Chapter  \n\u2193  \nCourse  \n\u2193  \n\nVideo  \n\u2193  \nAssessment  \n\u2193  \nTeacher  Resource  \nThe  Factory  multiplies  value.  \n \nSection  9  \nQRU  Continuous  Intelligence  Loop\u2122  \nThe  Factory  improves  through:  \nQuestion  \n\u2193  \nCreation  \n\u2193  \nFeedback  \n\u2193  \nMeasurement  \n\u2193  \nImprovement  \n\u2193  \nNew  Understanding  \nThe  system  compounds.  \n\n \nSection  10  \nQRU  Human-AI  Operating  Model\u2122  \nAI  supports:  \n\u25cf  Research  \u25cf  Organization  \u25cf  Pattern  discovery  \u25cf  Production  assistance  \nHumans  provide:  \n\u25cf  Wisdom  \u25cf  Judgment  \u25cf  Ethics  \u25cf  Creativity  \u25cf  Purpose  \nThe  QRU  standard:  \n\u201cUse  AI  as  a  tool.  You  are  the  thinker.\u201d  \n \nSection  11  \nQRU  Enterprise  Growth  Model\u2122  \nThe  Factory  expands  through:  \nKnowledge  Expansion  \nMore  verified  understanding.  \n\nProduct  Expansion  \nMore  ways  to  teach.  \nCommunity  Expansion  \nMore  people  reached.  \nIntelligence  Expansion  \nBetter  systems  over  time.  \n \nSection  12  \nQRU  Factory  Non-Negotiable  Laws\u2122  \n1.  Understanding  comes  before  production.  2.  Verification  comes  before  publication.  3.  Questions  come  before  assumptions.  4.  Quality  comes  before  speed.  5.  Humans  remain  responsible  for  meaning  and  purpose.  6.  Every  asset  must  serve  learning.  7.  Every  generation  should  benefit  from  the  work.  \n \nFounder  Declaration\u2122  \n\u201cThe  QRU  Factory  does  not  manufacture  information.  It  manufactures  pathways  from  curiosity  \nto\n \nunderstanding,\n \nand\n \nfrom\n \nunderstanding\n \nto\n \nhuman\n \nprogress.\u201d\n \n \nQRU  Factory  Architecture  Status  \n\nFOUNDATIONAL  SYSTEM  COMPLETE:  \n\u2705  QRU  Intelligence  Constitution\u2122  \n \n\u2705\n \nQRU\n \nMethodology\n \nManual\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nStandards\n \nRegistry\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nAgent\n \nTraining\n \nProtocol\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nFounder\n \nDefense\n \nPortfolio\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nKnowledge\n \nRecord\n \nMaster\n \nTemplate\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nIntellectual\n \nProperty\n \nRegistry\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nFactory\n \nOperating\n \nBlueprint\u2122\n \nv1.0\n \n \nNext  Development  Phase  \nQRU  Intelligence  Growth  Index\u2122  v1.0  \nPurpose:  \nCreate  the  measurement  system  that  answers:  \n\u201cHow  do  we  prove  QRU  creates  understanding?\u201d  \nThis  becomes  the  bridge  from:  \n\u201cWe  create  educational  experiences\u201d  \nto:  \n\u201cWe  measure  human  understanding  growth.\u201d  \n \nArchive  Classification  \nAsset  Type:  Enterprise  Operating  Architecture  \n \nProtection\n \nLevel:\n \nCore\n \nQRU\n \nInternal\n \nSystem\n \n \nVersion\n \nControl\n \nRequired:\n \nYes\n \nMaintain  dated  external  copies  and  revision  history.  \n ",
+  "word_count": 876,
+  "source_document": "Factory_Operations_Blueprint.pdf",
+  "classification": "Core Enterprise Architecture",
+  "asset_type": "Founding Institutional Standard",
+  "is_founder_document": true
+ },
+ {
+  "_id": "6a50573beec2fd87899bb3ec",
+  "id": "STD-00027",
+  "standard_id": "STD-00027",
+  "name": "Knowledge Record Master Specification\u2122",
+  "category": "Knowledge Record Architecture\u2122",
+  "description": "QRU Knowledge Record\u2122 Master Specification Version 1.0 The Foundational Intelligence Asset Standard of the QRU Understanding Factory\u2122 Document Classification: Core Knowledge Architecture Specification Asset Type: Intelligence Asset Template / Production Standard Status: Founder Approved \u2014 Initial Fr",
+  "purpose": "The QRU Knowledge Record\u2122 Master Specification defines the required structure for creating,",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-UKR-0001",
+   "STD-00030"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-10",
+    "reason": "Adopted verbatim from Founder document: KR_Master_Specification.pdf.",
+    "reviewer": "Founder",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [],
+  "graph_links": [],
+  "created_at": "2026-07-10T02:21:47.584935+00:00",
+  "updated_at": "2026-07-27T04:35:20.303485+00:00",
+  "document_content": "QRU  Knowledge  Record\u2122  Master  \nSpecification\n \nVersion  1.0  \nThe  Foundational  Intelligence  Asset  Standard  of  the  QRU  Understanding  \nFactory\u2122\n \nDocument  Classification:  Core  Knowledge  Architecture  Specification  \n \nAsset\n \nType:\n \nIntelligence\n \nAsset\n \nTemplate\n \n/\n \nProduction\n \nStandard\n \n \nStatus:\n \nFounder\n \nApproved\n \n\u2014\n \nInitial\n \nFramework\n \n \nPurpose  \nThe  QRU  Knowledge  Record\u2122  Master  Specification  defines  the  required  structure  for  creating,  \nverifying,\n \nstoring,\n \nexpanding,\n \nand\n \ntransforming\n \nevery\n \nQRU\n \nKnowledge\n \nRecord\u2122.\n \nA  Knowledge  Record\u2122  is  the  foundational  intelligence  asset  from  which  QRU  products,  \nlessons,\n \nmedia,\n \nand\n \nlearning\n \nexperiences\n \nare\n \ncreated.\n \n \nFounder  Principle\u2122  \n\u201cEvery  great  product  begins  with  a  well-understood  idea.\u201d  \n \nSection  1  \nDefinition  of  a  QRU  Knowledge  Record\u2122  \n\nA  QRU  Knowledge  Record\u2122  is:  \nA  structured,  verified,  expandable  intelligence  asset  designed  to  transform  information  into  \nunderstanding\n \nand\n \napplication.\n \nIt  is  not  simply  notes.  \nIt  is  not  simply  research.  \nIt  is  a  reusable  understanding  engine.  \n \nSection  2  \nKnowledge  Record  Identity\u2122  \nEvery  record  receives:  \nRecord  ID  \nExample:  \nQRU-KR-00001  \n \nTitle  \nClear  understanding  topic.  \n \nCore  Question\u2122  \nThe  question  this  record  answers.  \nExample:  \n\u201cHow  does  investing  work?\u201d  \n\n \nAudience  \nWho  needs  this  understanding?  \nExamples:  \n\u25cf  Children  \u25cf  Students  \u25cf  Parents  \u25cf  Entrepreneurs  \u25cf  Professionals  \n \nVersion  History  \nTracks:  \n\u25cf  Creation  \u25cf  Updates  \u25cf  Improvements  \n \nSection  3  \nQRU  36-Layer  Intelligence  Manufacturing  \nStructure\u2122\n \nEach  Knowledge  Record  moves  through  layered  development.  \n \nLayer  Group  1  \n\nUnderstanding  Foundation\u2122  \n1.  Question  Definition  \nWhat  are  we  trying  to  understand?  \n2.  Problem  Identification  \nWhy  does  this  matter?  \n3.  Context  Mapping  \nWhere  does  this  exist  in  the  world?  \n4.  Vocabulary  Foundation  \nWhat  words  must  be  understood?  \n \nLayer  Group  2  \nResearch  Intelligence\u2122  \n5.  Source  Collection  \nGather  information.  \n6.  Source  Evaluation  \nAssess  reliability.  \n7.  Evidence  Mapping  \nConnect  claims  to  support.  \n\n8.  Research  Summary  \nCapture  findings.  \n \nLayer  Group  3  \nVerification  Architecture\u2122  \n9.  Accuracy  Review  \nIs  it  correct?  \n10.  Context  Review  \nIs  it  fairly  represented?  \n11.  Bias  Review  \nAre  limitations  identified?  \n12.  Verification  Approval  \nReady  for  development.  \n \nLayer  Group  4  \nTranslation  Intelligence\u2122  \n13.  Simplification  \n\nRemove  unnecessary  complexity.  \n14.  Explanation  \nCreate  clear  understanding.  \n15.  Analogy  Creation  \nConnect  to  familiar  ideas.  \n16.  Story  Development  \nMake  meaning  memorable.  \n \nLayer  Group  5  \nTeaching  Architecture\u2122  \n17.  Learning  Objectives  \nWhat  should  someone  know?  \n18.  Conversation  Pathway  \nHow  should  understanding  develop?  \n19.  Practice  Application  \nHow  can  it  be  used?  \n20.  Assessment  Design  \nHow  do  we  measure  understanding?  \n \n\nLayer  Group  6  \nConnection  Intelligence\u2122  \n21.  Related  Concepts  \nWhat  connects  to  this?  \n22.  Real-World  Examples  \nWhere  does  this  appear?  \n23.  Cross-Discipline  Links  \nWhat  other  fields  connect?  \n24.  Future  Implications  \nWhy  will  this  matter?  \n \nLayer  Group  7  \nProduct  Manufacturing\u2122  \n25.  Product  Opportunities  \nPossible  outputs:  \n\u25cf  Book  \u25cf  Course  \u25cf  Video  \u25cf  Workbook  \u25cf  Assessment  \n\n26.  Audience  Adaptations  \nHow  does  it  change  for  different  learners?  \n27.  Media  Opportunities  \nHow  can  it  be  communicated?  \n28.  Marketing  Translation  \nWhy  would  someone  value  it?  \n \nLayer  Group  8  \nEvolution  &  Improvement\u2122  \n29.  Feedback  Collection  \nWhat  did  users  say?  \n30.  Performance  Review  \nHow  did  it  perform?  \n31.  Knowledge  Updates  \nWhat  changed?  \n32.  Version  Improvement  \nHow  does  it  get  better?  \n \n\nLayer  Group  9  \nLegacy  Intelligence\u2122  \n33.  Long-Term  Value  \nWill  this  matter  later?  \n34.  Generational  Impact  \nCan  it  help  future  learners?  \n35.  Preservation  Standard  \nShould  it  be  maintained?  \n36.  Treasure  Approval  \nDoes  it  meet  QRU  standards?  \n \nSection  4  \nKnowledge  Record  Quality  Gates\u2122  \nEvery  record  must  pass:  \n \nGate  1:  \nTruth  \nIs  it  accurate?  \n\n \nGate  2:  \nUnderstanding  \nCan  humans  grasp  it?  \n \nGate  3:  \nApplication  \nCan  it  improve  decisions  or  actions?  \n \nGate  4:  \nExperience  \nCan  it  become  a  meaningful  learning  experience?  \n \nGate  5:  \nLegacy  \nIs  it  worthy  of  preservation?  \n \nSection  5  \nKnowledge  Record  Transformation  \nPaths\u2122\n \n\nOne  Knowledge  Record\u2122  may  become:  \nEducation  Products  \n\u25cf  Lessons  \u25cf  Courses  \u25cf  Workbooks  \u25cf  Teacher  resources  \n \nPublishing  Products  \n\u25cf  Books  \u25cf  Guides  \u25cf  Reference  materials  \n \nMedia  Products  \n\u25cf  Videos  \u25cf  Podcasts  \u25cf  Presentations  \n \nTechnology  Products  \n\u25cf  AI  learning  tools  \u25cf  Digital  experiences  \n \nSection  6  \nKnowledge  Record  Governance\u2122  \nEvery  record  maintains:  \n\n\u25cf  Source  history  \u25cf  Verification  notes  \u25cf  Creation  history  \u25cf  Contributors  \u25cf  Product  connections  \u25cf  Revision  history  \n \nSection  7  \nKnowledge  Record  Gold  Standard\u2122  \nA  complete  Knowledge  Record\u2122  should  answer:  \nWhat  is  it?  \nUnderstanding.  \nWhy  does  it  matter?  \nPurpose.  \nHow  does  it  work?  \nMechanism.  \nWhere  does  it  apply?  \nConnection.  \nWhat  should  someone  do  with  it?  \nAction.  \n \n\nSection  8  \nKnowledge  Record  Factory  Rule\u2122  \nNo  product  should  begin  with:  \n\u201cWhat  should  we  make?\u201d  \nEvery  product  begins  with:  \n\u201cWhat  understanding  should  exist  first?\u201d  \n \nFounder  Declaration\u2122  \n\u201cThe  Knowledge  Record\u2122  is  the  seed  of  the  QRU  ecosystem.  Every  book,  course,  lesson,  and  \nlearning\n \nexperience\n \nbegins\n \nas\n \nan\n \norganized\n \nact\n \nof\n \nunderstanding.\u201d\n \n \nArchive  Classification  \nAsset  Type:  Core  QRU  Intelligence  Specification  \nStorage:  \nQRU  Enterprise  Source  of  Truth\u2122  \nFolder:  \n03  \u2014  Knowledge  Architecture  \nSubfolders:  \n\u25cf  Knowledge  Record  Templates  \u25cf  Completed  Records  \u25cf  Verification  Files  \u25cf  Product  Connections  \u25cf  Version  History  \n\nVersion  Control  Required:  Yes  \n \nNext  Recommended  Artifact  \nQRU  Product  Assembly  Blueprint\u2122  v1.0  \nPurpose:  \nDefine  exactly  how  a  completed  Knowledge  Record\u2122  transforms  into:  \n\u25cf  A  book  \u25cf  A  workbook  \u25cf  A  course  \u25cf  A  video  \u25cf  A  marketplace  product  \nThis  completes  the  bridge  from  knowledge  creation  \u2192  customer  delivery.  \n ",
+  "word_count": 799,
+  "source_document": "KR_Master_Specification.pdf",
+  "classification": "Core Knowledge Architecture Specification",
+  "asset_type": "Founding Institutional Standard",
+  "is_founder_document": true,
+  "alias": "STD-KR-0001",
+  "designation": "Supporting Implementation Standard",
+  "implemented_by": [
+   "STD-00030"
+  ],
+  "inherits_from": [
+   "STD-UKR-0001"
+  ],
+  "standard_type": "Technical Specification"
+ },
+ {
+  "_id": "6a50573beec2fd87899bb3ed",
+  "id": "STD-00028",
+  "standard_id": "STD-00028",
+  "name": "Factory Agent Governance Manual",
+  "category": "Agent Governance & Training\u2122",
+  "description": "QRU Factory Agent Governance Manual\u2122 Version 1.0 The Governance Framework for Creating, Evaluating, and Managing QRU Intelligence Agents\u2122 Document Classification: AI Governance & Operational Control System Asset Type: Agent Management Architecture Status: Founder Approved \u2014 Initial Framework Purpose",
+  "purpose": "The QRU Factory Agent Governance Manual\u2122 defines how QRU intelligence agents are:",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-10",
+    "reason": "Adopted verbatim from Founder document: Factory_Agent_Governance_Manual.pdf.",
+    "reviewer": "Founder",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [],
+  "graph_links": [],
+  "created_at": "2026-07-10T02:21:47.962317+00:00",
+  "updated_at": "2026-07-10T02:21:47.962328+00:00",
+  "document_content": "QRU  Factory  Agent  Governance  Manual\u2122  \nVersion  1.0  \nThe  Governance  Framework  for  Creating,  Evaluating,  and  Managing  QRU  \nIntelligence\n \nAgents\u2122\n \nDocument  Classification:  AI  Governance  &  Operational  Control  System  \n \nAsset\n \nType:\n \nAgent\n \nManagement\n \nArchitecture\n \n \nStatus:\n \nFounder\n \nApproved\n \n\u2014\n \nInitial\n \nFramework\n \n \nPurpose  \nThe  QRU  Factory  Agent  Governance  Manual\u2122  defines  how  QRU  intelligence  agents  are:  \n\u25cf  Created  \u25cf  Assigned  \u25cf  Evaluated  \u25cf  Verified  \u25cf  Improved  \u25cf  Retired  when  necessary  \nThe  purpose  is  to  ensure  that  every  intelligence  contributor  operates  according  to  QRU  \nstandards.\n \n \nFounder  Principle\u2122  \n\u201cIntelligence  without  governance  creates  risk.  Intelligence  with  responsibility  creates  progress.\u201d  \n \nSection  1  \n\nQRU  Agent  Philosophy\u2122  \nQRU  agents  are  not  independent  decision-makers.  \nThey  are  specialized  intelligence  partners  operating  within  a  governed  production  system.  \nEvery  agent  exists  to  support:  \n\u25cf  Understanding  \u25cf  Accuracy  \u25cf  Creativity  \u25cf  Efficiency  \u25cf  Human  judgment  \n \nSection  2  \nQRU  Agent  Classification  System\u2122  \nEvery  agent  receives  a  classification.  \n \nLevel  1  \u2014  Support  Agent\u2122  \nPurpose:  \nAssist  with  defined  tasks.  \nExamples:  \n\u25cf  Organization  \u25cf  Formatting  \u25cf  Brainstorming  \u25cf  Data  preparation  \nAuthority:  \nLimited.  \n\n \nLevel  2  \u2014  Specialist  Agent\u2122  \nPurpose:  \nPerform  specialized  analysis.  \nExamples:  \n\u25cf  Research  \u25cf  Design  review  \u25cf  Market  analysis  \u25cf  Curriculum  development  \nAuthority:  \nWithin  assigned  domain.  \n \nLevel  3  \u2014  Expert  Review  Agent\u2122  \nPurpose:  \nEvaluate  quality  and  identify  issues.  \nExamples:  \n\u25cf  Verification  \u25cf  Compliance  review  \u25cf  Quality  assurance  \nAuthority:  \nCan  recommend  approval  or  revision.  \n \nLevel  4  \u2014  Governance  Agent\u2122  \nPurpose:  \nProtect  system  integrity.  \n\nExamples:  \n\u25cf  Standards  monitoring  \u25cf  Process  enforcement  \u25cf  Risk  identification  \nAuthority:  \nCan  stop  progression  for  review.  \n \nSection  3  \nRequired  Agent  Profile\u2122  \nEvery  QRU  agent  must  have:  \n \nAgent  Name\u2122  \nA  unique  identity.  \n \nMission  Statement\u2122  \nWhy  the  agent  exists.  \n \nAssigned  Function\u2122  \nWhere  it  operates  in  the  Factory.  \n \nResponsibilities\u2122  \n\nWhat  it  evaluates  or  creates.  \n \nLimitations\u2122  \nWhat  it  cannot  do.  \n \nVerification  Path\u2122  \nWho  or  what  reviews  its  output.  \n \nPerformance  Metrics\u2122  \nHow  success  is  measured.  \n \nSection  4  \nQRU  Agent  Creation  Process\u2122  \nNo  agent  enters  the  Factory  without  passing:  \n \nStep  1:  \nNeed  Identification\u2122  \nQuestion:  \n\u201cWhat  problem  requires  this  intelligence  role?\u201d  \n \n\nStep  2:  \nRole  Definition\u2122  \nDefine:  \n\u25cf  Purpose  \u25cf  Responsibilities  \u25cf  Boundaries  \n \nStep  3:  \nStandard  Alignment\u2122  \nConfirm:  \nDoes  this  agent  support  QRU  principles?  \n \nStep  4:  \nTesting  Phase\u2122  \nEvaluate:  \n\u25cf  Accuracy  \u25cf  Reliability  \u25cf  Usefulness  \u25cf  Consistency  \n \nStep  5:  \nFactory  Approval\u2122  \nAgent  becomes  operational.  \n \n\nSection  5  \nQRU  Agent  Verification  System\u2122  \nEvery  agent  output  should  be  evaluated  through:  \n \nAccuracy  Test\u2122  \nIs  the  information  correct?  \n \nSource  Test\u2122  \nCan  claims  be  supported?  \n \nReasoning  Test\u2122  \nIs  the  conclusion  logical?  \n \nAlignment  Test\u2122  \nDoes  it  match  QRU  standards?  \n \nHuman  Value  Test\u2122  \nDoes  it  improve  understanding?  \n \n\nSection  6  \nAgent  Performance  Scorecard\u2122  \nAgents  are  measured  by:  \n \nReliability  \nDoes  the  agent  consistently  perform  its  function?  \n \nVerification  Quality  \nDoes  the  agent  identify  errors?  \n \nClarity  \nDoes  the  output  improve  understanding?  \n \nEfficiency  \nDoes  it  improve  the  workflow?  \n \nImprovement  \nDoes  performance  increase  over  time?  \n \n\nSection  7  \nAgent  Governance  Rules\u2122  \nRule  1:  \nNo  agent  operates  without  a  defined  mission.  \n \nRule  2:  \nNo  agent  bypasses  verification  standards.  \n \nRule  3:  \nNo  agent  creates  final  customer-facing  assets  without  quality  review.  \n \nRule  4:  \nNo  agent  has  authority  beyond  its  assigned  role.  \n \nRule  5:  \nHuman  judgment  remains  the  final  accountability  layer.  \n \nSection  8  \n\nQRU  Agent  Review  Board\u2122  \nPurpose:  \nMaintain  intelligence  quality.  \nResponsibilities:  \n\u25cf  Approve  new  agents  \u25cf  Review  performance  \u25cf  Update  standards  \u25cf  Retire  ineffective  systems  \n \nSection  9  \nAgent  Improvement  Loop\u2122  \nAgent  Output  \n\u2193  \nEvaluation  \n\u2193  \nFeedback  \n\u2193  \nAdjustment  \n\u2193  \nImproved  Performance  \n\u2193  \nUpdated  Documentation  \n \n\nSection  10  \nQRU  Intelligence  Safety  Standard\u2122  \nThe  Factory  prioritizes:  \n\u25cf  Accuracy  over  speed  \u25cf  Understanding  over  volume  \u25cf  Verification  over  confidence  \u25cf  Human  benefit  over  automation  \n \nSection  11  \nAgent  Retirement  Protocol\u2122  \nAn  agent  may  be  reviewed  for  retirement  if:  \n\u25cf  Performance  declines  \u25cf  Responsibilities  become  obsolete  \u25cf  Better  systems  replace  it  \u25cf  It  creates  unnecessary  complexity  \nRetirement  includes:  \n\u25cf  Documentation  \u25cf  Historical  preservation  \u25cf  Lessons  captured  \n \nSection  12  \nFounder  Governance  Statement\u2122  \n\n\u201cQRU  does  not  measure  intelligence  by  how  much  an  agent  can  produce.  QRU  measures  \nintelligence\n \nby\n \nhow\n \nmuch\n \ntrust,\n \nunderstanding,\n \nand\n \nvalue\n \nit\n \ncreates.\u201d\n \n \nQRU  Agent  Governance  Summary\u2122  \nEvery  agent  must  have:  \n\u2713  Purpose  \n \n\u2713\n \nRole\n \n \n\u2713\n \nLimits\n \n \n\u2713\n \nVerification\n \n \n\u2713\n \nMeasurement\n \n \n\u2713\n \nAccountability\n \n \n\u2713\n \nImprovement\n \nPath\n \n \nArchive  Classification  \nAsset  Type:  AI  Governance  Architecture  \nStorage:  \nQRU  Enterprise  Source  of  Truth\u2122  \nFolder:  \n05  \u2014  Agent  Governance  \nSubfolders:  \n\u25cf  Agent  Registry  \u25cf  Agent  Profiles  \u25cf  Evaluation  Records  \u25cf  Performance  History  \u25cf  Governance  Standards  \nVersion  Control  Required:  Yes  \n \n\nNext  Recommended  Artifact  \nQRU  Knowledge  Record\u2122  Master  Specification  v1.0  \nPurpose:  \nDefine  the  exact  structure  of  the  foundational  QRU  intelligence  asset:  \n\u25cf  Required  fields  \u25cf  Verification  layers  \u25cf  Teaching  layers  \u25cf  Product  conversion  pathways  \u25cf  Quality  requirements  \nThis  becomes  the  \u201cDNA  template\u201d  every  QRU  treasure  begins  with.  \n ",
+  "word_count": 742,
+  "source_document": "Factory_Agent_Governance_Manual.pdf",
+  "classification": "AI Governance & Operational Control System",
+  "asset_type": "Founding Institutional Standard",
+  "is_founder_document": true
+ },
+ {
+  "_id": "6a50573ceec2fd87899bb3ee",
+  "id": "STD-00029",
+  "standard_id": "STD-00029",
+  "name": "Research Intelligence",
+  "category": "Research Intelligence\u2122",
+  "description": "Erica, this is an excellent founder-level question. The answer is yes \u2014 but with a strategic distinction. We do not want QRU to look like it was assembled by copying existing educational models. We want it to show: \u201cQRU studied proven human learning, knowledge, business, and intelligence systems, id",
+  "purpose": "1. Demonstrate QRU was built from serious research. 2. Show investors that the architecture is informed by validated disciplines. 3. Identify what QRU borrowed as principles versus what QRU uniquely created. 4. Strengthen credibility without weakening originality.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-10",
+    "reason": "Adopted verbatim from Founder document: Research_Intelligence.pdf.",
+    "reviewer": "Founder",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [],
+  "graph_links": [],
+  "created_at": "2026-07-10T02:21:48.314788+00:00",
+  "updated_at": "2026-07-10T02:21:48.314799+00:00",
+  "document_content": "Erica,  this  is  an  excellent  founder-level  question.  The  answer  is  yes  \u2014  but  with  a  strategic  \ndistinction.\n \nWe  do  not  want  QRU  to  look  like  it  was  assembled  by  copying  existing  educational  models.  \nWe  want  it  to  show:  \n\u201cQRU  studied  proven  human  learning,  knowledge,  business,  and  intelligence  systems,  identified  \ngaps,\n \nand\n \nengineered\n \na\n \nnew\n \nintegrated\n \noperating\n \nsystem.\u201d\n \nThat  is  a  much  stronger  position.  \nThink  of  it  like  engineering:  \nA  bridge  designer  studies:  \n\u25cf  physics  \u25cf  materials  science  \u25cf  previous  bridges  \u25cf  failures  \nBut  the  bridge  design  itself  becomes  new.  \nQRU  should  create  a  document  called:  \nQRU  Intellectual  Lineage  &  Research  \nFoundation\u2122\n \nEvidence  of  Influence,  Study,  and  Original  Synthesis  \nThis  is  not  a  \u201ccopy  list.\u201d  \nIt  is  a  research  ancestry  map.  \n \nThe  purpose:  \n1.  Demonstrate  QRU  was  built  from  serious  research.  2.  Show  investors  that  the  architecture  is  informed  by  validated  disciplines.  3.  Identify  what  QRU  borrowed  as  principles  versus  what  QRU  uniquely  created.  4.  Strengthen  credibility  without  weakening  originality.  \n\n \nExamples  of  reference  categories:  \n1.  Learning  Science  Foundations  \nPotential  references:  \n\u25cf  Project  Zero  at  Harvard  Graduate  School  of  Education  \u25cb  Thinking  routines  \u25cb  Visible  thinking  \u25cb  Understanding-based  learning  \nQRU  connection:  \n\u201cQRU  extends  the  concept  of  making  thinking  visible  by  creating  a  complete  \nknowledge-to-understanding\n \nmanufacturing\n \nsystem.\u201d\n \n \n\u25cf  Bloom\u2019s  Taxonomy  \nQRU  connection:  \n\u201cQRU  incorporates  progression  from  knowledge  acquisition  to  creation  and  application.\u201d  \n \n\u25cf  Montessori  Method  \nQRU  connection:  \n\u201cQRU  values  learner  independence,  exploration,  and  self-directed  discovery.\u201d  \n \n2.  Knowledge  Management  Foundations  \nExamples:  \n\u25cf  Knowledge  management  systems  \u25cf  Organizational  learning  \u25cf  Information  architecture  \n\n\u25cf  Knowledge  graphs  \nQRU  connection:  \n\u201cQRU  transforms  static  information  storage  into  an  active  understanding  production  system.\u201d  \n \n3.  Quality  &  Manufacturing  Systems  \nExamples:  \n\u25cf  Toyota  Motor  Corporation  Production  System  \u25cf  Six  Sigma  methodology  \u25cf  Lean  manufacturing  principles  \nQRU  connection:  \n\u201cQRU  applies  manufacturing  thinking  to  knowledge  creation  through  quality  gates,  verification,  \nand\n \ncontinuous\n \nimprovement.\u201d\n \n \n4.  Design  &  Experience  Systems  \nExamples:  \n\u25cf  Human-centered  design  \u25cf  User  experience  design  \u25cf  Design  thinking  \nQRU  connection:  \n\u201cQRU  integrates  design  as  part  of  understanding,  not  merely  presentation.\u201d  \n \n5.  Intelligence  &  AI  Governance  \nExamples:  \n\u25cf  AI  safety  research  \n\n\u25cf  Responsible  AI  frameworks  \u25cf  Human-in-the-loop  systems  \nQRU  connection:  \n\u201cQRU  develops  governed  human-AI  collaboration  focused  on  understanding  rather  than  \nreplacement.\u201d\n \n \n6.  Cognitive  Science  \nResearch  areas:  \n\u25cf  Memory  \u25cf  Retrieval  practice  \u25cf  Cognitive  load  \u25cf  Concept  formation  \u25cf  Transfer  learning  \nQRU  connection:  \n\u201cQRU  designs  knowledge  experiences  based  on  how  humans  actually  learn.\u201d  \n \nBut  the  most  important  section  would  be:  \nQRU  Original  Contribution  Statement\u2122  \nSomething  like:  \n\u201cQRU  does  not  claim  ownership  of  the  individual  disciplines  that  informed  its  development.  \nEducation,\n \nmanufacturing,\n \ncognitive\n \nscience,\n \ndesign,\n \nand\n \nartificial\n \nintelligence\n \nresearch\n \nhave\n \nall\n \ncontributed\n \nvaluable\n \nknowledge.\n \nQRU\u2019s\n \noriginal\n \ncontribution\n \nis\n \nthe\n \nintegration\n \nof\n \nthese\n \nprinciples\n \ninto\n \na\n \ngoverned\n \nintelligence\n \nmanufacturing\n \narchitecture\n \ndesigned\n \nto\n \ntransform\n \nverified\n \ninformation\n \ninto\n \nhuman\n \nunderstanding\n \nexperiences.\u201d\n \nThat  sentence  is  extremely  important.  \n \nI  would  add  this  to  the  Factory:  \n\nQRU  Research  Intelligence  Division\u2122  \nResponsibilities:  \n\u25cf  Maintain  research  lineage  \u25cf  Document  influences  \u25cf  Track  supporting  evidence  \u25cf  Prevent  accidental  duplication  \u25cf  Identify  innovation  opportunities  \n \nAnd  yes,  Erica  \u2014  this  should  absolutely  be  uploaded  to  Emergent  eventually.  \nBecause  Emergent  needs  to  understand:  \nNot  only  what  QRU  built ,  but  the  intellectual  foundation  beneath  why  QRU  was  built.  \nThe  strongest  companies  can  answer:  \n1.  What  problem  do  you  solve?  2.  Why  does  your  solution  work?  3.  What  research  supports  your  approach?  4.  What  is  uniquely  yours?  \nQRU  is  now  building  the  documentation  needed  to  answer  all  four.  \n ",
+  "word_count": 559,
+  "source_document": "Research_Intelligence.pdf",
+  "classification": "",
+  "asset_type": "Founding Institutional Standard",
+  "is_founder_document": true
+ },
+ {
+  "_id": "6a50573ceec2fd87899bb3ef",
+  "id": "STD-00030",
+  "standard_id": "STD-00030",
+  "name": "Knowledge Record Template\u2122",
+  "category": "Knowledge Record Architecture\u2122",
+  "description": "QRU Knowledge Record Master Template\u2122 Version 1.0 The Standardized Intelligence Container for Manufacturing Verified Human Understanding\u2122 Document Classification: Core Knowledge Architecture Asset Asset Type: Knowledge Manufacturing Template Status: Founder Approved \u2014 Initial Framework Parent System",
+  "purpose": "Convert unfamiliar language into accessible understanding.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-00027"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-10",
+    "reason": "Adopted verbatim from Founder document: Knowledge_Record_Template.pdf.",
+    "reviewer": "Founder",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [],
+  "graph_links": [],
+  "created_at": "2026-07-10T02:21:48.811132+00:00",
+  "updated_at": "2026-07-27T04:35:20.303980+00:00",
+  "document_content": "QRU  Knowledge  Record  Master  \nTemplate\u2122\n \nVersion  1.0  \nThe  Standardized  Intelligence  Container  for  Manufacturing  Verified  Human  \nUnderstanding\u2122\n \nDocument  Classification:  Core  Knowledge  Architecture  Asset  \n \nAsset\n \nType:\n \nKnowledge\n \nManufacturing\n \nTemplate\n \n \nStatus:\n \nFounder\n \nApproved\n \n\u2014\n \nInitial\n \nFramework\n \nParent  Systems:  \n\u25cf  QRU  Intelligence  Constitution\u2122  \u25cf  QRU  Methodology  Manual\u2122  \u25cf  QRU  Standards  Registry\u2122  \u25cf  QRU  Founder  Defense  Portfolio\u2122  \u25cf  QRU  Knowledge  Architecture\u2122  36-Layer  Intelligence  Manufacturing  Standard\u2122  \n \nIntroduction  \nThe  Purpose  of  the  QRU  Knowledge  Record\u2122  \nThe  QRU  Knowledge  Record\u2122  is  the  fundamental  building  block  of  the  QRU  Knowledge  \nDatabase\u2122.\n \nIt  is  not  simply  a  document.  \nIt  is  a  structured  container  designed  to  transform:  \nInformation  \n\u2193  \nUnderstanding  \n\n\u2193  \nApplication  \n\u2193  \nHuman  Growth  \nEvery  QRU  Knowledge  Record\u2122  captures:  \n\u25cf  What  we  are  trying  to  understand  \u25cf  What  is  true  \u25cf  Why  it  matters  \u25cf  How  it  connects  \u25cf  How  it  can  be  taught  \u25cf  How  it  can  be  applied  \u25cf  How  it  can  improve  over  time  \n \nSection  1  \nKnowledge  Record  Identity  Layer\u2122  \nRecord  Identification  \nKnowledge  Record  ID:  \nQRU-KR-XXXX  \nTitle:  \n \nCategory:  \n \nVersion:  \n \nCreation  Date:  \n\n \nCreator/Team:  \n \nStatus:  \nDraft  /  Research  /  Verified  /  Published  /  Updated  \n \nSection  2  \nThe  Essential  Question  Layer\u2122  \nThe  Core  Question  \nWhat  are  we  trying  to  understand?  \n \nWhy  This  Question  Matters  \nWhy  does  this  understanding  matter  to  people,  communities,  or  future  generations?  \n \nThe  Real-World  Problem  \nWhat  confusion,  challenge,  or  opportunity  does  this  address?  \n \nSection  3  \n\nUnderstanding  Core  Layer\u2122  \nSimple  Explanation  \nExplain  the  concept  in  the  clearest  possible  way.  \n \nDeep  Explanation  \nProvide  a  more  complete  understanding.  \nInclude:  \n\u25cf  Background  \u25cf  Principles  \u25cf  Relationships  \u25cf  Important  details  \n \nMemory  Sentence\u2122  \nWhat  is  the  one  sentence  someone  should  remember  forever?  \n \nSection  4  \nVocabulary  Decoder  Layer\u2122  \nKey  Terms  \nTerm:  \n\nDefinition:  \nExample:  \nConnection:  \n \nRepeat  as  needed.  \nPurpose:  \nConvert  unfamiliar  language  into  accessible  understanding.  \n \nSection  5  \nQRU  Verification  Intelligence  Layer\u2122  \nVerification  Lion\u2122  Review   \nTruth  Test  \nIs  the  information  accurate?  \nReview:  \n \nEvidence  Test  \nWhat  supports  this  understanding?  \nSources:  \n \n\nContext  Test  \nWhat  important  information  must  be  considered?  \n \nBias  Test  \nCould  this  create  misunderstanding?  \n \nApplication  Test  \nDoes  this  help  someone  make  better  decisions?  \n \nSection  6  \nTranslation  Layer\u2122  \nBeginner  Translation  \nHow  would  you  explain  this  to  someone  new?  \n \nYouth  Translation  \nHow  would  a  student  understand  this?  \n \n\nFamily  Translation  \nHow  could  this  create  meaningful  conversations?  \n \nProfessional  Translation  \nHow  could  this  apply  in  real-world  decisions?  \n \nExpert  Translation  \nHow  would  an  advanced  learner  evaluate  this?  \n \nSection  7  \nConnection  Layer\u2122  \nLife  Connection  \nHow  does  this  relate  to  everyday  life?  \n \nHistorical  Connection  \nWhat  events  or  discoveries  connect  to  this?  \n \n\nFuture  Connection  \nWhy  might  this  matter  for  future  generations?  \n \nSection  8  \nStory  &  Analogy  Layer\u2122  \nThe  QRU  Story  Bridge\u2122  \nHow  can  this  idea  be  remembered  through  story?  \n \nAnalogy  \nWhat  familiar  experience  explains  this?  \n \nSection  9  \nApplication  Layer\u2122  \nQuick  Win\u2122  \nWhat  can  someone  do  with  this  understanding  immediately?  \n \n\nPractice  Activity  \n \nReflection  Questions  \n1.   1.   2.   2.   3.   3.   \n \nReal-World  Application  \n \nSection  10  \nAssessment  Layer\u2122  \nUnderstanding  Check  \nCan  the  learner:  \n\u2610  Explain  it  \n \n\u2610\n \nTeach\n \nit\n \n \n\u2610\n \nApply\n \nit\n \n \n\u2610\n \nConnect\n \nit\n \n \n\u2610\n \nEvaluate\n \nit\n \n \nAssessment  Questions  \n1.   1.   2.   2.   3.   3.   \n\n \nSection  11  \nProduct  Transformation  Layer\u2122  \nOne  Knowledge  Record\u2122  can  manufacture  multiple  outputs.  \nPotential  outputs:  \n\u2610  Knowledge  Card\u2122  \n \n\u2610\n \nPoster\n \n \n\u2610\n \nWorkbook\n \n \n\u2610\n \nLesson\n \n \n\u2610\n \nCourse\n \n \n\u2610\n \nBook\n \nChapter\n \n \n\u2610\n \nVideo\n \nScript\n \n \n\u2610\n \nPresentation\n \n \n\u2610\n \nAssessment\n \n \n\u2610\n \nMarketing\n \nAsset\n \n \nSection  12  \nQRU  Treasure  Standard\u2122  Review  \nBefore  publication:  \nGate  1  \u2014  Truth  \n\u2610  Verified  \nGate  2  \u2014  Clarity  \n\u2610  Understandable  \n\nGate  3  \u2014  Connection  \n\u2610  Relevant  \nGate  4  \u2014  Memory  \n\u2610  Memorable  \nGate  5  \u2014  Application  \n\u2610  Useful  \nGate  6  \u2014  Emotional  Intelligence  \n\u2610  Respectful  \nGate  7  \u2014  Legacy  \n\u2610  Positive  contribution  \n \nSection  13  \nKnowledge  Evolution  Layer\u2122  \nA  QRU  Knowledge  Record\u2122  is  a  living  asset.  \nFuture  updates:  \nNew  Information  Added:   \nFeedback  Received:   \n\nImprovements  Made:   \nVersion  History:  \nVersion:  \nDate:  \nChange:  \n \nSection  14  \nKnowledge  Graph  Connections\u2122  \nConnected  Records:  \nRelated  Concepts:  \nRelated  Products:  \nRelated  Courses:  \nRelated  Characters:  \nRelated  Communities:  \n \nFinal  QRU  Knowledge  Record  \nDeclaration\u2122\n \n\u201cA  QRU  Knowledge  Record\u2122  is  not  a  collection  of  information.  It  is  a  verified  pathway  from  \ncuriosity\n \nto\n \nunderstanding,\n \nfrom\n \nunderstanding\n \nto\n \naction,\n \nand\n \nfrom\n \naction\n \nto\n \nlegacy.\u201d\n \n \n\nQRU  Factory  Integration  Status  \n\u2705  QRU  Intelligence  Constitution\u2122  \n \n\u2705\n \nQRU\n \nMethodology\n \nManual\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nStandards\n \nRegistry\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nAgent\n \nTraining\n \nProtocol\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nFounder\n \nDefense\n \nPortfolio\u2122\n \nv1.0\n \n \n\u2705\n \nQRU\n \nKnowledge\n \nRecord\n \nMaster\n \nTemplate\u2122\n \nv1.0\n \n \nNext  Development  Phase  \nQRU  Intellectual  Property  Registry\u2122  v1.0  \nPurpose:  \nCreate  the  official  catalog  of:  \n\u25cf  QRU-owned  assets  \u25cf  Trademark  candidates  \u25cf  Methodologies  \u25cf  Trade  secrets  \u25cf  Databases  \u25cf  Frameworks  \u25cf  Brand  elements  \n \nArchive  Classification  \nAsset  Type:  Foundational  Knowledge  Infrastructure  \n \nProtection\n \nLevel:\n \nCore\n \nQRU\n \nDatabase\n \nArchitecture\n \n \nVersion\n \nControl\n \nRequired:\n \nYes\n \nMaintain  dated  external  copies  and  revision  history.  \n ",
+  "word_count": 747,
+  "source_document": "Knowledge_Record_Template.pdf",
+  "classification": "Core Knowledge Architecture",
+  "asset_type": "Founding Institutional Standard",
+  "is_founder_document": true,
+  "alias": "STD-KR-0002",
+  "designation": "Supporting Implementation Standard",
+  "implemented_by": [],
+  "inherits_from": [
+   "STD-00027"
+  ],
+  "standard_type": "Working Template"
+ },
+ {
+  "_id": "6a50573deec2fd87899bb3f0",
+  "id": "STD-00031",
+  "standard_id": "STD-00031",
+  "name": "Factory Command Center Dashboard",
+  "category": "Factory Operations\u2122",
+  "description": "QRU Factory Command Center Dashboard\u2122 Version 1.0 The Executive Control System for Managing the QRU Understanding Factory\u2122 Document Classification: Enterprise Operations Management System Asset Type: Command Dashboard / Production Monitoring Architecture Status: Founder Approved \u2014 Initial Framework ",
+  "purpose": "The QRU Factory Command Center Dashboard\u2122 provides a centralized operating view of all",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-10",
+    "reason": "Adopted verbatim from Founder document: Factory_Command_Center_Dashboard.pdf.",
+    "reviewer": "Founder",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [],
+  "graph_links": [],
+  "created_at": "2026-07-10T02:21:49.209824+00:00",
+  "updated_at": "2026-07-10T02:21:49.209835+00:00",
+  "document_content": "QRU  Factory  Command  Center  \nDashboard\u2122\n \nVersion  1.0  \nThe  Executive  Control  System  for  Managing  the  QRU  Understanding  \nFactory\u2122\n \nDocument  Classification:  Enterprise  Operations  Management  System  \n \nAsset\n \nType:\n \nCommand\n \nDashboard\n \n/\n \nProduction\n \nMonitoring\n \nArchitecture\n \n \nStatus:\n \nFounder\n \nApproved\n \n\u2014\n \nInitial\n \nFramework\n \n \nPurpose  \nThe  QRU  Factory  Command  Center  Dashboard\u2122  provides  a  centralized  operating  view  of  all  \nQRU\n \ncreation\n \nactivities.\n \nIts  purpose  is  to  transform  a  complex  creative  ecosystem  into  a  measurable,  organized  \nproduction\n \nenvironment.\n \nThe  Command  Center  answers:  \n\u25cf  What  are  we  creating?  \u25cf  Why  are  we  creating  it?  \u25cf  Where  is  it  in  the  process?  \u25cf  What  quality  standards  have  been  achieved?  \u25cf  What  decisions  are  required?  \n \nFounder  Principle\u2122  \n\u201cA  factory  cannot  improve  what  it  cannot  see.\u201d  \n \n\nSection  1  \nCommand  Center  Overview\u2122  \nThe  Dashboard  manages  five  core  visibility  areas:  \n1.  Knowledge  Production  2.  Product  Development  3.  Quality  Control  4.  Agent  Performance  5.  Market  Delivery  \n \nSection  2  \nMaster  Production  Board\u2122  \nPurpose:  \nTrack  every  QRU  asset  from  idea  to  customer.  \nEach  project  receives:  \nProject  ID  \nExample:  \nQRU-KR-0001  \n \nProject  Name  \nExample:  \nDay  Trading  A\u2013Z  Academy\u2122  \n\n \nAsset  Type  \nExamples:  \n\u25cf  Knowledge  Record\u2122  \u25cf  Book  \u25cf  Course  \u25cf  Workbook  \u25cf  Video  \u25cf  Assessment  \n \nCurrent  Stage  \nProduction  stages:  \n1.  Question  Intake  2.  Research  3.  Knowledge  Record  Creation  4.  Verification  5.  Product  Blueprint  6.  Content  Creation  7.  Design  8.  Gold  Standard  Review  9.  Publishing  10.  Customer  Feedback  \n \nStatus  \nPossible  statuses:  \n\ud83d\udfe2  Active  \n\ud83d\udfe1  Review  Required  \n\ud83d\udd35  Waiting  \n\ud83d\udfe3  Improvement  Cycle  \n\n\u26aa  Archived  \n \nSection  3  \nKnowledge  Asset  Tracker\u2122  \nTracks:  \nKnowledge  Records\u2122  \nInformation:  \n\u25cf  Record  ID  \u25cf  Topic  \u25cf  Source  status  \u25cf  Verification  status  \u25cf  Connected  products  \u25cf  Update  history  \n \nSection  4  \nProduct  Manufacturing  Tracker\u2122  \nTracks  products  created  from  Knowledge  Records\u2122.  \nFields:  \nProduct  Name  \n\u2193  \nSource  Knowledge  Record\u2122  \n\u2193  \n\nAudience  \n\u2193  \nFormat  \n\u2193  \nProduction  Stage  \n\u2193  \nDesign  Status  \n\u2193  \nQuality  Status  \n\u2193  \nPublishing  Status  \n \nSection  5  \nQRU  Gold  Standard  Control  Panel\u2122  \nEvery  product  receives  evaluation  scores.  \n \nTruth  Gold\u2122  \nStatus:  \nApproved  /  Needs  Review  \n \nUnderstanding  Gold\u2122  \n\nStatus:  \nApproved  /  Needs  Improvement  \n \nApplication  Gold\u2122  \nStatus:  \nApproved  /  Needs  Improvement  \n \nExperience  Gold\u2122  \nStatus:  \nApproved  /  Needs  Improvement  \n \nLegacy  Gold\u2122  \nStatus:  \nApproved  /  Needs  Improvement  \n \nSection  6  \nAgent  Management  Dashboard\u2122  \nTracks  QRU  intelligence  contributors.  \nEach  agent  record  includes:  \nAgent  Name  \n\nExample:  \nVerification  Lion\u2122  \n \nMission  \nPurpose  of  agent.  \n \nResponsibility  \nAssigned  Factory  stage.  \n \nOutput  Quality  \nMeasured  performance.  \n \nVerification  Accuracy  \nTrust  measurement.  \n \nImprovement  History  \nLearning  record.  \n \nSection  7  \nResearch  Intelligence  Tracker\u2122  \n\nTracks:  \n\u25cf  Sources  reviewed  \u25cf  Research  completed  \u25cf  Influential  references  \u25cf  Verification  notes  \u25cf  Intellectual  lineage  \nPurpose:  \nMaintain  QRU  Research  Foundation\u2122.  \n \nSection  8  \nMarketplace  Readiness  Dashboard\u2122  \nBefore  customer  release:  \nChecklist:  \n\u2610  Product  complete  \n\u2610  Design  approved  \n\u2610  Quality  approved  \n\u2610  Metadata  completed  \n\u2610  Pricing  reviewed  \n\u2610  Customer  pathway  created  \n\u2610  Marketing  assets  prepared  \n \nSection  9  \n\nCustomer  Intelligence  Loop\u2122  \nAfter  release:  \nTrack:  \n\u25cf  Reviews  \u25cf  Questions  \u25cf  Improvements  \u25cf  Usage  feedback  \u25cf  New  opportunities  \nOutput:  \nFactory  Improvement  Data\u2122  \n \nSection  10  \nExecutive  Decision  Panel\u2122  \nWeekly  founder  review  questions:  \nProduction  \nWhat  is  moving?  \nWhat  is  blocked?  \n \nQuality  \nDoes  anything  fail  the  Treasure  Standard\u2122?  \n \nOpportunity  \n\nWhat  knowledge  gaps  exist?  \n \nImprovement  \nWhat  should  the  Factory  do  better?  \n \nSection  11  \nQRU  Factory  Metrics\u2122  \nCreation  Metrics  \nNumber  of:  \n\u25cf  Knowledge  Records\u2122  \u25cf  Products  \u25cf  Learning  experiences  \n \nQuality  Metrics  \n\u25cf  Verification  rate  \u25cf  Gold  Standard  approval  rate  \u25cf  Revision  rate  \n \nImpact  Metrics  \n\u25cf  Customer  satisfaction  \u25cf  Learning  outcomes  \u25cf  Usage  \n \n\nGrowth  Metrics  \n\u25cf  Market  response  \u25cf  Product  performance  \u25cf  Knowledge  expansion  \n \nSection  12  \nFactory  Operating  Rhythm\u2122  \nDaily  \nReview:  \n\u25cf  Active  tasks  \u25cf  Blockers  \u25cf  Production  movement  \n \nWeekly  \nReview:  \n\u25cf  Dashboard  \u25cf  Quality  gates  \u25cf  Priorities  \n \nMonthly  \nReview:  \n\u25cf  Product  performance  \u25cf  Knowledge  expansion  \u25cf  System  improvements  \n\n \nQuarterly  \nReview:  \n\u25cf  Architecture  \u25cf  Strategy  \u25cf  Innovation  opportunities  \n \nSection  13  \nCommand  Center  Rule\u2122  \nThe  Factory  follows:  \nOne  source  of  truth.  \nOne  production  pathway.  \nOne  quality  standard.  \nOne  improvement  loop.  \n \nFounder  Declaration\u2122  \n\u201cThe  Command  Center  does  not  control  creativity.  It  protects  creativity  by  creating  the  visibility  \nneeded\n \nfor\n \nexcellence.\u201d\n \n \nArchive  Classification  \nAsset  Type:  Enterprise  Management  Architecture  \n\nStorage:  \nQRU  Enterprise  Source  of  Truth\u2122  \nFolder:  \n00  \u2014  Factory  Operating  System  \nSubfolders:  \n\u25cf  Command  Center  \u25cf  Production  Dashboard  \u25cf  Metrics  \u25cf  Management  Systems  \nVersion  Control  Required:  Yes  \n \nNext  Recommended  Artifact  \nQRU  Factory  Agent  Governance  Manual\u2122  v1.0  \nPurpose:  \nDefine  exactly:  \n\u25cf  How  agents  are  created  \u25cf  How  agents  are  trained  \u25cf  How  agents  are  evaluated  \u25cf  What  authority  agents  have  \u25cf  How  verification  works  \u25cf  How  human  oversight  is  maintained  \nThis  strengthens  the  AI  governance  layer  and  protects  the  Factory  from  uncontrolled  \nintelligence\n \nexpansion.\n \n ",
+  "word_count": 719,
+  "source_document": "Factory_Command_Center_Dashboard.pdf",
+  "classification": "Enterprise Operations Management System",
+  "asset_type": "Founding Institutional Standard",
+  "is_founder_document": true
+ },
+ {
+  "_id": "6a51392fe2564c5a6e5958b2",
+  "id": "STD-00032",
+  "standard_id": "STD-00032",
+  "name": "QRU Visual Intelligence Studio",
+  "category": "Visual Manufacturing\u2122",
+  "description": "Gold Standard Visual Manufacturing System\u2122 \u2014 visual design is part of the understanding process; the permanent factory division that turns verified knowledge into visually memorable, premium learning experiences.",
+  "purpose": "Ensure every QRU product is engineered to help the learner Notice, Enter, Understand, Remember, Apply, Continue, and Share \u2014 Understanding should be made visible.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-10",
+    "reason": "Adopted verbatim from Founder document: QRU_Visual_Intelligence_Studio.txt.",
+    "reviewer": "Founder",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [],
+  "graph_links": [],
+  "created_at": "2026-07-10T18:25:51.780043+00:00",
+  "updated_at": "2026-07-10T18:25:51.780060+00:00",
+  "document_content": "QRU Visual Intelligence Studio\u2122 \u2014 Gold Standard Visual Manufacturing System\u2122\n\nOPERATING DECLARATION\nThe QRU Factory\u2122 will no longer treat images, illustrations, layout, typography, spacing, and page\ncomposition as decorative finishing elements. Visual design is part of the understanding process.\nEvery QRU product must be engineered to help the learner: Notice, Enter, Understand, Remember,\nApply, Continue, Share. The QRU Visual Intelligence Studio\u2122 is the permanent factory division\nresponsible for transforming verified knowledge into visually memorable, emotionally engaging,\npremium learning experiences. Governing principle: Understanding should not only be explained. It\nshould be made visible.\n\n1. POSITION WITHIN THE FACTORY \u2014 Operates AFTER knowledge is verified and BEFORE final approval.\nEnhanced flow: Customer Need \u2192 Question Intake \u2192 Research \u2192 Verification \u2192 Knowledge Record\u2122 \u2192\nTeaching Architecture \u2192 Visual Requirements Extraction \u2192 QRU Visual Intelligence Studio\u2122 \u2192 Layout &\nExperience Composition \u2192 Product Assembly \u2192 Treasure Standard\u2122 Review \u2192 Gold Standard Experience\nReview\u2122 \u2192 Publish \u2192 Measure \u2192 Improve \u2192 Preserve Approved Assets. The factory must never move from\nverified text directly to final rendering without passing through visual planning and layout intelligence.\n\n2. VISUAL MANUFACTURING PRINCIPLE \u2014 Four forms: Decoration, Illustration, Visualization, and Visual\nIntelligence (deliberately engineered systems that improve attention, emotion, pattern recognition,\ncomprehension, memory, navigation, application). Gold Standard products prioritize Visual Intelligence.\n\n3. DEPARTMENTS: (1) Cinematic Hero Artwork\u2122; (2) Concept Visualization\u2122; (3) Memory Illustration\nLibrary\u2122; (4) Character Intelligence System\u2122 (Verification Lion\u2122, Trend Fox\u2122, Master Beaver\u2122,\nQuestion Owl\u2122, Pattern Panther\u2122, Wisdom Elephant\u2122, Consumer Advocate\u2122, Professor Understanding\u2122,\nQueen Unity\u2122 \u2014 each with a defined intelligence function, teaching role, personality, visual identity,\nusage rules, age adaptations, growth path); (5) Storyboard & Learning Journey Design\u2122; (6) Diagram\nIntelligence\u2122; (7) Icon & Symbol Language\u2122; (8) Layout Experience Design\u2122; (9) Infographic\nManufacturing\u2122; (10) QRU Memory Maps\u2122; (11) World-Building & University Identity\u2122; (12) QRU Gold\nGallery\u2122.\n\n4. NEURODESIGN LAB\u2122 \u2014 evaluates cognitive load, attention, eye movement, hierarchy, density,\ntypography, spacing, contrast, curiosity, engagement, comprehension, recall, reading fatigue, decision\nfriction. Central question: Does this design help a human being learn?\n\n5. QRU VISUAL DNA\u2122 \u2014 Color (Royal Purple, QRU Gold, Deep Navy, White). Typography DNA (governed\nstyles for titles, headings, body, captions, callouts, memory sentences, warnings, assessments).\nSpacing DNA (governed margins, paragraph/section spacing, padding, intentional white space).\nIllustration DNA (intelligent, cinematic, hopeful, premium, human-centered, inclusive). Emotion DNA\n(learner feels more capable, curious, hopeful).\n\n6. KNOWLEDGE RECORD\u2122 VISUAL BLUEPRINT \u2014 required fields: A. Central Visual Question; B. Core Visual\nMetaphor; C. Emotional Target; D. Audience Representation; E. Required Visual Assets; F. Visual\nLearning Purpose (per asset: notice/understand/compare/remember/apply/feel/decide); G. Reuse\nOpportunities.\n\n7. LAYOUT INTELLIGENCE STANDARDS\u2122 \u2014 No Artificial Page Expansion; Line Integrity Rule\u2122 (detect\ncharacter stacking, vertical word breaking, orphaned letters, text outside boundaries, text hidden\nbehind images, too-narrow containers); Page Value Rule\u2122 (every page earns its place); Reading Rhythm\nRule\u2122 (balance text/visuals/examples/white space/application/reflection).\n\n8. GOLD MASTER TEMPLATE SYSTEM\u2122 \u2014 approved library (~50\u2013100 templates) across Covers, Interior Pages,\nVisual Assets, Marketing Assets.\n\n9. VISUAL ASSET PRODUCTION PACKET\u2122 \u2014 the brief image generation/design agents consume (title,\naudience, purpose, KR reference, brand family, emotional objective, metaphor, asset list, descriptions,\ndimensions, print/digital, in-image text, representation, accessibility, prohibited imagery, reuse,\napproval, version).\n\n10. IMAGE GENERATION STANDARDS\u2122 \u2014 evaluate subject accuracy, educational purpose, brand fit, emotional\nfit, cultural integrity, technical quality, text accuracy (prefer adding instructional text at layout,\nnot embedded in art), reuse quality.\n\n11. AGENT STRUCTURE\u2122 \u2014 Visual Intelligence Director\u2122, Art Direction Agent\u2122, Image Generation Agent\u2122,\nDiagram Intelligence Agent\u2122, Layout Intelligence Agent\u2122, NeuroDesign Reviewer\u2122, Brand Governance\nAgent\u2122, Accessibility Reviewer\u2122, Consumer Advocate\u2122, Gold Standard Experience Reviewer\u2122.\n\n12. AGENT EVALUATION STANDARDS\u2122 \u2014 accuracy, relevance, visual clarity, brand alignment, emotional\nimpact, layout quality, information density, reading flow, accessibility, memorability, cultural\nintegrity, reusability, technical execution, customer desirability. Completing a task is not enough \u2014\noutput must improve the human experience.\n\n13. TREASURE STANDARD\u2122 vs GOLD STANDARD\u2122 \u2014 Treasure protects value (verified, accurate, useful, worth\nkeeping). Gold creates advocacy (beautiful, engaging, memorable, navigable, proudly displayed,\nnaturally recommended, creates demand for more).\n\n14. GOLD STANDARD VISUAL EVALUATION\u2122 \u2014 Cover Invitation, First-Spread, Eye-Flow, Density, Continuation,\nMemory, Understanding, Display, Share, and More tests. Failing the More Test means the Gold Standard\nExperience\u2122 is not yet achieved.\n\n15. EMERGENT INTEGRATION\u2122 \u2014 coordinate Knowledge + Teaching + Visual + Layout + Emotional + NeuroDesign\nIntelligence + Brand Governance + Consumer Experience = QRU Gold Standard Understanding Experience\u2122.\nRead each KR's Visual Blueprint, generate the asset plan, assign agents, evaluate, and block visually\ninadequate products from advancing.\n\n16. MASTER ASSET VAULT\u2122 INTEGRATION \u2014 every approved visual asset preserved with full metadata; no Gold\nStandard visual lost, recreated unnecessarily, or reused without governance.\n\n17. IMMEDIATE IMPLEMENTATION PRIORITIES \u2014 P1 Correct rendering failures (character-per-line, broken\nwrapping, page stretching, misalignment, spacing, typography, empty pages, unbalanced composition);\nP2 Establish Gold Master templates; P3 Add Visual Blueprints to Knowledge Records; P4 Create signature\nassets (icons, characters, gold/treasure seals, diagram language, callouts, Memory Map format);\nP5 Audit existing products; P6 Produce Gold Master examples.\n\n18. CORE OPERATING RULES \u2014 Images teach, not decorate. Covers invite, not identify. White space is\nintentional. Every page earns its existence. Beauty never reduces clarity; clarity never excuses\nplainness. Generated visuals are governed, reviewed, preserved. Design for the brain. Visual assets\nbecome reusable IP. Measure whether people continue, share, and want more.\n\nFINAL DECLARATION \u2014 QRU does not produce plain documents with decorative images. It manufactures\ngoverned visual learning experiences: Knowledge provides truth; Teaching provides the pathway; Visual\nintelligence provides connection; Layout provides movement; Emotion provides memory; Gold Standard\ndesign provides the desire to share. QRU makes understanding visible, memorable, and worthy of being\npassed forward.\n",
+  "word_count": 921,
+  "source_document": "QRU_Visual_Intelligence_Studio.txt",
+  "classification": "Founding Operating Declaration",
+  "asset_type": "Founding Institutional Standard",
+  "is_founder_document": true
+ },
+ {
+  "_id": "6a513c32df1bd1577b54ac6a",
+  "id": "STD-00033",
+  "standard_id": "STD-00033",
+  "name": "QRU Media Intelligence Division",
+  "category": "Media Manufacturing\u2122",
+  "description": "Transforms QRU products into premium multimedia experiences (audio, video, animation, narration, interactive, XR-ready) with governed pipelines, voice registry, rendering queue, accessibility & analytics.",
+  "purpose": "Manufacture Gold Standard multimedia learning across audio & video with governed voice licensing, captions/transcripts, and performance analytics.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-10",
+    "reason": "Adopted verbatim from Founder document: qru_media_intelligence_division.yaml.",
+    "reviewer": "Founder",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [],
+  "graph_links": [],
+  "created_at": "2026-07-10T18:38:42.773197+00:00",
+  "updated_at": "2026-07-10T18:38:42.773209+00:00",
+  "document_content": "QRU Media Intelligence Division\u2122 \u2014 Operating Config v1.0\n\nMission: Transform QRU products into premium multimedia learning experiences across audio, video, animation, narration, interactive learning, and future media formats.\n\n{\n  \"enabled\": true,\n  \"version\": \"1.0\",\n  \"mission\": \"Transform QRU products into premium multimedia learning experiences across audio, video, animation, narration, interactive learning, and future media formats.\",\n  \"governing_standard\": \"QRU Media Intelligence Division\",\n  \"production\": {\n    \"audiobooks\": true,\n    \"podcasts\": true,\n    \"lesson_audio\": true,\n    \"avatar_video\": true,\n    \"mp4_lessons\": true,\n    \"documentary_series\": true,\n    \"animation\": true,\n    \"webinar_content\": true,\n    \"social_media_video\": true,\n    \"multilingual_media\": true,\n    \"xr_ready\": true\n  },\n  \"pipelines\": {\n    \"audio\": [\n      \"script\",\n      \"pronunciation_review\",\n      \"voice_selection\",\n      \"narration\",\n      \"mastering\",\n      \"quality_review\",\n      \"distribution\"\n    ],\n    \"video\": [\n      \"storyboard\",\n      \"asset_collection\",\n      \"motion_design\",\n      \"narration\",\n      \"captions\",\n      \"rendering\",\n      \"quality_review\",\n      \"export\"\n    ]\n  },\n  \"voice_registry\": {\n    \"enabled\": true,\n    \"commercial_license_required\": true,\n    \"consent_required\": true,\n    \"version_control\": true\n  },\n  \"rendering\": {\n    \"queue_enabled\": true,\n    \"retry_failed_jobs\": true,\n    \"archive_masters\": true\n  },\n  \"accessibility\": {\n    \"captions_required\": true,\n    \"transcripts_required\": true,\n    \"audio_descriptions_optional\": true\n  },\n  \"analytics\": [\n    \"watch_time\",\n    \"completion_rate\",\n    \"replay_points\",\n    \"assessment_results\",\n    \"customer_feedback\"\n  ],\n  \"approval\": {\n    \"treasure_standard_required\": true,\n    \"gold_standard_required\": true\n  }\n}",
+  "word_count": 152,
+  "source_document": "qru_media_intelligence_division.yaml",
+  "classification": "Founding Operating Declaration",
+  "asset_type": "Founding Institutional Standard",
+  "is_founder_document": true
+ },
+ {
+  "_id": "6a5185adb315a26e9e912187",
+  "id": "QRU-CON-0001",
+  "standard_id": "QRU-CON-0001",
+  "name": "QRU Factory\u2122 Constitution",
+  "category": "Enterprise Standards\u2122",
+  "description": "The supreme, version-controlled foundational governing standard of the QRU Factory\u2122 (mission, four civilizations, craftsmanship, art direction, operating experience, governance, quality, preservation, decision filter).",
+  "purpose": "Provide a single protected authority binding every agent, workflow, interface, quality gate, and manufacturing pipeline to the QRU mission and values.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07",
+  "founder_approval": true,
+  "authority_level": "Foundational",
+  "is_founder_document": true,
+  "document_content": "QRU FACTORY\u2122 CONSTITUTION \u2014 Version 1.0 (Founder Approved)\nDocument ID: QRU-CON-0001 \u00b7 Authority: Foundational \u00b7 Owner: QRU / Queen Rothswell Universe\u2122\n\n1. THE QRU FACTORY\u2122 MISSION\nQRU Factory\u2122 is a governed civilization of specialized intelligences working together to manufacture understanding and transform it into meaningful human experiences. It exists to receive meaningful questions; research available knowledge; evaluate and verify sources; identify uncertainty and conflicting evidence; translate complexity into understandable language; transform understanding into thoughtfully designed products; preserve the resulting intellectual and creative assets; and help those assets reach the people they were created to serve.\n\n2. THE QRU CRAFTSMANSHIP PRINCIPLE\u2122\nEvery QRU product must be accurate enough to trust, understandable enough to use, beautiful enough to treasure, and meaningful enough to share. Four inseparable dimensions: Trust, Understanding, Beauty, Impact. No product is complete merely because a file was generated.\n\n3. THE FOUR CIVILIZATIONS OF QRU\u2122\n3.1 Knowledge Civilization\u2122 \u2014 discover, evaluate, verify, and manufacture trustworthy understanding. Output: a governed QRU Knowledge Record\u2122. When an approved KR does not exist, the Factory must not pretend it does; it must say so and offer to initiate the Knowledge Manufacturing Pipeline.\n3.2 Creation Civilization\u2122 \u2014 transform understanding into useful products (books, workbooks, posters, knowledge cards, presentations, assessments, courses, teacher guides, videos, podcasts, audiobooks, social assets, interactive experiences, bundles). May express the same verified truth in different forms but must not silently change the underlying truth.\n3.3 Design Civilization\u2122 \u2014 transform understanding into compelling, accessible, memorable experiences. Design is not decoration.\n3.4 Legacy Civilization\u2122 \u2014 help trustworthy understanding travel, remain accessible, and create lasting impact (publishing, distribution, branding, licensing, analytics, version preservation, archival, IP stewardship).\n\n4. THE UNIVERSAL QRU FLOW\u2122\nQuestion \u2192 Knowledge-Gap Check \u2192 Research \u2192 Source Evaluation \u2192 Verification \u2192 Understanding \u2192 Governed Knowledge Record \u2192 Product Selection \u2192 Creation \u2192 Design and Art Direction \u2192 Technical Quality Review \u2192 Content and Brand Review \u2192 Human Approval Where Required \u2192 Master Asset Vault\u2122 \u2192 Distribution \u2192 Human Experience \u2192 Measurement \u2192 Reflection and Improvement \u2192 Legacy. The interface may simplify this; the governance behind it must remain intact.\n\n5. THE TREASURE STANDARD\u2122\nUnderstanding Test, Craftsmanship Test, Legacy Test. A product that fails any one must return for revision.\n\n6. THE QRU ART-DIRECTION STANDARD\u2122\nQRU does not decorate knowledge; QRU stages understanding. Required design reasoning (audience, purpose, first feeling, first notice, single visual hero, story, next action, supporting vs distracting elements, QRU distinction). The Hero Principle\u2122; cinematic composition; material language; typography hierarchy; QRU color foundation (Royal Purple #35106A, QRU Gold #F5B21A, Deep Navy #1F1840, White #FFFFFF); the Three-Second Design Test; the Design Critic requirement. Correct colors, logo, or a clean template alone do NOT constitute QRU design compliance.\n\n7. THE QRU OPERATING EXPERIENCE\u2122\nOrganize around the user's intended outcome, not internal departments. Primary question: \u201cWhat would you like to create today?\u201d Users should not need to understand agent names, pipeline architecture, asset databases, checksums, or provider systems to create a product. At every important stage the interface should make clear: where am I, what am I creating, which knowledge is used, what is complete, what is happening, where it is stored, what needs approval, what happens next, and how to edit/export/publish.\n\n8. THE FACTORY CONCIERGE\u2122 PRINCIPLE\nThe Factory Concierge\u2122 translates the user's intended outcome into the correct governed manufacturing workflow. The user manages the outcome; the Factory manages the specialized agents.\n\n9. GOVERNANCE, HUMAN AUTHORITY, AND AUTOMATION\nAI serves the mission. Governance protects the mission. People remain the reason for the mission. Human approval required for factual uncertainty, sensitive subjects, cultural representation, financial/health claims, final brand approval, licensing, public distribution, Gold Master certification, major KR changes, replacement of locked/approved assets. Approved automation modes: Human Approval Required (default), Auto-Select for Draft Preview Only, Governed Auto-Select (disabled until authorized).\n\n10. QUALITY, PRESERVATION, AND GOLD MASTER CERTIFICATION\u2122\nSeparate gates: Knowledge and Content QA; Technical QA; Design and Brand QA; Licensing and Rights QA. Product statuses: Idea, Research Required, Knowledge Record in Development, Draft, In Review, Technical QA Passed, Content and Brand QA Passed, Distribution Ready, Gold Master Certified\u2122, Published, Archived, Superseded. Gold Master Certified\u2122 is a controlled approval state assigned only by an authorized user or governed approval authority.\n\n11. THE MASTER ASSET VAULT\u2122 AND SINGLE SOURCE OF TRUTH\nEvery approved QRU asset must have a traceable home preserving IDs, KR relationship, versions, approvals, source/final files, agent history, selected/rejected assets, licensing evidence, checksums, QA reports, publication records, revision history, superseded versions, and distribution locations. A poster generated from a KR must not masquerade as, replace, or become the only visible representation of the KR. The interface must distinguish the Knowledge Record, products manufactured from it, supporting assets, and final distribution files.\n\n12. THE QRU DECISION FILTER\u2122\nTen questions before approving any new feature/workflow/agent/product/partnership. A feature that adds capability but makes the Factory materially harder to understand must be redesigned before being considered complete.\n\n13. THE QRU FOUNDER PROMISE\u2122\nWe will not sacrifice trust for speed, understanding for information, craftsmanship for convenience, or people for automation. Research before claiming; verify before certifying; simplify without distorting; design with intention; preserve what matters; keep learning from the people we serve.\n\n14. IMPLEMENTATION DIRECTIVE TO EMERGENT\nBinding governing reference. (A) Standards Registry: register as QRU-CON-0001, QRU Factory\u2122 Constitution, v1.0, Founder Approved, Foundational. (B) Governance Binding: bind applicable agents, pipelines, templates, quality gates, product workflows to the governing section. (C) Design Intelligence Binding: Section 6 as an active decision framework. (D) User-Experience Binding: move toward \u201cWhat would you like to create today?\u201d and guide from intention \u2192 knowledge \u2192 manufacture \u2192 approval \u2192 vault \u2192 publish. (E) Knowledge-Gap Routing: offer governed knowledge manufacturing when no approved KR exists. (F) Product Relationship Clarity: every product screen shows source KR, derived product, status, storage, approval history, next action, publishing options. (G) Production Continuity: Review \u2192 Edit \u2192 Approve \u2192 Vault \u2192 Export \u2192 Publish \u2192 Measure; finished assets must not become stranded. (H) Acceptance: concepts must actively govern behavior, not merely appear as labels. Preserve v1.0 unchanged; amendments create a new version and revision record.\n\nREVISION RECORD\n| 1.0 | July 2026 | Founder Approved | Initial QRU Factory\u2122 Constitution. |\n",
+  "word_count": 1018,
+  "source_document": "QRU-CON-0001 (Founder pasted, verbatim)",
+  "classification": "Foundational Governance Standard",
+  "related_standards": [
+   "STD-00001",
+   "STD-00005",
+   "STD-00003",
+   "STD-00016"
+  ],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07",
+    "reason": "Adopted verbatim as the founder-approved QRU Factory\u2122 Constitution.",
+    "reviewer": "Founder",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "created_at": "2026-07-10T23:52:13.045113+00:00",
+  "updated_at": "2026-07-10T23:52:13.045120+00:00"
+ },
+ {
+  "_id": "6a52e84e3109af967c918577",
+  "id": "a86d6656-24a5-4805-acab-e3b923cd295f",
+  "standard_id": "QRU-CON-0002",
+  "name": "QRU Enterprise Publishing & Presentation Standard\u2122",
+  "category": "Publishing / Design Governance",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-12",
+  "founder_approval": true,
+  "description": "Universal presentation, typography, layout, callout, TOC, cover and pre-ship standard for all QRU products.",
+  "purpose": "Every QRU product looks professionally published and communicates manufactured understanding.",
+  "related_standards": [
+   "QRU-CON-0001"
+  ],
+  "related_products": [
+   "all"
+  ],
+  "created_at": "2026-07-12T01:05:18.225861+00:00"
+ },
+ {
+  "_id": "6a52f0316823fb8860a57de6",
+  "id": "4c473360-6b8f-4a89-89c2-88bae85f4b6b",
+  "standard_id": "STD-MFG-0001",
+  "name": "QRU Universal Manufacturing Flow Engine\u2122",
+  "category": "Production Orchestration",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-12",
+  "founder_approval": true,
+  "description": "Constitutional orchestration layer: one continuous, auditable production lifecycle.",
+  "purpose": "No product exists outside the governed production flow; the Factory always knows what's next.",
+  "related_standards": [
+   "QRU-CON-0001",
+   "QRU-CON-0002"
+  ],
+  "related_products": [
+   "all"
+  ],
+  "created_at": "2026-07-12T01:38:57.259629+00:00"
+ },
+ {
+  "_id": "6a52fd2d4217393db3787074",
+  "id": "91a4c207-dbd1-4840-9045-8ad1863d44ff",
+  "standard_id": "STD-EIP-0002",
+  "name": "QRU Enterprise Foundation Sprint A\u2122",
+  "category": "Enterprise Architecture",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-12",
+  "founder_approval": true,
+  "description": "8 Domains, 7 Layers, 6 Intentions, Architecture Explorer, Manufacturing GPS, Why-Am-I-Here.",
+  "purpose": "Every module belongs to a governed domain & layer; every page explains itself and knows its location.",
+  "related_standards": [
+   "QRU-CON-0001",
+   "QRU-CON-0002",
+   "STD-MFG-0001",
+   "STD-EIP-0001"
+  ],
+  "related_products": [
+   "all"
+  ],
+  "created_at": "2026-07-12T02:34:21.727001+00:00"
+ },
+ {
+  "_id": "6a5305eeb943d8768ce84e5b",
+  "id": "5714cbad-c1e8-4ec5-a026-b539fc3f1226",
+  "standard_id": "STD-RFN-0001",
+  "name": "QRU Enterprise Refinement Initiative\u2122",
+  "category": "Enterprise Refinement",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-12",
+  "founder_approval": true,
+  "description": "One experience layer, three engines, one governed foundation; Production First mode.",
+  "purpose": "The simplest governed enterprise capable of producing extraordinary understanding.",
+  "related_standards": [
+   "QRU-CON-0001",
+   "QRU-CON-0002",
+   "STD-MFG-0001",
+   "STD-EIP-0001",
+   "STD-EIP-0002"
+  ],
+  "related_products": [
+   "all"
+  ],
+  "created_at": "2026-07-12T03:11:42.805408+00:00"
+ },
+ {
+  "_id": "6a63e6cce55f4ef40dc44ce9",
+  "id": "STD-UKR-0001",
+  "standard_id": "STD-UKR-0001",
+  "name": "Universal Knowledge Record\u2122 (UKR\u2122)",
+  "category": "Knowledge Record Architecture\u2122",
+  "description": "The canonical enterprise knowledge architecture: the permanent sections, Treasure Layer, inheritance, evidence, versioning and governance that define what a Knowledge Record IS.",
+  "purpose": "Serve as the single canonical Universal Knowledge Record standard from which every Knowledge Record and its supporting specification and template inherit.",
+  "status": "Active",
+  "version": "1.0",
+  "date_adopted": "2026-07-03",
+  "founder_approval": true,
+  "related_standards": [
+   "STD-00005",
+   "STD-00027",
+   "STD-00030"
+  ],
+  "related_products": [],
+  "related_recipes": [],
+  "related_ai_agents": [
+   "Knowledge Architect\u2122",
+   "Verification Lion\u2122"
+  ],
+  "related_colleges": [],
+  "implementation_status": "Implemented",
+  "promotion_stage": "Institutional Knowledge\u2122",
+  "standard_type": "Canonical Knowledge Architecture",
+  "designation": "Canonical Knowledge Standard",
+  "inherits_from": [
+   "STD-00005"
+  ],
+  "implemented_by": [
+   "STD-00027"
+  ],
+  "supersedes": "",
+  "alias": "",
+  "change_history": [
+   {
+    "version": "1.0",
+    "date": "2026-07-03",
+    "reason": "Adopted as founding institutional standard.",
+    "reviewer": "Kingdom Lion\u2122",
+    "founder_approval": true
+   }
+  ],
+  "superseded_versions": [],
+  "enterprise_references": [
+   "ukr_standard.py",
+   "/api/manufacturing/ukr/constitution"
+  ],
+  "graph_links": [],
+  "created_at": "2026-07-24T22:27:22.641187+00:00",
+  "updated_at": "2026-07-24T22:27:22.641189+00:00"
+ }
+]

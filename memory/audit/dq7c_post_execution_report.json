@@ -1,0 +1,36 @@
+{
+ "executed_at": "2026-07-27T04:35:32.953475+00:00",
+ "scope": "PREVIEW database",
+ "qiks_count": 39,
+ "cons_count": 5,
+ "enforcement_counts": {
+  "INHERITED_ENFORCED": 9,
+  "GATE_ENFORCED": 2,
+  "FOUNDER_DECISION_REQUIRED": 28
+ },
+ "total_field_writes": 225,
+ "overwrites": 0,
+ "deletes": 0,
+ "renames": 0,
+ "canonical_ref_resolution": {
+  "QRU-CON-0001": "QRU-CON-0001",
+  "QRU-CON-0002": "QRU-CON-0002",
+  "STD-MFG-0001": "STD-MFG-0001",
+  "STD-EIP-0002": "STD-EIP-0002",
+  "STD-RFN-0001": "STD-RFN-0001"
+ },
+ "governance_metadata_intact": true,
+ "evidence_backed_ids": [
+  "QRU-CON-0001",
+  "QRU-CON-0002",
+  "STD-00001",
+  "STD-00005",
+  "STD-00008",
+  "STD-00009",
+  "STD-00027",
+  "STD-00030",
+  "STD-MFG-0001",
+  "STD-RFN-0001",
+  "STD-UKR-0001"
+ ]
+}

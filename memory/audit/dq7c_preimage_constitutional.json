@@ -1,0 +1,57 @@
+[
+ {
+  "_id": "6a52f0316691416be6970033",
+  "id": "QRU-CON-0001",
+  "category": "Foundational Governance",
+  "created_at": "2026-07-12T01:38:57.259932+00:00",
+  "implementation_status": "Production",
+  "name": "QRU Factory\u2122 Constitution",
+  "owner": "QRU",
+  "verification_status": "Verified",
+  "version": "1.0"
+ },
+ {
+  "_id": "6a52f0316691416be6970035",
+  "id": "QRU-CON-0002",
+  "category": "Publishing / Design Governance",
+  "created_at": "2026-07-12T01:38:57.283177+00:00",
+  "implementation_status": "Production",
+  "name": "Enterprise Publishing & Presentation Standard\u2122",
+  "owner": "QRU Press\u2122",
+  "verification_status": "Verified",
+  "version": "1.0"
+ },
+ {
+  "_id": "6a52f0316691416be6970037",
+  "id": "STD-MFG-0001",
+  "category": "Production Orchestration",
+  "created_at": "2026-07-12T01:38:57.283706+00:00",
+  "implementation_status": "Production",
+  "name": "Universal Manufacturing Flow Engine\u2122",
+  "owner": "QRU",
+  "verification_status": "Verified",
+  "version": "1.0"
+ },
+ {
+  "_id": "6a52fd2df29d8cbd81067246",
+  "id": "STD-EIP-0002",
+  "category": "Enterprise Architecture",
+  "created_at": "2026-07-12T02:34:21.733981+00:00",
+  "implementation_status": "Production",
+  "name": "Enterprise Foundation Sprint A\u2122",
+  "owner": "QRU",
+  "verification_status": "Verified",
+  "version": "1.0"
+ },
+ {
+  "_id": "6a5305eef29d8cbd81067c5c",
+  "id": "STD-RFN-0001",
+  "category": "Enterprise Refinement",
+  "created_at": "2026-07-12T03:11:42.805660+00:00",
+  "implementation_status": "Production",
+  "name": "Enterprise Refinement Initiative\u2122",
+  "owner": "QRU",
+  "verification_status": "Verified",
+  "version": "1.0"
+ }
+]

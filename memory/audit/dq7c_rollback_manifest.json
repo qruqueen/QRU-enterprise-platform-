@@ -1,0 +1,30 @@
+{
+ "method": "additive-only reversal",
+ "qiks_unset_fields": [
+  "lifecycle_status",
+  "enforcement_condition",
+  "enforcement_binding",
+  "dq7_prepared_at",
+  "dq7_evidence",
+  "owner",
+  "verification_status",
+  "dq7b_canonicalized_at"
+ ],
+ "note_owner_verification": "unset owner/verification_status ONLY on the 5 CONST5 ids (added by DQ-7C); pre-image confirms they were absent pre-run",
+ "cons_unset_fields": [
+  "canonical_ref",
+  "projection",
+  "dq7b_indexed_at"
+ ],
+ "preimage_files": [
+  "dq7c_preimage_qiks.json",
+  "dq7c_preimage_constitutional.json"
+ ],
+ "const5_ids": [
+  "QRU-CON-0001",
+  "QRU-CON-0002",
+  "STD-EIP-0002",
+  "STD-MFG-0001",
+  "STD-RFN-0001"
+ ]
+}
