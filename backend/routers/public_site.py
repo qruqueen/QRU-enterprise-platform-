@@ -6,7 +6,7 @@ internals (no provenance, manifests, working copy, states, or unpublished work).
 
 Published gate for a book = founder_authorization.authorized == True.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import os
@@ -16,6 +16,7 @@ from PIL import Image
 import rendering_engine as re_engine
 
 from database import db
+from auth import require_super_admin
 
 router = APIRouter(prefix="/api/public", tags=["qru-online"])
 
@@ -41,6 +42,12 @@ def _slug_map(docs: list[dict]) -> dict:
         seen.add(base)
         out[d.get("id")] = slug
     return out
+
+
+async def _featured_ids() -> list[str]:
+    """Founder-curated ordered list of book ids featured on the home page (empty = auto)."""
+    doc = await db.storefront_settings.find_one({"key": "featured"})
+    return (doc or {}).get("book_ids") or []
 
 # Master Asset Principle™ — one canonical cover; the web thumbnail is a
 # derivative generated once from that master and cached (never hand-maintained).
@@ -130,10 +137,16 @@ def _public_book(book: dict, detail: bool = False, slug: str | None = None) -> d
 @router.get("/home")
 async def home():
     """Public landing content — featured published books + honest catalog counts."""
-    books = await db.book_records.find(_PUBLISHED_QUERY, {"_id": 0}).to_list(500)
-    slugs = _slug_map(books)
-    public = [_public_book(b, slug=slugs.get(b.get("id"))) for b in books]
+    docs = await db.book_records.find(_PUBLISHED_QUERY, {"_id": 0}).to_list(500)
+    slugs = _slug_map(docs)
+    public = [_public_book(b, slug=slugs.get(b.get("id"))) for b in docs]
     public = [b for b in public if b.get("cover_url")]
+    fids = await _featured_ids()
+    if fids:
+        by_id = {b["id"]: b for b in public}
+        featured = [by_id[i] for i in fids if i in by_id][:12]
+    else:
+        featured = public[:6]
     return {
         "brand": {
             "name": "QRU Online",
@@ -141,7 +154,7 @@ async def home():
             "promise": "Every title is carefully researched, thoughtfully written, and verified "
                        "to the QRU Treasure Standard™.",
         },
-        "featured": public[:6],
+        "featured": featured,
         "counts": {"books": len(public)},
     }
 
@@ -226,3 +239,53 @@ async def subscribe(req: SubscribeRequest):
     except Exception:
         pass
     return {"status": "subscribed", "message": "Thank you — you're on the list."}
+
+
+# ---------- Founder curation (super-admin) — which titles are featured on the home page ----------
+
+class FeaturedRequest(BaseModel):
+    book_ids: list[str]
+
+
+@router.get("/admin/featured")
+async def get_featured(user=Depends(require_super_admin)):
+    """All published titles + the current featured selection (for the Founder curation panel)."""
+    docs = await db.book_records.find(_PUBLISHED_QUERY, {"_id": 0}).to_list(1000)
+    slugs = _slug_map(docs)
+    fids = await _featured_ids()
+    order = {bid: i for i, bid in enumerate(fids)}
+    books = []
+    for b in docs:
+        if not _cover_url(b):
+            continue
+        bid = b.get("id")
+        books.append({
+            "id": bid,
+            "title": b.get("title"),
+            "author": b.get("author"),
+            "slug": slugs.get(bid),
+            "thumb_url": f"/api/public/books/{bid}/cover-thumb",
+            "featured": bid in order,
+            "order": order.get(bid),
+        })
+    books.sort(key=lambda x: (x["order"] is None, x["order"] if x["order"] is not None else 0,
+                              (x["title"] or "").lower()))
+    return {"books": books, "featured_ids": fids, "auto": not fids}
+
+
+@router.put("/admin/featured")
+async def set_featured(req: FeaturedRequest, user=Depends(require_super_admin)):
+    """Save the Founder-curated, ordered list of featured titles. Empty list = auto (first titles)."""
+    published = await db.book_records.find(_PUBLISHED_QUERY, {"id": 1, "_id": 0}).to_list(1000)
+    valid = {b.get("id") for b in published}
+    seen, ids = set(), []
+    for i in (req.book_ids or []):
+        if i in valid and i not in seen:
+            seen.add(i)
+            ids.append(i)
+    await db.storefront_settings.update_one(
+        {"key": "featured"},
+        {"$set": {"key": "featured", "book_ids": ids, "updated_at": datetime.now(timezone.utc)}},
+        upsert=True,
+    )
+    return {"status": "saved", "featured_ids": ids, "count": len(ids)}

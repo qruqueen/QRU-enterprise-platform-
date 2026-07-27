@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
+import FeaturedTitlesManager from "@/components/FeaturedTitlesManager";
 import { Loader2, Mail, RefreshCw, CheckCircle2, AlertTriangle, MinusCircle, ShoppingBag, Search } from "lucide-react";
 
 const EMAIL_BADGE = {
@@ -65,6 +66,8 @@ export default function QRUOnlineOrders() {
         title="QRU Online Orders"
         subtitle="Every real storefront purchase and its delivery email. Resend a customer's confirmation and a fresh secure link in one tap — no re-charge."
       />
+
+      <FeaturedTitlesManager />
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <span className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5" data-testid="orders-total">
