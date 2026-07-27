@@ -1,5 +1,19 @@
 # QRU Factory™ — CHANGELOG
 
+## 2026-07-27 — Cover legibility: hardened rules + public-storefront fix (option C) + full store inventory
+- **RULES ($0, done):** `design_studio.compose()` — added a vertical SAFE BAND (30%–86%), ≤4-line title auto-fit, min-readable floor (46px), 2-line subtitle cap, guaranteed byline gap, block centered in band. Long titles no longer overflow/overlap. Applies to all future/re-rendered covers.
+- **Storefront scaling:** verified consistent — all storefront covers 1024×1536 (2:3), shown in 2:3 containers, thumbs 460×690 (2:3). No crop/stretch.
+- **Reconciliation of prior batch:** the 2026-07-25 `pilot_coordinator.batch_rerender` (RI-MFG-0002) re-rendered EPUBs only and REUSED the composited cover PNGs untouched ("Never touches cover art"); ran in PREVIEW only, never deployed. => zero covers were ever re-composited, in either env. No clean/textless art layer is stored for any book (pipeline saves only the flattened cover), so re-compositing needs AI art regen.
+- **Public storefront fix (Founder option C, this session):**
+  - *Patterns of Intelligence* — AI-regenerated the "Emergent Lattice" artwork (1 image credit via OpenAI gpt-image; Gemini image models are NOT allowed on the current universal key — key error: "key can only access models=[gpt-*...]"), re-composited with corrected title (no more "FINAL") + hardened rules, replaced the selected cover IN PLACE. Preserved id/slug/pricing/purchases/epub/authorization. Verified full-size + 460px thumb + public API (slug `patterns-of-intelligence`, cover-thumb 200).
+  - *The Understanding Tree* — re-inspected at thumbnail: title/subtitle/byline legible over the painted artwork; NOT a real defect (earlier "legacy" flag was a proxy). Left untouched to avoid degrading artwork (AI not approved for it).
+  - Verified all 8 storefront books: readable thumbnail type, no overlap/crop, correct titles/bylines/selected assets.
+- **⚠️ Finding (out of today's scope):** "Ordinary Tuesdays (Factory Ready)" has an internal tag "(Factory Ready)" leaked into the customer-facing TITLE (same defect class as Patterns' "FINAL"). Flagged for a separate decision (title correction changes slug).
+- **QRU STORE INVENTORY (98 customer-facing covers): PASS 15 / FAIL 83** (no-cover 9, legacy/outdated 73, other-defect 1). $0-repairable 74, AI-required 9.
+  - DEFERRED post-launch maintenance (Founder directive — do NOT run today): the 90-product authenticated commerce catalog batch → 74 zero-cost deterministic re-renders + 9 AI-regeneration covers (need image-credit approval + note: universal key currently blocks Gemini image; OpenAI gpt-image works).
+- **NOTE for future AI image work:** universal key blocks `gemini-*-image-preview` ("key not allowed to access model"); use OpenAI `gpt-image-1` path (or the image tool) instead, or Founder tops up / enables Gemini access.
+
+
 ## 2026-07-25e — RI-MFG-0002b production migration package (REVIEW ONLY, not executed)
 - Confirmed via support_agent: preview & production are SEPARATE MongoDB DBs; Deploy ships CODE only, not DATA;
   preview cannot write to production. Root cause of "4 of 8 books live": the 4 newer books exist only in preview
