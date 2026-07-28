@@ -13,7 +13,7 @@ import re
 import requests
 import pytest
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://understanding-os.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://enterprise-os-17.preview.emergentagent.com").rstrip("/")
 
 # Fields that MUST NEVER appear in any public response (Factory internals)
 FORBIDDEN_FIELDS = {

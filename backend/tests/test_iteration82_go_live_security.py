@@ -27,7 +27,7 @@ _mc = MongoClient(MONGO_URL)
 _db = _mc[DB_NAME]
 
 BASE_URL = os.environ.get(
-    "REACT_APP_BACKEND_URL", "https://understanding-os.preview.emergentagent.com"
+    "REACT_APP_BACKEND_URL", "https://enterprise-os-17.preview.emergentagent.com"
 ).rstrip("/")
 
 BOOK_ID = "8469bcc5-6d6b-4a35-bc5c-4dec82c114cb"  # The Understanding Tree, $4.99

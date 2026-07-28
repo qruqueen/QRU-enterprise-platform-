@@ -13,7 +13,7 @@ import time
 import pytest
 import requests
 
-BASE = os.environ.get("REACT_APP_BACKEND_URL", "https://understanding-os.preview.emergentagent.com").rstrip("/")
+BASE = os.environ.get("REACT_APP_BACKEND_URL", "https://enterprise-os-17.preview.emergentagent.com").rstrip("/")
 EMAIL = "demo.admin@qru.com"
 PASSWORD = "qru-demo-admin-2026"
 

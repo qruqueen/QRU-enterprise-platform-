@@ -10,7 +10,7 @@ import os
 import pytest
 import requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://understanding-os.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://enterprise-os-17.preview.emergentagent.com").rstrip("/")
 
 BOOK_IDS = {
     "understanding_tree": "8469bcc5-6d6b-4a35-bc5c-4dec82c114cb",

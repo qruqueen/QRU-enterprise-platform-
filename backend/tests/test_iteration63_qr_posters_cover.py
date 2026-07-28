@@ -8,8 +8,8 @@ import os
 import pytest
 import requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://understanding-os.preview.emergentagent.com").rstrip("/")
-PUBLIC_URL = "https://understanding-os.preview.emergentagent.com"
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://enterprise-os-17.preview.emergentagent.com").rstrip("/")
+PUBLIC_URL = "https://enterprise-os-17.preview.emergentagent.com"
 FOUNDER_EMAIL = "22j2rsdzb8@privaterelay.appleid.com"
 FOUNDER_PASSWORD = "QruFounder2026!"
 KR_ID = "1a93ceb2-0334-46ff-a3a4-54bda17d7b8f"

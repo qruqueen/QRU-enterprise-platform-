@@ -4,7 +4,7 @@ import time
 import pytest
 import requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://understanding-os.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://enterprise-os-17.preview.emergentagent.com").rstrip("/")
 
 FOUNDER_EMAIL = "22j2rsdzb8@privaterelay.appleid.com"
 FOUNDER_PASSWORD = "QruFounder2026!"
@@ -64,7 +64,7 @@ class TestCommerce:
         assert pid, f"No product id: {products[0]}"
 
         r = client.post(f"{BASE_URL}/api/commerce/checkout",
-                        json={"product_id": pid, "origin_url": "https://understanding-os.preview.emergentagent.com"},
+                        json={"product_id": pid, "origin_url": "https://enterprise-os-17.preview.emergentagent.com"},
                         timeout=45)
         assert r.status_code == 200, r.text
         data = r.json()

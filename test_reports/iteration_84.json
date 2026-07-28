@@ -5,11 +5,11 @@
     "STEP 2 select Manufacturing Ready + Knowledge=PASS Inherits Verified KR": "PASS (DEC-00013 → KR-00048)",
     "STEP 3 Workbook create via CTA": "PASS",
     "STEP 4 landed /products with product-shelf-page": "PASS (Workbook)",
-    "STEP 5 shelf-item-<id> visible after shelf-search": "PASS (Workbook id=5d0a9a7b-54a8-40dc-b82a-f8e3b452984c)",
+    "STEP 5 shelf-item-<id> visible after shelf-search": "PASS (Workbook id=enterprise-os-17)",
     "STEP 6 DB verification (Workbook)": "PASS (verified=true, kr afbc9452..., decoder_id DEC-00013, product_type=Workbook, pdf in customer_deliverable.files)",
     "STEP 7 PDF verification (Workbook)": "PASS (Copyright, Colophon, Title page, no factory chrome, no sanitization leftovers, content derives from decoder)",
     "STEP 8 Zero AI/LLM spend": "PASS (deterministic, log delta contained no LLM markers)",
-    "STEP 9 Teacher Guide full repeat": "PASS (id=eb39f16d-707f-4a54-a28c-07bb692ff832; DB + PDF + zero-LLM all pass)",
+    "STEP 9 Teacher Guide full repeat": "PASS (id=enterprise-os-17; DB + PDF + zero-LLM all pass)",
     "STEP 10 cleanup + confirmation": "PASS — 2 products deleted, DEC-00013.manufactured_products $pull leaves 0 lingering, KR products_created 4→2 (decremented by 2)"
   },
   "created_and_removed_product_ids": [

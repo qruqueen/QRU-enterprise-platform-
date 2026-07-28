@@ -6,7 +6,7 @@ import pytest
 import requests
 
 BASE_URL = (os.environ.get("REACT_APP_BACKEND_URL")
-            or "https://understanding-os.preview.emergentagent.com").rstrip("/")
+            or "https://enterprise-os-17.preview.emergentagent.com").rstrip("/")
 FOUNDER_EMAIL = "22j2rsdzb8@privaterelay.appleid.com"
 FOUNDER_PASSWORD = "QruFounder2026!"
 

@@ -5,7 +5,7 @@ import os
 import sys
 from playwright.async_api import async_playwright
 
-BASE = "https://understanding-os.preview.emergentagent.com"
+BASE = "https://enterprise-os-17.preview.emergentagent.com"
 
 
 async def main():
