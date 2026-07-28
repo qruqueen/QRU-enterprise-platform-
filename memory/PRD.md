@@ -12,6 +12,12 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - **Treasure Standard™** — no dead ends, no silent failures, evidence before any number/approval.
 - Language: English only (code, comments, UI).
 
+
+## ✅ Store Readiness batch (2026-07-28) — 3 of 4 founder tasks done (testing_agent iteration_96, 100%)
+- **Test Product Cleanup (P0)**, **Batch Upgrade Assets™ (P1)**, **Store Health™ (P2)** — all shipped as governed, reversible operations in the Production Operations™ panel + a new Store Health™ dashboard. Full detail in CHANGELOG.md (2026-07-28). All self-verified + testing_agent 100% backend & frontend, 0 issues.
+- **Remaining P1: Audiobook Storefront** — free Chapter-1 sample + purchasable full-audiobook SKU + e-book bundle upsell. Deferred pending Founder approval (spends TTS credits + touches the LIVE Stripe checkout path). Decisions needed: free-sample length, audiobook price + bundle price, narrator voice.
+- ENV boundary unchanged: preview & production are SEPARATE DBs; the 3 new operations act on the connected DB, so the Founder runs them in production from the deployed panel after Deploy.
+
 ## ✅ Storefront Launch Readiness (2026-07-27) — checkout verified + landing/SEO/email capture
 - **Checkout NOT broken** (prior "Buy the ebook" timeout was a test-tool artifact — clicking redirects to external checkout.stripe.com which Playwright waits on). Verified via curl: `POST /api/public/checkout` returns a valid Stripe session in ~0.5s; frontend button (`buy-ebook-btn`) correctly wired. ⚠️ Preview `.env` carries LIVE Stripe keys (session came back `cs_live_...`), so a real end-to-end purchase in preview charges real money — verified at API + code level only per Founder direction.
 - **SEO-friendly slug URLs**: `public_site.py` adds `_slugify` + `_slug_map` (deterministic, sorted-by-id, id-suffix on title collision). `/api/public/books/{key}` now resolves by id OR slug (id still works → backward compatible with checkout cancel_url). `home`/`books`/`book_detail` return a `slug` field. Route changed to `/book/:slug`; Home & Catalog link via `book.slug`; book page fetches by slug, checkout keyed by resolved `book.id`. Verified: slug resolve, id resolve, bad slug → 404.
