@@ -191,6 +191,9 @@ DEFINITIONS = [
        "Run one-time migrations by hand / via Support.",
        "Founder-run governed data operations against the live production database — Dry Run · Review · Apply · Rollback, all idempotent. Home of the Publishing Lineage Engine™ (canonical-manuscript-checksum identity, source-document lineage, reasoning chain + confidence) that every future Production Operation inherits to distinguish title corrections, new editions, republications and genuine collisions.",
        inherited_from="RI-MFG-0002b", moat=True),
+    _c("store-health", "Store Health™", "distribution", "active", "routers/store_health.py", "/store-health",
+       "Know at a glance whether the store is truly launch-ready.",
+       "A live, evidence-based integrity view of the storefront — books live, hidden covers, visible test products, Stripe/webhook/email config, orders and confirmation-email delivery. Read-only; every number derived from the connected database (Treasure Standard™)."),
     _c("youtube", "YouTube Publisher™", "distribution", "active", "youtube_publisher.py", "/youtube",
        "Publish real videos to YouTube.", "Real resumable upload with verified Video ID."),
     _c("connectors", "Publishing Connectors™", "distribution", "active", "connectors.py", "/connectors",
@@ -437,6 +440,7 @@ NAV_CORE_IDS = [c["id"] for c in NAV_CORE]
 # Production Operations™ is surfaced as a dedicated Founder/Admin-only core item in the sidebar,
 # so exclude it from the auto-generated "All Capabilities" drawer to avoid a duplicate entry.
 NAV_CORE_IDS.append("production-operations")
+NAV_CORE_IDS.append("store-health")
 
 # --- Self-cleaning sidebar (driven by the Registry) ---
 # Layers pinned to the top "Start Here" section (by capability id).

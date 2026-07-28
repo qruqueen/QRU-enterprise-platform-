@@ -3,8 +3,8 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import {
-  Loader2, Play, ShieldCheck, RotateCcw, CheckCircle2, AlertTriangle,
-  BookOpen, GraduationCap, Database, FileText, PauseOctagon, Search, ArrowLeftRight, FilePlus, Layers, ClipboardCheck,
+  Loader2, Play, ShieldCheck, RotateCcw, CheckCircle2, AlertTriangle, RefreshCw,
+  BookOpen, GraduationCap, Database, FileText, PauseOctagon, Search, ArrowLeftRight, FilePlus, Layers, ClipboardCheck, Trash2, Image as ImageIcon,
 } from "lucide-react";
 
 const OUTCOME = {
@@ -39,6 +39,10 @@ const OUTCOME = {
   NOT_PRESENT_IN_PRODUCTION: "bg-muted text-muted-foreground",
   NOT_LEARNER_ACCESSIBLE: "bg-muted text-muted-foreground",
   FOUNDER_REVIEW_REQUIRED: "bg-amber-100 text-amber-700",
+  TEST_VISIBLE_IN_CATALOG: "bg-red-100 text-red-700",
+  TEST_NOT_PUBLISHED: "bg-amber-100 text-amber-700",
+  TEST_ALREADY_ARCHIVED: "bg-muted text-muted-foreground",
+  TEST_HAS_PAID_ORDER: "bg-orange-100 text-orange-700",
 };
 
 function Badge({ v }) {
@@ -70,7 +74,7 @@ function EvidenceRows({ rows }) {
             <tr key={i} className="border-b last:border-0" data-testid={`evidence-row-${r.code}`}>
               <td className="py-2 px-3 font-medium text-foreground whitespace-nowrap">{r.code}</td>
               <td className="py-2 px-3"><Badge v={r.outcome || r.classification} /></td>
-              <td className="py-2 px-3 text-muted-foreground">{r.detail || `${r.pub_status || ""} · KR: ${r.kr_status || ""}`}</td>
+              <td className="py-2 px-3 text-muted-foreground">{r.detail || r.title || `${r.pub_status || ""} · KR: ${r.kr_status || ""}`}</td>
             </tr>
           ))}
         </tbody>
@@ -87,6 +91,10 @@ export default function ProductionOperations() {
   const [inspect, setInspect] = useState(null);
   const [stdPre, setStdPre] = useState(null);
   const [reportD, setReportD] = useState(null);
+  const [testPre, setTestPre] = useState(null);
+  const [reportE, setReportE] = useState(null);
+  const [assetPre, setAssetPre] = useState(null);
+  const [assetJob, setAssetJob] = useState(null);
 
   const loadSummary = () => api.get("/admin/migrations/summary").then((r) => setSummary(r.data)).catch(() => setSummary(false));
   useEffect(() => { loadSummary(); }, []);
@@ -205,12 +213,74 @@ export default function ProductionOperations() {
     setBusy("");
   };
 
+  const loadAssetStatus = () => api.get("/admin/migrations/assets-upgrade/status").then((r) => setAssetJob(r.data)).catch(() => {});
+
+  useEffect(() => {
+    if (assetJob?.status !== "running") return;
+    const t = setInterval(loadAssetStatus, 3000);
+    return () => clearInterval(t);
+  }, [assetJob?.status]);
+
+  const runAssetPreflight = async () => {
+    setBusy("F-preflight");
+    try {
+      const { data } = await api.get("/admin/migrations/assets-upgrade/preflight");
+      setAssetPre(data);
+      await loadAssetStatus();
+      toast.success("Asset scan complete (read-only).");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Scan failed.");
+    }
+    setBusy("");
+  };
+
+  const runAssetUpgrade = async (force) => {
+    if (!window.confirm(force ? "Re-render EVERY catalog product cover through the hardened deterministic renderer? Zero AI spend. Founder-selected Asset Vault covers are always preserved." : "Re-render catalog product covers that have not yet been upgraded, through the hardened deterministic renderer? Zero AI spend. Resumable and safe to re-run.")) return;
+    setBusy("F-run");
+    try {
+      const { data } = await api.post("/admin/migrations/assets-upgrade", { force });
+      toast.success(data.status === "running" ? "A batch is already running." : "Batch Upgrade Assets started (zero AI spend).");
+      await loadAssetStatus();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Failed to start batch.");
+    }
+    setBusy("");
+  };
+
+  const runTestPreflight = async () => {
+    setBusy("E-preflight");
+    try {
+      const { data } = await api.get("/admin/migrations/test-products/preflight");
+      setTestPre(data);
+      toast.success("Test-product scan complete (read-only).");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Scan failed.");
+    }
+    setBusy("");
+  };
+
+  const runTestCleanup = async (mode) => {
+    if (mode === "apply" && !window.confirm("Archive (unpublish) all detected internal test/placeholder products in THIS environment? They leave the learner catalog immediately. Products tied to a paid order are always skipped. Assets are preserved and this is fully reversible via Rollback.")) return;
+    setBusy(`E-${mode}`);
+    try {
+      let data;
+      if (mode === "rollback") ({ data } = await api.post("/admin/migrations/test-products/cleanup/rollback", { apply: true }));
+      else ({ data } = await api.post("/admin/migrations/test-products/cleanup", { apply: mode === "apply" }));
+      setReportE(data);
+      toast.success(mode === "dry" ? "Dry run complete — no changes written." : mode === "apply" ? "Test products archived." : "Rollback complete — products restored.");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Cleanup action failed.");
+    }
+    setBusy("");
+  };
+
   if (summary === null) return <div className="flex justify-center py-32"><Loader2 className="w-6 h-6 animate-spin text-royal" /></div>;
 
   const a = summary?.workstream_a || {};
   const c = summary?.workstream_c || {};
   const rowsA = reportA?.stages?.flatMap((s) => s.rows) || reportA?.rows || [];
   const rowsC = reportC?.hold_actions || reportC?.rows || reportC?.classification || [];
+  const rowsE = reportE?.actions || reportE?.rows || testPre?.classification || [];
 
   return (
     <div className="space-y-6" data-testid="production-operations">
@@ -466,6 +536,117 @@ export default function ProductionOperations() {
               </div>
             )}
             <details className="mt-2 text-[11px] text-muted-foreground"><summary className="cursor-pointer">Raw completion report (JSON)</summary><pre className="mt-2 p-3 bg-muted rounded-lg overflow-x-auto">{JSON.stringify(reportD, null, 2)}</pre></details>
+          </div>
+        )}
+      </section>
+
+      {/* Test Product Cleanup — independent governed operation */}
+      <section className="rounded-xl border bg-card p-5" data-testid="test-cleanup">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-royal font-semibold">Store Hygiene · Catalog Cleanup</div>
+            <div className="flex items-center gap-2 mt-1"><Trash2 className="w-4 h-4 text-navy" /><span className="font-heading font-bold text-navy">Test Product Cleanup</span></div>
+            <p className="text-xs text-muted-foreground mt-1 max-w-2xl">Detects internal acceptance-test and placeholder products (e.g. <span className="font-medium">UI_TEST_PROD</span>, <span className="font-medium">QRU Factory Acceptance Test</span>, <span className="font-medium">test infographic asset</span>) and archives them so they leave the learner catalog. Detection is deterministic (known test signatures only — never a bare word). Products tied to a paid order are always skipped. Assets are preserved and every change is fully reversible via Rollback.</p>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button onClick={runTestPreflight} disabled={!!busy} data-testid="e-preflight" className="inline-flex items-center gap-2 rounded-lg border border-navy/30 text-navy px-4 py-2 text-sm font-medium hover:bg-navy/5 disabled:opacity-50">
+            {busy === "E-preflight" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Scan (read-only)
+          </button>
+          <button onClick={() => runTestCleanup("dry")} disabled={!!busy} data-testid="e-dry" className="inline-flex items-center gap-2 rounded-lg border border-navy/30 text-navy px-4 py-2 text-sm font-medium hover:bg-navy/5 disabled:opacity-50">
+            {busy === "E-dry" ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Dry Run
+          </button>
+          <button onClick={() => runTestCleanup("apply")} disabled={!!busy} data-testid="e-apply" className="inline-flex items-center gap-2 rounded-lg bg-navy text-white px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50">
+            {busy === "E-apply" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Archive Test Products
+          </button>
+          <button onClick={() => runTestCleanup("rollback")} disabled={!!busy} data-testid="e-rollback" className="inline-flex items-center gap-2 rounded-lg border border-red-200 text-red-700 px-4 py-2 text-sm font-medium hover:bg-red-50 disabled:opacity-50">
+            {busy === "E-rollback" ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />} Rollback
+          </button>
+        </div>
+
+        {testPre && (
+          <div className="mt-4 rounded-lg border p-4" data-testid="test-preflight">
+            <div className="flex flex-wrap items-center gap-2 text-xs mb-3">
+              <span className="font-semibold text-navy">Scan</span>
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold ${testPre.removable > 0 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
+                {testPre.removable > 0 ? <AlertTriangle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                {testPre.removable > 0 ? `${testPre.removable} removable` : "Catalog clean"}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+              <Stat label="Matched total" value={testPre.counts.matched_total} />
+              <Stat label="Visible in catalog" value={testPre.counts.visible_in_catalog} tone={testPre.counts.visible_in_catalog ? "warn" : "ok"} />
+              <Stat label="Not published" value={testPre.counts.not_published} />
+              <Stat label="Already archived" value={testPre.counts.already_archived} />
+              <Stat label="Has paid order (skip)" value={testPre.counts.has_paid_order} tone={testPre.counts.has_paid_order ? "bad" : "ok"} />
+            </div>
+          </div>
+        )}
+
+        {(reportE || testPre) && (
+          <div className="mt-4" data-testid="report-e">
+            {reportE && (
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold bg-emerald-100 text-emerald-700">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  {reportE.action === "rollback" ? "Rollback" : reportE.mode === "APPLY" ? "Archived" : "Dry run"}
+                </span>
+              </div>
+            )}
+            <EvidenceRows rows={rowsE} />
+            <details className="mt-2 text-[11px] text-muted-foreground"><summary className="cursor-pointer">Raw report (JSON)</summary><pre className="mt-2 p-3 bg-muted rounded-lg overflow-x-auto">{JSON.stringify(reportE || testPre, null, 2)}</pre></details>
+          </div>
+        )}
+      </section>
+
+      {/* Batch Upgrade Assets™ — background, $0 AI cover re-render */}
+      <section className="rounded-xl border bg-card p-5" data-testid="assets-upgrade">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-royal font-semibold">Store Hygiene · Cover Quality</div>
+            <div className="flex items-center gap-2 mt-1"><ImageIcon className="w-4 h-4 text-navy" /><span className="font-heading font-bold text-navy">Batch Upgrade Assets™</span></div>
+            <p className="text-xs text-muted-foreground mt-1 max-w-2xl">Re-renders every catalog product cover through the <span className="font-medium">hardened deterministic renderer</span> — legible titles, safe vertical bands, no overflow. Guaranteed <span className="font-medium">$0 AI</span>. Founder-selected Asset Vault covers are always preserved. Runs in the background; resumable and safe to re-run.</p>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button onClick={runAssetPreflight} disabled={!!busy} data-testid="f-preflight" className="inline-flex items-center gap-2 rounded-lg border border-navy/30 text-navy px-4 py-2 text-sm font-medium hover:bg-navy/5 disabled:opacity-50">
+            {busy === "F-preflight" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Scan (read-only)
+          </button>
+          <button onClick={() => runAssetUpgrade(false)} disabled={!!busy || assetJob?.status === "running"} data-testid="f-run" className="inline-flex items-center gap-2 rounded-lg bg-navy text-white px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50">
+            {busy === "F-run" || assetJob?.status === "running" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} Upgrade Remaining Covers
+          </button>
+          <button onClick={() => runAssetUpgrade(true)} disabled={!!busy || assetJob?.status === "running"} data-testid="f-run-all" className="inline-flex items-center gap-2 rounded-lg border border-navy/30 text-navy px-4 py-2 text-sm font-medium hover:bg-navy/5 disabled:opacity-50">
+            {busy === "F-run-all" ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Re-render All
+          </button>
+        </div>
+
+        {assetPre && (
+          <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-3" data-testid="asset-preflight">
+            <Stat label="Eligible products" value={assetPre.eligible_products} />
+            <Stat label="Not yet upgraded" value={assetPre.not_yet_upgraded} tone={assetPre.not_yet_upgraded ? "warn" : "ok"} />
+            <Stat label="Already upgraded" value={assetPre.already_upgraded} tone="ok" />
+            <Stat label="AI cost" value="$0" tone="ok" />
+          </div>
+        )}
+
+        {assetJob && assetJob.status !== "idle" && (
+          <div className="mt-4 rounded-lg border p-4" data-testid="asset-job">
+            <div className="flex flex-wrap items-center gap-2 text-xs mb-3">
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold ${assetJob.status === "complete" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                {assetJob.status === "complete" ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {assetJob.status === "complete" ? "Complete" : "Running"}
+              </span>
+              <span className="text-muted-foreground">{assetJob.done}/{assetJob.total} processed</span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+              <div className="h-full bg-navy transition-all" style={{ width: `${assetJob.total ? Math.round((assetJob.done / assetJob.total) * 100) : 0}%` }} />
+            </div>
+            <div className="mt-3 grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <Stat label="Upgraded" value={assetJob.ok} tone="ok" />
+              <Stat label="Preserved (Founder asset)" value={assetJob.skipped} />
+              <Stat label="Failed" value={assetJob.failed} tone={assetJob.failed ? "bad" : "ok"} />
+              <Stat label="Remaining" value={assetJob.remaining} />
+            </div>
           </div>
         )}
       </section>

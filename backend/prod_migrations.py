@@ -858,3 +858,231 @@ async def standards_metadata_rollback(apply: bool = False):
         rows.append({"id": d.get("id"), "outcome": "UNSET" if apply else "WOULD_UNSET", "fields": DQ7C_PROJ})
     return {"operation": "DQ-7C Standards Metadata", "action": "rollback",
             "mode": "APPLY" if apply else "DRY_RUN", "at": _now(), "rows": rows}
+
+
+
+# =========================================================================== #
+# Test Product Cleanup — governed removal of acceptance-test / placeholder
+# products from the learner catalog. Additive-metadata + status archive only;
+# never deletes; never touches products tied to a paid order; fully reversible.
+# =========================================================================== #
+MARK_TEST = "RI-STORE-TESTCLEAN"
+ARCHIVE_STATUS = "Archived"
+
+# Deterministic markers of internal test/placeholder products (case-insensitive).
+# Anchored to KNOWN test signatures — never a bare word like "test".
+TEST_PRODUCT_PATTERNS = [
+    r"UI_TEST_PROD",
+    r"QRU Factory Acceptance Test",
+    r"test infographic asset",
+    r"\bTEST_[A-Z0-9]",
+    r"\bdummy\b",
+    r"\bsample product\b",
+]
+_TEST_RE = re.compile("|".join(TEST_PRODUCT_PATTERNS), re.I)
+
+
+def _matched_test_pattern(p: dict):
+    """Return the first matching test signature for a product, or None."""
+    haystack = " ".join([
+        str(p.get("title") or ""), str(p.get("name") or ""),
+        str(p.get("product_code") or ""), str(p.get("topic") or ""),
+    ])
+    m = _TEST_RE.search(haystack)
+    return m.group(0) if m else None
+
+
+async def _test_has_paid_order(pid: str) -> bool:
+    if pid and await db.purchases.count_documents({"product_id": pid}) > 0:
+        return True
+    if pid and await db.book_purchases.count_documents({"product_id": pid}) > 0:
+        return True
+    return False
+
+
+async def _test_products_classify():
+    rows = []
+    async for p in db.products.find({}, {"_id": 0, "id": 1, "product_code": 1,
+                                         "title": 1, "name": 1, "topic": 1, "status": 1}):
+        sig = _matched_test_pattern(p)
+        if not sig:
+            continue
+        pid = p.get("id")
+        paid = await _test_has_paid_order(pid)
+        status = p.get("status")
+        visible = status == "Published"
+        if paid:
+            cls = "TEST_HAS_PAID_ORDER"          # skip — founder decision
+        elif status == ARCHIVE_STATUS:
+            cls = "TEST_ALREADY_ARCHIVED"         # already hidden — no-op
+        elif visible:
+            cls = "TEST_VISIBLE_IN_CATALOG"       # removable (currently Published)
+        else:
+            cls = "TEST_NOT_PUBLISHED"            # removable (draft/review state)
+        rows.append({
+            "code": p.get("product_code"), "id": pid,
+            "title": p.get("title") or p.get("name"),
+            "matched": sig, "status": status,
+            "has_paid_order": paid, "classification": cls,
+        })
+    rows.sort(key=lambda r: (r["classification"], r["code"] or ""))
+    return rows
+
+
+async def test_products_preflight():
+    rows = await _test_products_classify()
+    def _n(c):
+        return sum(1 for r in rows if r["classification"] == c)
+    counts = {
+        "matched_total": len(rows),
+        "visible_in_catalog": _n("TEST_VISIBLE_IN_CATALOG"),
+        "not_published": _n("TEST_NOT_PUBLISHED"),
+        "already_archived": _n("TEST_ALREADY_ARCHIVED"),
+        "has_paid_order": _n("TEST_HAS_PAID_ORDER"),
+    }
+    removable = counts["visible_in_catalog"] + counts["not_published"]
+    return {
+        "operation": "Test Product Cleanup", "ref": MARK_TEST, "at": _now(),
+        "counts": counts, "removable": removable,
+        "ready_to_apply": removable > 0,
+        "block_reasons": [] if removable > 0 else ["No removable test products found."],
+        "classification": rows,
+    }
+
+
+async def test_products_cleanup(apply: bool = False):
+    rows = await _test_products_classify()
+    actions = []
+    for r in rows:
+        cls = r["classification"]
+        if cls == "TEST_HAS_PAID_ORDER":
+            actions.append({"code": r["code"], "outcome": "SKIP",
+                            "detail": "tied to a paid order — preserved for founder decision"})
+            continue
+        if cls == "TEST_ALREADY_ARCHIVED":
+            actions.append({"code": r["code"], "outcome": "SKIP",
+                            "detail": "already archived — no change"})
+            continue
+        # removable (visible or not-published)
+        if apply:
+            await db.products.update_one({"id": r["id"]}, {"$set": {
+                "status": ARCHIVE_STATUS,
+                "test_cleanup": {"prior_status": r["status"], "matched": r["matched"],
+                                 "by": MARK_TEST, "at": _now()},
+            }})
+            actions.append({"code": r["code"], "outcome": "REMOVED",
+                            "detail": f"status {r['status']} → {ARCHIVE_STATUS} (matched '{r['matched']}', assets preserved)"})
+        else:
+            actions.append({"code": r["code"], "outcome": "WOULD_REMOVE",
+                            "detail": f"status {r['status']} → {ARCHIVE_STATUS} (matched '{r['matched']}')"})
+    return {"operation": "Test Product Cleanup", "ref": MARK_TEST,
+            "mode": "APPLY" if apply else "DRY_RUN", "at": _now(),
+            "classification": rows, "actions": actions}
+
+
+async def test_products_cleanup_rollback(apply: bool = False):
+    rows = []
+    async for p in db.products.find({"test_cleanup": {"$exists": True}}, {"_id": 0}):
+        prior = (p.get("test_cleanup") or {}).get("prior_status") or "Published"
+        if apply:
+            await db.products.update_one({"id": p["id"]},
+                                         {"$set": {"status": prior},
+                                          "$unset": {"test_cleanup": ""}})
+            rows.append({"code": p.get("product_code"), "outcome": "RESTORED",
+                         "detail": f"restored → {prior}"})
+        else:
+            rows.append({"code": p.get("product_code"), "outcome": "WOULD_RESTORE",
+                         "detail": f"would restore → {prior}"})
+    return {"operation": "Test Product Cleanup", "action": "rollback",
+            "mode": "APPLY" if apply else "DRY_RUN", "at": _now(), "rows": rows}
+
+
+# =========================================================================== #
+# Batch Upgrade Assets™ — governed, resumable re-render of catalog product
+# covers through the HARDENED deterministic renderer (guaranteed $0 AI).
+# Preserves Founder-selected Asset Vault covers; runs in the background;
+# never touches book_records storefront covers.
+# =========================================================================== #
+ASSET_UPGRADE_JOB = "asset_upgrade_jobs"
+_ASSET_UPGRADE_MARK = "RI-STORE-ASSETUP"
+
+
+async def _asset_upgrade_targets(force: bool):
+    """Published commerce products that are NOT internal test products.
+    When force is False, only those not yet upgraded by this batch."""
+    q = {"status": "Published"}
+    out = []
+    async for p in db.products.find(q, {"_id": 0, "id": 1, "product_code": 1, "title": 1,
+                                        "name": 1, "topic": 1, "assets_upgrade": 1}):
+        if _matched_test_pattern(p):
+            continue
+        if not force and (p.get("assets_upgrade") or {}).get("upgraded_at"):
+            continue
+        out.append(p["id"])
+    return out
+
+
+async def asset_upgrade_status():
+    j = await db[ASSET_UPGRADE_JOB].find_one({"id": "current"}, {"_id": 0})
+    remaining = len(await _asset_upgrade_targets(force=False))
+    total_eligible = len(await _asset_upgrade_targets(force=True))
+    base = {"status": "idle", "total": 0, "done": 0, "ok": 0, "failed": 0,
+            "skipped": 0, "failed_ids": []}
+    if j:
+        base.update(j)
+    base["remaining"] = remaining
+    base["total_eligible"] = total_eligible
+    return base
+
+
+async def _asset_upgrade_worker(actor: str, force: bool):
+    from models import now_iso
+    ids = await _asset_upgrade_targets(force=force)
+    total = len(ids)
+    done = ok = failed = skipped = 0
+    failed_ids = []
+    await db[ASSET_UPGRADE_JOB].update_one({"id": "current"}, {"$set": {
+        "id": "current", "status": "running", "total": total, "done": 0, "ok": 0,
+        "failed": 0, "skipped": 0, "failed_ids": [], "force": force,
+        "started_at": _now(), "finished_at": None, "by": actor}}, upsert=True)
+    for pid in ids:
+        try:
+            res = await _re.ensure_branded_assets(pid, actor=actor, allow_ai_hero_art=False)
+            if res is None:
+                failed += 1
+                failed_ids.append(pid)
+            elif res.get("founder_selected"):
+                skipped += 1  # Founder-selected Asset Vault cover — preserved, never overwritten
+                await db.products.update_one({"id": pid}, {"$set": {
+                    "assets_upgrade": {"upgraded_at": now_iso(), "by": _ASSET_UPGRADE_MARK,
+                                       "renderer": "preserved_founder_asset"}}})
+            else:
+                ok += 1
+                await db.products.update_one({"id": pid}, {"$set": {
+                    "assets_upgrade": {"upgraded_at": now_iso(), "by": _ASSET_UPGRADE_MARK,
+                                       "renderer": "deterministic_hardened"}}})
+        except Exception:
+            failed += 1
+            failed_ids.append(pid)
+        done += 1
+        if done % 3 == 0:
+            await db[ASSET_UPGRADE_JOB].update_one({"id": "current"}, {"$set": {
+                "done": done, "ok": ok, "failed": failed, "skipped": skipped,
+                "failed_ids": failed_ids}})
+    await db[ASSET_UPGRADE_JOB].update_one({"id": "current"}, {"$set": {
+        "status": "complete", "done": done, "ok": ok, "failed": failed,
+        "skipped": skipped, "failed_ids": failed_ids, "finished_at": _now()}})
+
+
+async def asset_upgrade_preflight():
+    total_eligible = len(await _asset_upgrade_targets(force=True))
+    remaining = len(await _asset_upgrade_targets(force=False))
+    already = total_eligible - remaining
+    return {
+        "operation": "Batch Upgrade Assets", "ref": _ASSET_UPGRADE_MARK, "at": _now(),
+        "eligible_products": total_eligible,
+        "not_yet_upgraded": remaining,
+        "already_upgraded": already,
+        "ai_cost": "$0 (deterministic hardened renderer)",
+        "ready_to_run": total_eligible > 0,
+    }

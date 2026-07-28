@@ -4,6 +4,7 @@ DRY-RUN by default everywhere. Writes require an explicit apply flag AND run onl
 whatever database this backend is connected to — i.e. PRODUCTION when triggered on the
 deployed site. Reuses the exact idempotent logic in prod_migrations.py.
 """
+import asyncio
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
@@ -25,6 +26,10 @@ class ApplyInput(BaseModel):
 class ContainmentInput(BaseModel):
     apply_hold: bool = False
     apply: bool = False
+
+
+class AssetUpgradeInput(BaseModel):
+    force: bool = False
 
 
 @router.get("/summary")
@@ -75,6 +80,48 @@ async def learn_containment(body: ContainmentInput, user=Depends(require_super_a
 @router.post("/learn-containment/rollback")
 async def learn_containment_rollback(body: ApplyInput, user=Depends(require_super_admin)):
     return await pm.learn_containment_rollback(apply=body.apply)
+
+
+# ----- Batch Upgrade Assets™ (background, resumable, $0 AI) -----
+@router.get("/assets-upgrade/preflight")
+async def assets_upgrade_preflight(user=Depends(require_super_admin)):
+    return await pm.asset_upgrade_preflight()
+
+
+@router.post("/assets-upgrade")
+async def assets_upgrade(body: AssetUpgradeInput, user=Depends(require_super_admin)):
+    """Re-render catalog product covers via the hardened deterministic renderer (zero AI).
+    Runs in the background; poll /assets-upgrade/status."""
+    existing = await pm.asset_upgrade_status()
+    if existing.get("status") == "running":
+        return {"ok": True, "status": "running", "message": "An asset upgrade batch is already running.",
+                **{k: existing.get(k) for k in ("total", "done", "ok", "failed", "skipped")}}
+    asyncio.create_task(pm._asset_upgrade_worker(user.get("name", "Founder"), body.force))
+    return {"ok": True, "status": "started",
+            "message": "Batch Upgrade Assets started (zero AI spend). Poll status to track."}
+
+
+@router.get("/assets-upgrade/status")
+async def assets_upgrade_status(user=Depends(require_super_admin)):
+    return await pm.asset_upgrade_status()
+
+
+# ----- Test Product Cleanup (independent governed operation) -----
+@router.get("/test-products/preflight")
+async def test_products_preflight(user=Depends(require_super_admin)):
+    """Read-only classification of internal test/placeholder products in the catalog."""
+    return await pm.test_products_preflight()
+
+
+@router.post("/test-products/cleanup")
+async def test_products_cleanup(body: ApplyInput, user=Depends(require_super_admin)):
+    """Archive (unpublish) matched test products — dry-run by default; skips paid orders."""
+    return await pm.test_products_cleanup(apply=body.apply)
+
+
+@router.post("/test-products/cleanup/rollback")
+async def test_products_cleanup_rollback(body: ApplyInput, user=Depends(require_super_admin)):
+    return await pm.test_products_cleanup_rollback(apply=body.apply)
 
 
 # ----- DQ-7C Standards Metadata (independent governed operation) -----

@@ -38,6 +38,7 @@ const ICON = {
   "/enterprise-health": Activity, "/blueprint": BookOpenCheck, "/experience-lab": Eye,
   "/integration-hub": Plug, "/ai-services": Cpu, "/users": UserCog, "/portability": HardDriveDownload,
   "/engineering-console": Cpu, "/settings": Settings, "/production-operations": Database,
+  "/store-health": Stethoscope,
 };
 const iconFor = (route) => ICON[route] || Boxes;
 
@@ -125,6 +126,9 @@ export default function Layout() {
           {(model.core || []).map((item) => <NavItem key={item.id} item={item} onNavigate={close} />)}
           {["Founder & CEO", "Administrator"].includes(user?.role) && (
             <NavItem item={{ id: "production-operations", label: "Production Operations™", route: "/production-operations" }} onNavigate={close} />
+          )}
+          {["Founder & CEO", "Administrator"].includes(user?.role) && (
+            <NavItem item={{ id: "store-health", label: "Store Health™", route: "/store-health" }} onNavigate={close} />
           )}
 
           {/* All Capabilities — every other working page, one click away (collapsed) */}
