@@ -280,9 +280,15 @@ async def pricing(book_id: str, req: PricingReq, user=Depends(require_super_admi
     return r
 
 
+class AuthorizeReq(BaseModel):
+    acknowledge_imprint_mismatch: Optional[bool] = False
+
+
+
 @router.post("/books/{book_id}/authorize")
-async def authorize(book_id: str, user=Depends(require_super_admin)):
-    r = await bm.authorize_release(book_id, user.get("name", "Founder"))
+async def authorize(book_id: str, data: AuthorizeReq = AuthorizeReq(), user=Depends(require_super_admin)):
+    ack = bool(data.acknowledge_imprint_mismatch) if data else False
+    r = await bm.authorize_release(book_id, user.get("name", "Founder"), acknowledge_imprint_mismatch=ack)
     if r is None:
         raise HTTPException(404, "Book Record not found.")
     if isinstance(r, dict) and r.get("error"):

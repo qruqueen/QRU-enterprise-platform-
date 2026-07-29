@@ -1158,11 +1158,23 @@ async def run_post_publish_recipe(book_id, actor):
 
 
 
-async def authorize_release(book_id, actor):
+async def authorize_release(book_id, actor, acknowledge_imprint_mismatch=False):
     """Human final judgment for the irreversible release action. Requires the rest of the gate met."""
     b = await db[COLL].find_one({"id": book_id})
     if not b:
         return None
+    # QRU Imprint Governance™ QA gate — a title assigned to the wrong imprint is blocked from
+    # publishing until the Founder corrects it or explicitly acknowledges (overrides) the mismatch.
+    import imprint_rules as ir
+    comp = ir.imprint_compliance(b)
+    if comp["mismatch"] and not acknowledge_imprint_mismatch:
+        return {
+            "error": (f"Imprint Mismatch — '{b['title']}' is assigned to {comp['actual']}, but QRU "
+                      f"Imprint Governance™ expects {comp['expected']} ({comp['rule']}). Correct the "
+                      "imprint (Imprint Canonicalization in Production Operations™), or re-authorize "
+                      "with Founder acknowledgement to override."),
+            "imprint_mismatch": comp,
+        }
     pc = await publish_center(book_id)
     gate = dict(pc["final_release_gate"])
     gate["founder_authorization_received"] = True
@@ -1170,6 +1182,9 @@ async def authorize_release(book_id, actor):
         unmet = [k.replace("_", " ") for k, v in gate.items() if not v]
         return {"error": f"Cannot authorize — unmet gate items: {', '.join(unmet)}."}
     auth = {"authorized": True, "by": actor, "at": _now()}
+    if comp["mismatch"]:
+        auth["imprint_mismatch_override"] = {"expected": comp["expected"], "actual": comp["actual"],
+                                             "acknowledged_by": actor, "at": _now()}
     await db[COLL].update_one({"id": book_id}, {"$set": {
         "founder_authorization": auth, "publication_status": "Authorized for release (manual/authorized submission)",
         "updated_at": _now()},
@@ -2197,6 +2212,8 @@ async def get_book(book_id):
         out["title_cleanup_suggestion"] = suggestion
     content = (b.get("editorial_edition") or b.get("working_copy") or {}).get("content", "")
     out["content_integrity"] = content_integrity_check(out.get("title"), out.get("subtitle"), content)
+    import imprint_rules as ir
+    out["imprint_compliance"] = ir.imprint_compliance(out)
     return out
 
 

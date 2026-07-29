@@ -13,6 +13,16 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - Language: English only (code, comments, UI).
 
 
+## ✅ Imprint Canonicalization & Duplicate Merge (2026-07-29, RI-IMPRINT-0001) — self-verified full lifecycle
+Founder brand-identity correction. New `imprint_rules.py` = single source of truth for imprint + genre.
+- **Two imprints, one rule each:** **E.Q. Rothwell™** (LITERARY: The Understanding Tree, Ordinary Tuesdays, Patterns of Intelligence — author "E.Q. Rothwell"); **QRU Press™** (all educational/institutional — author "QRU Editorial" unless explicitly assigned). Author never inferred from imprint.
+- **Permanent fields added to every book_record:** `canonical_imprint` + normalized `genre` category (Literary Fiction / Educational / Science / Legal / Finance).
+- **Ordinary Tuesdays merge:** "Ordinary Tuesdays FULL MANUSCRIPT" (BOOK-0003, 0 purchases) archived into canonical "Ordinary Tuesdays" (BOOK-0004, 5 purchases) as `merged_records` (manuscript/files/history preserved) → duplicate moved to `book_records_trash` (reversible). Public never shows "FULL MANUSCRIPT".
+- **Authorization QA gate:** `authorize_release` now blocks an **Imprint Mismatch** (assigned imprint contradicts the rule) until the Founder corrects it OR re-authorizes with `acknowledge_imprint_mismatch=true` (override recorded on the auth record). `get_book` surfaces `imprint_compliance`.
+- **Delivered as a governed Production Operation** (`prod_migrations.imprint_*` + `/api/admin/migrations/imprint-canonicalization[/preflight|/rollback]`, super-admin) with a Preflight→Dry Run→Apply→Rollback card in Production Operations™ (`data-testid="imprint-canonicalization"`, buttons g-preflight/g-dry/g-apply/g-rollback). **No cover re-rendering (zero AI spend)** per Founder (deferred).
+- **Applied in PREVIEW:** 19 books → 3 E.Q. Rothwell™ / 16 QRU Press™; storefront `/api/public/books?imprint=` filters correctly (3 literary vs 5 educational live). Idempotent + rollback + re-apply + QA-gate all verified (python + curl + auth 401 + UI screenshot). **Founder must Deploy + run "Apply Canonicalization" in production** (separate DB).
+
+
 ## ✅ Distribution Architecture™ Phase 0 (2026-07-29, Founder-approved) — testing_agent iteration_97, 9/9 backend + frontend verified
 Approved model: **one governed catalog (QRU Store™), many plug-in customer experiences**. Phase 0 is invisible — QRU Learn™ and the public bookstore are untouched.
 - Enterprise principles now live: One Governed Catalog · **Automatic Distribution™** (default destinations per product type, auto-selected at publish, Founder-overridable) · **Experiences are Plug-ins** (register without touching the Factory).

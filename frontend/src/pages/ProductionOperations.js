@@ -43,6 +43,11 @@ const OUTCOME = {
   TEST_NOT_PUBLISHED: "bg-amber-100 text-amber-700",
   TEST_ALREADY_ARCHIVED: "bg-muted text-muted-foreground",
   TEST_HAS_PAID_ORDER: "bg-orange-100 text-orange-700",
+  OK: "bg-muted text-muted-foreground",
+  MERGED: "bg-emerald-100 text-emerald-700",
+  WOULD_MERGE: "bg-amber-100 text-amber-700",
+  RESTORED_FROM_TRASH: "bg-blue-100 text-blue-700",
+  WOULD_RESTORE_FROM_TRASH: "bg-amber-100 text-amber-700",
 };
 
 function Badge({ v }) {
@@ -95,6 +100,8 @@ export default function ProductionOperations() {
   const [reportE, setReportE] = useState(null);
   const [assetPre, setAssetPre] = useState(null);
   const [assetJob, setAssetJob] = useState(null);
+  const [imprintPre, setImprintPre] = useState(null);
+  const [reportG, setReportG] = useState(null);
 
   const loadSummary = () => api.get("/admin/migrations/summary").then((r) => setSummary(r.data)).catch(() => setSummary(false));
   useEffect(() => { loadSummary(); }, []);
@@ -274,6 +281,33 @@ export default function ProductionOperations() {
     setBusy("");
   };
 
+  const runImprintPreflight = async () => {
+    setBusy("G-preflight");
+    try {
+      const { data } = await api.get("/admin/migrations/imprint-canonicalization/preflight");
+      setImprintPre(data);
+      toast.success("Imprint audit complete (read-only).");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Audit failed.");
+    }
+    setBusy("");
+  };
+
+  const runImprint = async (mode) => {
+    if (mode === "apply" && !window.confirm("Apply imprint canonicalization to THIS environment? Assigns every book to its canonical imprint (E.Q. Rothwell™ literary / QRU Press™ educational), records the permanent canonical_imprint + genre, normalizes literary authorship, and merges the 'Ordinary Tuesdays FULL MANUSCRIPT' duplicate into the canonical record. Additive + fully reversible via Rollback. Covers are NOT re-rendered (no AI spend).")) return;
+    setBusy(`G-${mode}`);
+    try {
+      let data;
+      if (mode === "rollback") ({ data } = await api.post("/admin/migrations/imprint-canonicalization/rollback", { apply: true }));
+      else ({ data } = await api.post("/admin/migrations/imprint-canonicalization", { apply: mode === "apply" }));
+      setReportG(data);
+      toast.success(mode === "dry" ? "Dry run complete — no changes written." : mode === "apply" ? "Imprints canonicalized." : "Rollback complete — imprints restored.");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Imprint action failed.");
+    }
+    setBusy("");
+  };
+
   if (summary === null) return <div className="flex justify-center py-32"><Loader2 className="w-6 h-6 animate-spin text-royal" /></div>;
 
   const a = summary?.workstream_a || {};
@@ -281,6 +315,7 @@ export default function ProductionOperations() {
   const rowsA = reportA?.stages?.flatMap((s) => s.rows) || reportA?.rows || [];
   const rowsC = reportC?.hold_actions || reportC?.rows || reportC?.classification || [];
   const rowsE = reportE?.actions || reportE?.rows || testPre?.classification || [];
+  const rowsG = reportG?.actions || reportG?.rows || [];
 
   return (
     <div className="space-y-6" data-testid="production-operations">
@@ -595,6 +630,64 @@ export default function ProductionOperations() {
             )}
             <EvidenceRows rows={rowsE} />
             <details className="mt-2 text-[11px] text-muted-foreground"><summary className="cursor-pointer">Raw report (JSON)</summary><pre className="mt-2 p-3 bg-muted rounded-lg overflow-x-auto">{JSON.stringify(reportE || testPre, null, 2)}</pre></details>
+          </div>
+        )}
+      </section>
+
+      {/* Imprint Canonicalization & Duplicate Merge — RI-IMPRINT-0001 */}
+      <section className="rounded-xl border bg-card p-5" data-testid="imprint-canonicalization">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-royal font-semibold">Brand Identity · Imprint Governance</div>
+            <div className="flex items-center gap-2 mt-1"><BookOpen className="w-4 h-4 text-navy" /><span className="font-heading font-bold text-navy">Imprint Canonicalization & Duplicate Merge</span></div>
+            <p className="text-xs text-muted-foreground mt-1 max-w-2xl">Assigns every book to its canonical imprint — <span className="font-medium">E.Q. Rothwell™</span> for the literary list (The Understanding Tree, Ordinary Tuesdays, Patterns of Intelligence) and <span className="font-medium">QRU Press™</span> for all educational / institutional titles — records a permanent <span className="font-medium">canonical_imprint</span> + <span className="font-medium">genre</span>, sets literary authorship to E.Q. Rothwell, and merges the <span className="font-medium">"Ordinary Tuesdays FULL MANUSCRIPT"</span> duplicate into the canonical record (manuscript, files &amp; history preserved). Additive metadata, fully reversible. <span className="font-medium">Covers are not re-rendered</span> — no AI spend.</p>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button onClick={runImprintPreflight} disabled={!!busy} data-testid="g-preflight" className="inline-flex items-center gap-2 rounded-lg border border-navy/30 text-navy px-4 py-2 text-sm font-medium hover:bg-navy/5 disabled:opacity-50">
+            {busy === "G-preflight" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Audit (read-only)
+          </button>
+          <button onClick={() => runImprint("dry")} disabled={!!busy} data-testid="g-dry" className="inline-flex items-center gap-2 rounded-lg border border-navy/30 text-navy px-4 py-2 text-sm font-medium hover:bg-navy/5 disabled:opacity-50">
+            {busy === "G-dry" ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Dry Run
+          </button>
+          <button onClick={() => runImprint("apply")} disabled={!!busy} data-testid="g-apply" className="inline-flex items-center gap-2 rounded-lg bg-navy text-white px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50">
+            {busy === "G-apply" ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} Apply Canonicalization
+          </button>
+          <button onClick={() => runImprint("rollback")} disabled={!!busy} data-testid="g-rollback" className="inline-flex items-center gap-2 rounded-lg border border-red-200 text-red-700 px-4 py-2 text-sm font-medium hover:bg-red-50 disabled:opacity-50">
+            {busy === "G-rollback" ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />} Rollback
+          </button>
+        </div>
+
+        {imprintPre && (
+          <div className="mt-4 rounded-lg border p-4" data-testid="imprint-preflight">
+            <div className="flex flex-wrap items-center gap-2 text-xs mb-3">
+              <span className="font-semibold text-navy">Audit</span>
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold ${imprintPre.ready_to_apply ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
+                {imprintPre.ready_to_apply ? <AlertTriangle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                {imprintPre.ready_to_apply ? `${imprintPre.removable} to apply` : "All canonical"}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+              <Stat label="Total books" value={imprintPre.counts.total} />
+              <Stat label="To update" value={imprintPre.counts.to_update} tone={imprintPre.counts.to_update ? "warn" : "ok"} />
+              <Stat label="Duplicate merges" value={imprintPre.counts.to_merge} tone={imprintPre.counts.to_merge ? "warn" : "ok"} />
+              <Stat label="Imprint reassignments" value={imprintPre.counts.imprint_reassignments} tone={imprintPre.counts.imprint_reassignments ? "warn" : "ok"} />
+              <Stat label="E.Q. Rothwell™" value={imprintPre.counts.eq_rothwell} />
+              <Stat label="QRU Press™" value={imprintPre.counts.qru_press} />
+            </div>
+          </div>
+        )}
+
+        {reportG && (
+          <div className="mt-4" data-testid="report-g">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold bg-emerald-100 text-emerald-700">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                {reportG.action === "rollback" ? "Rollback" : reportG.mode === "APPLY" ? "Applied" : "Dry run"}
+              </span>
+            </div>
+            <EvidenceRows rows={rowsG} />
+            <details className="mt-2 text-[11px] text-muted-foreground"><summary className="cursor-pointer">Raw report (JSON)</summary><pre className="mt-2 p-3 bg-muted rounded-lg overflow-x-auto">{JSON.stringify(reportG, null, 2)}</pre></details>
           </div>
         )}
       </section>

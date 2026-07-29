@@ -21,6 +21,7 @@ from pathlib import Path
 
 import storage
 import rendering_engine as _re
+import imprint_rules as ir
 from database import db
 
 DATA_DIR = Path(__file__).parent / "migrations_data"
@@ -1086,3 +1087,170 @@ async def asset_upgrade_preflight():
         "ai_cost": "$0 (deterministic hardened renderer)",
         "ready_to_run": total_eligible > 0,
     }
+
+
+
+# =========================================================================== #
+# Imprint Canonicalization & Duplicate Merge (RI-IMPRINT-0001)
+# Founder-approved brand-identity correction. Assigns every book_record to its
+# canonical imprint (E.Q. Rothwell™ literary / QRU Press™ educational), records a
+# permanent canonical_imprint + genre category, normalizes literary authorship,
+# and merges the "Ordinary Tuesdays FULL MANUSCRIPT" duplicate into the canonical
+# "Ordinary Tuesdays" record. Additive metadata + rollback-preserving.
+# Does NOT re-render covers (deferred per Founder — no AI/image spend).
+# =========================================================================== #
+IMPRINT_MARK = "RI-IMPRINT-0001"
+BOOK_TRASH = "book_records_trash"
+
+
+def _norm_ot(title):
+    return ir.normalize_title(title) == "ordinary tuesdays"
+
+
+async def _imprint_plan():
+    """Deterministic per-book plan (used by preflight + apply). $0, read-only."""
+    books = await db[COLL].find({}, {"_id": 0}).to_list(2000)
+    # Ordinary Tuesdays: pick the canonical record (authorized > has-purchases > first), the rest merge in.
+    ot = [b for b in books if _norm_ot(b.get("title"))]
+    canonical_id = None
+    if ot:
+        best, best_key = None, (-1, -1, -1)
+        for b in ot:
+            n = await db["book_purchases"].count_documents({"book_id": b["id"]})
+            authd = 1 if (b.get("founder_authorization") or {}).get("authorized") else 0
+            locked = 1 if b.get("editorial_locked") else 0
+            key = (authd, n, locked)
+            if key > best_key:
+                best_key, best = key, b
+        canonical_id = best["id"] if best else None
+    rows = []
+    for b in books:
+        title = b.get("title") or ""
+        exp_imp = ir.expected_imprint(title)
+        exp_author = ir.expected_author(b)
+        exp_genre = ir.canonical_genre(b)
+        cur_imp = b.get("imprint")
+        is_dup = _norm_ot(title) and canonical_id and b["id"] != canonical_id
+        already = (cur_imp == exp_imp and b.get("canonical_imprint") == exp_imp
+                   and (b.get("author") or "") == exp_author and b.get("genre") == exp_genre)
+        rows.append({
+            "code": b.get("book_code"), "id": b["id"], "title": title,
+            "current_imprint": cur_imp, "target_imprint": exp_imp,
+            "current_author": b.get("author"), "target_author": exp_author,
+            "current_genre": b.get("genre"), "target_genre": exp_genre,
+            "is_literary": ir.is_literary(title),
+            "imprint_reassigned": bool(cur_imp) and cur_imp != exp_imp,
+            "action": "MERGE_DUPLICATE" if is_dup else ("NO_CHANGE" if already else "UPDATE"),
+            "merge_into": canonical_id if is_dup else None,
+        })
+    rows.sort(key=lambda r: (r["code"] or ""))
+    return rows, canonical_id
+
+
+async def imprint_audit_preflight():
+    rows, canonical_id = await _imprint_plan()
+    def _n(a):
+        return sum(1 for r in rows if r["action"] == a)
+    active = [r for r in rows if r["action"] != "MERGE_DUPLICATE"]
+    counts = {
+        "total": len(rows),
+        "to_update": _n("UPDATE"),
+        "to_merge": _n("MERGE_DUPLICATE"),
+        "already_canonical": _n("NO_CHANGE"),
+        "imprint_reassignments": sum(1 for r in rows if r["imprint_reassigned"]),
+        "eq_rothwell": sum(1 for r in active if r["target_imprint"] == ir.EQ_ROTHWELL),
+        "qru_press": sum(1 for r in active if r["target_imprint"] == ir.QRU_PRESS),
+    }
+    todo = counts["to_update"] + counts["to_merge"]
+    return {
+        "operation": "Imprint Canonicalization", "ref": IMPRINT_MARK, "at": _now(),
+        "canonical_ordinary_tuesdays": canonical_id,
+        "counts": counts, "removable": todo, "ready_to_apply": todo > 0,
+        "block_reasons": [] if todo > 0 else ["Every book is already canonical — nothing to apply."],
+        "classification": rows,
+    }
+
+
+async def imprint_canonicalize(apply: bool = False):
+    rows, canonical_id = await _imprint_plan()
+    actions = []
+    for r in rows:
+        if r["action"] == "NO_CHANGE":
+            actions.append({"code": r["code"], "outcome": "OK", "detail": "already canonical"})
+            continue
+        if r["action"] == "MERGE_DUPLICATE":
+            if apply:
+                dup = await db[COLL].find_one({"id": r["id"]})
+                await db[COLL].update_one({"id": canonical_id}, {"$push": {"merged_records": {
+                    "from_book_code": dup.get("book_code"), "from_id": dup["id"],
+                    "title": dup.get("title"), "merged_at": _now(), "ref": IMPRINT_MARK,
+                    "working_copy": dup.get("working_copy"), "editorial_edition": dup.get("editorial_edition"),
+                    "deliverables": dup.get("deliverables"), "artifacts": dup.get("artifacts"),
+                    "revision_history": dup.get("revision_history"),
+                    "source_file_history": dup.get("source_file_history"),
+                }}})
+                trash = dict(dup)
+                trash["_trashed_at"] = _now()
+                trash["_trash_ref"] = IMPRINT_MARK
+                await db[BOOK_TRASH].update_one({"id": dup["id"]}, {"$set": trash}, upsert=True)
+                await db[COLL].delete_one({"id": dup["id"]})
+                actions.append({"code": r["code"], "outcome": "MERGED",
+                                "detail": f"manuscript/files/history archived into canonical Ordinary Tuesdays; duplicate moved to trash (reversible)"})
+            else:
+                actions.append({"code": r["code"], "outcome": "WOULD_MERGE",
+                                "detail": "archive content into canonical Ordinary Tuesdays, then move duplicate to trash"})
+            continue
+        # UPDATE
+        detail = (f"imprint {r['current_imprint']}→{r['target_imprint']}; "
+                  f"author {r['current_author']}→{r['target_author']}; "
+                  f"genre {r['current_genre']}→{r['target_genre']}")
+        if apply:
+            b = await db[COLL].find_one({"id": r["id"]}, {"_id": 0, "imprint": 1, "author": 1,
+                                                          "genre": 1, "canonical_imprint": 1})
+            preimage = {"imprint": b.get("imprint"), "author": b.get("author"),
+                        "genre": b.get("genre"), "canonical_imprint": b.get("canonical_imprint")}
+            await db[COLL].update_one({"id": r["id"]}, {"$set": {
+                "imprint": r["target_imprint"], "canonical_imprint": r["target_imprint"],
+                "author": r["target_author"], "genre": r["target_genre"],
+                "imprint_migration": {"preimage": preimage, "at": _now(), "ref": IMPRINT_MARK},
+                "updated_at": _now(),
+            }})
+            actions.append({"code": r["code"], "outcome": "UPDATED", "detail": detail})
+        else:
+            actions.append({"code": r["code"], "outcome": "WOULD_UPDATE", "detail": detail})
+    return {"operation": "Imprint Canonicalization", "ref": IMPRINT_MARK,
+            "mode": "APPLY" if apply else "DRY_RUN", "at": _now(),
+            "canonical_ordinary_tuesdays": canonical_id,
+            "classification": rows, "actions": actions}
+
+
+async def imprint_canonicalize_rollback(apply: bool = False):
+    rows = []
+    async for b in db[COLL].find({"imprint_migration.ref": IMPRINT_MARK}, {"_id": 0}):
+        pre = (b.get("imprint_migration") or {}).get("preimage") or {}
+        if apply:
+            setd = {"imprint": pre.get("imprint"), "author": pre.get("author"), "genre": pre.get("genre")}
+            unset = {"imprint_migration": ""}
+            if pre.get("canonical_imprint") is None:
+                unset["canonical_imprint"] = ""
+            else:
+                setd["canonical_imprint"] = pre.get("canonical_imprint")
+            await db[COLL].update_one({"id": b["id"]}, {"$set": setd, "$unset": unset})
+            rows.append({"code": b.get("book_code"), "outcome": "RESTORED",
+                         "detail": f"imprint→{pre.get('imprint')}, author→{pre.get('author')}"})
+        else:
+            rows.append({"code": b.get("book_code"), "outcome": "WOULD_RESTORE",
+                         "detail": f"imprint→{pre.get('imprint')}, author→{pre.get('author')}"})
+    async for t in db[BOOK_TRASH].find({"_trash_ref": IMPRINT_MARK}, {"_id": 0}):
+        if apply:
+            doc = {k: v for k, v in t.items() if k not in ("_trashed_at", "_trash_ref")}
+            await db[COLL].update_one({"id": doc["id"]}, {"$set": doc}, upsert=True)
+            await db[COLL].update_many({}, {"$pull": {"merged_records": {"from_id": t["id"]}}})
+            await db[BOOK_TRASH].delete_one({"id": t["id"]})
+            rows.append({"code": t.get("book_code"), "outcome": "RESTORED_FROM_TRASH",
+                         "detail": "duplicate record recovered; merge entry removed from canonical"})
+        else:
+            rows.append({"code": t.get("book_code"), "outcome": "WOULD_RESTORE_FROM_TRASH",
+                         "detail": "recover duplicate record from trash"})
+    return {"operation": "Imprint Canonicalization", "action": "rollback",
+            "mode": "APPLY" if apply else "DRY_RUN", "at": _now(), "rows": rows}

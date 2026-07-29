@@ -138,3 +138,19 @@ async def standards_metadata_apply(body: ApplyInput, user=Depends(require_super_
 @router.post("/standards-metadata/rollback")
 async def standards_metadata_rollback(body: ApplyInput, user=Depends(require_super_admin)):
     return await pm.standards_metadata_rollback(apply=body.apply)
+
+
+
+@router.get("/imprint-canonicalization/preflight")
+async def imprint_preflight(user=Depends(require_super_admin)):
+    return await pm.imprint_audit_preflight()
+
+
+@router.post("/imprint-canonicalization")
+async def imprint_canonicalize(body: ApplyInput, user=Depends(require_super_admin)):
+    return await pm.imprint_canonicalize(apply=body.apply)
+
+
+@router.post("/imprint-canonicalization/rollback")
+async def imprint_canonicalize_rollback(body: ApplyInput, user=Depends(require_super_admin)):
+    return await pm.imprint_canonicalize_rollback(apply=body.apply)
