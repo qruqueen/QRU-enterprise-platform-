@@ -313,7 +313,8 @@ def premium_cover(product, kr=None, hero_bytes=None):
     d.rectangle([40, H - 118, W - 40, H - 40], fill=(0, 0, 0))
     d.rectangle([40, H - 122, W - 40, H - 118], fill=accent)
     edition = f"Edition {p.get('kr_version', 1)}"
-    d.text((80, H - 79), "QRU PRESS™", font=_f(SERIF_BOLD, 34), fill=accent, anchor="lm")
+    imprint = (p.get("imprint") or "QRU PRESS™").strip()
+    d.text((80, H - 79), imprint, font=_f(SERIF_BOLD, 34), fill=accent, anchor="lm")
     d.text((W - 80, H - 79), edition, font=_f(SANS, 26), fill=CREAM, anchor="rm")
 
     buf = io.BytesIO()
