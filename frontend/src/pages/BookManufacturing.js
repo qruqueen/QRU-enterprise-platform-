@@ -51,6 +51,7 @@ export default function BookManufacturing() {
   const [titleDraft, setTitleDraft] = useState("");
   const [authorDraft, setAuthorDraft] = useState("");
   const [subtitleDraft, setSubtitleDraft] = useState("");
+  const [imprintDraft, setImprintDraft] = useState("QRU Press™");
 
   const loadBooks = async () => {
     const { data } = await api.get("/book-mfg/books");
@@ -128,11 +129,11 @@ export default function BookManufacturing() {
   const doSanitize = () => run(() => api.post(`/book-mfg/books/${book.id}/sanitize`, { base_url: A }), "Publication Sanitization Pass™ complete — clean retail edition prepared.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
   const doDraftBlurb = () => run(async () => { const { data } = await api.post(`/book-mfg/books/${book.id}/draft-blurb`); toast.message("Blurb drafted — review & approve.", { description: data.status }); });
   const doSavePublication = (fields, ok) => run(() => api.post(`/book-mfg/books/${book.id}/publication-details`, fields), ok || "Publication details saved.");
-  const openEditIdentity = () => { setTitleDraft(book.title || ""); setAuthorDraft(book.author || ""); setSubtitleDraft(book.subtitle || ""); setEditIdentity(true); };
+  const openEditIdentity = () => { setTitleDraft(book.title || ""); setAuthorDraft(book.author || ""); setSubtitleDraft(book.subtitle || ""); setImprintDraft(book.imprint || "QRU Press™"); setEditIdentity(true); };
   const applyCleanTitle = () => doSavePublication({ title: book.title_cleanup_suggestion }, `Title cleaned up to “${book.title_cleanup_suggestion}”.`);
   const saveIdentity = async () => {
     if (!titleDraft.trim()) { toast.error("Title cannot be empty."); return; }
-    await doSavePublication({ title: titleDraft.trim(), author: authorDraft.trim(), subtitle: subtitleDraft.trim() }, "Title, subtitle & author updated. Re-run Design & Audio to refresh the cover and narration.");
+    await doSavePublication({ title: titleDraft.trim(), author: authorDraft.trim(), subtitle: subtitleDraft.trim(), imprint: imprintDraft }, "Title, subtitle, author & imprint updated. Re-run Design & Audio to refresh the cover and narration.");
     setEditIdentity(false);
   };
   const doPrintWrap = (paperType) => run(() => api.post(`/book-mfg/books/${book.id}/print-wrap`, { paper_type: paperType }), "Print-ready cover wrap built.");
@@ -200,6 +201,14 @@ export default function BookManufacturing() {
                   <label className="text-[10px] font-bold uppercase tracking-wide text-navy">Author</label>
                   <input data-testid="edit-author-input" value={authorDraft} onChange={(e) => setAuthorDraft(e.target.value)}
                     className="w-full mt-0.5 border rounded-md p-2 text-sm text-navy" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-navy">Imprint</label>
+                  <select data-testid="edit-imprint-select" value={imprintDraft} onChange={(e) => setImprintDraft(e.target.value)}
+                    className="w-full mt-0.5 border rounded-md p-2 text-sm text-navy bg-white">
+                    <option value="QRU Press™">QRU Press™</option>
+                    <option value="E.Q. Rothwell™">E.Q. Rothwell™</option>
+                  </select>
                 </div>
                 <p className="text-[10px] text-muted-foreground">Tip: remove file-name artifacts like “FINAL”, “v2”, “DRAFT”. Re-run Design &amp; Audio afterward so the cover and narration pick up the new title.</p>
                 <div className="flex gap-2">

@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import {
-  Loader2, Plus, Gift, Trash2, Check, Rocket, RotateCcw, X,
+  Loader2, Plus, Gift, Trash2, Check, Rocket, RotateCcw, X, Image as ImageIcon,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger,
@@ -55,7 +55,7 @@ export default function BundlesManager() {
     setBusy(id + action);
     try {
       if (action === "delete") { await api.delete(`/bundles/${id}`); toast.success("Bundle deleted."); }
-      else { await api.post(`/bundles/${id}/${action}`); toast.success(action === "publish" ? "Bundle published to the Bundles experience." : "Bundle moved back to draft."); }
+      else { await api.post(`/bundles/${id}/${action}`); toast.success(action === "publish" ? "Bundle published to the Bundles experience." : action === "cover" ? "Bundle cover regenerated ($0 AI)." : "Bundle moved back to draft."); }
       load();
     } catch (e) { toast.error(e.response?.data?.detail || "Action failed."); }
     setBusy("");
@@ -124,7 +124,12 @@ export default function BundlesManager() {
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
           {bundles.map((b) => (
-            <div key={b.id} className="rounded-xl border bg-card p-5" data-testid={`bundle-${b.id}`}>
+            <div key={b.id} className="rounded-xl border bg-card overflow-hidden" data-testid={`bundle-${b.id}`}>
+              {b.cover_url && (
+                <img src={`${BACKEND}${b.cover_url.startsWith("/") ? b.cover_url : "/" + b.cover_url}`} alt={b.title}
+                  className="w-full h-40 object-cover border-b" data-testid={`bundle-cover-${b.id}`} />
+              )}
+              <div className="p-5">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="flex items-center gap-2"><Gift className="w-4 h-4 text-navy" /><span className="font-heading font-bold text-navy">{b.title}</span></div>
@@ -157,6 +162,10 @@ export default function BundlesManager() {
                 <button onClick={() => act(b.id, "delete")} disabled={!!busy} data-testid={`delete-${b.id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 text-red-700 px-3 py-1.5 text-xs font-medium hover:bg-red-50 disabled:opacity-50">
                   <Trash2 className="w-3.5 h-3.5" /> Delete
                 </button>
+                <button onClick={() => act(b.id, "cover")} disabled={!!busy} data-testid={`cover-${b.id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-navy/30 text-navy px-3 py-1.5 text-xs font-medium hover:bg-navy/5 disabled:opacity-50">
+                  {busy === b.id + "cover" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />} Regenerate cover
+                </button>
+              </div>
               </div>
             </div>
           ))}

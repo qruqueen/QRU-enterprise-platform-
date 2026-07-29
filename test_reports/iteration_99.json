@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 99 verified Bundle Cover Studio, Imprint Rollout, and Publish Preview Everywhere end-to-end. Backend: 11/11 pytest passing (1 skipped variant). Frontend: catalog imprint filter, bundle detail branded cover, founder bundles manager (regenerate cover w/ toast), Book Manufacturing edit-imprint-select w/ both imprints, Media Studio media-catalog-destination, Product Family family-destinations w/ family-dest-* chips — all verified.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/catalog", "issues": ["Book cover art still bakes 'QRU PRESS™' badge on top for books whose imprint metadata is 'E.Q. Rothwell™' (e.g., 'The Understanding Tree', 'Ordinary Tuesdays') — the underlying cover PNG is a pre-rendered asset and is not re-generated when imprint metadata changes. Documented/expected per E1's note; user-visible mismatch between top badge (QRU PRESS™) and bottom byline (E.Q. Rothwell)."]},
+      {"screen": "BookManufacturing / ProductFamily / MediaStudio <select>", "issues": ["Repeat of prior iteration: React hydration warning — <span> cannot be a child of <option>. Console errors on every render (BookManufacturing L240, ProductFamily L83, MediaStudio L88). Not blocking; noise only."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration99_covers_and_imprints.py",
+    "/app/test_reports/pytest/iteration99_results.xml"
+  ],
+  "action_items": [
+    "Optional: regenerate book cover art whenever the book.imprint is changed via /api/book-mfg/books/{id}/publication-details so the baked badge matches the imprint metadata (currently only bundle covers auto-regenerate).",
+    "Optional: strip decorated <span> children out of <option> renderers in BookManufacturing/ProductFamily/MediaStudio to remove hydration warnings.",
+    "Founder /bundles manager: consider adding a fixed test-id like 'bundle-card-{id}' on each row to make selection deterministic (current 'bundle-cover-{id}' + 'cover-{id}' are sufficient)."
+  ],
+  "critical_code_review_comments": [
+    "POST /api/bundles/{id}/cover returns {ok:true} without echoing back the updated cover_url — clients must re-GET to obtain the new URL. Minor DX improvement to include the fresh cover_url in the response.",
+    "POST /api/bundles/{id}/publish also returns only {ok:true}; considered returning the mutated bundle for parity with POST /api/bundles which returns {ok, bundle}.",
+    "GET /api/public/books now returns {books,count,imprints}; frontend catalog correctly derives chips from this list — good.",
+    "Bundle cover generator is deterministic + $0 (no LLM call) as advertised — good.",
+    "Auth guard on POST /api/bundles/{id}/cover returns 401/403 for anonymous — good."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration99_covers_and_imprints.py"],
+  "success_rate": { "backend": "100% (11/11, 1 skipped variant)", "frontend": "100%" },
+  "test_credentials": "demo.admin@qru.com / qru-demo-admin-2026 (Administrator)",
+  "seed_data_creation": "Tests are self-cleaning: TEST_ bundle created + regenerated + published then deleted. Publication-details imprint change reverted at end of test.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Stripe LIVE — only session creation tested. Bundle create endpoint accepts 'price' (dollars) NOT 'price_cents'. Bundle create returns {ok:true, bundle:{...}}; publish/cover return only {ok:true} — must GET /api/bundles/{id} to inspect updated cover_url. Public books endpoint requires no query for full 8 books; filter via ?imprint=E.Q.%20Rothwell%E2%84%A2 returns 3; ?imprint=QRU%20Press%E2%84%A2 returns 5. Founder Bundles Manager card selectors: img[data-testid='bundle-cover-{id}'], button[data-testid='cover-{id}']. Product Family flow: family-source-select -> click intent-{key} -> 'Confirm the Family' panel auto-appears with family-destinations + family-dest-{type} chips (no separate confirm button). Media Studio: click any media-item-* -> right pane shows Publish section including media-catalog-destination block.",
+  "rca of the issue": "N/A — no bugs."
+}

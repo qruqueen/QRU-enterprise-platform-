@@ -73,6 +73,14 @@ async def publish_bundle(bundle_id: str, user=Depends(require_super_admin)):
     return res
 
 
+@router.post("/{bundle_id}/cover")
+async def regenerate_cover(bundle_id: str, user=Depends(require_super_admin)):
+    res = await bundle_engine.generate_cover(bundle_id)
+    if res.get("error"):
+        raise HTTPException(400, res["error"])
+    return res
+
+
 @router.post("/{bundle_id}/unpublish")
 async def unpublish_bundle(bundle_id: str, user=Depends(require_super_admin)):
     return await bundle_engine.unpublish(bundle_id)

@@ -1631,6 +1631,10 @@ async def set_publication_details(book_id, fields, actor):
         upd["isbn"] = (fields.get("isbn") or "").strip()
     if "isbn_source" in fields:
         upd["isbn_source"] = fields.get("isbn_source")
+    if "imprint" in fields:
+        im = (fields.get("imprint") or "").strip()
+        if im:
+            upd["imprint"] = im
     await db[COLL].update_one({"id": book_id}, {"$set": upd})
     return clean(await db[COLL].find_one({"id": book_id}))
 

@@ -4,6 +4,7 @@ import api, { formatApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared";
 import { Panel } from "@/components/qru";
+import { DestinationChips } from "@/components/DestinationPreview";
 import {
   Loader2, Layers, CheckCircle2, XCircle, ShieldCheck, ShieldAlert, PackageCheck,
   ArrowRight, Boxes, Download,
@@ -22,11 +23,13 @@ export default function ProductFamily() {
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [destMap, setDestMap] = useState([]);
   const nav = useNavigate();
 
   useEffect(() => {
     api.get("/family/eligible-sources").then((r) => setSources(r.data.sources || [])).catch(() => {});
     api.get("/family/intents").then((r) => { setIntents(r.data.intents || []); setAvailable(r.data.available_families || []); }).catch(() => {});
+    api.get("/distribution-architecture/destinations-map").then((r) => setDestMap(r.data.map || [])).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -123,6 +126,21 @@ export default function ProductFamily() {
               </label>
             ))}
           </div>
+
+          {selectedFamilies.length > 0 && (
+            <div className="rounded-md border border-navy/15 bg-navy/[0.03] p-3 mb-4" data-testid="family-destinations">
+              <p className="text-[11px] font-semibold text-navy mb-2">Automatic Distribution™ — where each will publish</p>
+              <div className="space-y-1.5">
+                {selectedFamilies.map((f) => (
+                  <div key={f} className="flex items-center gap-2 text-[12px]" data-testid={`family-dest-${f.replace(/\s+/g, "-")}`}>
+                    <span className="text-navy font-medium min-w-[120px]">{f}</span>
+                    <DestinationChips productType={f} destMap={destMap} />
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-2">Destinations are auto-selected by type. You can override any product after it's manufactured.</p>
+            </div>
+          )}
 
           <button data-testid="assemble-family-btn" onClick={doAssemble}
             disabled={busy || !preview.can_manufacture || selectedFamilies.length === 0}

@@ -6,10 +6,14 @@ included item. Phase 1 items are authorized books (fully deliverable); the data 
 accepts any product type so other experiences can be added later without a rewrite.
 """
 import re
+import io
 from datetime import datetime, timezone
 
 from database import db
 from models import gen_id, now_iso
+import design_language as dl
+import rendering_engine as re_engine
+from PIL import ImageDraw
 
 BUNDLES_COLL = "bundles"
 _PUBLISHED_BOOK = {"founder_authorization.authorized": True}
@@ -105,6 +109,12 @@ async def create(data: dict, actor: str):
     }
     await db[BUNDLES_COLL].insert_one(dict(doc))
     doc.pop("_id", None)
+    try:
+        cov = await generate_cover(bid)
+        if cov.get("cover_url"):
+            doc["cover_url"] = cov["cover_url"]
+    except Exception:
+        pass
     return {"ok": True, "bundle": doc}
 
 
@@ -135,6 +145,10 @@ async def publish(bundle_id: str, actor: str):
         return {"error": "Every item must be deliverable before this bundle can be published."}
     await db[BUNDLES_COLL].update_one({"id": bundle_id}, {"$set": {
         "status": "Published", "published_by": actor, "published_at": now_iso(), "updated_at": now_iso()}})
+    try:
+        await generate_cover(bundle_id)
+    except Exception:
+        pass
     return {"ok": True}
 
 
@@ -185,3 +199,83 @@ async def public_get(key: str):
         return None
     items, total = await _resolve_items(b.get("item_ids"))
     return _public_bundle(b, items, total)
+
+
+# ── Bundle Cover Studio™ — deterministic, branded, $0 AI ───────────────────
+def render_bundle_cover_bytes(title: str, subtitle: str, item_count: int, savings: float) -> bytes:
+    """A branded LANDSCAPE bundle cover (1600x1000) so a bundle looks like a real
+    product — not a borrowed book cover. Fully deterministic (zero AI spend)."""
+    W, H = 1600, 1000
+    pal = dl.resolve_palette("Bundle", "", title or "", title or "")
+    accent = pal["accent"]
+    img = dl._vignette(dl._gradient(W, H, pal["top"], pal["bottom"]))
+    d = ImageDraw.Draw(img)
+
+    # double frame
+    d.rectangle([40, 40, W - 40, H - 40], outline=accent, width=4)
+    d.rectangle([54, 54, W - 54, H - 54], outline=accent, width=1)
+
+    # eyebrow + shield
+    d.text((W // 2, 118), "QRU • CURATED BUNDLE", font=dl._f(dl.SANS_BOLD, 30), fill=accent, anchor="mm")
+    dl.draw_shield(img, W // 2, 165, 150, 180, accent)
+
+    # stack-of-books motif (signals a collection)
+    cx, cy = W // 2, 360
+    for i, off in enumerate([(-150, 26), (0, 0), (150, 26)]):
+        x0 = cx + off[0] - 95
+        y0 = cy + off[1] - 60
+        col = accent if i == 1 else (CREAM_ if (CREAM_ := dl.CREAM) else accent)
+        d.rounded_rectangle([x0, y0, x0 + 190, y0 + 120], radius=10, outline=col, width=5)
+        d.rectangle([x0 + 22, y0, x0 + 30, y0 + 120], fill=col)
+
+    # title — landscape auto-fit
+    ttl = dl._clean_cover_title(title or "Bundle")
+    font, lines, size = dl._fit_title(d, ttl, W - 280, 3, start=140, min_size=54)
+    y = 520
+    for ln in lines:
+        d.text((W // 2, y), ln, font=font, fill=dl.WHITE, anchor="mm")
+        y += int(size * 1.1)
+
+    # divider + subtitle
+    d.rectangle([W // 2 - 130, y + 12, W // 2 + 130, y + 16], fill=accent)
+    sub = (subtitle or f"A curated collection of {item_count} titles")[:110]
+    d.text((W // 2, y + 62), sub, font=dl._f(dl.SERIF, 34), fill=dl.CREAM, anchor="mm")
+
+    # count + savings pills
+    pill = f"{item_count} TITLES"
+    pw = d.textlength(pill, font=dl._f(dl.SANS_BOLD, 26)) + 48
+    save_txt = f"SAVE ${savings:.2f}" if savings and savings > 0 else None
+    sw = (d.textlength(save_txt, font=dl._f(dl.SANS_BOLD, 26)) + 48) if save_txt else 0
+    gap = 24 if save_txt else 0
+    total_w = pw + sw + gap
+    px = W // 2 - total_w // 2
+    py = H - 250
+    d.rounded_rectangle([px, py, px + pw, py + 52], radius=26, outline=accent, width=3)
+    d.text((px + pw / 2, py + 26), pill, font=dl._f(dl.SANS_BOLD, 26), fill=dl.WHITE, anchor="mm")
+    if save_txt:
+        sx = px + pw + gap
+        d.rounded_rectangle([sx, py, sx + sw, py + 52], radius=26, fill=accent)
+        d.text((sx + sw / 2, py + 26), save_txt, font=dl._f(dl.SANS_BOLD, 26), fill=dl.QRU_NAVY, anchor="mm")
+
+    # publisher band
+    d.rectangle([40, H - 118, W - 40, H - 40], fill=(0, 0, 0))
+    d.rectangle([40, H - 122, W - 40, H - 118], fill=accent)
+    d.text((80, H - 79), "QRU PRESS™", font=dl._f(dl.SERIF_BOLD, 34), fill=accent, anchor="lm")
+    d.text((W - 80, H - 79), "Bundle Edition", font=dl._f(dl.SANS, 26), fill=dl.CREAM, anchor="rm")
+
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    return buf.getvalue()
+
+
+async def generate_cover(bundle_id: str):
+    b = await db[BUNDLES_COLL].find_one({"id": bundle_id}, {"_id": 0})
+    if not b:
+        return {"error": "Bundle not found."}
+    items, total = await _resolve_items(b.get("item_ids"))
+    savings = round(max(0.0, total - float(b.get("price") or 0)), 2)
+    data = render_bundle_cover_bytes(b.get("title"), b.get("subtitle"), len(items), savings)
+    fid = re_engine._save("bundle-cover", "png", data)
+    url = re_engine._asset_url(fid)
+    await db[BUNDLES_COLL].update_one({"id": bundle_id}, {"$set": {"cover_url": url, "updated_at": now_iso()}})
+    return {"ok": True, "cover_url": url}

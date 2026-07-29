@@ -321,6 +321,7 @@ class PublicationDetailsReq(BaseModel):
     author_bio: Optional[str] = None
     include_blurb: Optional[bool] = None
     blurb_status: Optional[str] = None
+    imprint: Optional[str] = None
 
 
 @router.post("/books/{book_id}/publication-details")

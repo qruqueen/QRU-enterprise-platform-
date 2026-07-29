@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
+import { DestinationChips } from "@/components/DestinationPreview";
 
 const STATUS = {
   manufactured: { bg: "hsl(var(--primary) / 0.12)", color: "hsl(var(--primary))", label: "Manufactured" },
@@ -23,6 +24,7 @@ export default function MediaStudio() {
   const [records, setRecords] = useState([]);
   const [library, setLibrary] = useState([]);
   const [destinations, setDestinations] = useState([]);
+  const [destMap, setDestMap] = useState([]);
   const [krId, setKrId] = useState("");
   const [mtype, setMtype] = useState("video");
   const [busy, setBusy] = useState(false);
@@ -36,6 +38,7 @@ export default function MediaStudio() {
 
   useEffect(() => {
     api.get("/memory/records").then((r) => setRecords(r.data.records));
+    api.get("/distribution-architecture/destinations-map").then((r) => setDestMap(r.data.map || [])).catch(() => {});
     loadLibrary();
   }, [loadLibrary]);
 
@@ -202,6 +205,11 @@ export default function MediaStudio() {
                   {/* Publishing */}
                   <div className="bg-card border rounded-xl p-4">
                     <p className="overline text-primary mb-2 flex items-center gap-1.5"><Send className="w-3.5 h-3.5" /> Publish destinations</p>
+                    <div className="rounded-lg border border-navy/15 bg-navy/[0.03] p-2.5 mb-3 flex items-center gap-2 flex-wrap" data-testid="media-catalog-destination">
+                      <span className="text-[11px] font-semibold text-navy">In the QRU catalog this publishes to</span>
+                      <DestinationChips productType={sel.media_type === "video" ? "Video" : "Podcast"} destMap={destMap} />
+                      <span className="text-[10px] text-muted-foreground">· auto-selected by Automatic Distribution™</span>
+                    </div>
                     <p className="text-xs text-muted-foreground mb-2" data-testid="media-publish-note">
                       <b>YouTube publishing is live</b> — upload the finished MP4 in <a href="/youtube" className="text-royal font-semibold underline">YouTube Publisher™</a> and QRU uploads it to your channel with a real Video ID. Other destinations use automated upload that isn't wired yet (a planned milestone of the Universal Publishing Engine™). Manage connections in <b>Publishing Connectors™</b>.
                     </p>
