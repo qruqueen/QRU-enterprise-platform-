@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/shared";
 import { Panel, StatusChip, VerifiedBadge, MetricCard } from "@/components/qru";
 import { ManifestDialog } from "@/components/ManifestDialog";
+import { DestinationPreview } from "@/components/DestinationPreview";
 import {
   Upload, SpellCheck, Palette, Mic, Video, Send, Activity, Loader2, CheckCircle2,
   Lock, FileText, ShieldCheck, ChevronRight, BookOpen, AlertTriangle, Download, MapPin, Share2, Play, DollarSign, ClipboardCheck, Sparkles, FileCheck2, Pencil, X, SearchCheck,
@@ -1425,6 +1426,7 @@ function FounderReleaseReview({ book, data, busy, doAuthorize }) {
         </div>
       ) : (
         <>
+          <div className="mb-3"><DestinationPreview target="book" id={book.id} productType="Book" /></div>
           <button data-testid="authorize-btn" onClick={doAuthorize} disabled={!canAuthorize}
             className="w-full inline-flex items-center justify-center gap-2 bg-gold text-navy px-4 py-3.5 rounded-md text-base font-bold transition-opacity disabled:opacity-40 hover:opacity-90">
             <ShieldCheck className="w-5 h-5" /> Authorize Release

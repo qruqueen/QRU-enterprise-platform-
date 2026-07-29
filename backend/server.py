@@ -94,6 +94,8 @@ from routers.pilot import router as pilot_router
 from routers.migrations import router as migrations_router
 from routers.store_health import router as store_health_router
 from routers.distribution_arch import router as distribution_arch_router
+from routers.bundles import router as bundles_router
+from routers.public_bundles import router as public_bundles_router
 from routers.manufacturing_standards import router as manufacturing_standards_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
@@ -170,6 +172,8 @@ for r in [
     migrations_router,
     store_health_router,
     distribution_arch_router,
+    bundles_router,
+    public_bundles_router,
 ]:
     app.include_router(r)
 

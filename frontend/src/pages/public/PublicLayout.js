@@ -19,7 +19,9 @@ export default function PublicLayout() {
             <Link to="/" data-testid="nav-home"
               className={`transition-colors hover:text-[#C5A059] ${pathname === "/" ? "text-[#1C1C1A]" : "text-[#575754]"}`}>Home</Link>
             <Link to="/catalog" data-testid="nav-catalog"
-              className={`transition-colors hover:text-[#C5A059] ${pathname.startsWith("/catalog") ? "text-[#1C1C1A]" : "text-[#575754]"}`}>Catalog</Link>
+              className={`transition-colors hover:text-[#C5A059] ${pathname.startsWith("/catalog") || pathname.startsWith("/book/") ? "text-[#1C1C1A]" : "text-[#575754]"}`}>Books</Link>
+            <Link to="/bundles" data-testid="nav-bundles"
+              className={`transition-colors hover:text-[#C5A059] ${pathname.startsWith("/bundle") ? "text-[#1C1C1A]" : "text-[#575754]"}`}>Bundles</Link>
             <Link to="/login" data-testid="nav-founder-login"
               className="hidden sm:inline-flex items-center rounded-full border border-[#C5A059] text-[#C5A059] px-4 py-1.5 text-xs uppercase tracking-[0.15em] transition-colors hover:bg-[#C5A059] hover:text-[#FAFAF8]">
               Founder Login
@@ -50,7 +52,8 @@ export default function PublicLayout() {
           <div className="flex flex-col gap-3 text-sm">
             <span className="text-xs uppercase tracking-[0.2em] text-[#9BA3B5] mb-1">Explore</span>
             <Link to="/" className="hover:text-[#D4AF37] transition-colors">Home</Link>
-            <Link to="/catalog" className="hover:text-[#D4AF37] transition-colors">Books Catalog</Link>
+            <Link to="/catalog" className="hover:text-[#D4AF37] transition-colors">Books</Link>
+            <Link to="/bundles" className="hover:text-[#D4AF37] transition-colors">Bundles</Link>
             <Link to="/privacy" data-testid="footer-privacy" className="hover:text-[#D4AF37] transition-colors">Privacy</Link>
             <Link to="/terms" data-testid="footer-terms" className="hover:text-[#D4AF37] transition-colors">Terms &amp; Conditions</Link>
             <Link to="/refunds" data-testid="footer-refunds" className="hover:text-[#D4AF37] transition-colors">Refund Policy</Link>

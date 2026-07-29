@@ -38,7 +38,7 @@ const ICON = {
   "/enterprise-health": Activity, "/blueprint": BookOpenCheck, "/experience-lab": Eye,
   "/integration-hub": Plug, "/ai-services": Cpu, "/users": UserCog, "/portability": HardDriveDownload,
   "/engineering-console": Cpu, "/settings": Settings, "/production-operations": Database,
-  "/store-health": Stethoscope, "/founder-manual": BookOpenCheck, "/distribution-architecture": Workflow,
+  "/store-health": Stethoscope, "/founder-manual": BookOpenCheck, "/distribution-architecture": Workflow, "/bundles": Boxes,
 };
 const iconFor = (route) => ICON[route] || Boxes;
 
@@ -135,6 +135,9 @@ export default function Layout() {
           )}
           {["Founder & CEO", "Administrator"].includes(user?.role) && (
             <NavItem item={{ id: "distribution-architecture", label: "Distribution Architecture™", route: "/distribution-architecture" }} onNavigate={close} />
+          )}
+          {["Founder & CEO", "Administrator"].includes(user?.role) && (
+            <NavItem item={{ id: "bundles", label: "Bundles™", route: "/bundles" }} onNavigate={close} />
           )}
 
           {/* All Capabilities — every other working page, one click away (collapsed) */}

@@ -200,6 +200,9 @@ DEFINITIONS = [
     _c("distribution-architecture", "Distribution Architecture™", "distribution", "active", "distribution_architecture.py", "/distribution-architecture",
        "Publish once; the catalog distributes everywhere.",
        "The governed 'one catalog, many experiences' model: QRU Store™ is the single source of truth, Automatic Distribution™ auto-selects each product type's destinations at publish (Founder-overridable), and customer experiences (Books, Learn, Resources, Media, Bundles + any future one) are PLUG-INS registered without touching the Factory."),
+    _c("bundles", "Bundles™", "distribution", "active", "bundles.py", "/bundles",
+       "Sell multiple titles as one first-class product.",
+       "First-class bundle products: fill a bundle with any deliverable items, price it as one, publish it to the Bundles experience on qru-online.com. One customer purchase delivers every item via a single secure access page. Savings vs. buying separately are shown automatically."),
     _c("youtube", "YouTube Publisher™", "distribution", "active", "youtube_publisher.py", "/youtube",
        "Publish real videos to YouTube.", "Real resumable upload with verified Video ID."),
     _c("connectors", "Publishing Connectors™", "distribution", "active", "connectors.py", "/connectors",
@@ -449,6 +452,7 @@ NAV_CORE_IDS.append("production-operations")
 NAV_CORE_IDS.append("store-health")
 NAV_CORE_IDS.append("founder-manual")
 NAV_CORE_IDS.append("distribution-architecture")
+NAV_CORE_IDS.append("bundles")
 
 # --- Self-cleaning sidebar (driven by the Registry) ---
 # Layers pinned to the top "Start Here" section (by capability id).

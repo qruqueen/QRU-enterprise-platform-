@@ -160,13 +160,17 @@ async def home():
 
 
 @router.get("/books")
-async def books():
-    """Public catalog — every authorized, published book (public-safe fields only)."""
+async def books(imprint: str | None = None):
+    """Public catalog — every authorized, published book (public-safe fields only).
+    Optional ?imprint= filters to one imprint; the response also lists available imprints."""
     docs = await db.book_records.find(_PUBLISHED_QUERY, {"_id": 0}).to_list(1000)
     slugs = _slug_map(docs)
     items = [_public_book(b, slug=slugs.get(b.get("id"))) for b in docs]
     items = [b for b in items if b.get("cover_url")]
-    return {"books": items, "count": len(items)}
+    imprints = sorted({(b.get("imprint") or "QRU Press™") for b in items})
+    if imprint:
+        items = [b for b in items if (b.get("imprint") or "QRU Press™") == imprint]
+    return {"books": items, "count": len(items), "imprints": imprints}
 
 
 @router.get("/books/{book_id}/cover-thumb")

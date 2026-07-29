@@ -112,6 +112,9 @@ import ConsumerPathways from "@/pages/consumer/ConsumerPathways";
 import PublicLayout from "@/pages/public/PublicLayout";
 import QRUHome from "@/pages/public/QRUHome";
 import QRUCatalog from "@/pages/public/QRUCatalog";
+import QRUBundles from "@/pages/public/QRUBundles";
+import QRUBundlePage from "@/pages/public/QRUBundlePage";
+import QRUBundleAccess from "@/pages/public/QRUBundleAccess";
 import QRUBookPage from "@/pages/public/QRUBookPage";
 import QRUPurchaseSuccess from "@/pages/public/QRUPurchaseSuccess";
 import QRUAccess from "@/pages/public/QRUAccess";
@@ -124,6 +127,7 @@ import ProductionOperations from "@/pages/ProductionOperations";
 import StoreHealth from "@/pages/StoreHealth";
 import FounderManual from "@/pages/FounderManual";
 import DistributionArchitecture from "@/pages/DistributionArchitecture";
+import BundlesManager from "@/pages/BundlesManager";
 import { Loader2 } from "lucide-react";
 
 function ProtectedRoute({ children }) {
@@ -201,6 +205,7 @@ function EnterpriseRoutes() {
         <Route path="store-health" element={<StoreHealth />} />
         <Route path="founder-manual" element={<FounderManual />} />
         <Route path="distribution-architecture" element={<DistributionArchitecture />} />
+        <Route path="bundles" element={<BundlesManager />} />
         <Route path="checkout/success" element={<CheckoutSuccess />} />
         <Route path="command-center" element={<EnterpriseCommandCenter />} />
         <Route path="evidence" element={<EvidenceDashboard />} />
@@ -273,6 +278,9 @@ function PublicRoutes() {
       <Route path="/" element={<PublicLayout />}>
         <Route index element={<QRUHome />} />
         <Route path="catalog" element={<QRUCatalog />} />
+        <Route path="bundles" element={<QRUBundles />} />
+        <Route path="bundle/:slug" element={<QRUBundlePage />} />
+        <Route path="bundle-access/:token" element={<QRUBundleAccess />} />
         <Route path="book/:slug" element={<QRUBookPage />} />
         <Route path="purchase/success" element={<QRUPurchaseSuccess />} />
         <Route path="access/:token" element={<QRUAccess />} />

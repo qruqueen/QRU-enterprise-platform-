@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { Loader2, Search, Download, Headphones, ArrowRight, PackageOpen, BookText, Clapperboard, LayoutTemplate, FileText, Rocket, FileCheck2, Eye } from "lucide-react";
 import { ManifestDialog } from "@/components/ManifestDialog";
 import { DeliverablePreview } from "@/components/DeliverablePreview";
+import { DestinationChips } from "@/components/DestinationPreview";
 import { downloadDeliverable } from "@/lib/deliverable";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
@@ -28,6 +29,7 @@ export default function ProductShelf() {
   const [manifestFor, setManifestFor] = useState(null);
   const [previewFor, setPreviewFor] = useState(null);
   const [dlBusy, setDlBusy] = useState(null);
+  const [destMap, setDestMap] = useState([]);
 
   const doDownload = async (p) => {
     setDlBusy(p.id);
@@ -62,6 +64,7 @@ export default function ProductShelf() {
       .then((r) => setData(r.data))
       .catch(() => {})
       .finally(() => setLoading(false));
+    api.get("/distribution-architecture/destinations-map").then((r) => setDestMap(r.data.map || [])).catch(() => {});
   }, []);
 
   const items = useMemo(() => {
@@ -134,10 +137,13 @@ export default function ProductShelf() {
                     <a href={`${BACKEND}${p.download}`} target="_blank" rel="noreferrer" data-testid={`shelf-download-${p.id}`} className="text-[10px] text-royal inline-flex items-center gap-1 hover:underline"><Download className="w-3 h-3" /> Download</a>
                   ))}
                   {p.status !== "Published" && p.publishable && (
-                    <button onClick={() => publish(p)} disabled={publishing === p.id} data-testid={`shelf-publish-${p.id}`}
-                      className="text-[10px] font-semibold text-white bg-royal hover:bg-navy disabled:opacity-50 rounded-full px-2.5 py-1 inline-flex items-center gap-1 transition-colors">
-                      {publishing === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Rocket className="w-3 h-3" />} Publish for Distribution
-                    </button>
+                    <>
+                      <DestinationChips productType={p.kind} destMap={destMap} />
+                      <button onClick={() => publish(p)} disabled={publishing === p.id} data-testid={`shelf-publish-${p.id}`}
+                        className="text-[10px] font-semibold text-white bg-royal hover:bg-navy disabled:opacity-50 rounded-full px-2.5 py-1 inline-flex items-center gap-1 transition-colors">
+                        {publishing === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Rocket className="w-3 h-3" />} Publish for Distribution
+                      </button>
+                    </>
                   )}
                   {p.has_manifest && (
                     <button onClick={() => setManifestFor(p)} data-testid={`shelf-manifest-${p.id}`}

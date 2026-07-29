@@ -1,0 +1,34 @@
+{
+  "summary": "Phase 1 QRU Factory Books/Bundles + Destination Preview tested end-to-end. Backend: 17/17 pytest passing — public books w/ imprint filter, public bundles list, seeded 'The Understanding Starter Set' detail ($22.48, was $29.98, save $7.50, 2 items, savings math correct), Stripe SESSION CREATION returns checkout_url + session_id (no payment completed), status endpoint returns pending+kind=bundle, Founder Bundles CRUD (create->publish->public visible->unpublish->delete), publish validation returns 400 for <2 items and price<=0, auth guards on /api/bundles* (401 unauth), destinations GET/POST override + revert, regression on /api/public/home + /api/consumer/catalog + single-book /api/public/checkout. Frontend: PublicLayout Home/Books/Bundles tabs visible unauth. /catalog renders qru-catalog. /bundles renders qru-bundles with 1 seeded card that navigates to /bundle/the-understanding-starter-set showing qru-bundle-page, bundle-price, bundle-savings, 2 bundle-item-* rows and buy-bundle-btn. Founder /bundles renders bundles-manager; new-bundle-btn opens new-bundle-dialog listing 8 select-item-* checkboxes with title/subtitle/description/price inputs. Book Manufacturing Publish tab shows destination-preview with dest-current, dest-edit revealing 5 dest-toggle-* + dest-save + dest-revert. /products (ProductShelf) shows destination-chips per product (200 instances). Code review of routers/public_bundles.py confirmed: _fulfill is idempotent (only sets access_id/order_ref/expires on the first pending->paid transition via update_one with payment_status $ne paid guard), _send_email is called from _fulfill_and_notify only when newly==True, /bundle-access/{token} lists items with per-book /bundle-download links, /bundle-download enforces paid + download_expires_at > now + item_ids membership + per-item cap of 5.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Book Manufacturing (/book-manufacturing)", "issues": ["React hydration warning in console: <span> cannot be a child of <option> — decorated span (x-source-* attributes) is being rendered inside the book-switcher <select><option> at BookManufacturing.js line 231. Not blocking but produces console errors on every render."]},
+      {"screen": "Public /catalog", "issues": ["imprint-filter is absent because seeded books only contain a single imprint (QRU Press™). Per spec this is correct behavior (filter only appears when 2+ imprints exist). Not a bug — noted for regression coverage."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration98_qru_bundles.py",
+    "/app/test_reports/pytest/iteration98_results.xml"
+  ],
+  "action_items": [
+    "Optional: sanitize the <option> children in BookManufacturing.js book-switcher to eliminate the hydration warning (wrap or render plain text instead of decorated span).",
+    "Seed a 2nd imprint (e.g., Little Legacy™) into an authorized book to visibly exercise imprint-filter in /catalog."
+  ],
+  "critical_code_review_comments": [
+    "bundle_engine.publish enforces all three guards: >=2 items, price>0, and all items deliverable — good.",
+    "public_bundles._fulfill uses atomic conditional update {payment_status: {$ne: 'paid'}} guaranteeing idempotent access_id/order_ref minting and single email send via _fulfill_and_notify newly-flag.",
+    "bundle-download enforces payment_status=paid + expiry (410 on expired) + per-item cap of 5 (410) + item_ids membership (404) — matches spec.",
+    "public_bundles route uses in-router key resolution via public_get which accepts both id and slug — good UX for the /bundle/:slug frontend route.",
+    "distribution_arch.set_destinations correctly uses $unset for empty experiences to revert to auto (auto_assigned removed), overridden flag driven by presence of distribution.experiences — clean."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration98_qru_bundles.py"],
+  "success_rate": {"backend": "100% (17/17)", "frontend": "100%"},
+  "test_credentials": "demo.admin@qru.com / qru-demo-admin-2026 (Administrator)",
+  "seed_data_creation": "Tests are self-cleaning — each TEST_ bundle created via /api/bundles is deleted at the end of its test. No residual data.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Stripe is LIVE in preview — bundle checkout was tested for SESSION CREATION only (no card entered, no payment completed). Bundle access/delivery logic (paid transition, email send, /bundle-access, /bundle-download) was verified via CODE REVIEW only; runtime paid-path not exercised. If a next iteration mocks/fakes payments, add live paid-path tests. Only 1 imprint exists in seed data, so imprint-filter UI visibility is not exercised in browser tests. Prev context: iteration_97 (distribution architecture Phase 0 map)."
+}
