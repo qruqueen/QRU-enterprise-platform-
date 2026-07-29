@@ -17,11 +17,11 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 Approved model: **one governed catalog (QRU Store™), many plug-in customer experiences**. Phase 0 is invisible — QRU Learn™ and the public bookstore are untouched.
 - Enterprise principles now live: One Governed Catalog · **Automatic Distribution™** (default destinations per product type, auto-selected at publish, Founder-overridable) · **Experiences are Plug-ins** (register without touching the Factory).
 - Delivered: `distribution_architecture.py` + `/api/distribution-architecture/*`, auto-distribution wired into `publish_product`, and the Founder page `/distribution-architecture`. Full detail in CHANGELOG.md (2026-07-29).
-- **Phased roadmap (approved, not yet built):**
-  - **Phase 1** — qru-online.com becomes an experience shell; **Books** experience (with imprint filtering: QRU Press™, E.Q. Rothwell™) reads from the catalog. Learn untouched.
-  - **Phase 2** — turn on **Resources / Media** experiences as rendering gaps close (video, motion story, posters).
-  - **Phase 3** — **Bundles** first-class product + checkout/entitlement fulfillment.
-  - Parallel backlog: public visibility of non-book products, Audiobook Storefront (pending Founder decisions).
+- **Phased roadmap (approved):**
+  - **Phase 1 ✅ DONE (2026-07-29)** — qru-online.com experience shell (Home/Books/Bundles tabs); Books experience reads catalog with imprint filtering (QRU Press™ / E.Q. Rothwell™); First-Class Bundles (real product, single-purchase multi-item delivery); Publish Destination Preview on product shelf + book authorize step. testing_agent iteration_98 (17/17 backend, frontend verified).
+  - **Phase 2** — turn on **Resources / Media** experiences as rendering gaps close (video, motion story, posters); public visibility + purchase of non-book products.
+  - **Phase 3** — mixed-type Bundles purchasable once all items deliverable; imprint management UI.
+  - Parallel backlog: Audiobook Storefront (pending Founder decisions: sample length, pricing, voice, TTS-credit approval).
 
 
 ## ✅ Store Readiness batch (2026-07-28) — 3 of 4 founder tasks done (testing_agent iteration_96, 100%)
