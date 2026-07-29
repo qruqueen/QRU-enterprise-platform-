@@ -640,8 +640,9 @@ export const STORE_VS_ONLINE = {
 
 // ── Observations (gaps found while documenting — NOT a redesign proposal) ──
 export const OBSERVATIONS = [
+  "APPROVED DIRECTION (Phase 0 live): Distribution Architecture™ — 'one governed catalog, many experiences'. QRU Store™ is the single source of truth; Automatic Distribution™ auto-selects each product type's destinations at publish (Founder-overridable); customer experiences (Books, Learn, Resources, Media, Bundles + future ones) are PLUG-INS registered without touching the Factory. See the Distribution Architecture™ screen.",
   "Several capabilities are marked 'merged' in the registry (e.g. Manufacturing Studio, Media Starter Kit, Creative Studio, Command Console, Enterprise Health, Product Library). They still work but overlap a newer capability — use the primary one noted in the manual to avoid confusion.",
   "A few capabilities are 'Future Backlog' (Feature Film, Streaming, Multi-language, AI Tutor, etc.) — architecture-ready but NOT built. They are listed for vision completeness only.",
   "Preview and Production are separate databases. Cleaning/upgrading the LIVE store must be done from Production Operations™ ON qru-online.com after a Deploy — running it in preview only changes preview.",
-  "Audiobook Storefront (free sample + purchasable audiobook SKU) is planned but not yet built; a few Founder decisions (sample length, pricing, voice) are needed before it can ship.",
+  "Implementation gaps still open (to close in later phases): public visibility of non-book products, video rendering, motion-story rendering, poster experience, and first-class Bundle checkout/entitlement. Audiobook Storefront also remains pending Founder decisions.",
 ];

@@ -197,6 +197,9 @@ DEFINITIONS = [
     _c("founder-manual", "Founder Operator's Manual™", "enterprise", "active", "frontend/pages/FounderManual.js", "/founder-manual",
        "Operate the Factory confidently during launch.",
        "The permanent, print-friendly Founder reference — Operator's Manual (per-capability detail), Quick Start workflows ('I have X, what next?'), and the Capability Relationship Map (incl. the QRU Store™ vs qru-online.com distinction). Business language; documents the Factory as it exists."),
+    _c("distribution-architecture", "Distribution Architecture™", "distribution", "active", "distribution_architecture.py", "/distribution-architecture",
+       "Publish once; the catalog distributes everywhere.",
+       "The governed 'one catalog, many experiences' model: QRU Store™ is the single source of truth, Automatic Distribution™ auto-selects each product type's destinations at publish (Founder-overridable), and customer experiences (Books, Learn, Resources, Media, Bundles + any future one) are PLUG-INS registered without touching the Factory."),
     _c("youtube", "YouTube Publisher™", "distribution", "active", "youtube_publisher.py", "/youtube",
        "Publish real videos to YouTube.", "Real resumable upload with verified Video ID."),
     _c("connectors", "Publishing Connectors™", "distribution", "active", "connectors.py", "/connectors",
@@ -445,6 +448,7 @@ NAV_CORE_IDS = [c["id"] for c in NAV_CORE]
 NAV_CORE_IDS.append("production-operations")
 NAV_CORE_IDS.append("store-health")
 NAV_CORE_IDS.append("founder-manual")
+NAV_CORE_IDS.append("distribution-architecture")
 
 # --- Self-cleaning sidebar (driven by the Registry) ---
 # Layers pinned to the top "Start Here" section (by capability id).

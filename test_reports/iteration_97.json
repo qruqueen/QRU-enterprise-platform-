@@ -1,0 +1,32 @@
+{
+  "summary": "Tested QRU Distribution Architecture Phase 0 end-to-end. All 9 backend tests pass (auth guards, seeded 5 experiences in exact order, destinations-map matches approved table exactly, resolve returns defaults and fallback, plug-in registration works with duplicate/empty rejection, regression on /api/consumer/catalog and /api/public/home passes). Frontend page /distribution-architecture renders correctly: 3 principle cards, 3-layer flow with 5 experiences, experiences section, all 12 approved map rows visible, register-experience dialog opens, save creates a new card immediately (verified 'QRU Academy Test' appears without page reload). Code-review of manufacturing_foundation.publish_product: both 'publication' and 'other-engine' branches correctly apply Automatic Distribution — Founder override wins, else recommend_destinations; auto_assigned + assigned_at set as required. Note: a stray 'qa-test-exp' experience remains in DB from the test — main agent stated they will clean up.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Register Experience dialog", "issues": ["Radix Dialog warning: missing DialogDescription/aria-describedby (accessibility warning only, not blocking)"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration97_distribution_architecture.py",
+    "/app/test_reports/pytest/iteration97_results.xml"
+  ],
+  "action_items": [
+    "Cleanup: remove the 'qa-test-exp' and 'qru-academy-XXXX' experiences created during testing from distribution_experiences collection (as stated by main agent).",
+    "Optional a11y: add DialogDescription to Register Experience dialog to silence Radix warning."
+  ],
+  "critical_code_review_comments": [
+    "Automatic Distribution logic in manufacturing_foundation.publish_product correctly branches: override preserved (auto_assigned:false) vs default recommendation (auto_assigned:true). Verified in both publication and non-publication engine branches.",
+    "distribution_architecture.register_experience normalizes id (lowercase, hyphenated) and returns error dicts (not HTTP errors) for validation failures — client checks data.error which is consistent with UI code.",
+    "seed_experiences is idempotent (upsert with $setOnInsert for founder_locked/builtin/registered_at), safe on restart.",
+    "MongoDB _id properly excluded via projection and doc.pop after insert."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration97_distribution_architecture.py"],
+  "success_rate": {"backend": "100% (9/9)", "frontend": "100%"},
+  "test_credentials": "demo.admin@qru.com / qru-demo-admin-2026 (Administrator, works with require_super_admin)",
+  "seed_data_creation": "Created ephemeral experiences during test: 'qa-test-exp' via backend test and 'qru-academy-XXXX' via UI test. Main agent to clean up.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Distribution Architecture Phase 0 is functional. Automatic Distribution defaults for product publish are code-verified; runtime publish path not exercised (needs manufactured product with real deliverable). Prev iteration 96 covered Store readiness."
+}

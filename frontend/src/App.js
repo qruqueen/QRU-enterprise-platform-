@@ -123,6 +123,7 @@ import PilotCoordinator from "@/pages/PilotCoordinator";
 import ProductionOperations from "@/pages/ProductionOperations";
 import StoreHealth from "@/pages/StoreHealth";
 import FounderManual from "@/pages/FounderManual";
+import DistributionArchitecture from "@/pages/DistributionArchitecture";
 import { Loader2 } from "lucide-react";
 
 function ProtectedRoute({ children }) {
@@ -199,6 +200,7 @@ function EnterpriseRoutes() {
         <Route path="production-operations" element={<ProductionOperations />} />
         <Route path="store-health" element={<StoreHealth />} />
         <Route path="founder-manual" element={<FounderManual />} />
+        <Route path="distribution-architecture" element={<DistributionArchitecture />} />
         <Route path="checkout/success" element={<CheckoutSuccess />} />
         <Route path="command-center" element={<EnterpriseCommandCenter />} />
         <Route path="evidence" element={<EvidenceDashboard />} />

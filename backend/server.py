@@ -93,6 +93,7 @@ from routers.public_commerce import router as public_commerce_router
 from routers.pilot import router as pilot_router
 from routers.migrations import router as migrations_router
 from routers.store_health import router as store_health_router
+from routers.distribution_arch import router as distribution_arch_router
 from routers.manufacturing_standards import router as manufacturing_standards_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
@@ -168,6 +169,7 @@ for r in [
     pilot_router,
     migrations_router,
     store_health_router,
+    distribution_arch_router,
 ]:
     app.include_router(r)
 
@@ -212,6 +214,8 @@ async def startup():
     await little_legacy.seed()
     import capability_registry
     await capability_registry.seed()
+    import distribution_architecture
+    await distribution_architecture.seed_experiences()
     import ukr_standard
     try:
         _ukr_rep = await ukr_standard.migrate_to_canonical(actor="System (startup)")

@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 
 import product_recipes as catalog
 from database import db
+import distribution_architecture as dist_arch
 from models import gen_id, now_iso
 import commerce
 import ukr_standard as ukr
@@ -360,7 +361,14 @@ async def publish_product(engine, source_id, actor):
     if engine == "publication":
         if not (d.get("creative_brief") and d.get("creative_status") == "Reviewed" and d.get("verified")):
             return {"error": "Send this product through the Creative Studio review before publication."}
-        await db.products.update_one({"id": source_id}, {"$set": {"status": "Published", "updated_at": now_iso()}})
+        # Automatic Distribution™ — Founder override wins; else recommended defaults for the type
+        _dist = (d.get("distribution") or {})
+        _experiences = _dist.get("experiences") or dist_arch.recommend_destinations(d.get("product_type"))
+        await db.products.update_one({"id": source_id}, {"$set": {
+            "status": "Published", "updated_at": now_iso(),
+            "distribution": {**_dist, "experiences": _experiences,
+                             "auto_assigned": not bool(_dist.get("experiences")),
+                             "assigned_at": now_iso()}}})
         listing = await db.products.find_one({"id": source_id}, {"_id": 0})
         listing_id = source_id
     else:
@@ -368,11 +376,16 @@ async def publish_product(engine, source_id, actor):
         existing = await db.products.find_one({"source_engine": engine, "source_id": source_id}, {"_id": 0})
         listing_id = existing["id"] if existing else gen_id()
         price = commerce.PRICE_TIERS.get(fields["product_type"], commerce.DEFAULT_PRICE)
+        _existing_dist = (existing or {}).get("distribution") or {}
+        _experiences = _existing_dist.get("experiences") or dist_arch.recommend_destinations(fields["product_type"])
         listing = {
             "id": listing_id, "product_code": existing.get("product_code") if existing else f"STORE-{listing_id[:8].upper()}",
             "title": fields["title"], "product_type": fields["product_type"], "family": fields["family"],
             "topic": fields["topic"], "knowledge_record_id": fields["knowledge_record_id"],
             "status": "Published", "price": price,
+            "distribution": {**_existing_dist, "experiences": _experiences,
+                             "auto_assigned": not bool(_existing_dist.get("experiences")),
+                             "assigned_at": now_iso()},
             "customer_deliverable": {"files": [{"format": file_url.rsplit(".", 1)[-1] if "." in file_url else "file", "url": file_url}], "download_url": file_url},
             "cover_url": fields.get("cover_url"), "thumbnail_url": fields.get("cover_url"),
             "treasure_standard": bool(d.get("treasure_status") in ("Treasure", "PASS", True) or d.get("verification_status") == "Verified"),
