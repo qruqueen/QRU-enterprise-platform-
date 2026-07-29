@@ -194,6 +194,9 @@ DEFINITIONS = [
     _c("store-health", "Store Health™", "distribution", "active", "routers/store_health.py", "/store-health",
        "Know at a glance whether the store is truly launch-ready.",
        "A live, evidence-based integrity view of the storefront — books live, hidden covers, visible test products, Stripe/webhook/email config, orders and confirmation-email delivery. Read-only; every number derived from the connected database (Treasure Standard™)."),
+    _c("founder-manual", "Founder Operator's Manual™", "enterprise", "active", "frontend/pages/FounderManual.js", "/founder-manual",
+       "Operate the Factory confidently during launch.",
+       "The permanent, print-friendly Founder reference — Operator's Manual (per-capability detail), Quick Start workflows ('I have X, what next?'), and the Capability Relationship Map (incl. the QRU Store™ vs qru-online.com distinction). Business language; documents the Factory as it exists."),
     _c("youtube", "YouTube Publisher™", "distribution", "active", "youtube_publisher.py", "/youtube",
        "Publish real videos to YouTube.", "Real resumable upload with verified Video ID."),
     _c("connectors", "Publishing Connectors™", "distribution", "active", "connectors.py", "/connectors",
@@ -441,6 +444,7 @@ NAV_CORE_IDS = [c["id"] for c in NAV_CORE]
 # so exclude it from the auto-generated "All Capabilities" drawer to avoid a duplicate entry.
 NAV_CORE_IDS.append("production-operations")
 NAV_CORE_IDS.append("store-health")
+NAV_CORE_IDS.append("founder-manual")
 
 # --- Self-cleaning sidebar (driven by the Registry) ---
 # Layers pinned to the top "Start Here" section (by capability id).

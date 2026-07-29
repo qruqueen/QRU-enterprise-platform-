@@ -38,7 +38,7 @@ const ICON = {
   "/enterprise-health": Activity, "/blueprint": BookOpenCheck, "/experience-lab": Eye,
   "/integration-hub": Plug, "/ai-services": Cpu, "/users": UserCog, "/portability": HardDriveDownload,
   "/engineering-console": Cpu, "/settings": Settings, "/production-operations": Database,
-  "/store-health": Stethoscope,
+  "/store-health": Stethoscope, "/founder-manual": BookOpenCheck,
 };
 const iconFor = (route) => ICON[route] || Boxes;
 
@@ -129,6 +129,9 @@ export default function Layout() {
           )}
           {["Founder & CEO", "Administrator"].includes(user?.role) && (
             <NavItem item={{ id: "store-health", label: "Store Health™", route: "/store-health" }} onNavigate={close} />
+          )}
+          {["Founder & CEO", "Administrator"].includes(user?.role) && (
+            <NavItem item={{ id: "founder-manual", label: "Operator's Manual™", route: "/founder-manual" }} onNavigate={close} />
           )}
 
           {/* All Capabilities — every other working page, one click away (collapsed) */}
