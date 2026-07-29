@@ -13,6 +13,17 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - Language: English only (code, comments, UI).
 
 
+## ✅ Distribution Architecture™ Phase 0 (2026-07-29, Founder-approved) — testing_agent iteration_97, 9/9 backend + frontend verified
+Approved model: **one governed catalog (QRU Store™), many plug-in customer experiences**. Phase 0 is invisible — QRU Learn™ and the public bookstore are untouched.
+- Enterprise principles now live: One Governed Catalog · **Automatic Distribution™** (default destinations per product type, auto-selected at publish, Founder-overridable) · **Experiences are Plug-ins** (register without touching the Factory).
+- Delivered: `distribution_architecture.py` + `/api/distribution-architecture/*`, auto-distribution wired into `publish_product`, and the Founder page `/distribution-architecture`. Full detail in CHANGELOG.md (2026-07-29).
+- **Phased roadmap (approved, not yet built):**
+  - **Phase 1** — qru-online.com becomes an experience shell; **Books** experience (with imprint filtering: QRU Press™, E.Q. Rothwell™) reads from the catalog. Learn untouched.
+  - **Phase 2** — turn on **Resources / Media** experiences as rendering gaps close (video, motion story, posters).
+  - **Phase 3** — **Bundles** first-class product + checkout/entitlement fulfillment.
+  - Parallel backlog: public visibility of non-book products, Audiobook Storefront (pending Founder decisions).
+
+
 ## ✅ Store Readiness batch (2026-07-28) — 3 of 4 founder tasks done (testing_agent iteration_96, 100%)
 - **Test Product Cleanup (P0)**, **Batch Upgrade Assets™ (P1)**, **Store Health™ (P2)** — all shipped as governed, reversible operations in the Production Operations™ panel + a new Store Health™ dashboard. Full detail in CHANGELOG.md (2026-07-28). All self-verified + testing_agent 100% backend & frontend, 0 issues.
 - **Remaining P1: Audiobook Storefront** — free Chapter-1 sample + purchasable full-audiobook SKU + e-book bundle upsell. Deferred pending Founder approval (spends TTS credits + touches the LIVE Stripe checkout path). Decisions needed: free-sample length, audiobook price + bundle price, narrator voice.

@@ -7,7 +7,7 @@ import {
   BookOpen, GraduationCap, Wrench, Video, Gift, Boxes, Layers,
 } from "lucide-react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
@@ -124,7 +124,9 @@ export default function DistributionArchitecture() {
               </button>
             </DialogTrigger>
             <DialogContent data-testid="register-dialog">
-              <DialogHeader><DialogTitle>Register a Customer Experience</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>Register a Customer Experience</DialogTitle>
+                <DialogDescription>Add a new destination the whole Factory can publish to — with zero engine changes.</DialogDescription>
+              </DialogHeader>
               <div className="space-y-3">
                 <Input data-testid="exp-id-input" placeholder="id (e.g. qru-academy)" value={form.id} onChange={(e) => setForm({ ...form, id: e.target.value })} />
                 <Input data-testid="exp-name-input" placeholder="Name (e.g. QRU Academy™)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />

@@ -1,5 +1,17 @@
 # QRU Factory™ — CHANGELOG
 
+## 2026-07-29 — Distribution Architecture™ Phase 0 (Founder-approved; testing_agent iteration_97 — 9/9 backend pass, frontend verified, 0 blocking issues)
+Approved architecture: "one governed catalog, many customer experiences." Built the invisible Phase 0 foundation — no change to QRU Learn™ or the live bookstore.
+- **New enterprise principles (documented + enforced):** (1) One Governed Catalog — QRU Store™ = single source of truth. (2) **Automatic Distribution™** — every product type has recommended default destinations, auto-selected at publish, Founder-overridable. (3) **Experiences are Plug-ins** — register a customer experience without touching the Factory.
+- **Backend `distribution_architecture.py`**: `DEFAULT_EXPERIENCES` (books, learn[protected], resources, media, bundles) seeded to `distribution_experiences` coll on startup; `DEFAULT_DESTINATIONS` map = the Founder-approved table (Book→books; Course→learn; Workbook→learn,resources; Teacher/Student/Family/Caregiver Guide→learn; Poster/Infographic/Printable/Presentation→resources; Flash Cards→resources,learn; Motion Story→books,media; Podcast/Video/scripts/short-form→media; Bundle→bundles; fallback→resources); `recommend_destinations()`, `resolve_destinations()` (Founder override wins else defaults), `register_experience()` (plug-in), `destinations_map()`.
+- **Router `routers/distribution_arch.py`** `/api/distribution-architecture`: GET /experiences, POST /experiences (super-admin register), GET /destinations-map, GET /resolve/{product_type}.
+- **Auto-distribution wired into `manufacturing_foundation.publish_product`** (both `publication` and other-engine branches): on publish, sets `distribution.experiences` from recommendation if no Founder override, stamping `auto_assigned` + `assigned_at`. Non-breaking, additive.
+- **Frontend `DistributionArchitecture.js`** (route `/distribution-architecture`, nav "Distribution Architecture™", capability registered): principle cards, Factory→Store→experiences→Customer flow, plug-in experience cards + **Register Experience** dialog (verified adds a new experience live), and the Automatic Distribution table.
+- Operator's Manual observations updated to reference the approved direction + remaining implementation gaps (public non-book visibility, video/motion/poster rendering, first-class Bundle checkout, Audiobook Storefront).
+- Fixed a minor a11y warning (added DialogDescription). Cleaned up test experiences (kept 5 builtins).
+- NOT YET BUILT (later phases, per Founder — gaps acknowledged, not in focus): public visibility of non-book products on qru-online.com, experience shell/tabs on the public site, first-class Bundle checkout + entitlement, video/motion-story/poster rendering, imprint filtering UI.
+
+
 ## 2026-07-29 — Founder Operator's Manual™ v1.0 (documentation deliverable, no architecture change)
 Founder requested permanent Launch-Readiness operational documentation (not engineering docs, not a redesign). Delivered as a print-friendly in-app page grounded in the live Capability Registry™.
 - **Page** `/founder-manual` (nav "Operator's Manual™", Founder/Admin; capability registered `founder-manual`). Print/Save-PDF button + print CSS that hides the sidebar/topbar. Content module `frontend/src/data/founderManual.js`.
