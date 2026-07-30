@@ -102,11 +102,11 @@ export default function FactoryConcierge() {
               <div ref={endRef} />
             </div>
 
-            {/* Suggestion chips (outcome selection) */}
-            {stage === "need_outcome" && suggestions.length > 0 && (
+            {/* Suggestion / selector chips (outcome selection + KR selector) */}
+            {suggestions.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-3" data-testid="concierge-suggestions">
                 {suggestions.map((s) => (
-                  <button key={s.outcome_id} data-testid={`concierge-suggestion-${s.outcome_id}`} onClick={() => send(s.value)}
+                  <button key={s.outcome_id || s.value} data-testid={`concierge-suggestion-${s.outcome_id || s.value}`} onClick={() => send(s.value)}
                     className="text-[11px] px-2.5 py-1 rounded-full border border-royal/25 text-royal hover:bg-royal hover:text-white transition-colors">{s.label}</button>
                 ))}
               </div>
@@ -165,10 +165,12 @@ export default function FactoryConcierge() {
                     <p className="text-[12px] text-navy">{plan.knowledge_gap.message}</p>
                   </div>
                   <p className="text-[11px] text-muted-foreground mt-1.5">{plan.knowledge_gap.offer?.note}</p>
-                  <button onClick={beginKnowledge} data-testid="concierge-begin-knowledge"
-                    className="mt-3 w-full inline-flex items-center justify-center gap-2 bg-gold text-navy px-4 py-2.5 rounded-sm font-bold hover:bg-gold/90 transition-colors">
-                    <BookOpenCheck className="w-4 h-4" /> {plan.knowledge_gap.offer?.label}
-                  </button>
+                  {plan.knowledge_gap.offer?.label && (
+                    <button onClick={beginKnowledge} data-testid="concierge-begin-knowledge"
+                      className="mt-3 w-full inline-flex items-center justify-center gap-2 bg-gold text-navy px-4 py-2.5 rounded-sm font-bold hover:bg-gold/90 transition-colors">
+                      <BookOpenCheck className="w-4 h-4" /> {plan.knowledge_gap.offer?.label}
+                    </button>
+                  )}
                 </div>
               )}
             </Panel>

@@ -80,6 +80,70 @@ def _tokens(text):
     return {w for w in re.findall(r"[a-zA-Z][a-zA-Z\-]{2,}", (text or "").lower()) if w not in _STOP}
 
 
+# Knowledge-First resolution: detect explicit KR / manuscript IDs and exact titles BEFORE the fuzzy gate.
+_KR_CODE_RE = re.compile(r"\bKR-(?:[A-Z]{1,4}-)?\d{2,}\b", re.I)
+_BOOK_CODE_RE = re.compile(r"\bBOOK-\d{2,}\b", re.I)
+_KR_PROJ = {"_id": 0, "kr_code": 1, "id": 1, "title": 1, "topic": 1, "verification_status": 1}
+_BOOK_PROJ = {"_id": 0, "book_code": 1, "id": 1, "title": 1, "source_kr": 1, "knowledge_record_id": 1}
+
+
+def _strip_codes(text):
+    t = _BOOK_CODE_RE.sub(" ", _KR_CODE_RE.sub(" ", text or ""))
+    return re.sub(r"\s+", " ", t).strip(" —–-·|")
+
+
+def _kr_brief(r):
+    return {"kr_code": r.get("kr_code"), "id": r.get("id"), "title": r.get("title"),
+            "verification_status": r.get("verification_status")}
+
+
+def _ms_brief(m):
+    return {"book_code": m.get("book_code"), "id": m.get("id"), "title": m.get("title"),
+            "linked_kr": m.get("source_kr") or m.get("knowledge_record_id")}
+
+
+async def resolve_existing_assets(text):
+    """Detect explicit KR/manuscript IDs and exact-title matches so a Founder who names an existing
+    record is NEVER pushed into new research. Returns candidate KRs (any status) + source manuscripts."""
+    text = text or ""
+    kr_codes = {c.upper() for c in _KR_CODE_RE.findall(text)}
+    book_codes = {c.upper() for c in _BOOK_CODE_RE.findall(text)}
+    kr_matches, manuscripts, seen = [], [], set()
+    for code in kr_codes:
+        r = await db.knowledge_records.find_one(
+            {"kr_code": {"$regex": f"^{re.escape(code)}$", "$options": "i"}}, _KR_PROJ)
+        if r and r["id"] not in seen:
+            r["_resolved_by"] = "explicit_id"
+            kr_matches.append(r); seen.add(r["id"])
+    for code in book_codes:
+        b = await db.book_records.find_one(
+            {"book_code": {"$regex": f"^{re.escape(code)}$", "$options": "i"}}, _BOOK_PROJ)
+        if b:
+            b["_resolved_by"] = "explicit_id"; manuscripts.append(b)
+    stripped = _strip_codes(text)
+    st = _tokens(stripped)
+    slow = stripped.lower()
+    # Exact / high-confidence KR title match (only when no explicit KR id was given).
+    if not kr_matches and st:
+        async for r in db.knowledge_records.find({}, _KR_PROJ):
+            rt = _tokens(f"{r.get('title')} {r.get('topic')}")
+            if not rt:
+                continue
+            ratio = len(st & rt) / len(st)
+            exact = (r.get("title", "").strip().lower() == slow)
+            if exact or (ratio >= 0.8 and len(st & rt) >= 2):
+                if r["id"] not in seen:
+                    r["_resolved_by"] = "title"
+                    kr_matches.append(r); seen.add(r["id"])
+    # Existing manuscript (book_record) match — offered as a source asset.
+    if not manuscripts and len(st) >= 2:
+        for b in await db.book_records.find({}, _BOOK_PROJ).to_list(500):
+            bt = _tokens(b.get("title"))
+            if bt and (len(st & bt) / len(st)) >= 0.6 and len(st & bt) >= 2:
+                b["_resolved_by"] = "title"; manuscripts.append(b)
+    return {"kr_matches": kr_matches, "manuscripts": manuscripts[:5]}
+
+
 def outcomes_view():
     return {"outcomes": [{**o, "maturity_label": MATURITY[o["maturity"]]} for o in OUTCOMES],
             "maturity_legend": MATURITY,
@@ -88,7 +152,47 @@ def outcomes_view():
 
 async def knowledge_gap_check(topic, audience="", goal=""):
     """Constitution §3.1/§14E. Find an APPROVED (Verified) Knowledge Record for the topic.
-    Never fabricates a KR. If none exists, returns the honest message + pipeline offer."""
+    Never fabricates a KR. If none exists, returns the honest message + pipeline offer.
+    Explicit KR/manuscript IDs and exact titles are resolved FIRST so naming an existing record
+    never triggers duplicate research."""
+    # --- Explicit resolution (before the fuzzy gate) ---
+    resolved = await resolve_existing_assets(f"{topic} {goal}")
+    krs, manuscripts = resolved["kr_matches"], resolved["manuscripts"]
+    ms_brief = [_ms_brief(m) for m in manuscripts]
+    if len(krs) > 1:
+        return {
+            "knowledge_record_found": False, "multiple_matches": True,
+            "selector": [_kr_brief(r) for r in krs], "manuscript_sources": ms_brief,
+            "message": "More than one Knowledge Record matches — please choose which one to use.",
+        }
+    if len(krs) == 1:
+        r = krs[0]
+        brief = _kr_brief(r)
+        if r.get("verification_status") == "Verified":
+            return {
+                "knowledge_record_found": True, "knowledge_record": brief,
+                "resolved_record": brief, "resolved_by": r.get("_resolved_by"),
+                "verification_status": "Verified", "match_score": 1.0, "alternatives": [],
+                "manuscript_sources": ms_brief,
+                "message": f"Verified Knowledge Record resolved: {r.get('kr_code')} — {r.get('title')}.",
+            }
+        return {
+            "knowledge_record_found": False, "needs_verification": True,
+            "resolved_record": brief, "resolved_by": r.get("_resolved_by"),
+            "verification_status": r.get("verification_status"), "manuscript_sources": ms_brief,
+            "message": (f"Knowledge Record {r.get('kr_code')} — {r.get('title')} exists but its status is "
+                        f"“{r.get('verification_status')}”. It must be Verified before manufacturing — "
+                        "no new research is needed."),
+        }
+    if manuscripts:
+        return {
+            "knowledge_record_found": False, "manuscript_sources": ms_brief,
+            "message": ("An existing manuscript matches this request. It can be used as a source asset to "
+                        "manufacture a governed Knowledge Record — no duplicate research required."),
+            "offer": {"action": "use_manuscript_source", "route": "/promotion-pipeline",
+                      "label": "Use existing manuscript as source"},
+        }
+    # --- Fuzzy gate (Verified KRs only) ---
     topic_tokens = _tokens(topic)
     goal_tokens = _tokens(goal)
     best, best_score = None, 0.0

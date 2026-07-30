@@ -1,0 +1,27 @@
+{
+  "summary": "Iteration 103 — Verified the Factory Concierge Knowledge Record resolver fix. Two-turn workbook flow ('I want to make a workbook' → 'KR-00080 — AI Literacy') correctly resolves to stage='ready' with can_launch=true, media_kr_id set, and reply containing 'KR-00080', 'AI Literacy', and 'Verified' — NOT stage='knowledge_gap'. All 7 pytest cases pass (100%). Frontend /concierge verified end-to-end: Knowledge-First panel shows the verified KR, About field reads 'AI Literacy', Launch Workbook Builder™ button is visible, no error toast. KR count remained 85 with KR-00080 count = 1 before and after all interactions — resolver is read-only. All variants (bare KR-00080, sentence 'make a workbook from KR-00080'), manuscript resolution (BOOK-0017 for 'How to Understand AI – Final Publishing Master'), multi-match selector for 'How hope sustains people through hardship' (KR-00069 + KR-00083), and non-regression (unknown topic still yields knowledge_gap) all work correctly.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration103_concierge_kr_resolver.py",
+    "/app/test_reports/pytest/iteration_103.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "factory_os.resolve_existing_assets() uses `async for r in db.knowledge_records.find({}, _KR_PROJ)` for fuzzy title fallback — this scans the full 85-record collection on every unresolved message. Not a bug at current scale but will need an indexed lookup or precomputed title index if KR count grows to thousands.",
+    "factory_concierge._MEDIA_OUTCOMES set is defined at module scope but 'book' is not included even though the Book outcome plausibly benefits from a Storyboard route; this is an intentional product choice, flagging only for confirmation.",
+    "Reset short-circuit at factory_concierge.py:150 clears slots but still runs a parse on an empty message and then returns need_outcome — works fine, but the flow could early-return to avoid the redundant parse pass."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration103_concierge_kr_resolver.py (new — 7 cases)"],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "100%"},
+  "test_credentials": "demo.admin@qru.com / qru-demo-admin-2026 (Administrator; satisfies get_current_user on concierge endpoints)",
+  "seed_data_creation": "8 transient concierge_sessions were created and cleaned up (deleted post-run). No knowledge_records or book_records were written. KR count stayed 85; KR-00080 stayed 1.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "The read-only resolver in factory_os.resolve_existing_assets + knowledge_gap_check works for explicit KR codes, exact/high-confidence title matches, manuscript codes/titles, and multi-match selector. Concierge stages exposed: ready / select_kr / kr_needs_verification / manuscript_source / knowledge_gap. Frontend renders 'concierge-kr-found' + 'concierge-launch' on stage=ready and 'concierge-kr-gap' + 'concierge-begin-knowledge' on stage=knowledge_gap. Test file is reusable for regression.",
+  "rca of the issue": {
+    "reported_bug": "Before the fix, entering 'KR-00080 — AI Literacy' was tokenized and passed only to the fuzzy Verified-KR gate; if the token overlap was below threshold, the flow fell to stage=knowledge_gap and offered new Knowledge Manufacturing Pipeline.",
+    "fix_verified": "factory_os.resolve_existing_assets() now runs BEFORE the fuzzy gate: _KR_CODE_RE matches 'KR-00080', looks it up by kr_code case-insensitively, and knowledge_gap_check returns {knowledge_record_found:true, resolved_by:'explicit_id', verification_status:'Verified'}. factory_concierge.handle_message() renders stage='ready' with reply that includes 'You gave me an exact ID — resolved to KR-00080 — AI Literacy (Verified)'. Topic slot is normalized to the KR title so the UI 'About' shows 'AI Literacy'.",
+    "reproduction": "POST /api/factory-os/concierge/message twice as demo.admin: {message:'I want to make a workbook'} then {session_id, message:'KR-00080 — AI Literacy'}. Second response has stage='ready', can_launch=true, media_kr_id set."
+  }
+}

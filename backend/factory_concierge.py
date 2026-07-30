@@ -173,6 +173,8 @@ async def handle_message(session_id, message, use_ai=False, name="Founder"):
     can_launch = False
     media_route = None
     media_kr_id = None
+    selector = []
+    manuscript_sources = []
 
     if not slots["outcome_id"]:
         stage = "need_outcome"
@@ -188,29 +190,58 @@ async def handle_message(session_id, message, use_ai=False, name="Founder"):
     else:
         plan = await fos.build_plan(slots["outcome_id"], slots["topic"], slots["audience"], slots["goal"])
         gap = plan.get("knowledge_gap", {})
+        manuscript_sources = gap.get("manuscript_sources", []) or []
         if gap.get("knowledge_record_found"):
             stage = "ready"
             can_launch = True
             kr = gap["knowledge_record"]
             media_kr_id = kr.get("id")
+            slots["topic"] = kr["title"]
+            resolved_by = gap.get("resolved_by")
+            lead = (f"You gave me an exact ID — resolved to {kr['kr_code']} — {kr['title']} (Verified)."
+                    if resolved_by == "explicit_id"
+                    else f"I found a verified Knowledge Record for this: {kr['kr_code']} — {kr['title']} (Verified).")
             if slots["outcome_id"] in _MEDIA_OUTCOMES:
                 media_route = "/storyboard-studio"
-            reply = (f"I found a verified Knowledge Record for this: {kr['kr_code']} \u2014 {kr['title']}. "
-                     f"Your {outcome['name']} on \u201c{slots['topic']}\u201d"
+            reply = (lead + f" Your {outcome['name']} on “{slots['topic']}”"
                      + (f" for {slots['audience']}" if slots['audience'] else "")
-                     + f" will be manufactured from it \u2014 never invented. "
+                     + " will be manufactured from it — never invented, no duplicate research. "
                      f"I'll run it through {plan['launch']['workflow']} with design, QA and human approval "
-                     "where required. Shall I start? You can also just say \u201cchange it to a workbook\u201d "
-                     "or give me a different topic.")
+                     "where required. Shall I start?")
+            if manuscript_sources:
+                ms = manuscript_sources[0]
+                reply += (f" I also see an existing manuscript ({ms['book_code']} — {ms['title']}) you can "
+                          "attach as a source asset.")
             if media_route:
-                reply += (" Because this is a media product, I'll build one governed Storyboard Master\u2122 from "
-                          "this Knowledge Record and render every format you select from it \u2014 no content is "
-                          "rewritten. Open Storyboard Studio\u2122 to choose formats and manufacture.")
+                reply += (" Because this is a media product, I'll build one governed Storyboard Master™ from "
+                          "this Knowledge Record and render every format you select from it — no content is "
+                          "rewritten. Open Storyboard Studio™ to choose formats and manufacture.")
+        elif gap.get("multiple_matches"):
+            stage = "select_kr"
+            selector = gap.get("selector", [])
+            listing = "; ".join(f"{s['kr_code']} — {s['title']} ({s['verification_status']})" for s in selector)
+            first = selector[0]["kr_code"] if selector else "KR-XXXXX"
+            reply = ("More than one Knowledge Record matches your request. Which should I use? "
+                     f"{listing}. Reply with the KR code (e.g., {first}) and I'll manufacture from it — "
+                     "I won't start new research.")
+            suggestions = [{"label": f"{s['kr_code']} — {s['title']}", "value": s['kr_code']} for s in selector]
+        elif gap.get("needs_verification"):
+            stage = "kr_needs_verification"
+            rr = gap.get("resolved_record", {})
+            media_kr_id = rr.get("id")
+            reply = (gap.get("message", "") + f" Once {rr.get('kr_code')} is Verified, I'll manufacture your "
+                     f"{outcome['name']} directly from it — no new research.")
+        elif manuscript_sources:
+            stage = "manuscript_source"
+            ms = manuscript_sources[0]
+            reply = (f"I found an existing manuscript — {ms['book_code']} — {ms['title']}. I can use it as a "
+                     "source asset to manufacture a governed Knowledge Record (no duplicate research), then "
+                     f"build your {outcome['name']} from it. Want me to use this manuscript as the source?")
         else:
             stage = "knowledge_gap"
-            reply = (f"Honest answer: \u201c{slots['topic']}\u201d has not yet been manufactured as a governed "
-                     "QRU Knowledge Record\u2122. Knowledge always comes before products, so I can't create a "
-                     f"{outcome['name']} from it yet \u2014 I won't invent the facts. I can begin the Knowledge "
+            reply = (f"Honest answer: “{slots['topic']}” has not yet been manufactured as a governed "
+                     "QRU Knowledge Record™. Knowledge always comes before products, so I can't create a "
+                     f"{outcome['name']} from it yet — I won't invent the facts. I can begin the Knowledge "
                      "Manufacturing Pipeline to research, verify and approve the knowledge first. Want me to start that?")
 
     # Persist the turn.
@@ -230,6 +261,8 @@ async def handle_message(session_id, message, use_ai=False, name="Founder"):
         "can_launch": can_launch,
         "media_route": media_route,
         "media_kr_id": media_kr_id,
+        "selector": selector,
+        "manuscript_sources": manuscript_sources,
         "suggestions": suggestions,
         "ai_used": ai_used,
         "governed_by": ["QRU-CON-0001 §7", "§8", "§3.1"],
