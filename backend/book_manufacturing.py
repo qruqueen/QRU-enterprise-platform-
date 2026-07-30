@@ -1701,27 +1701,39 @@ async def set_publication_details(book_id, fields, actor):
     return clean(await db[COLL].find_one({"id": book_id}))
 
 
-async def draft_blurb(book_id, actor):
-    """Draft a back-cover blurb from the manuscript (marked DRAFT — Founder approves before it's final)."""
+async def draft_blurb(book_id, actor, mode="governed"):
+    """Draft a back-cover blurb (STD-BLB-0001, an application of STD-MFG-0001).
+    DEFAULT = Governed Manufacturing™ ($0) — assembled from verified metadata, no AI dependency.
+    mode='ai' opts into AI Enhancement™ (optional). Founder approves before it's final."""
+    import product_description as pdm
     b = await db[COLL].find_one({"id": book_id})
     if not b:
         return None
-    content = (b.get("editorial_edition") or b.get("working_copy") or {}).get("content", "")
-    synopsis = " ".join(content.split()[:1200])
-    sys_p = ("You are a QRU jacket copywriter. Write ONE compelling back-cover blurb (120–170 words) for the "
-             "book below. Voice-appropriate, evocative, no spoilers, no invented facts, no quotes/reviews. "
-             "Return plain prose only — no headings.")
-    try:
-        text = await ai_service.llm_generate(sys_p, f"Title: {b.get('title')}\nBy: {b.get('author')}\n\n{synopsis}",
-                                             f"blurb-{book_id}")
-        text = (text or "").strip()
-    except Exception as e:
-        return {"error": f"Blurb draft unavailable right now ({str(e)[:80]})."}
-    if len(text) < 40:
-        return {"error": "Could not draft a blurb from this manuscript."}
-    await db[COLL].update_one({"id": book_id}, {"$set": {
-        "description": text, "include_blurb": True, "blurb_status": "draft — Founder to approve", "updated_at": _now()}})
-    return {"ok": True, "blurb": text, "status": "draft — Founder to approve"}
+    if mode == "ai":
+        meta = await pdm.gather_meta("book", book_id)
+        res = await pdm.ai_enhanced(meta, channel="back_cover", styles=["professional", "inspirational"])
+        if res.get("error"):
+            # Honest fallback to the $0 governed default — AI is never a dependency.
+            res = None
+        else:
+            variants = res.get("variants") or []
+            if variants:
+                text = variants[0]["text"]
+                await db[COLL].update_one({"id": book_id}, {"$set": {
+                    "description": text, "include_blurb": True,
+                    "descriptions.back_cover": {"text": text, "mode": "ai", "ai_used": True,
+                                                "canonical": False, "channel": "back_cover", "by": actor,
+                                                "updated_at": _now(), "standard": pdm.STANDARD_ID},
+                    "blurb_status": "AI Enhancement™ draft — Founder to approve", "updated_at": _now()}})
+                return {"ok": True, "blurb": text, "status": "AI Enhancement™ draft — Founder to approve",
+                        "mode": "ai", "ai_used": True, "variants": variants}
+    # Governed Manufacturing™ ($0) — the constitutional default.
+    r = await pdm.manufacture("book", book_id, mode="governed", channel="back_cover", actor=actor)
+    if r.get("error"):
+        return {"error": r["error"]}
+    return {"ok": True, "blurb": r["text"], "status": "Governed Manufacturing™ ($0) — Founder to approve",
+            "mode": "governed", "ai_used": False, "word_count": r.get("word_count"),
+            "within_target": r.get("within_target"), "sources": r.get("sources")}
 
 
 async def build_print_cover_wrap(book_id, paper_type, actor):

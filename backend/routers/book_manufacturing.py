@@ -349,9 +349,13 @@ async def publication_details(book_id: str, req: PublicationDetailsReq, user=Dep
     return r
 
 
+class DraftBlurbReq(BaseModel):
+    mode: Optional[str] = "governed"      # governed ($0, default) | ai (optional)
+
+
 @router.post("/books/{book_id}/draft-blurb")
-async def draft_blurb(book_id: str, user=Depends(require_super_admin)):
-    r = await bm.draft_blurb(book_id, user.get("name", "Founder"))
+async def draft_blurb(book_id: str, req: DraftBlurbReq = DraftBlurbReq(), user=Depends(require_super_admin)):
+    r = await bm.draft_blurb(book_id, user.get("name", "Founder"), mode=(req.mode or "governed"))
     if r is None:
         raise HTTPException(404, "Book Record not found.")
     if isinstance(r, dict) and r.get("error"):

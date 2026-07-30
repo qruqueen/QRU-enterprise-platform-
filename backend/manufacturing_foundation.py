@@ -53,6 +53,8 @@ INHERITED_STANDARDS_BASE = [
     {"id": "STD-PUB-0001", "name": "QRU Publishing Standard™", "owns": "Publication conventions"},
     {"id": "STD-DES-0001", "name": "QRU Design Standard™", "owns": "On-brand design & typography"},
     {"id": "STD-COV-0001", "name": "QRU Cover Generation Standard™", "owns": "Cover modes (Premium Typography™ / AI Artwork / Automatic) with silent fallback — cover manufacturing never stops"},
+    {"id": "STD-MFG-0001", "name": "QRU Governed Product Description Manufacturing™", "owns": "Customer-facing descriptions from verified knowledge ($0 default); AI is an optional enhancement, never a dependency"},
+    {"id": "STD-BLB-0001", "name": "QRU Governed Back Cover Manufacturing™", "owns": "Back-cover copy from verified knowledge ($0 default) — an application of STD-MFG-0001"},
     {"id": "STD-TREASURE-0001", "name": "Treasure Standard™", "owns": "Absolute honesty — no fake states"},
     {"id": "STD-VER-0001", "name": "Verification Standard™", "owns": "Evidence before publication"},
     {"id": "STD-EVID-0001", "name": "Evidence Standard™", "owns": "Auditable manufacturing record"},
