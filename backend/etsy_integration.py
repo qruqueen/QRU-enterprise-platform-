@@ -164,23 +164,20 @@ async def handle_callback(state: str, code: str, error: str = None):
         await _audit("connect", "failure", "No access token returned.")
         return origin, False, "Etsy did not return an access token."
 
-    me, shop = None, None
-    try:
-        me = await _get_me(access)
-    except Exception as e:
-        await _audit("connect", "failure", f"getMe failed: {e}")
-    shop_id = (me or {}).get("shop_id") or os.environ.get("ETSY_SHOP_ID")
-    user_id = (me or {}).get("user_id")
-    if shop_id:
+    ident = await _resolve_identity(access)
+    user_id = ident.get("user_id")
+    shop_id = ident.get("shop_id")
+    shop_name = ident.get("shop_name")
+    if shop_id and not shop_name:
         try:
-            shop = await _get_shop(access, shop_id)
+            shop_name = (await _get_shop(access, shop_id)).get("shop_name")
         except Exception:
-            shop = None
+            pass
 
     await db[INTEG].update_one({"id": INTEG_ID}, {"$set": {
         "id": INTEG_ID,
         "shop_id": shop_id,
-        "shop_name": (shop or {}).get("shop_name"),
+        "shop_name": shop_name,
         "etsy_user_id": user_id,
         "connection_status": "connected",
         "encrypted_access_token": _enc(access),
@@ -248,6 +245,44 @@ async def _get_me(access):
     return r.json()
 
 
+def _uid_from_token(access):
+    """Etsy v3 access tokens embed the numeric user id as a prefix: '{user_id}.{token}'."""
+    if access and "." in access:
+        pre = access.split(".", 1)[0]
+        if pre.isdigit():
+            return int(pre)
+    return None
+
+
+async def _resolve_identity(access):
+    """Return {user_id, shop_id, shop_name}. /users/me can 403 on many apps, so derive the
+    user id from the token prefix and read the user's shop directly."""
+    user_id = _uid_from_token(access)
+    shop_id, shop_name = None, None
+    if user_id:
+        try:
+            r = await _api("GET", f"/users/{user_id}/shops", access=access)
+            if r.status_code < 400:
+                j = r.json()
+                shop = j if j.get("shop_id") else ((j.get("results") or [{}])[0] if isinstance(j.get("results"), list) else {})
+                shop_id = shop.get("shop_id")
+                shop_name = shop.get("shop_name")
+        except Exception:
+            pass
+    if not user_id or shop_id is None:
+        try:
+            me = await _get_me(access)
+            user_id = user_id or me.get("user_id")
+            shop_id = shop_id or me.get("shop_id")
+        except Exception:
+            pass
+    if shop_id is None:
+        env_shop = os.environ.get("ETSY_SHOP_ID")
+        if env_shop and env_shop.isdigit():
+            shop_id = int(env_shop)
+    return {"user_id": user_id, "shop_id": shop_id, "shop_name": shop_name}
+
+
 async def _get_shop(access, shop_id):
     r = await _api("GET", f"/shops/{shop_id}", access=access)
     r.raise_for_status()
@@ -305,23 +340,33 @@ async def test_connection():
         checks.append({"name": "Access token", "ok": True, "detail": "Valid (auto-refreshed if needed)."})
     except Exception as e:
         return {"ok": False, "checks": [{"name": "Access token", "ok": False, "detail": _redact(str(e))}]}
-    try:
-        me = await _get_me(access)
-        checks.append({"name": "Ping (users/me)", "ok": True,
-                       "detail": f"Authenticated user #{me.get('user_id')}, shop #{me.get('shop_id')}."})
-        shop_id = me.get("shop_id") or doc.get("shop_id")
-    except Exception as e:
+    ident = await _resolve_identity(access)
+    if ident.get("user_id"):
+        checks.append({"name": "Ping (identity)", "ok": True,
+                       "detail": f"Authenticated user #{ident['user_id']}."})
+    else:
         ok_all = False
-        checks.append({"name": "Ping (users/me)", "ok": False, "detail": _redact(str(e))})
-        shop_id = doc.get("shop_id")
-    try:
-        shop = await _get_shop(access, shop_id) if shop_id else {}
-        checks.append({"name": "Read shop", "ok": bool(shop), "detail": f"Shop: {shop.get('shop_name','?')}"})
-    except Exception as e:
+        checks.append({"name": "Ping (identity)", "ok": False,
+                       "detail": "Could not resolve the authenticated Etsy user from the token."})
+    shop_id = ident.get("shop_id") or doc.get("shop_id")
+    shop_name = ident.get("shop_name") or doc.get("shop_name")
+    if shop_id:
+        try:
+            shop = await _get_shop(access, shop_id)
+            shop_name = shop.get("shop_name") or shop_name
+            checks.append({"name": "Read shop", "ok": True, "detail": f"Shop: {shop_name} (#{shop_id})"})
+        except Exception as e:
+            ok_all = False
+            checks.append({"name": "Read shop", "ok": False, "detail": _redact(str(e))})
+    else:
         ok_all = False
-        checks.append({"name": "Read shop", "ok": False, "detail": _redact(str(e))})
-    await db[INTEG].update_one({"id": INTEG_ID}, {"$set": {"last_verified_at": now_iso(),
-                                                            "last_error": None if ok_all else "Test connection reported issues."}})
+        checks.append({"name": "Read shop", "ok": False,
+                       "detail": "No Etsy shop is associated with this account. Open your Etsy shop, then test again."})
+    # Heal the stored identity so publish/listings work without a reconnect.
+    await db[INTEG].update_one({"id": INTEG_ID}, {"$set": {
+        "shop_id": shop_id, "shop_name": shop_name, "etsy_user_id": ident.get("user_id"),
+        "last_verified_at": now_iso(),
+        "last_error": None if ok_all else "Test connection reported issues."}})
     await _audit("test", "success" if ok_all else "failure", "Read-only connection test.")
     return {"ok": ok_all, "checks": checks}
 
