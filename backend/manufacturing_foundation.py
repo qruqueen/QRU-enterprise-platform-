@@ -52,6 +52,7 @@ INHERITED_STANDARDS_BASE = [
     {"id": PMS_STANDARD_ID, "name": "QRU Product Manufacturing Standard™ (PMS™)", "owns": "Instructions"},
     {"id": "STD-PUB-0001", "name": "QRU Publishing Standard™", "owns": "Publication conventions"},
     {"id": "STD-DES-0001", "name": "QRU Design Standard™", "owns": "On-brand design & typography"},
+    {"id": "STD-COV-0001", "name": "QRU Cover Generation Standard™", "owns": "Cover modes (Premium Typography™ / AI Artwork / Automatic) with silent fallback — cover manufacturing never stops"},
     {"id": "STD-TREASURE-0001", "name": "Treasure Standard™", "owns": "Absolute honesty — no fake states"},
     {"id": "STD-VER-0001", "name": "Verification Standard™", "owns": "Evidence before publication"},
     {"id": "STD-EVID-0001", "name": "Evidence Standard™", "owns": "Auditable manufacturing record"},

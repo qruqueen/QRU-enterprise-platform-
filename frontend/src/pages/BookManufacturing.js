@@ -52,6 +52,7 @@ export default function BookManufacturing() {
   const [authorDraft, setAuthorDraft] = useState("");
   const [subtitleDraft, setSubtitleDraft] = useState("");
   const [imprintDraft, setImprintDraft] = useState("QRU Press™");
+  const [coverPref, setCoverPref] = useState({ mode: "auto", modes: [], has_saved_default: false });
 
   const loadBooks = async () => {
     const { data } = await api.get("/book-mfg/books");
@@ -67,6 +68,7 @@ export default function BookManufacturing() {
   const selectBook = async (id) => { setTab("upload"); setShareInfo(null); setInspection(null); await reload(id); };
   useEffect(() => {
     api.get("/book-mfg/config").then((r) => { setButtons(r.data.buttons); if (r.data.system_title) setSystemTitle(r.data.system_title); }).catch(() => {});
+    api.get("/book-mfg/cover-preference").then((r) => setCoverPref(r.data)).catch(() => {});
     loadBooks().then((books) => {
       const wanted = new URLSearchParams(window.location.search).get("book");
       const target = (wanted && books.find((b) => b.id === wanted)) ? wanted : books[0]?.id;
@@ -105,7 +107,10 @@ export default function BookManufacturing() {
   const doResolveFinding = (payload) => run(async () => { const { data } = await api.post(`/book-mfg/books/${book.id}/resolve-finding`, payload); setProof(data.report); }, payload.action === "keep" ? "Kept as written (intentional)." : "Correction applied & re-proofed.");
   const doSaveManuscript = (content) => run(async () => { const { data } = await api.post(`/book-mfg/books/${book.id}/manuscript`, { content }); setProof(data.report); }, "Manuscript saved & re-proofed.");
   const doApprove = () => run(() => api.post(`/book-mfg/books/${book.id}/approve-edition`), "Editorial edition locked.");
-  const doDesign = () => run(() => api.post(`/book-mfg/books/${book.id}/design`, { base_url: A }), "Design drafted.");
+  const doDesign = (coverMode, remember) => run(async () => {
+    await api.post(`/book-mfg/books/${book.id}/design`, { base_url: A, cover_mode: coverMode, remember_preference: !!remember });
+    if (remember && coverMode) setCoverPref((p) => ({ ...p, mode: coverMode, has_saved_default: true }));
+  }, "Design drafted.");
   const doSelectCover = (concept) => run(() => api.post(`/book-mfg/books/${book.id}/select-cover`, { concept, base_url: A }), `Cover ${concept} selected — clean retail edition prepared.`);
   const doAssemble = async () => {
     setBusy(true);
@@ -419,7 +424,7 @@ export default function BookManufacturing() {
       {/* Panels */}
       {tab === "upload" && <UploadPanel book={book} busy={busy} doUploadFile={doUploadFile} />}
       {tab === "proof" && <ProofPanel book={book} proof={proof} busy={busy} doProof={doProof} doApprove={doApprove} doOpenRevision={doOpenRevision} doResolveFinding={doResolveFinding} doSaveManuscript={doSaveManuscript} />}
-      {tab === "design" && <DesignPanel book={book} busy={busy} doDesign={doDesign} doSelectCover={doSelectCover} />}
+      {tab === "design" && <DesignPanel book={book} busy={busy} doDesign={doDesign} doSelectCover={doSelectCover} coverPref={coverPref} />}
       {tab === "audio" && <AudioPanel book={book} audio={audio} busy={busy} onRender={doRenderAudio} />}
       {tab === "video" && <PlanPanel title="Video" icon={Video} data={video} render={renderVideo} />}
       {tab === "publish" && <PublishPanel data={publish} kdp={kdp} postPub={postPub} book={book} busy={busy} doPricing={doPricing} doAuthorize={doAuthorize} doSanitize={doSanitize} doDraftBlurb={doDraftBlurb} doSavePublication={doSavePublication} doPrintWrap={doPrintWrap} />}
@@ -797,24 +802,67 @@ function LegibilityPreview({ concepts }) {
   );
 }
 
-function DesignPanel({ book, busy, doDesign, doSelectCover }) {
+function DesignPanel({ book, busy, doDesign, doSelectCover, coverPref }) {
   const d = book.artifacts?.design;
   const prov = d?.cover_provenance;
+  const modeInfo = d?.cover_mode;
+  const MODES = (coverPref?.modes && coverPref.modes.length) ? coverPref.modes : [
+    { id: "auto", label: "Automatic (Recommended)", desc: "Try AI artwork; silently fall back to Premium Typography™ if the image provider is unavailable — manufacturing never stops." },
+    { id: "ai", label: "AI Artwork", desc: "Generate original AI cover artwork. Any concept that fails is shown honestly as failed (never faked)." },
+    { id: "typography", label: "Premium Typography™", desc: "Deterministic on-brand typographic covers. No external provider — always succeeds, $0." },
+  ];
+  const [mode, setMode] = useState(coverPref?.mode || "auto");
+  const [remember, setRemember] = useState(false);
+  useEffect(() => { setMode(coverPref?.mode || "auto"); }, [coverPref?.mode]);
   return (
     <div data-testid="panel-design">
       <Panel title="Design" icon={Palette} accent="gold"
         right={
-          <button data-testid="run-design-btn" onClick={doDesign} disabled={busy || !book.editorial_locked}
+          <button data-testid="run-design-btn" onClick={() => doDesign(mode, remember)} disabled={busy || !book.editorial_locked}
             className="inline-flex items-center gap-1.5 bg-navy text-white px-4 py-2 rounded-md text-sm font-bold disabled:opacity-40"
             title={book.editorial_locked ? "" : "Lock the editorial edition first"}>
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Palette className="w-4 h-4" />} Generate Design
           </button>
         }>
         {!book.editorial_locked && <p className="text-sm text-amber-700 py-2">Approve & lock the editorial edition in Proof & Polish first — no downstream format may change approved text.</p>}
+        {book.editorial_locked && (
+          <div data-testid="cover-mode-selector" className="mb-5 rounded-md border border-border/70 bg-muted/30 p-3">
+            <p className="text-xs font-bold text-navy uppercase tracking-wide mb-2">Cover Generation Mode™ <span className="text-[9px] font-normal text-muted-foreground">(STD-COV-0001)</span></p>
+            <div className="space-y-2">
+              {MODES.map((m) => (
+                <label key={m.id} data-testid={`cover-mode-${m.id}`}
+                  className={`flex items-start gap-2.5 rounded-md border p-2.5 cursor-pointer transition-colors ${mode === m.id ? "border-gold bg-gold/5" : "border-border hover:border-navy/40"}`}>
+                  <input type="radio" name="cover-mode" value={m.id} checked={mode === m.id}
+                    onChange={() => setMode(m.id)} className="mt-0.5 accent-navy" data-testid={`cover-mode-radio-${m.id}`} />
+                  <span>
+                    <span className="block text-[13px] font-bold text-navy">{m.label}</span>
+                    <span className="block text-[11px] text-muted-foreground leading-tight">{m.desc}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <label className="flex items-center gap-2 mt-3 text-[12px] text-navy cursor-pointer" data-testid="remember-cover-preference">
+              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)}
+                className="accent-navy" data-testid="remember-cover-preference-checkbox" />
+              Remember my preference (applies this mode to every book you design from now on)
+            </label>
+            {coverPref?.has_saved_default && (
+              <p className="text-[10px] text-muted-foreground mt-1.5" data-testid="cover-mode-saved-default">
+                Current saved default: <span className="font-semibold">{(MODES.find((m) => m.id === coverPref.mode) || {}).label || coverPref.mode}</span>
+              </p>
+            )}
+          </div>
+        )}
         {!d ? (
           <p className="text-sm text-muted-foreground py-4">Generate print interior, EPUB, and three cover concepts from the approved edition.</p>
         ) : (
           <div className="space-y-5">
+            {modeInfo && (
+              <div data-testid="cover-mode-used" className={`rounded-md p-2.5 text-[12px] ${modeInfo.cover_notice ? "bg-amber-50 border border-amber-200 text-amber-800" : "bg-emerald-50 border border-emerald-200 text-emerald-800"}`}>
+                <span className="font-bold">Cover mode used: {modeInfo.cover_mode_used}.</span>{" "}
+                {modeInfo.cover_notice || "Generated as requested."}
+              </div>
+            )}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs font-bold text-navy uppercase tracking-wide">Cover Concepts (choose one)</p>

@@ -133,11 +133,21 @@ async def resolve_finding(book_id: str, req: ResolveFindingReq, user=Depends(req
 
 class DesignReq(BaseModel):
     base_url: Optional[str] = ""
+    cover_mode: Optional[str] = None
+    remember_preference: Optional[bool] = False
+
+
+@router.get("/cover-preference")
+async def cover_preference(user=Depends(get_current_user)):
+    """Founder-wide default Cover Generation mode + the available modes (STD-COV-0001)."""
+    mode = await bm.get_cover_preference()
+    return {"mode": mode or "auto", "has_saved_default": bool(mode), "modes": bm.COVER_MODES}
 
 
 @router.post("/books/{book_id}/design")
 async def design(book_id: str, req: DesignReq = DesignReq(), user=Depends(require_super_admin)):
-    r = await bm.design(book_id, user.get("name", "Founder"), req.base_url or "")
+    r = await bm.design(book_id, user.get("name", "Founder"), req.base_url or "",
+                        cover_mode=req.cover_mode, remember_preference=bool(req.remember_preference))
     if r is None:
         raise HTTPException(404, "Book Record not found.")
     if isinstance(r, dict) and r.get("error"):

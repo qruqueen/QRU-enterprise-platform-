@@ -568,11 +568,42 @@ async def resolve_finding(book_id, issue, action, actor, span=None, suggested_fi
 
 
 # ----------------------------- BUTTON 3 — DESIGN -----------------------------
+# QRU Cover Generation Standard™ (STD-COV-0001) — three modes, Founder-selectable, with a SILENT
+# fallback to Premium Typography™ so cover manufacturing NEVER stops because an image provider fails.
+COVER_MODES = [
+    {"id": "auto", "label": "Automatic (Recommended)",
+     "desc": "Try AI artwork; if the image provider is unavailable, silently generate Premium Typography™ instead — manufacturing never stops."},
+    {"id": "ai", "label": "AI Artwork",
+     "desc": "Generate original AI cover artwork. Any concept that fails is shown honestly as failed (never faked)."},
+    {"id": "typography", "label": "Premium Typography™",
+     "desc": "Deterministic on-brand typographic covers. No external provider — always succeeds, $0."},
+]
+_VALID_COVER_MODES = {"auto", "ai", "typography"}
+_COVER_PREF_KEY = "cover_generation"
+
+
+async def get_cover_preference():
+    """Founder-wide default Cover Generation mode (persisted in factory_settings)."""
+    doc = await db.factory_settings.find_one({"key": _COVER_PREF_KEY})
+    mode = (doc or {}).get("mode")
+    return mode if mode in _VALID_COVER_MODES else None
+
+
+async def set_cover_preference(mode, actor="Founder"):
+    if mode not in _VALID_COVER_MODES:
+        return
+    await db.factory_settings.update_one(
+        {"key": _COVER_PREF_KEY},
+        {"$set": {"key": _COVER_PREF_KEY, "mode": mode, "updated_by": actor, "updated_at": _now()}},
+        upsert=True)
+
+
 async def _cover_design_recipe(b, re_engine):
     """Book Cover Design Recipe™ — delegates to the shared QRU Design Studio™ engine so the Book
     system, Cover Studio, Poster Studio, workbooks and every product recipe share ONE publication-
     quality design pipeline (art-direction → Gemini artwork → QRU typography composite)."""
     import design_studio
+    mode = b.get("_cover_mode") if b.get("_cover_mode") in _VALID_COVER_MODES else "auto"
     context = {
         "title": b["title"], "subtitle": b.get("subtitle", ""),
         "byline": b.get("author", ""), "imprint": b.get("imprint", ""),
@@ -580,15 +611,25 @@ async def _cover_design_recipe(b, re_engine):
         "synopsis": b.get("working_copy", {}).get("content", ""),
     }
     return await design_studio.manufacture_design_concepts(
-        context, kind="cover", n=3, slug=f"bookcover-{b['id']}")
+        context, kind="cover", n=3, slug=f"bookcover-{b['id']}", mode=mode)
 
 
-async def design(book_id, actor, base_url=""):
+async def design(book_id, actor, base_url="", cover_mode=None, remember_preference=False):
     b = await db[COLL].find_one({"id": book_id})
     if not b:
         return None
     if not b.get("editorial_locked"):
         return {"error": "Approve & lock the editorial edition before Design (no downstream format may change approved text)."}
+    # Resolve the Cover Generation mode (STD-COV-0001). Explicit request wins; else the Founder-wide
+    # remembered default; else Automatic. "Remember my preference" persists the explicit choice.
+    requested = (cover_mode or "").strip().lower()
+    if requested in _VALID_COVER_MODES:
+        mode = requested
+        if remember_preference:
+            await set_cover_preference(mode, actor)
+    else:
+        mode = (await get_cover_preference()) or "auto"
+    b["_cover_mode"] = mode
     import rendering_engine as re_engine
     import deliverable_renderer as dr
     content = b["editorial_edition"]["content"]
@@ -621,20 +662,26 @@ async def design(book_id, actor, base_url=""):
         epub_url = None
     ai_ok = [c for c in concepts if c["status"] == "success"]
     ai_failed = [c for c in concepts if c["status"] != "success"]
+    import design_studio as _dstudio
+    cover_mode_info = _dstudio.cover_mode_summary(concepts, mode)
     cover_provenance = {
         "generated_at": _now(), "by": actor,
         "art_provider": "Gemini (Emergent LLM Key)", "art_model": __import__("ai_service").IMAGE_MODEL,
         "concepts_requested": len(concepts),
         "concepts_with_ai_art": len(ai_ok),
         "concepts_failed": len(ai_failed),
+        "cover_mode_requested": cover_mode_info.get("cover_mode_requested"),
+        "cover_mode_used": cover_mode_info.get("cover_mode_used"),
+        "cover_notice": cover_mode_info.get("cover_notice"),
         "failed_concepts": [{"concept": c["concept"], "name": c["name"], "reason": c["failure_reason"]} for c in ai_failed],
-        "standard": "Cover Design Recipe™ — honest per-concept status; a failed concept is never presented as real AI art.",
+        "standard": "STD-COV-0001 Cover Generation Standard™ — honest per-concept status; a failed concept is never presented as real AI art; silent fallback to Premium Typography™ keeps manufacturing running.",
     }
     artifacts = b.get("artifacts", {})
     artifacts["design"] = {
         "generated_at": _now(),
         "cover_concepts": concepts, "selected_cover": None,
         "cover_provenance": cover_provenance,
+        "cover_mode": cover_mode_info,
         "print": {"paperback_interior_pdf": re_engine._asset_url(interior_fid),
                   "trim_size": "6x9 in", "bleed": "0.125 in", "toc": "Clickable + printed (Reading Experience Standard™)"},
         "ebook": {"epub": epub_url, "kindle_ready": bool(epub_url), "clickable_toc": True},
