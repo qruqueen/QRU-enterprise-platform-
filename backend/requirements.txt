@@ -76,6 +76,7 @@ mypy_extensions==1.1.0
 numpy==2.4.6
 oauthlib==3.3.1
 openai==1.99.9
+opencv-python-headless==5.0.0.93
 packaging==26.2
 pandas==3.0.3
 passlib==1.7.4
@@ -118,6 +119,7 @@ referencing==0.37.0
 regex==2026.6.28
 requests==2.34.2
 requests-oauthlib==2.0.0
+resend==2.34.0
 rich==15.0.0
 rpds-py==2026.6.3
 rsa==4.9.1
@@ -146,4 +148,3 @@ websockets==16.0
 xlsxwriter==3.2.9
 yarl==1.24.2
 zipp==4.1.0
-resend==2.34.0

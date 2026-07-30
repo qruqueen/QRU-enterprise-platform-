@@ -78,11 +78,12 @@ class UploadReq(BaseModel):
     paper_type: Optional[str] = "white"
     rights: Optional[Dict[str, Any]] = None
     parent_asset_id: Optional[str] = None
+    expected_qr_url: Optional[str] = None
 
 
 @router.post("/upload/{engine}/{record_id}")
 async def upload(engine: str, record_id: str, req: UploadReq, user=Depends(require_super_admin)):
-    """Import an externally-produced asset → match spec → CAVE™ validate → CAVL™ vault (never publishes)."""
+    """Import an externally-produced asset → match spec → CAVE™ validate (incl. QR) → CAVL™ vault."""
     p = await _resolve_product(engine, record_id)
     if not p:
         raise HTTPException(404, "Product not found.")
@@ -94,7 +95,8 @@ async def upload(engine: str, record_id: str, req: UploadReq, user=Depends(requi
         data = base64.b64decode(req.file_base64.split(",")[-1])
     except Exception:
         raise HTTPException(400, "Invalid file_base64.")
-    validation = ucams.validate_asset(spec_obj, data, mime="", asset_meta=req.rights)
+    validation = ucams.validate_asset(spec_obj, data, mime="", asset_meta=req.rights,
+                                       expected_qr_url=req.expected_qr_url)
     asset = await ucams.store_asset(product_id=p["id"], spec=spec_obj, data=data, filename=req.filename,
                                     asset_meta=req.rights, validation=validation,
                                     actor=user.get("name", "Founder"), parent_asset_id=req.parent_asset_id)
@@ -109,6 +111,7 @@ class ValidateReq(BaseModel):
     pages: Optional[int] = None
     paper_type: Optional[str] = "white"
     rights: Optional[Dict[str, Any]] = None
+    expected_qr_url: Optional[str] = None
 
 
 @router.post("/validate/{engine}/{record_id}")
@@ -122,7 +125,30 @@ async def validate(engine: str, record_id: str, req: ValidateReq, user=Depends(r
     if spec_obj.get("error"):
         raise HTTPException(400, spec_obj["error"])
     data = base64.b64decode(req.file_base64.split(",")[-1])
-    return ucams.validate_asset(spec_obj, data, asset_meta=req.rights)
+    return ucams.validate_asset(spec_obj, data, asset_meta=req.rights, expected_qr_url=req.expected_qr_url)
+
+
+class QRScanReq(BaseModel):
+    file_base64: str
+    expected_qr_url: Optional[str] = None
+
+
+@router.post("/qr-scan")
+async def qr_scan(req: QRScanReq, user=Depends(require_super_admin)):
+    """Scan & verify a QR code from a finished asset (image or PDF)."""
+    data = base64.b64decode(req.file_base64.split(",")[-1])
+    return ucams.validate_qr(data, req.expected_qr_url, is_pdf=data[:4] == b"%PDF")
+
+
+@router.get("/package/{engine}/{record_id}")
+async def package(engine: str, record_id: str, marketplace: str, user=Depends(require_super_admin)):
+    p = await _resolve_product(engine, record_id)
+    if not p:
+        raise HTTPException(404, "Product not found.")
+    r = await ucams.build_marketplace_package(p, marketplace)
+    if isinstance(r, dict) and r.get("error"):
+        raise HTTPException(400, r["error"])
+    return r
 
 
 @router.get("/assets/{engine}/{record_id}")

@@ -1,0 +1,46 @@
+{
+  "summary": "Frontend-only validation of the two new Founder UI pages — Creative Assets (/creative-assets, STD-UCAMS-0001) and Publication Governance (/publication-governance, STD-PUB-0001). Logged in as demo.admin@qru.com, exercised all requested click flows against BOOK-0020. Every scenario listed in the review passed end-to-end.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "CreativeAssets & PublicationGovernance product selects", "issues": ["Console warning: 'In HTML, <span> cannot be a child of <option>' — a hydration warning caused by wrapping option content. Cosmetic only, does not affect functionality; suggest keeping <option> children as plain text."]}
+    ]
+  },
+  "test_evidence": {
+    "creative_assets": {
+      "product_dropdown_options_loaded": 19,
+      "inherited_specs_loaded": ["ca-spec-kdp_paperback_wrap","ca-spec-kdp_ebook_cover","ca-spec-etsy_primary","ca-spec-qru_online_primary","ca-spec-youtube_thumbnail","ca-spec-pinterest_pin","ca-spec-instagram_post","ca-spec-tiktok_vertical"],
+      "profile_and_missing_badges": "All 8 rows show 'Profile Verified' and 'Missing' badges before upload",
+      "spec_generation": "ca-genspec-qru_online_primary → ca-spec-panel appeared with spec_id UCAS-10368e519a13 and checksum badge; success toast triggered",
+      "upload_flow": "PNG 1600x2000 uploaded to qru_online_primary with ca-rights-ok checked → asset CA-78e8fc40bed8 created, badge 'Under Review' + validation 'PASS' (green)",
+      "approve_lock_lifecycle": "ca-approve then ca-lock transitioned asset to 'Locked' after refresh (verified via badge text)",
+      "marketplace_package_etsy": "ca-pkg-etsy → ca-package-result shows 'Not Ready', Policy: Review Ready, Decision: BLOCKED, Missing: marketplace_image — correct pre-approval behaviour"
+    },
+    "publication_governance": {
+      "destinations_rendered": ["pg-dest-qru_online","pg-dest-etsy","pg-dest-amazon_kdp","pg-dest-tpt","pg-dest-shopify"],
+      "decision_badges": "All 5 destinations show BLOCKED with mode badge (Authorized Auto Publish / Review Ready) and 'from enterprise:QRU' resolved-from",
+      "missing_requirements": "pg-missing-<dest> shown for every destination listing constitutional gaps (Knowledge Verified, Rendering Passed, ...)",
+      "publish_buttons_disabled": "All 5 pg-publish-<dest> buttons are disabled (auto_publish_authorized=false) — correct governed behaviour",
+      "policy_override_product_etsy_auto_publish": "Set policy → toast 'Policy set: etsy → Authorized Auto Publish' — etsy card mode badge updated to 'Authorized Auto Publish' with resolved-from 'product:<book_id>' after auto-reload",
+      "history_panel": "pg-history renders with empty-state message 'No publication attempts yet.'"
+    }
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(Optional/cosmetic) Fix React hydration warning: <span> inside <option> in both CreativeAssets.js and PublicationGovernance.js product <select>. Currently options are pure text — the warning appears to come from another page component (search bar or dropdown) triggered on route change. Non-blocking."
+  ],
+  "critical_code_review_comments": [
+    "CreativeAssets.js and PublicationGovernance.js are well-scoped, use data-testid consistently, and correctly call backend APIs via the axios interceptor with Bearer token from localStorage.",
+    "Success toasts on upload use v.result to pick between success/error which is a nice UX detail.",
+    "Package result correctly surfaces policy mode, decision, and missing assets — matches governed publication contract."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped by request)", "frontend": "100%"},
+  "test_credentials": "demo.admin@qru.com / qru-demo-admin-2026 (Administrator)",
+  "seed_data_creation": "Created 1 spec (UCAS-10368e519a13) and 1 creative asset (CA-78e8fc40bed8) on product BOOK-0020, then transitioned asset to Locked. Set product-scope policy override: BOOK-0020 / etsy → Authorized Auto Publish. No publication history was created (publish remained blocked per constitution).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Both Founder UI pages are fully operational. Test data on BOOK-0020: one Locked marketplace_image asset for qru_online_primary, and a product-scope etsy Authorized Auto Publish override. If you retest with a different book, use the /book-mfg/books list (19 available). For upload testing, use PNG for qru_online_primary or etsy_primary; kdp_paperback_wrap requires PDF (image will FAIL — expected)."
+}

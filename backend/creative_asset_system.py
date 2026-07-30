@@ -352,7 +352,72 @@ def validate_rights(asset_meta):
     return missing
 
 
-def validate_asset(spec, data, *, mime="", asset_meta=None):
+def scan_qr(data, is_pdf=False):
+    """Scan QR codes from the FINAL RENDERED asset (rasterize PDF pages / decode image) using OpenCV.
+    Returns the list of decoded payload strings actually present in the finished file."""
+    import cv2
+    import numpy as np
+    imgs = []
+    try:
+        if is_pdf or data[:4] == b"%PDF":
+            import fitz
+            doc = fitz.open(stream=data, filetype="pdf")
+            for pg in doc:
+                pix = pg.get_pixmap(dpi=200)
+                arr = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, pix.n)
+                if pix.n == 4:
+                    arr = cv2.cvtColor(arr, cv2.COLOR_RGBA2BGR)
+                elif pix.n == 3:
+                    arr = cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
+                imgs.append(arr)
+        else:
+            arr = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+            if arr is not None:
+                imgs.append(arr)
+    except Exception:
+        return []
+    det = cv2.QRCodeDetector()
+    found = []
+    for arr in imgs:
+        try:
+            ok, decoded, pts, _ = det.detectAndDecodeMulti(arr)
+            if ok:
+                found += [s for s in decoded if s]
+            else:
+                s, _, _ = det.detectAndDecode(arr)
+                if s:
+                    found.append(s)
+        except Exception:
+            pass
+    return found
+
+
+def _norm_url(u):
+    return (u or "").strip().rstrip("/").lower().replace("https://", "").replace("http://", "")
+
+
+def validate_qr(data, expected_url=None, is_pdf=False):
+    """QR verification (§15): scan the finished asset, confirm it decodes, and confirm the destination
+    matches the expected URL. Fails manufacturing on missing / broken / wrong destination."""
+    found = scan_qr(data, is_pdf)
+    if not found:
+        return {"result": "FAIL", "found": False, "decoded": [],
+                "reason": "No QR code detected in the final rendered asset."}
+    decoded = found[0]
+    if expected_url and expected_url.strip():
+        if _norm_url(decoded) == _norm_url(expected_url):
+            return {"result": "PASS", "found": True, "decoded": found,
+                    "reason": "QR decodes to the expected destination."}
+        if _norm_url(expected_url).split("/")[0] in _norm_url(decoded):
+            return {"result": "PASS WITH WARNINGS", "found": True, "decoded": found,
+                    "reason": f"QR host matches but full path differs (got '{decoded}')."}
+        return {"result": "FAIL", "found": True, "decoded": found,
+                "reason": f"QR decodes to '{decoded}', which does NOT match expected '{expected_url}'."}
+    return {"result": "PASS WITH WARNINGS", "found": True, "decoded": found,
+            "reason": "QR decodes, but no expected destination was supplied to compare against."}
+
+
+def validate_asset(spec, data, *, mime="", asset_meta=None, expected_qr_url=None):
     """CAVE™ — validate an uploaded/returned/derived asset against its UCAS spec. Deterministic.
     Returns {result, issues, warnings, checks} where result ∈ PASS/PASS WITH WARNINGS/FAIL/HOLD."""
     # Rights gate first (§14) — missing rights ⇒ HOLD (cannot be Approved for Distribution).
@@ -365,12 +430,23 @@ def validate_asset(spec, data, *, mime="", asset_meta=None):
     else:
         result, issues, warnings = _validate_image_bytes(spec, data)
     checks = {"dimensions": True, "rights": not rights_missing, "format": True}
+    # QR verification from the FINAL rendered asset (§15) — only when a QR destination is expected.
+    qr = None
+    if expected_qr_url:
+        qr = validate_qr(data, expected_qr_url, is_pdf=is_pdf)
+        checks["qr"] = qr["result"] in ("PASS", "PASS WITH WARNINGS")
+        if qr["result"] == "FAIL":
+            issues.append(f"QR validation FAILED — {qr['reason']}")
+            result = "FAIL"
+        elif qr["result"] == "PASS WITH WARNINGS" and result == "PASS":
+            warnings.append(f"QR: {qr['reason']}")
+            result = "PASS WITH WARNINGS"
     if rights_missing:
         warnings.append(f"Rights incomplete (missing: {', '.join(rights_missing)}) — Rights Hold until resolved.")
         result = "HOLD"
     return {"result": result, "issues": issues, "warnings": warnings,
             "rights_missing": rights_missing, "spec_checksum": spec.get("spec_checksum"),
-            "validated_at": _now(), "checks": checks,
+            "qr_validation": qr, "validated_at": _now(), "checks": checks,
             "correction_required": issues or ([f"Provide rights: {rights_missing}"] if rights_missing else [])}
 
 
@@ -528,3 +604,66 @@ async def catalog_export(scope="catalog", fmt="json", limit=100):
         return {"format": "html", "content": html, "row_count": len(rows), "ai_generation_triggered": False}
     return {"format": "json", "rows": rows, "row_count": len(rows), "ai_generation_triggered": False,
             "scope": scope, "standard": STANDARD_ID}
+
+
+# ---------------------------------------------------------------------------
+# Marketplace packages (§ Marketplace Packages) — governed, review-ready. NEVER auto-publish.
+# ---------------------------------------------------------------------------
+MARKETPLACE_REQUIRED_ROLES = {
+    "etsy": [("marketplace_image", "etsy_primary", ["primary", "contents", "usage", "preview"])],
+    "amazon_kdp": [("print_cover_wrap", "kdp_paperback_wrap", ["wrap"]),
+                   ("digital_cover", "kdp_ebook_cover", ["cover"])],
+    "kdp": [("print_cover_wrap", "kdp_paperback_wrap", ["wrap"]),
+            ("digital_cover", "kdp_ebook_cover", ["cover"])],
+    "tpt": [("marketplace_image", "tpt_primary", ["cover", "preview", "contents"])],
+    "shopify": [("marketplace_image", "qru_online_primary", ["primary"])],
+    "qru_online": [("marketplace_image", "qru_online_primary", ["primary"])],
+}
+
+
+async def build_marketplace_package(product, marketplace):
+    """Assemble a governed, review-ready marketplace package from APPROVED+LOCKED assets. Reports the
+    required vs present assets, listing copy for that channel, pricing, and the governed publication
+    decision. Does NOT publish (STD-PUB-0001 decides the mode)."""
+    import publication_policy as pp
+    mk = marketplace.lower()
+    reqs = MARKETPLACE_REQUIRED_ROLES.get(mk)
+    if not reqs:
+        return {"error": f"No governed package definition for marketplace '{marketplace}'."}
+    required, present, missing = [], [], []
+    for role, platform_id, image_roles in reqs:
+        prof = await get_profile(platform_id, role)
+        assets = await db[ASSET_COLL].find(
+            {"product_id": product.get("id"), "platform_id": platform_id,
+             "lifecycle_state": {"$in": ["Approved", "Locked", "Platform Validated", "Distribution Authorized"]}},
+            {"_id": 0}).to_list(50)
+        required.append({"asset_role": role, "platform_id": platform_id, "image_roles": image_roles,
+                         "profile_version": (prof or {}).get("profile_version"),
+                         "profile_status": (prof or {}).get("status")})
+        if assets:
+            for a in assets:
+                present.append({"asset_id": a["asset_id"], "asset_role": role, "platform_id": platform_id,
+                                "version": a["version"], "state": a["lifecycle_state"], "file_url": a["file_url"]})
+        else:
+            missing.append({"asset_role": role, "platform_id": platform_id,
+                            "reason": "No Approved/Locked asset in the vault for this role."})
+    channel = {"etsy": "etsy", "amazon_kdp": "amazon", "kdp": "amazon", "tpt": "tpt",
+               "shopify": "qru_online", "qru_online": "qru_online"}.get(mk, "generic")
+    descs = (product.get("descriptions") or {})
+    listing_copy = descs.get(channel) or descs.get("generic") or {"text": product.get("description", "")}
+    decision = await pp.decide(product, mk if mk != "kdp" else "amazon_kdp")
+    ready = len(missing) == 0 and bool(listing_copy.get("text"))
+    return {
+        "standard": STANDARD_ID, "marketplace": marketplace, "product_id": product.get("id"),
+        "title": product.get("title"),
+        "required_assets": required, "present_assets": present, "missing_assets": missing,
+        "listing_copy": listing_copy,
+        "pricing": product.get("pricing") or {"list_price": product.get("list_price")},
+        "package_ready": ready,
+        "governed_publication_mode": decision["policy"]["effective_mode"],
+        "publication_decision": decision["decision"],
+        "can_publish": decision["can_publish"],
+        "blocked_reason": None if ready else "Package is not review-ready — supply the missing approved assets and an approved description.",
+        "note": "Review-ready package. The Factory does NOT auto-publish; Governed Publication Policy™ decides the mode.",
+        "built_at": _now(),
+    }

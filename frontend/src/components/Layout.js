@@ -11,7 +11,7 @@ import {
   LayoutDashboard, MessageSquareText, BookOpen, FlaskConical, ShieldCheck,
   Factory, Sparkles, Library, Bot, GraduationCap, BarChart3, Users, UserCog,
   Bell, Settings, Search, LogOut, Menu, Wand2, Building2, Palette, Activity, Eye, PackageCheck, Brain, Clapperboard, Film,
-  ClipboardList, Boxes, PackageOpen, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud, Gavel, Youtube, QrCode, Scale, Compass, Cog, LayoutTemplate, Baby, Map, ChevronDown, ChevronRight, History,
+  ClipboardList, Boxes, PackageOpen, ShieldHalf, Plug, Rocket, Cpu, Workflow, Radio, Store, Brain as BrainIcon, BookOpenCheck, UsersRound, Coins, HardDriveDownload, Gauge, Archive, Wallet, Sprout, ShieldAlert, Stethoscope, Inbox, FolderUp, Database, UploadCloud, Gavel, Youtube, QrCode, Scale, Compass, Cog, LayoutTemplate, Baby, Map, ChevronDown, ChevronRight, History, Layers,
 } from "lucide-react";
 
 // Icon per capability route — keeps the established visual language.
@@ -35,6 +35,7 @@ const ICON = {
   "/factory-monitor": Radio, "/failure-intelligence": ShieldAlert, "/autonomy": BrainIcon, "/enterprise-autonomy": Cpu,
   "/analytics": BarChart3, "/manufacturing-economics": Wallet, "/first-dollar": Coins, "/factory-readiness": Gauge,
   "/customers": Users, "/workforce": Bot, "/organization": Building2, "/asset-vault": Archive, "/command": MessageSquareText,
+  "/creative-assets": Layers, "/publication-governance": Gavel,
   "/enterprise-health": Activity, "/blueprint": BookOpenCheck, "/experience-lab": Eye,
   "/integration-hub": Plug, "/ai-services": Cpu, "/users": UserCog, "/portability": HardDriveDownload,
   "/engineering-console": Cpu, "/settings": Settings, "/production-operations": Database,
@@ -141,6 +142,12 @@ export default function Layout() {
           )}
           {["Founder & CEO", "Administrator"].includes(user?.role) && (
             <NavItem item={{ id: "etsy", label: "Etsy Integration™", route: "/etsy" }} onNavigate={close} />
+          )}
+          {["Founder & CEO", "Administrator"].includes(user?.role) && (
+            <NavItem item={{ id: "creative-assets", label: "Creative Assets™", route: "/creative-assets" }} onNavigate={close} />
+          )}
+          {["Founder & CEO", "Administrator"].includes(user?.role) && (
+            <NavItem item={{ id: "publication-governance", label: "Publication Governance™", route: "/publication-governance" }} onNavigate={close} />
           )}
 
           {/* All Capabilities — every other working page, one click away (collapsed) */}
