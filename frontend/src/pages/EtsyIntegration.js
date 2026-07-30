@@ -5,7 +5,7 @@ import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import {
   Loader2, Store, Plug, PlugZap, Unplug, RefreshCw, CheckCircle2, AlertTriangle,
-  Eye, FilePlus, ExternalLink, GitCompare, UploadCloud, ShieldCheck,
+  Eye, FilePlus, ExternalLink, GitCompare, UploadCloud, ShieldCheck, Rocket,
 } from "lucide-react";
 
 const STATUS_TONE = {
@@ -113,15 +113,31 @@ export default function EtsyIntegration() {
   };
 
   const createDraft = async (p) => {
-    if (!window.confirm(`Create an Etsy DRAFT listing for "${p.title}"? It will NOT be activated — you approve activation separately on Etsy.`)) return;
+    if (!window.confirm(`Create an Etsy DRAFT listing for "${p.title}"? It will attach the cover + epub and stay a DRAFT — activation is a separate step.`)) return;
     setBusy(`draft-${p.id}`);
     try {
       const { data } = await api.post(`/integrations/etsy/products/${p.id}/publish`, { approved: true });
       if (data.error) toast.error(data.error);
-      else toast.success(data.idempotent ? "Draft already exists (no duplicate)." : "Etsy draft created.");
+      else if (data.idempotent) toast.info("Draft already exists (no duplicate).");
+      else {
+        toast[data.ready_to_activate ? "success" : "warning"](data.message);
+        if (data.warnings?.length) data.warnings.forEach((w) => toast.warning(w));
+      }
       await loadProducts(); await loadStatus();
       if (preview?.product?.id === p.id) await doPreview(p);
     } catch (e) { toast.error(e.response?.data?.detail || "Draft creation failed."); }
+    setBusy("");
+  };
+
+  const activateOne = async (p) => {
+    if (!window.confirm(`Activate "${p.title}" on Etsy? This makes the listing PUBLIC and purchasable and incurs Etsy's ~$0.20 listing fee.`)) return;
+    setBusy(`act-${p.id}`);
+    try {
+      const { data } = await api.post(`/integrations/etsy/products/${p.id}/activate`, { approved: true });
+      if (data.error) toast.error(data.error);
+      else toast.success(data.message || "Listing is live.");
+      await loadProducts(); await loadStatus();
+    } catch (e) { toast.error(e.response?.data?.detail || "Activation failed."); }
     setBusy("");
   };
 
@@ -252,12 +268,20 @@ export default function EtsyIntegration() {
                   <td className="py-2 px-3"><div className="font-medium text-foreground">{p.title}</div><div className="text-[10px] text-muted-foreground">{p.code}</div></td>
                   <td className="py-2 px-3 text-muted-foreground">{p.imprint}</td>
                   <td className="py-2 px-3">{p.eligible ? <span className="inline-flex items-center gap-1 text-emerald-700"><CheckCircle2 className="w-3.5 h-3.5" /> Yes</span> : <span className="inline-flex items-center gap-1 text-muted-foreground"><AlertTriangle className="w-3.5 h-3.5" /> No</span>}</td>
-                  <td className="py-2 px-3">{p.etsy_listing_id ? <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700">{p.etsy_state || "draft"}</span> : <span className="text-muted-foreground">—</span>}</td>
+                  <td className="py-2 px-3">{p.etsy_listing_id ? (
+                    <div className="flex flex-col gap-0.5">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold w-fit ${p.etsy_state === "active" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{p.etsy_state || "draft"}</span>
+                      <span className="text-[9px] text-muted-foreground">{p.image_uploaded ? "🖼️" : "▫"} img · {p.file_uploaded ? "📄" : "▫"} file</span>
+                    </div>
+                  ) : <span className="text-muted-foreground">—</span>}</td>
                   <td className="py-2 px-3">
                     <div className="flex flex-wrap gap-1.5">
                       <button onClick={() => doPreview(p)} disabled={!!busy} data-testid={`etsy-preview-${p.code}`} className="inline-flex items-center gap-1 rounded border px-2 py-1 hover:bg-muted"><Eye className="w-3 h-3" /> Preview</button>
                       {!p.etsy_listing_id && connected && (
                         <button onClick={() => createDraft(p)} disabled={!!busy || !p.eligible} data-testid={`etsy-draft-${p.code}`} className="inline-flex items-center gap-1 rounded bg-[#F1641E] text-white px-2 py-1 hover:opacity-90 disabled:opacity-40"><FilePlus className="w-3 h-3" /> Create Draft</button>
+                      )}
+                      {p.etsy_listing_id && p.etsy_state === "draft" && connected && (
+                        <button onClick={() => activateOne(p)} disabled={!!busy || !p.image_uploaded || !p.file_uploaded} data-testid={`etsy-activate-${p.code}`} className="inline-flex items-center gap-1 rounded bg-emerald-600 text-white px-2 py-1 hover:opacity-90 disabled:opacity-40"><Rocket className="w-3 h-3" /> Activate</button>
                       )}
                       {p.etsy_url && <a href={p.etsy_url} target="_blank" rel="noreferrer" data-testid={`etsy-view-${p.code}`} className="inline-flex items-center gap-1 rounded border px-2 py-1 hover:bg-muted"><ExternalLink className="w-3 h-3" /> View</a>}
                       {p.etsy_listing_id && <button onClick={() => syncOne(p)} disabled={!!busy} data-testid={`etsy-sync-${p.code}`} className="inline-flex items-center gap-1 rounded border px-2 py-1 hover:bg-muted"><GitCompare className="w-3 h-3" /> Sync</button>}

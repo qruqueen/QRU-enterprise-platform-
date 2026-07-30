@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 101 — Catalog integrity (user's reported bug) + Etsy governance gating after imprint migration & activate-pipeline extension. 15 pytest cases + Playwright UI validation on /etsy. Catalog is COMPLETE: exactly 8 authorized books, imprints canonicalized to {E.Q. Rothwell™, QRU Press™}, 'Patterns of Intelligence' (BOOK-0013) exists under E.Q. Rothwell™, BOOK-0003 duplicate is gone, BOOK-0004 canonical Ordinary Tuesdays intact. Security + no-secret-leak + publish approval/disconnected gates all pass. Found 1 real bug (KeyError on preview) and 1 governance-ordering deviation on activate.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/integrations/etsy/products/{id}/activate", "issue": "Governance-order deviation: when NO mapping exists, activate() returns 'No Etsy draft is mapped...' even when approved=false — but the review spec requires 'with {approved:false} on any state returns requires_approval=true'. The approval gate should run BEFORE the mapping check to match the stated contract. Currently order is: mapping → already-active → approval → uploads."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "EtsyIntegration Preview panel", "issue": "Clicking Preview returned HTTP 500 and 'Preview failed' toast. Root cause: etsy_integration.preview() read payload['taxonomy_id'] unconditionally, but _listing_payload() only sets that key when a taxonomy is configured (env var missing in preview). Fixed inline with .get('taxonomy_id') — panel now opens correctly with no toast.", "selector": "[data-testid='etsy-preview-BOOK-0001']", "priority": "HIGH (was blocking preview for every book)"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration101_catalog_and_etsy.py",
+    "/app/test_reports/pytest/iteration_101.xml"
+  ],
+  "action_items": [
+    "Reorder governance gates in etsy_integration.activate_listing() so that when approved=false the API returns {requires_approval:true} regardless of mapping state (spec: 'with {approved:false} on any state returns requires_approval=true'). Move the `if not approved` check to the top of the function.",
+    "Verify the taxonomy_id fix (.get instead of []) I applied in etsy_integration.preview() line 696 — trivial and safe, but please code-review."
+  ],
+  "critical_code_review_comments": [
+    "etsy_integration.py line 696 assumed payload['taxonomy_id'] exists but _listing_payload only sets it when DEFAULT_TAXONOMY_ID or explicit taxonomy_id is provided. Under normal preview-env (no env var) every call to POST /products/{id}/preview 500s. Fixed to .get(). Add a unit test that runs preview() with DEFAULT_TAXONOMY_ID unset to prevent regression.",
+    "activate_listing() gate ordering doesn't match the review-request contract (approval-first). Small but visible: the API 'leaks' the internal mapping state before enforcing Founder approval. Consider a canonical gate order: approval → connected → mapping → uploads → already-active.",
+    "publish_draft() and activate_listing() are shape-mixed (200 with {error} body vs raising). Consistent: return non-200 for hard errors, keep 200 only for {ok:true} and {requires_approval:true}. (Not fixed — behavior change.)",
+    "eligibility() detail strings are still opaque; e.g., 'Metadata populated' failing doesn't say which field. Nice-to-have from prior iteration remains open."
+  ],
+  "updated_files": [
+    "/app/backend/etsy_integration.py (one-line safety fix: payload.get('taxonomy_id'))",
+    "/app/backend/tests/test_iteration101_catalog_and_etsy.py (new — 15 cases)"
+  ],
+  "success_rate": {"backend": "93% (14/15 pytest; the 1 failure is the activate gate-order deviation described above)", "frontend": "100% after preview fix"},
+  "test_credentials": "demo.admin@qru.com / qru-demo-admin-2026 (Administrator satisfies require_super_admin)",
+  "seed_data_creation": "None. All publish/activate attempts correctly blocked by governance/disconnected — verified no etsy_listing_mappings were created.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Catalog integrity confirmed: 8 authorized books, PoI=BOOK-0013 under E.Q. Rothwell™, BOOK-0003 correctly removed. Etsy stays DISCONNECTED in preview — do NOT connect. The preview 500 bug was fixed by main-agent-safe .get() change. Only remaining item: activate() approval-first gate ordering (main agent business decision).",
+  "rca of the issue": {
+    "user_reported_bug_catalog_integrity": "NOT A BUG — catalog is complete. All 8 authorized book_codes present, Patterns of Intelligence (BOOK-0013) exists and is E.Q. Rothwell™-imprinted, BOOK-0003 is the only trashed record. Publishing may proceed on catalog grounds.",
+    "found_bug_preview_500": "etsy_integration.preview() referenced payload['taxonomy_id'] with subscript access; _listing_payload only sets that key when DEFAULT_TAXONOMY_ID env or explicit tid arg is present. In preview env neither is set → KeyError → 500 → UI toast 'Preview failed'. Reproduction: POST /api/integrations/etsy/products/BOOK-0001/preview as super-admin. Mitigation: use payload.get('taxonomy_id') (applied)."
+  }
+}

@@ -95,6 +95,11 @@ async def publish(product_id: str, body: ApproveInput = ApproveInput(), user=Dep
                                     approved=body.approved, taxonomy_id=body.taxonomy_id)
 
 
+@router.post("/products/{product_id}/activate")
+async def activate(product_id: str, body: ApproveInput = ApproveInput(), user=Depends(require_super_admin)):
+    return await etsy.activate_listing(product_id, user.get("name", "Founder"), approved=body.approved)
+
+
 @router.patch("/products/{product_id}")
 async def update(product_id: str, user=Depends(require_super_admin)):
     return await etsy.update_listing(product_id, user.get("name", "Founder"))

@@ -34,7 +34,7 @@ SHARED_SECRET = os.environ.get("ETSY_SHARED_SECRET", "")
 SHOP_NAME_HINT = os.environ.get("ETSY_SHOP_NAME", "")
 SCOPES = (os.environ.get("ETSY_SCOPES") or "shops_r listings_r listings_w transactions_r").replace(",", " ").strip()
 REDIRECT_OVERRIDE = os.environ.get("ETSY_REDIRECT_URI", "")
-DEFAULT_TAXONOMY_ID = int(os.environ.get("ETSY_DEFAULT_TAXONOMY_ID", "1") or 1)
+DEFAULT_TAXONOMY_ID = int(os.environ["ETSY_DEFAULT_TAXONOMY_ID"]) if os.environ.get("ETSY_DEFAULT_TAXONOMY_ID", "").isdigit() else None
 
 _fernet = Fernet(os.environ["INTEGRATION_ENC_KEY"].encode())
 
@@ -541,16 +541,19 @@ def eligibility(prod):
 
 
 def _listing_payload(prod, taxonomy_id=None):
-    return {
+    payload = {
         "quantity": 999, "title": (prod["title"] or "")[:140],
         "description": prod["description"] or prod["title"],
         "price": float(prod["price"]) if prod["price"] else 0.0,
         "who_made": "i_did", "when_made": "2020_2025",
-        "taxonomy_id": int(taxonomy_id or DEFAULT_TAXONOMY_ID),
         "type": "download", "is_supply": False,
         "tags": prod["tags"], "state": "draft",
         "should_auto_renew": False,
     }
+    tid = taxonomy_id or DEFAULT_TAXONOMY_ID
+    if tid:
+        payload["taxonomy_id"] = int(tid)
+    return payload
 
 
 def _sync_hash(prod):
@@ -559,6 +562,115 @@ def _sync_hash(prod):
         "title": prod["title"], "description": prod["description"], "price": prod["price"],
         "tags": prod["tags"], "images": prod["images"], "files": prod["files"],
     }, sort_keys=True, default=str).encode()).hexdigest()
+
+
+async def _asset_bytes(url):
+    """Read a QRU asset's raw bytes from disk (re-materializing from durable storage if needed)."""
+    fname = url.rsplit("/", 1)[-1].split("?")[0]
+    import rendering_engine as reng
+    import storage
+    path = os.path.join(reng.ASSET_DIR, fname)
+    if not os.path.exists(path):
+        try:
+            await storage.aensure_local(fname, path)
+        except Exception:
+            pass
+    if not os.path.exists(path):
+        return None, fname
+    with open(path, "rb") as f:
+        return f.read(), fname
+
+
+async def _upload_image(shop_id, listing_id, url, access):
+    data, fname = await _asset_bytes(url)
+    if not data:
+        return False, "cover image bytes not found"
+    ct = "image/png" if fname.lower().endswith("png") else "image/jpeg"
+    async with httpx.AsyncClient(timeout=90) as client:
+        r = await client.post(
+            f"{API}/shops/{shop_id}/listings/{listing_id}/images",
+            headers={"x-api-key": _api_key(), "Authorization": f"Bearer {access}"},
+            files={"image": (fname, data, ct)}, data={"rank": "1"})
+    return (r.status_code < 400), (None if r.status_code < 400 else f"HTTP {r.status_code} {_redact(r.text)[:140]}")
+
+
+async def _upload_file(shop_id, listing_id, url, name, access):
+    data, fname = await _asset_bytes(url)
+    if not data:
+        return False, "digital file bytes not found"
+    async with httpx.AsyncClient(timeout=180) as client:
+        r = await client.post(
+            f"{API}/shops/{shop_id}/listings/{listing_id}/files",
+            headers={"x-api-key": _api_key(), "Authorization": f"Bearer {access}"},
+            files={"file": (name, data, "application/epub+zip")}, data={"name": name})
+    return (r.status_code < 400), (None if r.status_code < 400 else f"HTTP {r.status_code} {_redact(r.text)[:140]}")
+
+
+async def _resolve_taxonomy(access):
+    """Auto-pick a Books/Digital Etsy taxonomy leaf; cached on the integration doc."""
+    doc = await _integration()
+    if doc and doc.get("default_taxonomy_id"):
+        return doc["default_taxonomy_id"]
+    if DEFAULT_TAXONOMY_ID:
+        return DEFAULT_TAXONOMY_ID
+    try:
+        r = await _api("GET", "/seller-taxonomy/nodes", access=access)
+        if r.status_code >= 400:
+            return None
+        flat = []
+        def _walk(n):
+            flat.append(n)
+            for c in (n.get("children") or []):
+                _walk(c)
+        for n in r.json().get("results", []):
+            _walk(n)
+        exact = [n for n in flat if (n.get("name", "").lower() == "books")]
+        like = [n for n in flat if "book" in (n.get("name", "").lower())]
+        cand = (exact or like or [None])[0]
+        if cand and cand.get("id"):
+            await db[INTEG].update_one({"id": INTEG_ID}, {"$set": {
+                "default_taxonomy_id": cand["id"], "default_taxonomy_name": cand.get("name")}})
+            return cand["id"]
+    except Exception as e:
+        logger.info("ETSY taxonomy resolve error: %s", _redact(str(e))[:160])
+    return None
+
+
+async def activate_listing(product_id, actor, approved=False):
+    """Set a mapped DRAFT listing to ACTIVE (public + purchasable). Founder-approval gated;
+    requires the listing to already carry its cover image + digital file."""
+    mapping = await db[MAP].find_one({"qru_product_id": product_id})
+    if not mapping or not mapping.get("etsy_listing_id"):
+        return {"error": "No Etsy draft is mapped to this product yet — create the draft first."}
+    if mapping.get("etsy_listing_state") == "active":
+        return {"ok": True, "idempotent": True, "message": "Listing is already active.",
+                "etsy_url": mapping.get("etsy_url")}
+    if not approved:
+        return {"error": "Founder approval required to activate (go live). This makes the listing "
+                         "public and incurs Etsy's listing fee.", "requires_approval": True}
+    if not (mapping.get("image_uploaded") and mapping.get("file_uploaded")):
+        return {"error": "Cannot activate — the draft is missing its cover image or digital file. "
+                         "Recreate the draft so both attach, then activate."}
+    doc = await _integration()
+    shop_id = doc.get("shop_id")
+    try:
+        r = await _api("PATCH", f"/shops/{shop_id}/listings/{mapping['etsy_listing_id']}",
+                       data={"state": "active"})
+        if r.status_code >= 400:
+            await _audit("publish", "failure", f"Activate failed (HTTP {r.status_code}): {r.text}",
+                         {"product": mapping.get("qru_product_code")})
+            return {"error": "Etsy rejected activation. The draft is unchanged.",
+                    "detail": _redact(r.text)[:200]}
+        listing = r.json()
+    except Exception as e:
+        await _audit("publish", "failure", f"Activate error: {e}", {"product": mapping.get("qru_product_code")})
+        return {"error": "Failed to activate the Etsy listing."}
+    url = listing.get("url") or mapping.get("etsy_url")
+    await db[MAP].update_one({"id": mapping["id"]}, {"$set": {
+        "etsy_listing_state": "active", "etsy_url": url, "activated_at": now_iso(), "updated_at": now_iso()}})
+    await _audit("publish", "success", "Etsy listing ACTIVATED (live).",
+                 {"product": mapping.get("qru_product_code"), "listing_id": mapping["etsy_listing_id"]})
+    return {"ok": True, "message": "Etsy listing is now live and purchasable.", "etsy_url": url}
 
 
 async def preview(product_id, taxonomy_id=None):
@@ -581,7 +693,7 @@ async def preview(product_id, taxonomy_id=None):
         "listing_preview": {
             "title": payload["title"], "description": payload["description"],
             "price": payload["price"], "currency": prod["currency"], "quantity": payload["quantity"],
-            "taxonomy_id": payload["taxonomy_id"], "tags": payload["tags"],
+            "taxonomy_id": payload.get("taxonomy_id"), "tags": payload["tags"],
             "type": payload["type"], "state": "draft (on publish)",
             "renewal": "manual (auto-renew off)",
             "images": prod["images"], "files": prod["files"],
@@ -613,7 +725,14 @@ async def publish_draft(product_id, actor, approved=False, taxonomy_id=None):
     if not doc or not doc.get("encrypted_access_token"):
         return {"error": "Etsy is not connected."}
     shop_id = doc.get("shop_id")
-    payload = _listing_payload(prod, taxonomy_id)
+    if not shop_id:
+        return {"error": "No Etsy shop is resolved yet — run Test Connection first."}
+    access = await _access_token()
+    tid = taxonomy_id or await _resolve_taxonomy(access)
+    if not tid:
+        return {"error": "Could not determine an Etsy category (taxonomy). Set ETSY_DEFAULT_TAXONOMY_ID "
+                         "or choose a category, then retry."}
+    payload = _listing_payload(prod, tid)
     # Reserve the mapping first (idempotency guard against concurrent retries).
     idem = existing.get("id") if existing else gen_id()
     await db[MAP].update_one({"qru_product_id": prod["id"]}, {"$set": {
@@ -630,7 +749,8 @@ async def publish_draft(product_id, actor, approved=False, taxonomy_id=None):
                          {"product": prod.get("code")})
             return {"error": "Etsy rejected the draft listing. The QRU product was not changed.",
                     "detail": _redact(r.text)[:200]}
-        listing = r.json().get("results", [r.json()])[0] if isinstance(r.json(), dict) and "results" in r.json() else r.json()
+        j = r.json()
+        listing = (j.get("results") or [j])[0] if isinstance(j, dict) and "results" in j else j
         listing_id = listing.get("listing_id")
         url = listing.get("url") or f"https://www.etsy.com/listing/{listing_id}"
     except Exception as e:
@@ -638,17 +758,36 @@ async def publish_draft(product_id, actor, approved=False, taxonomy_id=None):
             "sync_status": "error", "last_error": _redact(str(e))[:200], "updated_at": now_iso()}})
         await _audit("publish", "failure", f"Create draft error: {e}", {"product": prod.get("code")})
         return {"error": "Failed to create the Etsy draft. The QRU product was not changed."}
+    # Digital listing needs a cover image and the downloadable file before it can go live.
+    image_ok, image_err = (False, None)
+    file_ok, file_err = (False, None)
+    if prod["images"]:
+        image_ok, image_err = await _upload_image(shop_id, listing_id, prod["images"][0], access)
+    if prod["files"]:
+        safe_name = "".join(ch for ch in (prod["title"] or "book") if ch.isalnum() or ch in " ._-").strip() or "book"
+        file_ok, file_err = await _upload_file(shop_id, listing_id, prod["files"][0], f"{safe_name}.epub", access)
     mapping = {
         "id": idem, "qru_product_id": prod["id"], "qru_product_code": prod["code"],
         "etsy_listing_id": listing_id, "etsy_shop_id": shop_id, "etsy_listing_state": "draft",
-        "qru_product_version": str(prod["version"]), "etsy_url": url,
+        "taxonomy_id": tid, "qru_product_version": str(prod["version"]), "etsy_url": url,
+        "image_uploaded": image_ok, "file_uploaded": file_ok,
+        "upload_warnings": [w for w in [image_err and f"image: {image_err}", file_err and f"file: {file_err}"] if w],
         "last_published_at": now_iso(), "last_synced_at": now_iso(),
         "last_sync_hash": _sync_hash(prod), "sync_status": "in_sync", "last_error": None,
         "updated_at": now_iso(),
     }
     await db[MAP].update_one({"qru_product_id": prod["id"]}, {"$set": mapping})
-    await _audit("publish", "success", "Etsy DRAFT created.", {"product": prod.get("code"), "listing_id": listing_id})
-    return {"ok": True, "mapping": mapping, "message": "Etsy draft listing created (not active)."}
+    await _audit("publish", "success",
+                 f"Etsy DRAFT created (image={image_ok}, file={file_ok}).",
+                 {"product": prod.get("code"), "listing_id": listing_id})
+    ready = image_ok and file_ok
+    return {"ok": True, "mapping": mapping,
+            "image_uploaded": image_ok, "file_uploaded": file_ok,
+            "ready_to_activate": ready,
+            "message": ("Etsy draft created with cover + file attached — ready to Activate (Go Live)."
+                        if ready else
+                        "Etsy draft created, but image/file upload had issues — see warnings before activating."),
+            "warnings": mapping["upload_warnings"]}
 
 
 async def update_listing(product_id, actor):
@@ -739,6 +878,8 @@ async def eligible_products(limit=100):
             "etsy_listing_id": (mapping or {}).get("etsy_listing_id"),
             "etsy_state": (mapping or {}).get("etsy_listing_state"),
             "etsy_url": (mapping or {}).get("etsy_url"),
+            "image_uploaded": (mapping or {}).get("image_uploaded"),
+            "file_uploaded": (mapping or {}).get("file_uploaded"),
             "sync_status": (mapping or {}).get("sync_status"),
         })
     out.sort(key=lambda r: (not r["eligible"], r["code"] or ""))
