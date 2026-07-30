@@ -326,13 +326,105 @@ async def art_direction(context, n=3):
     return briefs
 
 
-async def manufacture_bytes(context, *, kind="cover", size=None, n=3, slug="design"):
-    """Core: produce n publication-quality composited design concepts and return raw PNG BYTES
-    (so any caller can store them however it likes). Each item carries honest status + provenance."""
+def _typography_bg(variant, pal, W, H):
+    """Deterministic premium branded background (NO AI): brand gradient + geometric elements +
+    gold inset border. Composited under the standard typography overlay. Always succeeds."""
+    from PIL import Image, ImageDraw
+    top = pal.get("top", dl.QRU_ROYAL)
+    bottom = pal.get("bottom", dl.QRU_NAVY)
+    accent = pal.get("accent", dl.QRU_GOLD)
+    a = (accent[0], accent[1], accent[2])
+    img = dl._gradient(W, H, top, bottom).convert("RGBA")
+    ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(ov)
+    v = variant % 3
+    if v == 0:
+        r = int(W * 0.44)
+        cx, cy = int(W * 0.72), int(H * 0.30)
+        d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(a[0], a[1], a[2], 26))
+        r2 = int(r * 0.62)
+        d.ellipse([cx - r2, cy - r2, cx + r2, cy + r2], outline=(a[0], a[1], a[2], 70), width=max(2, W // 240))
+    elif v == 1:
+        d.polygon([(0, int(H * 0.18)), (W, int(H * 0.02)), (W, int(H * 0.16)), (0, int(H * 0.34))],
+                  fill=(a[0], a[1], a[2], 36))
+        m = int(W * 0.085); t = int(W * 0.03)
+        for (x, y) in [(m, m), (W - m, m), (m, H - m), (W - m, H - m)]:
+            d.line([(x - t, y), (x + t, y)], fill=(a[0], a[1], a[2], 130), width=3)
+            d.line([(x, y - t), (x, y + t)], fill=(a[0], a[1], a[2], 130), width=3)
+    else:
+        cx, cy = int(W * 0.5), int(H * 0.63)
+        for i, rr in enumerate([0.52, 0.42, 0.32, 0.22]):
+            r = int(W * rr)
+            d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=(a[0], a[1], a[2], 30 + i * 10),
+                      width=max(2, W // 260))
+    img = Image.alpha_composite(img, ov).convert("RGB")
+    bd = ImageDraw.Draw(img)
+    inset = int(W * 0.045)
+    bd.rectangle([inset, inset, W - inset, H - inset], outline=dl.QRU_GOLD, width=max(2, W // 300))
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    return buf.getvalue()
+
+
+def _brand_trio(context):
+    pal = dl.resolve_palette(family=context.get("family", ""), department=context.get("department", ""),
+                             topic=context.get("topic", "") or context.get("title", ""),
+                             title=context.get("title", ""))
+    pool = [pal, dl.PALETTES["business"], dl.PALETTES["default"], dl.PALETTES["faith"], dl.PALETTES["science"]]
+    trio, seen = [], set()
+    for p in pool:
+        if p.get("label") not in seen:
+            trio.append(p); seen.add(p.get("label"))
+        if len(trio) == 3:
+            break
+    return trio
+
+
+_TYPO_NAMES = ["Serif Classic", "Geometric", "Emblem"]
+
+
+def _typography_concept(idx, context, dims, kind, trio):
+    """One Premium Typography™ concept (no external provider). Always succeeds."""
+    pal = trio[(idx - 1) % len(trio)]
+    bg = _typography_bg(idx - 1, pal, dims[0], dims[1])
+    png = compose(bg, {"title": context.get("title", ""), "subtitle": context.get("subtitle", ""),
+                       "byline": context.get("byline", ""), "imprint": context.get("imprint", ""),
+                       "palette": pal.get("label", ""), "kind": kind, "size": dims})
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+    return {
+        "concept": idx, "name": f"Premium Typography — {_TYPO_NAMES[(idx - 1) % 3]}",
+        "art_direction": f"Deterministic QRU branded {kind}: {pal.get('label','QRU')} palette, "
+                         "geometric elements, gold border, premium serif typography.",
+        "palette": pal.get("label", ""), "png": png,
+        "status": "success", "has_ai_art": False, "generation_mode": "Premium Typography™",
+        "failure_reason": None, "thumbnail_legible": True,
+        "readability_status": "Title & byline legible at retail thumbnail size (premium serif on branded field).",
+        "provenance": {
+            "art_provider": "QRU Premium Typography™ (no external provider)", "art_model": "deterministic",
+            "art_direction_model": "n/a", "art_direction_prompt": "", "generation_time_sec": 0.0,
+            "generated_at": now, "fallback_used": False, "has_ai_art": False,
+            "failure_reason": None, "design_engine": "QRU Design Studio™", "standard": "STD-COV-0001",
+        },
+        "rights": "Rights-safe — original QRU branded typography cover (no AI image provider used).",
+    }
+
+
+async def manufacture_bytes(context, *, kind="cover", size=None, n=3, slug="design", mode="auto"):
+    """Core: produce n publication-quality design concepts and return raw PNG BYTES.
+    Cover Generation Standard™ (STD-COV-0001) modes:
+      • "typography" — Premium Typography™ only, no external provider, always succeeds.
+      • "ai"         — AI Artwork; honest per-concept failure if the provider fails.
+      • "auto"       — try AI, silently fall back to Premium Typography™ per concept (default)."""
     context = dict(context or {})
     context.setdefault("kind", kind)
     context.setdefault("slug", slug)
     dims = size or FORMATS.get(kind, FORMATS["cover"])
+    trio = _brand_trio(context)
+
+    if mode == "typography":
+        return [_typography_concept(i, context, dims, kind, trio) for i in range(1, n + 1)]
+
     briefs = await art_direction(context, n=n)
 
     async def _gen(idx, brief):
@@ -357,6 +449,16 @@ async def manufacture_bytes(context, *, kind="cover", size=None, n=3, slug="desi
     out = []
     for idx, (brief, (hero, elapsed, fail_reason)) in enumerate(zip(briefs, results), 1):
         success = hero is not None
+        if not success and mode == "auto":
+            # Silent, graceful fallback — never expose the provider failure to the Founder.
+            import logging as _lg
+            _lg.getLogger("design").warning("Cover AI art fell back to Premium Typography (concept %s): %s",
+                                             idx, fail_reason)
+            c = _typography_concept(idx, context, dims, kind, trio)
+            c["provenance"]["fallback_used"] = True
+            c["provenance"]["ai_attempt_failed"] = fail_reason
+            out.append(c)
+            continue
         png = compose(hero, {"title": context.get("title", ""), "subtitle": context.get("subtitle", ""),
                              "byline": context.get("byline", ""), "imprint": context.get("imprint", ""),
                              "palette": brief.get("palette", ""), "kind": kind, "size": dims})
@@ -365,7 +467,7 @@ async def manufacture_bytes(context, *, kind="cover", size=None, n=3, slug="desi
             "art_direction": brief.get("art_prompt", ""), "palette": brief.get("palette", ""),
             "png": png,
             "status": "success" if success else "failed",
-            "has_ai_art": success,
+            "has_ai_art": success, "generation_mode": "AI Artwork",
             "failure_reason": None if success else fail_reason,
             "thumbnail_legible": True,
             "readability_status": "Title & byline legible at retail thumbnail size (composited scrim + high-contrast serif).",
@@ -374,6 +476,7 @@ async def manufacture_bytes(context, *, kind="cover", size=None, n=3, slug="desi
                 "art_direction_prompt": brief.get("art_prompt", ""), "generation_time_sec": elapsed,
                 "generated_at": now, "fallback_used": not success, "has_ai_art": success,
                 "failure_reason": None if success else fail_reason, "design_engine": "QRU Design Studio™",
+                "standard": "STD-COV-0001",
             },
             "rights": "Rights-safe — AI-generated original artwork (no third-party imagery)." if success
                       else "AI artwork could not be generated for this concept (honest failure — a branded placeholder is shown, NOT presented as real art).",
@@ -381,10 +484,22 @@ async def manufacture_bytes(context, *, kind="cover", size=None, n=3, slug="desi
     return out
 
 
-async def manufacture_design_concepts(context, *, kind="cover", size=None, n=3, slug="design"):
+def cover_mode_summary(concepts, requested_mode):
+    """Batch-level mode + Founder-facing notice derived from the produced concepts."""
+    any_ai = any(c.get("has_ai_art") for c in concepts)
+    any_typo = any(not c.get("has_ai_art") for c in concepts)
+    if requested_mode == "typography" or (requested_mode == "auto" and not any_ai):
+        return {"cover_mode_requested": requested_mode, "cover_mode_used": "Premium Typography™",
+                "cover_notice": ("AI artwork unavailable. Premium Typography™ covers generated automatically."
+                                 if requested_mode == "auto" else None)}
+    return {"cover_mode_requested": requested_mode, "cover_mode_used": "AI Artwork",
+            "cover_notice": None, "cover_partial_typography": bool(any_typo)}
+
+
+async def manufacture_design_concepts(context, *, kind="cover", size=None, n=3, slug="design", mode="auto"):
     """Produce n publication-quality design concepts and SAVE them to the shared asset store,
     returning concept dicts with url/status/has_ai_art/provenance (Book-system structure)."""
-    items = await manufacture_bytes(context, kind=kind, size=size, n=n, slug=slug)
+    items = await manufacture_bytes(context, kind=kind, size=size, n=n, slug=slug, mode=mode)
     concepts = []
     for it in items:
         fid = re_engine._save(f"{slug}-c{it['concept']}", "png", it["png"])
@@ -392,3 +507,4 @@ async def manufacture_design_concepts(context, *, kind="cover", size=None, n=3, 
         c["url"] = re_engine._asset_url(fid)
         concepts.append(c)
     return concepts
+
