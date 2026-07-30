@@ -91,9 +91,14 @@ async def _audit(action, status, detail="", meta=None):
 
 
 # ------------------------------------------------------------------ headers ---
+def _api_key():
+    # Etsy Open API v3 requires the shared secret in x-api-key: "{keystring}:{shared_secret}".
+    return f"{KEYSTRING}:{SHARED_SECRET}" if SHARED_SECRET else KEYSTRING
+
+
 def _headers(access_token: str):
-    # Etsy Open API v3: x-api-key = app keystring; Bearer = user access token.
-    return {"x-api-key": KEYSTRING, "Authorization": f"Bearer {access_token}"}
+    # x-api-key = keystring:shared_secret; Bearer = user access token.
+    return {"x-api-key": _api_key(), "Authorization": f"Bearer {access_token}"}
 
 
 def is_configured():
@@ -153,7 +158,7 @@ async def handle_callback(state: str, code: str, error: str = None):
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             r = await client.post(TOKEN_URL, data=data, headers={
-                "Content-Type": "application/x-www-form-urlencoded", "x-api-key": KEYSTRING})
+                "Content-Type": "application/x-www-form-urlencoded", "x-api-key": _api_key()})
         if r.status_code >= 400:
             await _audit("connect", "failure", f"Token exchange rejected (HTTP {r.status_code}).")
             return origin, False, "Etsy rejected the authorization. Please verify the app credentials and redirect URI, then try again."
@@ -207,7 +212,7 @@ async def _refresh(doc):
                "refresh_token": _dec(doc.get("encrypted_refresh_token", ""))}
     async with httpx.AsyncClient(timeout=30) as client:
         r = await client.post(TOKEN_URL, data=payload, headers={
-            "Content-Type": "application/x-www-form-urlencoded", "x-api-key": KEYSTRING})
+            "Content-Type": "application/x-www-form-urlencoded", "x-api-key": _api_key()})
     if r.status_code >= 400:
         await db[INTEG].update_one({"id": INTEG_ID}, {"$set": {
             "connection_status": "expired", "last_error": "Token refresh failed — reconnect required.",
