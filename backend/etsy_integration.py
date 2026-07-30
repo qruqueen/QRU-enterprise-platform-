@@ -264,8 +264,6 @@ async def status():
                 "mapped_products": 0, "draft_listings": 0, "active_listings": 0}
     expired = float(doc.get("token_expires_at", 0)) < time.time() and not doc.get("encrypted_refresh_token")
     st = "expired" if expired else (doc.get("connection_status") or "connected")
-    if doc.get("last_error") and st == "connected":
-        pass
     mapped = await db[MAP].count_documents({})
     drafts = await db[MAP].count_documents({"etsy_listing_state": "draft"})
     active = await db[MAP].count_documents({"etsy_listing_state": "active"})

@@ -13,6 +13,16 @@ Engine, Level-5 Autonomy, QRU Constitution governance, "First Dollar Mode".
 - Language: English only (code, comments, UI).
 
 
+## ✅ Etsy Open API v3 — governed integration (2026-07-30) — testing_agent iteration_100, 100% backend + frontend, 0 issues
+Founder-approved. Secure framework built to the STOP CONDITION (connect + read-only test + preview + draft capability; NO bulk publish; NO auto-activation).
+- **Backend:** `etsy_integration.py` engine + `routers/etsy.py` (all `/api/integrations/etsy/*`, super-admin; only `GET /callback` is unauth, secured by OAuth state). OAuth 2.0 Authorization Code + **PKCE S256**; crypto-secure state+verifier per attempt stored server-side (`etsy_oauth_sessions`) and verified before code exchange. Tokens **encrypted at rest** (Fernet, reuse `INTEGRATION_ENC_KEY`) in `etsy_integrations`; **auto-refresh** with refresh-token rotation. Keystring/shared-secret/tokens NEVER returned to browser or logged (`_redact()` on all audit/detail). Full audit trail (`etsy_audit`): connect/disconnect/publish/update/sync/test/token_refresh/failure.
+- **Governance gate:** a QRU product reaches Etsy only when QA complete + Authorized + deliverable file present + listing image present + metadata populated + no blocking issue (content-integrity/imprint-mismatch). **Draft-first + idempotent** (mapping in `etsy_listing_mappings` keyed by qru_product_id → retries never duplicate). Preview causes NO Etsy mutation. Etsy listings never auto-deleted.
+- **Routes:** status, connect, callback, disconnect, test, listings, orders, products, products/{id}/preview, publish (approval-gated), PATCH products/{id}, products/{id}/sync.
+- **Frontend:** `/etsy` (nav "Etsy Integration™", super-admin) — connection card (status/shop/scopes/counts/last error, Connect/Test/Disconnect) + eligible-products table with per-product Preview / Create Draft / View / Compare (Sync) / Update controls + governance preview panel.
+- **Env (backend/.env, server-side only):** ETSY_API_KEYSTRING, ETSY_SHARED_SECRET, ETSY_SCOPES. Tokens stored encrypted in DB (not env).
+- **PENDING FOUNDER ACTION (unavoidable):** live OAuth consent needs the Founder's Etsy account/browser. To finish the STOP CONDITION's "one test-product draft": (1) register redirect URIs in the Etsy app — `https://qru-online.com/api/integrations/etsy/callback` AND `https://enterprise-os-17.preview.emergentagent.com/api/integrations/etsy/callback`; (2) Deploy (prod picks up code + env); (3) click **Connect Etsy** on /etsy → approve on Etsy; (4) Preview → Create Draft on one authorized product. Everything else is verified.
+
+
 ## ✅ Imprint Canonicalization & Duplicate Merge (2026-07-29, RI-IMPRINT-0001) — self-verified full lifecycle
 Founder brand-identity correction. New `imprint_rules.py` = single source of truth for imprint + genre.
 - **Two imprints, one rule each:** **E.Q. Rothwell™** (LITERARY: The Understanding Tree, Ordinary Tuesdays, Patterns of Intelligence — author "E.Q. Rothwell"); **QRU Press™** (all educational/institutional — author "QRU Editorial" unless explicitly assigned). Author never inferred from imprint.
