@@ -1,0 +1,25 @@
+{
+  "summary": "Iteration 102 — RETEST of the two fixes from iteration_101. Both FIX 1 (activate approval-first gate ordering) and FIX 2 (preview 500 -> 200 with taxonomy_id.get()) are verified. 11/11 pytest cases PASS. UI test on /etsy confirms Preview button for BOOK-0001 opens 'etsy-preview-panel' with 6 governance checks and no 'Preview failed' toast. Catalog regression PASS (8 books, PoI under E.Q. Rothwell™). Security regression PASS (401 without token). No mapping/etsy_listing_mappings created during test run.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration102_etsy_retest.py",
+    "/app/test_reports/pytest/iteration_102.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Both fixes are minimal, correct, and safely scoped. activate_listing() now enforces approval-first ordering (line 642, first statement); preview() uses payload.get('taxonomy_id') (line 696). No side-effects observed.",
+    "Nice-to-have (not blocking): eligibility() detail strings could name which metadata field failed. Carried over from prior iterations."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration102_etsy_retest.py (new — 11 cases)"],
+  "success_rate": {"backend": "100% (11/11)", "frontend": "100%"},
+  "test_credentials": "demo.admin@qru.com / qru-demo-admin-2026 (Administrator satisfies require_super_admin). Token field: access_token.",
+  "seed_data_creation": "None. Verified no etsy_listing_mappings created (all 8 authorized books have etsy_listing_id = null).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Etsy remains DISCONNECTED in preview by design. Both governance fixes verified end-to-end. Reusable test file: /app/backend/tests/test_iteration102_etsy_retest.py covers activate approval gate, preview payload safety, catalog integrity, and auth requirements.",
+  "rca of the issue": {
+    "fix1_activate_approval_first": "VERIFIED. activate_listing() now returns {requires_approval:true} for {approved:false} regardless of mapping state (tested on BOOK-0001, BOOK-0013). With {approved:true} and no mapping, returns 'No Etsy draft is mapped...'.",
+    "fix2_preview_taxonomy_id": "VERIFIED. POST /preview for BOOK-0001, BOOK-0013, BOOK-0016 all return 200 with eligibility + listing_preview (taxonomy_id may be null but key present). UI panel opens with 6 governance checks, no error toast."
+  }
+}

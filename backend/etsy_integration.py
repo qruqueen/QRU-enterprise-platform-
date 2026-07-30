@@ -639,15 +639,15 @@ async def _resolve_taxonomy(access):
 async def activate_listing(product_id, actor, approved=False):
     """Set a mapped DRAFT listing to ACTIVE (public + purchasable). Founder-approval gated;
     requires the listing to already carry its cover image + digital file."""
+    if not approved:
+        return {"error": "Founder approval required to activate (go live). This makes the listing "
+                         "public and incurs Etsy's listing fee.", "requires_approval": True}
     mapping = await db[MAP].find_one({"qru_product_id": product_id})
     if not mapping or not mapping.get("etsy_listing_id"):
         return {"error": "No Etsy draft is mapped to this product yet — create the draft first."}
     if mapping.get("etsy_listing_state") == "active":
         return {"ok": True, "idempotent": True, "message": "Listing is already active.",
                 "etsy_url": mapping.get("etsy_url")}
-    if not approved:
-        return {"error": "Founder approval required to activate (go live). This makes the listing "
-                         "public and incurs Etsy's listing fee.", "requires_approval": True}
     if not (mapping.get("image_uploaded") and mapping.get("file_uploaded")):
         return {"error": "Cannot activate — the draft is missing its cover image or digital file. "
                          "Recreate the draft so both attach, then activate."}
