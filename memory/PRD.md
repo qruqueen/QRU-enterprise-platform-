@@ -1,5 +1,13 @@
 # QRU Factory™ — Enterprise Knowledge Manufacturing OS
 
+## ✅ Catalog integrity verified + Etsy publish pipeline (draft→upload→activate) (2026-07-30) — testing_agent iterations 101/102, 100%
+- **Reported bug (catalog completeness) — NOT a bug, verified complete:** all 8 authorized books present; **Patterns of Intelligence (BOOK-0013) intact under E.Q. Rothwell™**; only the intended duplicate (BOOK-0003 "Ordinary Tuesdays FULL MANUSCRIPT") was merged into canonical BOOK-0004 and moved to `book_records_trash`. Public catalog returns 8.
+- **Etsy publish pipeline** (`etsy_integration.py`): `publish_draft` now auto-resolves a Books/Digital taxonomy (`_resolve_taxonomy`, cached on integration doc), creates the draft, and uploads the **cover image** + **epub file** (read from disk via `_asset_bytes`). New `activate_listing` (go-live) is a SEPARATE, approval-gated step that also requires image+file attached and is idempotent. Route: `POST /api/integrations/etsy/products/{id}/activate`. UI: Etsy page shows attach-status (img/file) + state badge + "Activate (Go Live)" button (gated on connected + uploads).
+- Founder choices: test product = The Understanding Tree (BOOK-0001); draft-only then manual Activate; auto-pick category.
+- Fixed during testing: preview 500 (taxonomy key) and activate approval-gate ordering (approval check now runs first).
+- ⚠️ **Live publish requires production** (Etsy is connected there, not in preview). Founder: redeploy, then on qru-online.com /etsy → Create Draft on BOOK-0001 → review in Shop Manager → Activate.
+
+
 ## Original Problem Statement
 Production-ready enterprise OS for "QRU", a knowledge-manufacturing company using an autonomous
 "Digital Workforce" to manufacture educational products. Core: Stripe commerce, Enterprise Workflow
