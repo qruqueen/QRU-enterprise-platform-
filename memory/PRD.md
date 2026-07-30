@@ -1,3 +1,21 @@
+## ✅ UCAMS Founder UI + Publication Governance UI + QR Scanning + Marketplace Packages — done & tested (2026-07-30)
+Completed the 4 selected Phase-1 items. Frontend testing_agent = **100%** (iteration_104); backend curl-verified.
+
+### QR Scanning (real, from finished asset) — `creative_asset_system.py`
+- Installed `opencv-python-headless` (in requirements.txt). `scan_qr()` rasterizes PDF pages (fitz @200dpi) / decodes images via `cv2.QRCodeDetector`; `validate_qr()` confirms QR exists + decodes + destination matches expected URL. Wired into `validate_asset(expected_qr_url=...)` → wrong/broken/missing QR = **FAIL**. New endpoint `POST /api/creative-assets/qr-scan`. Verified: correct→PASS, wrong→FAIL, missing→FAIL, integrated check qr=True.
+
+### Marketplace Packages — `build_marketplace_package()` + `GET /api/creative-assets/package/{engine}/{id}?marketplace=`
+- Etsy/Amazon KDP/TpT/Shopify/QRU Online: required roles per storefront, gathers Approved+Locked assets, reports present/missing, listing copy (from descriptions channel), pricing, and the STD-PUB-0001 decision. Review-ready only — never auto-publishes. Verified: Etsy shows missing marketplace_image + Review Ready + BLOCKED; KDP requires print_cover_wrap + digital_cover.
+
+### Creative Assets Founder UI — `/creative-assets` (`CreativeAssets.js`, nav added)
+- Product picker → 8 inherited required specs (profile status + present/missing), Generate Spec (shows spec + checksum), Upload artwork (base64, rights checkbox, optional expected-QR), inline validation result + QR badge, per-asset Approve/Lock/Reject/Archive, and Marketplace Package builder with readiness/decision. Usable entirely without API calls.
+
+### Publication Governance UI — `/publication-governance` (`PublicationGovernance.js`, nav added)
+- Product picker → 5 destination cards each showing governed policy mode, decision badge, resolved-from, passed-count + **missing-requirements** list; Publish button DISABLED unless auto-publish authorized (constitutional); Governed Policy Override panel (scope/destination/mode → Set Policy); Publication History panel. Verified via testing_agent: inheritance display, override updates mode, disabled-publish-when-blocked all pass.
+
+### Still pending (honest): Visual QA as a formal render-time hard-gate module (rasterization heuristics), deep per-family validation (motion/video, safe-zone pixels, PDF/X + font-embedding checks), Creative Manufacturing Dashboard aggregate view, localization, campaigns/bundles, live marketplace publishing integrations. ⚠️ Preview only — redeploy for production.
+
+
 ## ✅ Rendering Pipeline P1 + Governed Publication Policy™ (STD-PUB-0001) — done & verified (2026-07-30)
 
 ### Rendering Pipeline P1 (customer-facing defect fix, factory-wide)
