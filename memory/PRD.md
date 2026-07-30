@@ -1,3 +1,12 @@
+## ✅ Factory Concierge — existing-KR resolution fix (2026-07-30) — testing_agent iteration_103, 100% (7/7 backend, frontend clean)
+Bug: entering an exact KR ID ("KR-00080 — AI Literacy") was treated as a NEW topic and offered new research (tokenizer mangled `KR-00080`→`{'kr-'}`). Fixed:
+- New `resolve_existing_assets()` in `factory_os.py` detects explicit KR/BOOK codes (regex) + exact/high-confidence titles BEFORE the fuzzy gate. `knowledge_gap_check()` now returns: resolved Verified KR (→ ready, no new research), `needs_verification` (KR exists but not Verified), `multiple_matches`+`selector` (>1 KR), or `manuscript_sources` (existing book_record offered as source asset). Read-only — never creates a KR.
+- `factory_concierge.handle_message()` renders stages: ready (shows KR title + "Verified", normalizes topic to KR title), select_kr (selector chips), kr_needs_verification, manuscript_source. Returns `selector` + `manuscript_sources`.
+- Frontend `FactoryConcierge.js`: renders suggestion/selector chips at any stage; guards the offer button.
+- Verified: KR-00080 (all forms) → ready/launch; BOOK-0017 offered as manuscript source; KR-00069/00083 → selector; unknown topic → honest new-research; KR count stays 85 (no dupes).
+- ⚠️ Fixed in preview — Founder must **redeploy** for production (qru-online.com).
+
+
 # QRU Factory™ — Enterprise Knowledge Manufacturing OS
 
 ## ✅ Catalog integrity verified + Etsy publish pipeline (draft→upload→activate) (2026-07-30) — testing_agent iterations 101/102, 100%
