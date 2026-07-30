@@ -56,6 +56,7 @@ INHERITED_STANDARDS_BASE = [
     {"id": "STD-MFG-0001", "name": "QRU Governed Product Description Manufacturing™", "owns": "Customer-facing descriptions from verified knowledge ($0 default); AI is an optional enhancement, never a dependency"},
     {"id": "STD-BLB-0001", "name": "QRU Governed Back Cover Manufacturing™", "owns": "Back-cover copy from verified knowledge ($0 default) — an application of STD-MFG-0001"},
     {"id": "STD-UCAMS-0001", "name": "QRU Universal Creative Asset Manufacturing System™", "owns": "Governed visual-asset specs, validation, lineage & distribution manifests across all destinations"},
+    {"id": "STD-PUB-0001", "name": "QRU Governed Publication Policy™", "owns": "Publication authorization by governed inherited policy + constitutional requirements gate — never by code defaults"},
     {"id": "STD-TREASURE-0001", "name": "Treasure Standard™", "owns": "Absolute honesty — no fake states"},
     {"id": "STD-VER-0001", "name": "Verification Standard™", "owns": "Evidence before publication"},
     {"id": "STD-EVID-0001", "name": "Evidence Standard™", "owns": "Auditable manufacturing record"},

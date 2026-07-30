@@ -95,6 +95,7 @@ from routers.migrations import router as migrations_router
 from routers.etsy import router as etsy_router
 from routers.descriptions import router as descriptions_router
 from routers.creative_assets import router as creative_assets_router
+from routers.publication import router as publication_router
 from routers.store_health import router as store_health_router
 from routers.distribution_arch import router as distribution_arch_router
 from routers.bundles import router as bundles_router
@@ -176,6 +177,7 @@ for r in [
     etsy_router,
     descriptions_router,
     creative_assets_router,
+    publication_router,
     store_health_router,
     distribution_arch_router,
     bundles_router,

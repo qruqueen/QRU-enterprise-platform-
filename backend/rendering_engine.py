@@ -120,9 +120,63 @@ def _make_qr(url):
 
 
 def _strip_md(text):
-    text = re.sub(r"[#*_`>]", "", text or "")
-    text = text.replace("\u2122", "(TM)").replace("\u2019", "'").replace("\u2018", "'").replace("\u201c", '"').replace("\u201d", '"').replace("\u2013", "-").replace("\u2014", "-")
-    return text.encode("latin-1", "replace").decode("latin-1")
+    """Publication text normalizer (STD-PUB rendering): converts inline Markdown to clean prose and
+    returns REAL Unicode (fonts are embedded downstream, so we NEVER latin-1 encode → no `?`/� corruption).
+    - links `[text](url)` → `text`; images `![alt](url)` → dropped
+    - emphasis `**b**`/`*i*`/`__b__`/`_i_`/`` `code` `` → inner text
+    - pipe-table separator rows dropped; `|` → spacing
+    - leading heading hashes stripped; replacement chars removed; rare non-embeddable glyphs mapped."""
+    t = text or ""
+    t = _MD_IMAGE.sub("", t)
+    t = _MD_LINK.sub(lambda m: m.group(1), t)
+    t = _MD_BOLD.sub(r"\1", t)
+    t = _MD_BOLD2.sub(r"\1", t)
+    t = _MD_ITALIC.sub(r"\1", t)
+    t = _MD_ITALIC2.sub(r"\1", t)
+    t = _MD_CODE.sub(r"\1", t)
+    t = re.sub(r"^\s{0,3}#{1,6}\s*", "", t)          # stray leading heading hashes
+    if re.match(r"^\s*\|?[\s\-:|]+\|?\s*$", t) and "-" in t:
+        return ""                                     # markdown table separator row
+    t = t.replace("|", "  ")
+    t = t.replace("\u00a0", " ").replace("\ufffd", "")  # nbsp → space; drop any replacement chars
+    for k, v in _GLYPH_MAP.items():
+        t = t.replace(k, v)
+    return t
+
+
+_MD_IMAGE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
+_MD_LINK = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
+_MD_BOLD = re.compile(r"\*\*([^*]+)\*\*")
+_MD_BOLD2 = re.compile(r"__([^_]+)__")
+_MD_ITALIC = re.compile(r"(?<![\w*])\*([^*\n]+)\*(?![\w*])")
+_MD_ITALIC2 = re.compile(r"(?<![\w_])_([^_\n]+)_(?![\w_])")
+_MD_CODE = re.compile(r"`([^`]+)`")
+# Glyphs the bundled Liberation fonts may lack → safe, meaning-preserving equivalents (avoids .notdef box).
+_GLYPH_MAP = {
+    "\u2794": "->", "\u2192": "\u2192", "\u2013": "\u2013", "\u2014": "\u2014",
+    "\u2610": "[ ]", "\u2611": "[x]", "\u2612": "[x]", "\u2705": "[x]", "\u274c": "[x]",
+    "\u25aa": "\u2022", "\u25cf": "\u2022", "\u2043": "\u2022", "\u00ad": "",
+}
+
+
+FONT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "fonts")
+_QRU_FONTS = {
+    ("QRUSerif", ""): "LiberationSerif-Regular.ttf",
+    ("QRUSerif", "B"): "LiberationSerif-Bold.ttf",
+    ("QRUSans", ""): "LiberationSans-Regular.ttf",
+    ("QRUSans", "B"): "LiberationSans-Bold.ttf",
+}
+
+
+def _register_fonts(pdf):
+    """Embed the bundled Unicode TTFs so ™, arrows, dashes, curly quotes render correctly (no `?`/box)."""
+    for (fam, style), fname in _QRU_FONTS.items():
+        path = os.path.join(FONT_DIR, fname)
+        if os.path.exists(path):
+            try:
+                pdf.add_font(fam, style, path)
+            except Exception:
+                pass
 
 
 # Suffixes that are internal/format labels or redundant — never customer-facing on a title.
@@ -157,6 +211,13 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
         retail_mode = False
         retail_title = ""
 
+        def set_font(self, family="", style="", size=0):
+            fam = {"times": "QRUSerif", "helvetica": "QRUSans", "arial": "QRUSans",
+                   "courier": "QRUSans"}.get((family or "").lower(), family or "QRUSerif")
+            if isinstance(style, str):
+                style = style.upper().replace("I", "")   # bundled TTFs are Regular+Bold only (no italic)
+            super().set_font(fam, style, size)
+
         def footer(self):
             # Skip footer on the cover page.
             if self.page_no() == 1:
@@ -167,12 +228,13 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
             self.ln(2)
             self.set_font("Times", "I", 8); self.set_text_color(120, 120, 130)
             # Retail editions show only the book title as a running foot — no manufacturing branding.
-            self.cell(0, 6, _strip_md(self.retail_title if self.retail_mode else "QRU PRESS(TM) - Quest for Real Understanding"), align="L")
+            self.cell(0, 6, self.retail_title if self.retail_mode else "QRU PRESS\u2122 \u2014 Quest for Real Understanding", align="L")
             self.set_font("Helvetica", "", 8)
             self.cell(0, 6, str(self.page_no() - 1), align="R")
 
     # 6 x 9 in trade paperback (KDP standard) — dimensions in mm: 152.4 x 228.6.
     pdf = QRUPDF(format=(152.4, 228.6))
+    _register_fonts(pdf)   # embed Unicode TTFs BEFORE any set_font/add_page (footer uses fonts)
     if product.get("retail_publication"):
         pdf.retail_mode = True
         pdf.retail_title = title_txt
@@ -215,7 +277,7 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
             if gf.get("licensing"):
                 pdf.ln(1); pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md(gf["licensing"]))
             pdf.ln(4); pdf.set_font("Helvetica", "B", 11); pdf.set_text_color(*ROYAL)
-            pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md("Product Governance Package(TM)"))
+            pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md("Product Governance Package™"))
             pdf.set_text_color(*NAVY); pdf.set_font("Times", "", 10.5)
             for dstmt in gf.get("disclaimers", []):
                 pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md("- " + dstmt))
@@ -228,7 +290,7 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
                 pdf.ln(1); pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md("Accessibility: " + gf["accessibility"]))
     else:
         pdf.set_text_color(*ROYAL); pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(0, 6, _strip_md(f"QRU PRESS(TM)   -   {family_txt.upper()}"))
+        pdf.cell(0, 6, _strip_md(f"QRU PRESS™   -   {family_txt.upper()}"))
         pdf.ln(16)
         pdf.set_text_color(*NAVY); pdf.set_font("Times", "B", 26)
         pdf.multi_cell(0, 12, title_txt)
@@ -259,14 +321,14 @@ def _make_pdf(product, kr, cover_bytes, qr_bytes):
                 "Book", title=product.get("title", ""), version=product.get("kr_version", 1),
                 domain=product.get("family", ""), audience=product.get("audience", ""),
                 high_stakes=bool(product.get("high_stakes")))
-            front_items = ["Copyright", "Product Governance Package(TM)", "Transparency & Disclaimer", "Table of Contents"]
+            front_items = ["Copyright", "Product Governance Package™", "Transparency & Disclaimer", "Table of Contents"]
             pdf.add_page(); pdf.set_text_color(*ROYAL); pdf.set_font("Helvetica", "B", 10)
             pdf.cell(0, 7, _strip_md("FRONT MATTER")); pdf.ln(10)
             pdf.set_text_color(*NAVY); pdf.set_font("Times", "", 11)
             pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md(gp.get("copyright", "")))
             pdf.ln(1); pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md(gp.get("licensing", "")))
             pdf.ln(4); pdf.set_font("Helvetica", "B", 11); pdf.set_text_color(*ROYAL)
-            pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md("Product Governance Package(TM)")); pdf.set_text_color(*NAVY)
+            pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 6, _strip_md("Product Governance Package™")); pdf.set_text_color(*NAVY)
             pdf.set_font("Times", "", 10.5)
             for dstmt in gp.get("disclaimers", []):
                 pdf.set_x(pdf.l_margin); pdf.multi_cell(0, 5.5, _strip_md("- " + dstmt))

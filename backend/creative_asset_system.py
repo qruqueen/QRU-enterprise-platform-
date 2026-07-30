@@ -424,29 +424,38 @@ async def set_asset_state(asset_id, new_state, actor="Founder"):
 # CDM™ — Creative Distribution Manifest. NEVER auto-publishes (§24).
 # ---------------------------------------------------------------------------
 async def build_distribution_manifest(product, destinations, actor="Founder"):
-    """Produce a machine-readable distribution package. Only APPROVED/LOCKED assets are eligible;
-    publication_mode defaults to 'Export Only' — passing validation is NOT permission to publish."""
+    """Produce a machine-readable distribution package. The publication_mode for each destination is now
+    determined by GOVERNED POLICY (STD-PUB-0001) — not a hard-coded default. Passing validation is still
+    NOT permission to publish; auto-publish requires an authorizing decision from the policy engine."""
+    import publication_policy as pp
     entries = []
     for dest in destinations:
         assets = await db[ASSET_COLL].find(
             {"product_id": product.get("id"), "platform_id": dest,
              "lifecycle_state": {"$in": ["Approved", "Locked", "Platform Validated", "Distribution Authorized"]}},
             {"_id": 0}).to_list(50)
-        authorized = any(a["lifecycle_state"] == "Distribution Authorized" for a in assets)
+        decision = await pp.decide(product, dest)
         entries.append({
             "destination": dest, "assets": [{"asset_id": a["asset_id"], "role": a["asset_role"],
                                              "file_url": a["file_url"], "version": a["version"],
                                              "state": a["lifecycle_state"]} for a in assets],
             "listing_copy": (product.get("descriptions") or {}),
-            "publication_mode": "Authorized to Publish" if authorized else "Export Only",
-            "publish_blocked_reason": None if authorized else "No asset has Distribution Authorized state — export package only.",
+            "governed_policy_mode": decision["policy"]["effective_mode"],
+            "policy_resolved_from": decision["policy"]["resolved_from"],
+            "publication_decision": decision["decision"],
+            "publication_mode": {"AUTHORIZED": "Authorized to Publish", "REVIEW_READY": "Review Ready",
+                                 "EXPORT_ONLY": "Export Only", "BLOCKED": "Export Only"}.get(decision["decision"], "Export Only"),
+            "can_publish": decision["can_publish"],
+            "publish_blocked_reason": None if decision["can_publish"] else decision["human_readable"],
+            "missing_requirements": decision["requirements"]["missing"],
         })
     manifest = {
         "standard": STANDARD_ID, "manifest_id": f"CDM-{gen_id()[:8].upper()}",
         "product_id": product.get("id"), "title": product.get("title"),
         "built_at": _now(), "built_by": actor, "destinations": entries,
-        "note": "Machine-readable distribution package. The Factory does NOT auto-publish; a destination "
-                "must have active integration + verified credentials + authorization before any publish.",
+        "note": "Publication mode is set by Governed Publication Policy™ (STD-PUB-0001), not code defaults. "
+                "The Factory does NOT auto-publish unless the policy engine authorizes it and every "
+                "constitutional requirement passes.",
     }
     return manifest
 

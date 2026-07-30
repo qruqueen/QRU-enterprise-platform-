@@ -1,3 +1,24 @@
+## ✅ Rendering Pipeline P1 + Governed Publication Policy™ (STD-PUB-0001) — done & verified (2026-07-30)
+
+### Rendering Pipeline P1 (customer-facing defect fix, factory-wide)
+Root-cause fix in the SHARED renderer `rendering_engine.py` (`_make_pdf`, used by books + `products` via `deliverable_renderer`):
+- **Embedded Unicode fonts**: `QRUPDF.set_font` override maps Times→QRUSerif / Helvetica→QRUSans (bundled Liberation TTFs, Regular+Bold; italic→regular); `_register_fonts()` embeds them before any render. Kills the latin-1 `?`/� corruption at the source.
+- **`_strip_md` rewritten**: strips Markdown links `[t](u)`→`t`, images dropped, `**/*/__/_/`code`` emphasis→inner text, pipe-table separator rows dropped + `|`→spacing, leading `#` stripped, replacement chars removed, rare non-embeddable glyphs mapped. Returns REAL Unicode (no latin-1). All `(TM)` literals → real `™`.
+- Single TOC already guaranteed by `book_structure.toc_entries` + `strip_navigation` (unchanged).
+- **Verified (fitz text extraction):** torture test → 0 replacement chars, 0 raw md links/images, real ™ + → + em-dash + curly quotes render, bold/italic markers gone, table separators dropped; **deterministic** (identical output from identical input). Pivot Points preview copy is a 41-char stub (no manuscript) so its own TOC=0 — honest.
+
+### Governed Publication Policy™ (STD-PUB-0001) — constitutional; replaces hard-coded CDM default
+`publication_policy.py` + `routers/publication.py` (`/api/publication/*`). **Publishing is determined by governed policy, never code defaults.**
+- **6 modes** (Export Only / Review Ready / Authorized Auto Publish / Scheduled / Enterprise Workflow / Disabled). **22 constitutional requirements**; auto-publish requires ALL applicable to pass (unknown/absent ⇒ blocks).
+- **Inheritance** enterprise→imprint→series→product_family→product→edition (most-specific wins) via `resolve_policy`. Seeded **default enterprise policy**: qru_online/internal = Authorized Auto Publish; etsy/kdp/tpt/shopify = Review Ready; all others Export Only. Governed overrides at any scope record who/why (`override_history`).
+- **Decision engine** `decide()` → AUTHORIZED / REVIEW_READY / EXPORT_ONLY / BLOCKED + human-readable reason + satisfied/missing lists. **Verification** `verify_publication()` → Published / Published with Warnings / Failed / Needs Review. Owned QRU Online publishes for real (visibility flag); external marketplaces never auto-published without live integration.
+- **CDM manifest now uses policy** (removed hard-coded Export-Only) — each destination shows governed_policy_mode, decision, missing_requirements.
+- **Verified (curl + direct):** SC1 inheritance (etsy=Review Ready, qru_online=Auto from enterprise); SC2 destination policy + change history; SC3 product override (etsy→Auto for one product); SC4/SC9 auto-block with missing reqs listed; SC5 QRU Online AUTHORIZED→published→verification Published after all pass; SC6 Etsy Review-Ready decision; SC7 human-readable report; SC8 verification. All test artifacts cleaned.
+
+### ⏳ UCAMS Phase-1 completion — STILL PENDING (honest, per user's own "complete only when…" definition)
+NOT done this turn: **Creative Assets Founder UI + Creative Manufacturing Dashboard** (frontend — the user's gating item for "Phase 1 complete"); Visual QA as a formal render-time hard gate (page rasterization heuristics module — logic exists in UCAMS spec/validate but not wired as a blocking render step); **real QR scan from rendered asset** (needs `pyzbar`, not installed); full marketplace-package builders per storefront; deep per-family validation (motion/video, safe-zone pixels, PDF/X). Standards STD-UCAMS-0001 backend foundation + STD-PUB-0001 are production-shaped; UI is the next required build. ⚠️ Preview only — redeploy for production. No AI/image cost; no approved asset overwritten.
+
+
 ## ✅ Universal Creative Asset Manufacturing System™ (STD-UCAMS-0001) — Phase 1 foundation, curl-verified (2026-07-30)
 Governed, INHERITED enterprise core (not a book-only utility). The Factory owns deterministic manufacturing requirements; external creative providers only produce artwork against exported specs. Built `creative_asset_system.py` + `routers/creative_assets.py` (`/api/creative-assets/*`). Five subsystems live:
 - **PSR™ Platform Specification Registry** (`ucams_platforms`): 11 seeded, source-backed, versioned, status-managed profiles (KDP paperback wrap + eBook, Etsy, TpT, QRU Online, YouTube thumbnail + 16:9 screen, Pinterest, Instagram, TikTok vertical, One-Page Knowledge Visual print). Each carries source URL, date_verified, verifier, version, status, next_review_date + change history; stale profiles get a warning (no unverified assumption presented as truth).
