@@ -16,8 +16,9 @@ import os
 import time
 import base64
 import hashlib
+import logging
 import secrets as _secrets
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote
 
 import httpx
 from cryptography.fernet import Fernet
@@ -25,9 +26,12 @@ from cryptography.fernet import Fernet
 from database import db
 from models import gen_id, now_iso
 
+logger = logging.getLogger("etsy")
+
 # ------------------------------------------------------------------ config ----
 KEYSTRING = os.environ.get("ETSY_API_KEYSTRING", "")
 SHARED_SECRET = os.environ.get("ETSY_SHARED_SECRET", "")
+SHOP_NAME_HINT = os.environ.get("ETSY_SHOP_NAME", "")
 SCOPES = (os.environ.get("ETSY_SCOPES") or "shops_r listings_r listings_w transactions_r").replace(",", " ").strip()
 REDIRECT_OVERRIDE = os.environ.get("ETSY_REDIRECT_URI", "")
 DEFAULT_TAXONOMY_ID = int(os.environ.get("ETSY_DEFAULT_TAXONOMY_ID", "1") or 1)
@@ -286,11 +290,67 @@ async def _resolve_identity(access):
             shop_id = shop_id or me.get("shop_id")
         except Exception as e:
             diag.setdefault("me_error", _redact(str(e))[:120])
+    if shop_id is None and SHOP_NAME_HINT:
+        # Fallback: public shop search by name (getShopByOwnerUserId can be unreliable).
+        try:
+            r = await _api("GET", f"/shops?shop_name={quote(SHOP_NAME_HINT)}", access=access)
+            diag["findShops_status"] = r.status_code
+            if r.status_code < 400:
+                results = (r.json() or {}).get("results") or []
+                if results:
+                    match = next((s for s in results
+                                  if (s.get("shop_name", "").lower() == SHOP_NAME_HINT.lower())), results[0])
+                    shop_id = match.get("shop_id")
+                    shop_name = match.get("shop_name") or shop_name
+            else:
+                diag["findShops_body"] = _redact(r.text)[:180]
+        except Exception as e:
+            diag.setdefault("findShops_error", _redact(str(e))[:120])
     if shop_id is None:
         env_shop = os.environ.get("ETSY_SHOP_ID")
         if env_shop and env_shop.isdigit():
             shop_id = int(env_shop)
+    logger.info("ETSY identity resolve: user_id=%s shop_id=%s diag=%s", user_id, shop_id, diag)
     return {"user_id": user_id, "shop_id": shop_id, "shop_name": shop_name, "_diag": diag}
+
+
+async def diagnostics():
+    """Raw, redacted probe of every relevant Etsy endpoint — for Founder-visible debugging.
+    Logs full status + body server-side and returns them (secrets/tokens redacted)."""
+    doc = await _integration()
+    out = {"has_integration": bool(doc),
+           "stored_shop_id": (doc or {}).get("shop_id"),
+           "stored_shop_name": (doc or {}).get("shop_name"),
+           "stored_user_id": (doc or {}).get("etsy_user_id"),
+           "shop_name_hint": SHOP_NAME_HINT or None, "calls": []}
+    if not doc or not doc.get("encrypted_access_token"):
+        out["error"] = "Not connected."
+        return out
+    try:
+        access = await _access_token()
+    except Exception as e:
+        out["error"] = _redact(str(e))[:200]
+        return out
+    uid = _uid_from_token(access)
+    out["user_id_from_token"] = uid
+    probes = [("getMe", "/users/me")]
+    if uid:
+        probes.append(("getShopByOwnerUserId", f"/users/{uid}/shops"))
+        probes.append(("getUser", f"/users/{uid}"))
+    if SHOP_NAME_HINT:
+        probes.append(("findShops(shop_name)", f"/shops?shop_name={quote(SHOP_NAME_HINT)}"))
+    for name, path in probes:
+        entry = {"name": name, "endpoint": path}
+        try:
+            r = await _api("GET", path, access=access)
+            entry["status"] = r.status_code
+            entry["body"] = _redact(r.text)[:800]
+            logger.info("ETSY DIAG %s %s -> HTTP %s | %s", name, path, r.status_code, _redact(r.text)[:400])
+        except Exception as e:
+            entry["error"] = _redact(str(e))[:300]
+            logger.info("ETSY DIAG %s %s -> ERROR %s", name, path, _redact(str(e))[:200])
+        out["calls"].append(entry)
+    return out
 
 
 async def _get_shop(access, shop_id):
@@ -371,15 +431,17 @@ async def test_connection():
     else:
         ok_all = False
         diag = ident.get("_diag") or {}
-        if diag.get("status") and diag["status"] >= 400:
-            detail = (f"Shop lookup returned HTTP {diag['status']} on {diag.get('endpoint','')}. "
-                      f"{diag.get('body','')}".strip())
-        elif diag.get("error"):
-            detail = f"Shop lookup error: {diag['error']}"
-        elif diag.get("note") == "empty":
-            detail = "Etsy returned no shop for this account — the account likely has no OPEN Etsy shop yet (an in-progress/draft shop is not returned). Open/publish your shop, then test again."
-        else:
-            detail = "No Etsy shop found for this account. Open your Etsy shop, then test again."
+        parts = []
+        if diag.get("status"):
+            parts.append(f"owner-lookup HTTP {diag['status']}" + (f" {diag.get('body','')}" if diag.get("body") else ""))
+        if diag.get("findShops_status"):
+            parts.append(f"findShops HTTP {diag['findShops_status']}" + (f" {diag.get('findShops_body','')}" if diag.get("findShops_body") else ""))
+        for k in ("error", "findShops_error", "me_error"):
+            if diag.get(k):
+                parts.append(f"{k}: {diag[k]}")
+        if diag.get("note") == "empty" and not diag.get("findShops_status"):
+            parts.append("owner-lookup returned no shop")
+        detail = "Shop not resolved. " + (" | ".join(parts) if parts else "No shop returned.") + " — open /api/integrations/etsy/diagnostics for raw responses."
         checks.append({"name": "Read shop", "ok": False, "detail": detail})
     # Heal the stored identity so publish/listings work without a reconnect.
     await db[INTEG].update_one({"id": INTEG_ID}, {"$set": {

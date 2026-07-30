@@ -64,6 +64,11 @@ async def test(user=Depends(require_super_admin)):
     return await etsy.test_connection()
 
 
+@router.get("/diagnostics")
+async def diagnostics(user=Depends(require_super_admin)):
+    return await etsy.diagnostics()
+
+
 @router.get("/listings")
 async def listings(user=Depends(require_super_admin)):
     return await etsy.listings()

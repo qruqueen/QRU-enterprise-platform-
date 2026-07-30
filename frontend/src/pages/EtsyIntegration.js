@@ -30,6 +30,7 @@ export default function EtsyIntegration() {
   const [products, setProducts] = useState([]);
   const [busy, setBusy] = useState("");
   const [test, setTest] = useState(null);
+  const [diag, setDiag] = useState(null);
   const [preview, setPreview] = useState(null);
 
   const loadStatus = useCallback(async () => {
@@ -89,6 +90,16 @@ export default function EtsyIntegration() {
       toast[data.ok ? "success" : "error"](data.ok ? "Connection OK." : "Connection test found issues.");
       await loadStatus();
     } catch (e) { toast.error(e.response?.data?.detail || "Test failed."); }
+    setBusy("");
+  };
+
+  const runDiag = async () => {
+    setBusy("diag");
+    try {
+      const { data } = await api.get("/integrations/etsy/diagnostics");
+      setDiag(data);
+      toast.info("Diagnostics captured — raw Etsy responses below.");
+    } catch (e) { toast.error(e.response?.data?.detail || "Diagnostics failed."); }
     setBusy("");
   };
 
@@ -171,6 +182,9 @@ export default function EtsyIntegration() {
                 <button onClick={runTest} disabled={!!busy} data-testid="etsy-test-btn" className="inline-flex items-center gap-2 rounded-lg border border-navy/30 text-navy px-4 py-2 text-sm font-medium hover:bg-navy/5 disabled:opacity-50">
                   {busy === "test" ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlugZap className="w-4 h-4" />} Test Connection
                 </button>
+                <button onClick={runDiag} disabled={!!busy} data-testid="etsy-diag-btn" className="inline-flex items-center gap-2 rounded-lg border border-navy/30 text-navy px-4 py-2 text-sm font-medium hover:bg-navy/5 disabled:opacity-50">
+                  {busy === "diag" ? <Loader2 className="w-4 h-4 animate-spin" /> : <GitCompare className="w-4 h-4" />} Run Diagnostics
+                </button>
                 <button onClick={disconnect} disabled={!!busy} data-testid="etsy-disconnect-btn" className="inline-flex items-center gap-2 rounded-lg border border-red-200 text-red-700 px-4 py-2 text-sm font-medium hover:bg-red-50 disabled:opacity-50">
                   {busy === "disconnect" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unplug className="w-4 h-4" />} Disconnect
                 </button>
@@ -195,6 +209,27 @@ export default function EtsyIntegration() {
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+        {diag && (
+          <div className="mt-4 rounded-lg border p-4" data-testid="etsy-diag-report">
+            <div className="text-xs font-semibold text-navy mb-2">Raw Etsy diagnostics</div>
+            <div className="text-[11px] text-muted-foreground mb-2">
+              user_id (from token): <span className="font-mono">{String(diag.user_id_from_token)}</span> · stored shop: <span className="font-mono">{String(diag.stored_shop_id) || "—"}</span> · shop-name hint: <span className="font-mono">{diag.shop_name_hint || "—"}</span>
+              {diag.error && <span className="text-red-600"> · {diag.error}</span>}
+            </div>
+            <div className="space-y-2">
+              {(diag.calls || []).map((c, i) => (
+                <div key={i} className="rounded border bg-muted/30 p-2">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${c.status && c.status < 400 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>{c.status || "ERR"}</span>
+                    <span className="font-medium">{c.name}</span>
+                    <span className="font-mono text-[10px] text-muted-foreground">{c.endpoint}</span>
+                  </div>
+                  <pre className="mt-1 text-[10px] whitespace-pre-wrap break-all text-muted-foreground max-h-40 overflow-y-auto">{c.error || c.body}</pre>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </section>
