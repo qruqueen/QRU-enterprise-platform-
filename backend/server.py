@@ -92,6 +92,7 @@ from routers.public_site import router as public_site_router
 from routers.public_commerce import router as public_commerce_router
 from routers.pilot import router as pilot_router
 from routers.migrations import router as migrations_router
+from routers.etsy import router as etsy_router
 from routers.store_health import router as store_health_router
 from routers.distribution_arch import router as distribution_arch_router
 from routers.bundles import router as bundles_router
@@ -170,6 +171,7 @@ for r in [
     public_commerce_router,
     pilot_router,
     migrations_router,
+    etsy_router,
     store_health_router,
     distribution_arch_router,
     bundles_router,

@@ -1,0 +1,26 @@
+{
+  "summary": "Iteration 100 — QRU × Etsy governed integration. Ran 13 pytest cases against public API and Playwright UI validation for /etsy. All backend security + governance + preview no-mutation assertions passed. Frontend renders connection card, disconnected badge, connect button, products table with eligible Yes/No, and preview panel with all 6 governance checks + draft-state listing. No secret leak in UI/HTML. Create Draft hidden while disconnected. Live Etsy OAuth consent path intentionally not exercised.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration100_etsy.py",
+    "/app/test_reports/pytest/iteration_100.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "etsy_integration.py + routers/etsy.py are cleanly scoped and under 700 lines each; PKCE math (S256), state persistence in etsy_oauth_sessions, and Fernet at-rest encryption for tokens look correct.",
+    "_redact() strips KEYSTRING/SHARED_SECRET and bearer-token patterns before any audit/detail is written or returned — good.",
+    "publish_draft() enforces eligibility gate → founder approved=true gate → Etsy-connected gate → idempotent mapping upsert BEFORE the Etsy POST. Retries cannot create a duplicate listing.",
+    "preview() performs no Etsy mutation and no DB writes to etsy_listing_mappings — verified via GET /products before+after preview.",
+    "MINOR: In status(), the local variable `expired` is computed but the branch `if doc.get('last_error') and st == 'connected': pass` is a no-op; harmless but dead code.",
+    "MINOR: eligibility() returns detail-only strings; consider surfacing which field is missing in 'Metadata populated' for faster Founder triage."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration100_etsy.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "demo.admin@qru.com / qru-demo-admin-2026 (Administrator satisfies require_super_admin)",
+  "seed_data_creation": "None — used existing book_records (BOOK-0004 eligible, BOOK-0006 ineligible). No etsy_listing_mappings were created (all publish attempts were correctly blocked by governance/approval/not-connected gates).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend tests live in /app/backend/tests/test_iteration100_etsy.py (13 cases, all pass). Do NOT flip integration to 'connected' — the disconnected-state assertions depend on it. Live Etsy OAuth code exchange and real draft creation require the Founder's actual Etsy account and are out of scope for automated testing.",
+  "rca of the issue": "N/A — no issues found."
+}

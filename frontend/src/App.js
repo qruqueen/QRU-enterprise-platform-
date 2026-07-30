@@ -66,6 +66,7 @@ import Notifications from "@/pages/Notifications";
 import Settings from "@/pages/Settings";
 import SearchResults from "@/pages/SearchResults";
 import Connectors from "@/pages/Connectors";
+import EtsyIntegration from "@/pages/EtsyIntegration";
 import EvidenceDashboard from "@/pages/EvidenceDashboard";
 import ManufacturingInspection from "@/pages/ManufacturingInspection";
 import ManufacturingDashboard from "@/pages/ManufacturingDashboard";
@@ -246,6 +247,7 @@ function EnterpriseRoutes() {
         <Route path="book-manufacturing" element={<BookManufacturing />} />
         <Route path="product-family" element={<ProductFamily />} />
         <Route path="connectors" element={<Connectors />} />
+        <Route path="etsy" element={<EtsyIntegration />} />
         <Route path="ai-services" element={<AIServices />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
