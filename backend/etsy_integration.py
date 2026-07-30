@@ -255,32 +255,42 @@ def _uid_from_token(access):
 
 
 async def _resolve_identity(access):
-    """Return {user_id, shop_id, shop_name}. /users/me can 403 on many apps, so derive the
-    user id from the token prefix and read the user's shop directly."""
+    """Return {user_id, shop_id, shop_name, _diag}. /users/me can 403 on many apps, so derive the
+    user id from the token prefix and read the user's shop directly. _diag captures the raw outcome
+    of the shop lookup so failures are diagnosable instead of silently swallowed."""
     user_id = _uid_from_token(access)
-    shop_id, shop_name = None, None
+    shop_id, shop_name, diag = None, None, {}
     if user_id:
         try:
             r = await _api("GET", f"/users/{user_id}/shops", access=access)
+            diag = {"endpoint": f"/users/{user_id}/shops", "status": r.status_code}
             if r.status_code < 400:
                 j = r.json()
-                shop = j if j.get("shop_id") else ((j.get("results") or [{}])[0] if isinstance(j.get("results"), list) else {})
+                if isinstance(j, dict) and j.get("shop_id"):
+                    shop = j
+                elif isinstance(j, dict) and isinstance(j.get("results"), list) and j["results"]:
+                    shop = j["results"][0]
+                else:
+                    shop = {}
+                    diag["note"] = "empty"
                 shop_id = shop.get("shop_id")
                 shop_name = shop.get("shop_name")
-        except Exception:
-            pass
-    if not user_id or shop_id is None:
+            else:
+                diag["body"] = _redact(r.text)[:180]
+        except Exception as e:
+            diag = {"error": _redact(str(e))[:180]}
+    if shop_id is None:
         try:
             me = await _get_me(access)
             user_id = user_id or me.get("user_id")
             shop_id = shop_id or me.get("shop_id")
-        except Exception:
-            pass
+        except Exception as e:
+            diag.setdefault("me_error", _redact(str(e))[:120])
     if shop_id is None:
         env_shop = os.environ.get("ETSY_SHOP_ID")
         if env_shop and env_shop.isdigit():
             shop_id = int(env_shop)
-    return {"user_id": user_id, "shop_id": shop_id, "shop_name": shop_name}
+    return {"user_id": user_id, "shop_id": shop_id, "shop_name": shop_name, "_diag": diag}
 
 
 async def _get_shop(access, shop_id):
@@ -360,8 +370,17 @@ async def test_connection():
             checks.append({"name": "Read shop", "ok": False, "detail": _redact(str(e))})
     else:
         ok_all = False
-        checks.append({"name": "Read shop", "ok": False,
-                       "detail": "No Etsy shop is associated with this account. Open your Etsy shop, then test again."})
+        diag = ident.get("_diag") or {}
+        if diag.get("status") and diag["status"] >= 400:
+            detail = (f"Shop lookup returned HTTP {diag['status']} on {diag.get('endpoint','')}. "
+                      f"{diag.get('body','')}".strip())
+        elif diag.get("error"):
+            detail = f"Shop lookup error: {diag['error']}"
+        elif diag.get("note") == "empty":
+            detail = "Etsy returned no shop for this account — the account likely has no OPEN Etsy shop yet (an in-progress/draft shop is not returned). Open/publish your shop, then test again."
+        else:
+            detail = "No Etsy shop found for this account. Open your Etsy shop, then test again."
+        checks.append({"name": "Read shop", "ok": False, "detail": detail})
     # Heal the stored identity so publish/listings work without a reconnect.
     await db[INTEG].update_one({"id": INTEG_ID}, {"$set": {
         "shop_id": shop_id, "shop_name": shop_name, "etsy_user_id": ident.get("user_id"),
