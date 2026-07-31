@@ -70,7 +70,7 @@ function NavItem({ item, onNavigate }) {
       title={item.hint ? `${item.label} — ${item.hint}` : item.label}
       onClick={onNavigate}
       className={({ isActive }) =>
-        `flex items-center gap-3 px-3 py-2 rounded-sm text-sm transition-colors duration-150 ${
+        `flex items-center gap-3 px-3 py-2.5 lg:py-2 rounded-sm text-sm transition-colors duration-150 active:bg-white/15 ${
           isActive ? "bg-gold text-navy font-bold shadow-sm" : "text-white/65 hover:bg-white/10 hover:text-white"
         }`
       }
@@ -110,8 +110,8 @@ export default function Layout() {
     <div className="min-h-screen flex bg-background">
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static z-40 w-64 h-screen bg-navy text-white/90 border-r border-white/10 flex flex-col transition-transform ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        className={`fixed lg:static z-40 w-[85vw] max-w-xs lg:w-64 h-screen bg-navy text-white/90 border-r border-white/10 flex flex-col transition-transform duration-300 ease-out ${
+          mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         <div className="h-16 flex items-center gap-2.5 px-5 border-b border-white/10 shrink-0">
@@ -239,13 +239,13 @@ export default function Layout() {
         </div>
       </aside>
 
-      {mobileOpen && <div className="fixed inset-0 bg-black/30 z-30 lg:hidden" onClick={() => setMobileOpen(false)} />}
+      {mobileOpen && <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={() => setMobileOpen(false)} />}
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
         <header className="h-16 border-b bg-card/80 backdrop-blur sticky top-0 z-20 flex items-center gap-4 px-4 sm:px-6">
-          <button className="lg:hidden" data-testid="mobile-menu-btn" onClick={() => setMobileOpen(true)}>
-            <Menu className="w-5 h-5" />
+          <button className="lg:hidden -ml-1 p-2 rounded-sm active:bg-muted transition-colors" data-testid="mobile-menu-btn" onClick={() => setMobileOpen(true)} aria-label="Open menu">
+            <Menu className="w-6 h-6" />
           </button>
           <form onSubmit={doSearch} className="flex-1 max-w-md relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -273,13 +273,61 @@ export default function Layout() {
             </NavLink>
           </div>
         </header>
-        <main className="flex-1 p-4 sm:p-8 max-w-[1600px] w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-8 pb-24 lg:pb-8 max-w-[1600px] w-full mx-auto">
           <FounderSecurityBanner />
           <ErrorBoundary routeKey={location.pathname}>
             <Outlet />
           </ErrorBoundary>
         </main>
       </div>
+
+      {/* Mobile bottom tab bar — native app feel */}
+      <MobileTabBar onOpenMenu={() => setMobileOpen(true)} />
     </div>
+  );
+}
+
+const TABS = [
+  { id: "dashboard", label: "Console", route: "/", icon: LayoutDashboard, end: true },
+  { id: "create", label: "Create", route: "/create", icon: Sparkles },
+  { id: "knowledge", label: "Knowledge", route: "/knowledge", icon: BookOpen },
+  { id: "concierge", label: "Concierge", route: "/concierge", icon: MessageSquareText },
+];
+
+function MobileTabBar({ onOpenMenu }) {
+  return (
+    <nav
+      data-testid="mobile-tab-bar"
+      className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-navy/95 backdrop-blur border-t border-white/10 flex items-stretch"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      {TABS.map((t) => {
+        const Icon = t.icon;
+        return (
+          <NavLink
+            key={t.id}
+            to={t.route}
+            end={t.end}
+            data-testid={`tab-${t.id}`}
+            className={({ isActive }) =>
+              `flex-1 flex flex-col items-center justify-center gap-0.5 min-h-[56px] py-1.5 text-[10px] font-medium transition-colors active:bg-white/10 ${
+                isActive ? "text-gold" : "text-white/60"
+              }`
+            }
+          >
+            <Icon className="w-5 h-5" />
+            <span className="tracking-wide">{t.label}</span>
+          </NavLink>
+        );
+      })}
+      <button
+        data-testid="tab-menu"
+        onClick={onOpenMenu}
+        className="flex-1 flex flex-col items-center justify-center gap-0.5 min-h-[56px] py-1.5 text-[10px] font-medium text-white/60 active:bg-white/10 transition-colors"
+      >
+        <Menu className="w-5 h-5" />
+        <span className="tracking-wide">Menu</span>
+      </button>
+    </nav>
   );
 }

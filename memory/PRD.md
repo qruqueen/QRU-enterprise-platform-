@@ -1483,3 +1483,8 @@ Founder froze new-feature dev; directed modernization by *wiring existing capabi
 - Founder cockpit: thin nav (~8) while keeping internals behind it.
 - Remove dead code: `_run_proof.py`, `backfill_marketing.py`, `qru_governance.py`, `constitution_v1.py`.
 
+
+### Mobile Polish (2026-07-31)
+- Layout.js: added native-style bottom tab bar (Console/Create/Knowledge/Concierge/Menu) on mobile (`lg:hidden`); gold active state.
+- Hamburger drawer polished: slide-in 300ms ease, 85vw max-w-xs width, shadow, safe-area inset, larger tap targets (py-2.5).
+- Main content padded (pb-24) so bottom bar never overlaps; verified on 390×844 viewport.
