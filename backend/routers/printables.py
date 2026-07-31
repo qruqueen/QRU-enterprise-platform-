@@ -31,8 +31,17 @@ async def config(user=Depends(get_current_user)):
     return {"standard": ppb.STANDARD_ID,
             "product_types": [{"id": k, **v} for k, v in ppb.PRODUCT_TYPES.items()],
             "page_sizes": [{"id": k, **v} for k, v in ppb.PAGE_SIZES.items()],
+            "worksheet_presets": [{"id": k, "label": v} for k, v in ppb.WORKSHEET_PRESETS.items()],
             "destinations": ppb.SUITABLE_DESTINATIONS,
             "gate": {"min_print_dpi": ppb.MIN_PRINT_DPI, "ideal_print_dpi": ppb.IDEAL_PRINT_DPI}}
+
+
+@router.get("/library")
+async def library(user=Depends(get_current_user)):
+    """Standalone Printables Library — every printable built (with or without a product), newest first,
+    so you can find, download, and reuse them later."""
+    rows = await db[COLL].find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return {"count": len(rows), "printables": rows}
 
 
 class BuildReq(BaseModel):
@@ -45,6 +54,7 @@ class BuildReq(BaseModel):
     instructions: Optional[List[str]] = None
     page_size: Optional[str] = "letter"
     activity_layout: Optional[bool] = None
+    worksheet_presets: Optional[List[str]] = None
 
 
 @router.post("/build/{engine}/{record_id}")
@@ -63,7 +73,8 @@ async def build(engine: str, record_id: str, req: BuildReq, user=Depends(get_cur
     result = ppb.build(product, req.product_type, images, include_cover=req.include_cover,
                        include_instructions=req.include_instructions, title=req.title,
                        subtitle=req.subtitle, instructions=req.instructions,
-                       page_size=req.page_size or "letter", activity_layout=req.activity_layout)
+                       page_size=req.page_size or "letter", activity_layout=req.activity_layout,
+                       worksheet_presets=req.worksheet_presets)
     if result.get("error"):
         raise HTTPException(400, result["error"])
     pdf_bytes = result.pop("pdf_bytes")

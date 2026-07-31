@@ -149,7 +149,8 @@ def _instructions_page(title, lines, page_size, palette):
 
 
 def build(product, product_type, images, *, include_cover=None, include_instructions=None,
-          title=None, subtitle=None, instructions=None, page_size="letter", activity_layout=None):
+          title=None, subtitle=None, instructions=None, page_size="letter", activity_layout=None,
+          worksheet_presets=None):
     """Assemble the governed PDF. `images` is a list of raw bytes in the desired page order.
 
     Returns {pdf_bytes, page_count, qa, quality_review_required, pages_meta} or {error}.
@@ -202,6 +203,13 @@ def build(product, product_type, images, *, include_cover=None, include_instruct
 
     if not canvases:
         return {"error": "Could not build any pages from the uploaded artwork."}
+
+    # Worksheet Presets — drop in ready-made activity layouts (tracing / matching / word search).
+    if use_activity and worksheet_presets:
+        for preset in worksheet_presets:
+            if preset in WORKSHEET_PRESETS:
+                c, meta = _preset_page(preset, title, page_size, palette, len(canvases) + 1)
+                canvases.append(c); pages_meta.append(meta)
 
     # Activity templates: auto-fill to the target page count so a few PNGs become a full book.
     if use_activity:
@@ -372,3 +380,78 @@ def render_toc_pdf(title, entries, page_size, palette):
            font=dl._f(dl.SANS, 26), fill=(120, 120, 130), anchor="mm")
     buf = io.BytesIO(); canvas.save(buf, format="PDF", resolution=float(DEFAULT_DPI))
     return buf.getvalue()
+
+
+# ---------------------------------------------------------------------------
+# Worksheet Presets — ready-made activity layouts the activity book can drop in.
+# ---------------------------------------------------------------------------
+WORKSHEET_PRESETS = {
+    "tracing": "Tracing Practice",
+    "matching": "Match the Pairs",
+    "word_search": "Word Search",
+}
+
+
+def _preset_page(preset, title, page_size, palette, page_no):
+    import random
+    from PIL import ImageDraw, Image
+    pw, ph, _, _ = _page_px(page_size)
+    canvas = Image.new("RGB", (pw, ph), (255, 255, 255))
+    d = ImageDraw.Draw(canvas)
+    label = WORKSHEET_PRESETS.get(preset, "Activity")
+    _title_strip(d, pw, palette, label)
+    l = int(MARGIN_IN * DEFAULT_DPI)
+    top = int(0.14 * DEFAULT_DPI * 11)
+    accent = palette["accent"]
+
+    if preset == "tracing":
+        d.text((l, top), "Trace the dotted lines, then write your own:", font=dl._f(dl.SANS_BOLD, 40), fill=palette["top"])
+        y = top + int(0.7 * DEFAULT_DPI)
+        row_gap = int(1.1 * DEFAULT_DPI)
+        while y < ph - int(0.7 * DEFAULT_DPI):
+            # top guide, dotted mid guide, bottom baseline
+            d.line([(l, y), (pw - l, y)], fill=(210, 210, 220), width=3)
+            xx = l
+            while xx < pw - l:
+                d.line([(xx, y + row_gap // 2), (xx + 26, y + row_gap // 2)], fill=(180, 180, 195), width=3)
+                xx += 52
+            d.line([(l, y + row_gap - 20), (pw - l, y + row_gap - 20)], fill=(150, 150, 170), width=4)
+            y += row_gap
+
+    elif preset == "matching":
+        d.text((l, top), "Draw a line to match each pair:", font=dl._f(dl.SANS_BOLD, 40), fill=palette["top"])
+        left = ["1", "2", "3", "4", "5"]
+        right = left[:]; random.shuffle(right)
+        y = top + int(0.8 * DEFAULT_DPI); gap = int(1.3 * DEFAULT_DPI)
+        lx, rx = l + int(0.4 * DEFAULT_DPI), pw - l - int(0.4 * DEFAULT_DPI)
+        for i in range(5):
+            d.ellipse([lx - 60, y - 60, lx + 60, y + 60], outline=accent, width=5)
+            d.text((lx, y), left[i], font=dl._f(dl.SERIF_BOLD, 60), fill=palette["top"], anchor="mm")
+            d.rectangle([rx - 200, y - 60, rx + 60, y + 60], outline=accent, width=4)
+            d.text((rx - 70, y), f"Item {right[i]}", font=dl._f(dl.SANS, 36), fill=(60, 60, 75), anchor="mm")
+            d.ellipse([lx + 90, y - 12, lx + 114, y + 12], fill=accent)
+            d.ellipse([rx - 224, y - 12, rx - 200, y + 12], fill=accent)
+            y += gap
+
+    elif preset == "word_search":
+        d.text((l, top), "Find the hidden words:", font=dl._f(dl.SANS_BOLD, 40), fill=palette["top"])
+        cols = rows = 12
+        grid_top = top + int(0.7 * DEFAULT_DPI)
+        grid_size = min(pw - 2 * l, int(ph * 0.55))
+        cell = grid_size // cols
+        gx = (pw - cell * cols) // 2
+        letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        f = dl._f(dl.SANS_BOLD, int(cell * 0.55))
+        for r in range(rows):
+            for c in range(cols):
+                cx = gx + c * cell + cell // 2
+                cy = grid_top + r * cell + cell // 2
+                d.text((cx, cy), random.choice(letters), font=f, fill=(70, 70, 90), anchor="mm")
+        by = grid_top + rows * cell + int(0.3 * DEFAULT_DPI)
+        d.text((l, by), "Words:  LEARN   FOCUS   THINK   GROW   TRUTH",
+               font=dl._f(dl.SANS_BOLD, 34), fill=palette["top"])
+
+    d.text((pw // 2, ph - int(0.28 * DEFAULT_DPI)), f"QRU PRESS™  ·  {page_no}",
+           font=dl._f(dl.SANS, 26), fill=(120, 120, 130), anchor="mm")
+    return canvas, {"page": page_no, "type": f"worksheet_{preset}", "effective_dpi": DEFAULT_DPI,
+                    "status": "CLEAN", "preset": preset}

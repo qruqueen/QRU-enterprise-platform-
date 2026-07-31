@@ -1519,3 +1519,9 @@ Founder froze new-feature dev; directed modernization by *wiring existing capabi
 - Build no longer requires a pre-selected product. Frontend button disabled only when no pages uploaded (was also gating on !sel → confused mobile users when selector scrolled off-screen).
 - Backend build/{engine}/{record_id} accepts record_id "standalone"/"none"/"" → builds with product={} (default palette, title from cover field). Returns product_id (null for standalone).
 - Product needed only for Bundle/Attach; result panel hides attach buttons + shows a note when standalone. Selector relabeled "No product — build a standalone printable".
+
+### Printable Studio™ — Presets, Library, Reorder UX + Bookstore clarification (2026-07-31)
+- Worksheet Presets: WORKSHEET_PRESETS (tracing/matching/word_search) rendered as ready-made activity pages; build accepts worksheet_presets[]; appended after artwork, before auto-fill. Config exposes them; UI shows toggle chips when Activity layout is on.
+- Save Standalone To Library: GET /api/printables/library returns all printables (with/without product) newest-first; UI "Printables Library" grid (title, type, pages, QA, standalone tag, download).
+- Reorder UX fix: thumbnails relabeled "Artwork i/N · p.X"; up/down arrows disabled at boundaries; added front-matter note explaining cover/instructions occupy pages 1–2 (uncheck to make artwork page 1). Not a bug — arrows only reorder artwork pages.
+- Bookstore "7 titles" is NOT a bug: storefront (public_site/public_commerce/public_bundles) gate = founder_authorization.authorized==True (Treasure Standard). Preview has 20 books/9 authorized; production 7. Authorize via POST /api/book-mfg/books/{id}/authorize (Founder-only). Production (qru-online.com) has its own DB — authorize on the live site.

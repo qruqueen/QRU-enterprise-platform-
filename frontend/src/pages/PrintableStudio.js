@@ -35,11 +35,18 @@ export default function PrintableStudio() {
   const [bundleSel, setBundleSel] = useState([]);
   const [bundleTitle, setBundleTitle] = useState("");
   const [bundleResult, setBundleResult] = useState(null);
+  const [presets, setPresets] = useState([]);
+  const [library, setLibrary] = useState([]);
+
+  const loadLibrary = useCallback(() => {
+    api.get("/printables/library").then(({ data }) => setLibrary(data.printables || [])).catch(() => {});
+  }, []);
 
   useEffect(() => {
     api.get("/printables/config").then(({ data }) => setConfig(data)).catch(() => {});
     api.get("/book-mfg/books").then(({ data }) => setBooks(data.books || [])).catch(() => {});
-  }, []);
+    loadLibrary();
+  }, [loadLibrary]);
 
   const loadHistory = useCallback((id) => {
     if (!id) { setHistory([]); return; }
@@ -103,9 +110,9 @@ export default function PrintableStudio() {
         product_type: ptype, images_base64: pages.map((p) => p.dataUrl),
         include_cover: incCover, include_instructions: incInstr,
         title: title || null, subtitle: subtitle || null, page_size: pageSize,
-        activity_layout: activityLayout,
+        activity_layout: activityLayout, worksheet_presets: isActivity ? presets : null,
       });
-      setResult(data); if (sel) loadHistory(sel);
+      setResult(data); if (sel) loadHistory(sel); loadLibrary();
       const r = data.qa.result;
       toast[r === "FAIL" ? "error" : r === "REVISION_REQUIRED" ? "warning" : "success"](
         `${data.page_count}-page PDF built — QA: ${r.replace("_", " ")}`);
@@ -157,6 +164,22 @@ export default function PrintableStudio() {
           <input data-testid="ps-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Cover title (optional)" className="rounded border px-2 py-1 w-56" />
           <input data-testid="ps-subtitle" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="Cover subtitle (optional)" className="rounded border px-2 py-1 w-56" />
         </div>
+        {isActivity && (
+          <div data-testid="ps-presets" className="flex flex-wrap items-center gap-2 text-[12px]">
+            <span className="font-semibold text-navy">Worksheet presets:</span>
+            {(config?.worksheet_presets || []).map((wp) => {
+              const on = presets.includes(wp.id);
+              return (
+                <button key={wp.id} data-testid={`ps-preset-${wp.id}`}
+                  onClick={() => setPresets((s) => on ? s.filter((x) => x !== wp.id) : [...s, wp.id])}
+                  className={`px-2.5 py-1 rounded-full border transition-colors ${on ? "bg-navy text-white border-navy" : "text-navy border-border hover:border-navy"}`}>
+                  {wp.label}
+                </button>
+              );
+            })}
+            <span className="text-[10px] text-muted-foreground">Added as ready-made pages after your artwork.</span>
+          </div>
+        )}
       </div>
 
       {/* Step 2 — upload + arrange */}
@@ -172,6 +195,11 @@ export default function PrintableStudio() {
           Arrange them in reading order. Final PDF = {incCover ? "cover + " : ""}{incInstr ? "instructions + " : ""}{contentSlots} artwork page{contentSlots === 1 ? "" : "s"} = <b>{totalPages}</b> page{totalPages === 1 ? "" : "s"}.
           {typeDef && totalPages !== typeDef.pages && <span className="text-amber-600"> ({typeDef.label} targets {typeDef.pages}.)</span>}
         </p>
+        {(incCover || incInstr) && (
+          <p className="text-[11px] text-muted-foreground mt-1" data-testid="ps-frontmatter-note">
+            Note: {incCover && "the cover"}{incCover && incInstr ? " and instructions pages" : incInstr ? "the instructions page" : " page"} are auto-added at the front (pages {incCover ? "1" : ""}{incCover && incInstr ? "–2" : ""}). To make your artwork the first page, uncheck them above.
+          </p>
+        )}
         {pages.length === 0 ? (
           <div className="mt-3 border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground text-[13px]">
             No pages yet — upload PNG/JPEG artwork to begin.
@@ -183,11 +211,11 @@ export default function PrintableStudio() {
                 <img src={pg.dataUrl} alt={pg.name} className="w-full h-28 object-contain rounded bg-white" />
                 {pg.enhanced && <span className="absolute top-1 left-1 text-[9px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full font-semibold">upscaled</span>}
                 <div className="mt-1 flex items-center justify-between">
-                  <span className="text-[10px] font-semibold text-navy">Page {i + 1 + (incCover ? 1 : 0) + (incInstr ? 1 : 0)}</span>
+                  <span className="text-[10px] font-semibold text-navy">Artwork {i + 1}/{pages.length} · p.{i + 1 + (incCover ? 1 : 0) + (incInstr ? 1 : 0)}</span>
                   <div className="flex gap-0.5">
                     <button data-testid={`ps-enhance-${i}`} title="Regenerate Larger (upscale to print size)" onClick={() => enhancePage(i)} className="p-0.5 rounded hover:bg-muted text-emerald-700"><Maximize2 className="w-3.5 h-3.5" /></button>
-                    <button data-testid={`ps-up-${i}`} onClick={() => move(i, -1)} className="p-0.5 rounded hover:bg-muted text-navy"><ArrowUp className="w-3.5 h-3.5" /></button>
-                    <button data-testid={`ps-down-${i}`} onClick={() => move(i, 1)} className="p-0.5 rounded hover:bg-muted text-navy"><ArrowDown className="w-3.5 h-3.5" /></button>
+                    <button data-testid={`ps-up-${i}`} title="Move earlier" disabled={i === 0} onClick={() => move(i, -1)} className="p-0.5 rounded hover:bg-muted text-navy disabled:opacity-30 disabled:cursor-not-allowed"><ArrowUp className="w-3.5 h-3.5" /></button>
+                    <button data-testid={`ps-down-${i}`} title="Move later" disabled={i === pages.length - 1} onClick={() => move(i, 1)} className="p-0.5 rounded hover:bg-muted text-navy disabled:opacity-30 disabled:cursor-not-allowed"><ArrowDown className="w-3.5 h-3.5" /></button>
                     <button data-testid={`ps-remove-${i}`} onClick={() => removeAt(i)} className="p-0.5 rounded hover:bg-red-50 text-red-600"><X className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
@@ -305,6 +333,26 @@ export default function PrintableStudio() {
               </div>
             </div>
           )}
+        </div>
+      )}
+      {/* Printables Library — standalone home to find & reuse without a product */}
+      {library.length > 0 && (
+        <div className="rounded-lg border bg-card p-4" data-testid="ps-library">
+          <h3 className="text-sm font-bold text-navy flex items-center gap-2"><FileText className="w-4 h-4" /> Printables Library <span className="text-[11px] font-normal text-muted-foreground">({library.length}) — every printable you've built, newest first</span></h3>
+          <div className="mt-3 grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {library.slice(0, 18).map((h) => (
+              <div key={h.id} data-testid={`ps-lib-${h.id}`} className="rounded-md border p-2.5 text-[12px] flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-semibold text-navy truncate">{h.title || h.product_type}</div>
+                  <div className="text-[10px] text-muted-foreground truncate">{h.product_type.replace(/_/g, " ")} · {h.page_count}p{h.product_id ? "" : " · standalone"}</div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-semibold ${RESULT_TONE[h.qa_result] || "bg-muted text-muted-foreground"}`}>{(h.qa_result || "").replace("_", " ")}</span>
+                  <a href={h.pdf_url} target="_blank" rel="noreferrer" className="text-navy hover:underline inline-flex items-center gap-1"><Download className="w-3.5 h-3.5" /></a>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
