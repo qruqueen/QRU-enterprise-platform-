@@ -114,7 +114,7 @@ export default function Layout() {
           mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
         }`}
       >
-        <div className="h-16 flex items-center gap-2.5 px-5 border-b border-white/10 shrink-0">
+        <div className="h-16 flex items-center gap-2.5 px-5 border-b border-white/10 shrink-0" style={{ paddingTop: "env(safe-area-inset-top)", height: "calc(4rem + env(safe-area-inset-top))" }}>
           <QRUShield className="w-8 h-8 shrink-0" />
           <div className="leading-none">
             <p className="font-heading font-bold text-[16px] tracking-tight text-white">QRU FACTORY™</p>
@@ -243,8 +243,11 @@ export default function Layout() {
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
-        <header className="h-16 border-b bg-card/80 backdrop-blur sticky top-0 z-20 flex items-center gap-4 px-4 sm:px-6">
-          <button className="lg:hidden -ml-1 p-2 rounded-sm active:bg-muted transition-colors" data-testid="mobile-menu-btn" onClick={() => setMobileOpen(true)} aria-label="Open menu">
+        <header
+          className="border-b bg-card/80 backdrop-blur sticky top-0 z-20 flex items-center gap-4 px-4 sm:px-6 h-16"
+          style={{ paddingTop: "env(safe-area-inset-top)", height: "calc(4rem + env(safe-area-inset-top))" }}
+        >
+          <button className="lg:hidden -ml-1 p-2.5 rounded-sm active:bg-muted transition-colors" data-testid="mobile-menu-btn" onClick={() => setMobileOpen(true)} aria-label="Open menu">
             <Menu className="w-6 h-6" />
           </button>
           <form onSubmit={doSearch} className="flex-1 max-w-md relative">
