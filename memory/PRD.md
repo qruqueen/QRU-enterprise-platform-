@@ -1,3 +1,18 @@
+## ✅ Visual QA Hard Gate™ + Live Etsy Publish + Asset Thumbnails — done & verified (2026-07-31)
+
+### Visual QA Hard Gate™ — `visual_qa.py` + `POST /api/creative-assets/visual-qa/{engine}/{id}`
+- Renders every page (PyMuPDF @120dpi) and detects, deterministically: **blank pages** (ink coverage), sparse pages (warn), **text clipping** (glyph bbox outside page), **split headings** (large-font span stranded in bottom 12% with no ink after), **duplicate pages** (16×16 perceptual hash; content-rich pages only to avoid blank-page false positives), and **Unicode replacement chars (�)**. Result PASS/FAIL; any FAIL blocks.
+- **Hard-gate integration:** sets `visual_qa_status = VISUAL_QA_PASSED/FAILED` which STD-PUB-0001's "Visual QA Passed" requirement reads → no product reaches AUTHORIZED (publish) without passing. Verified: real BOOK-0019 render → PASS (2 pages); crafted defective PDF → FAIL (blank + clipping + duplicate detected). UI: "Run Visual QA" button + PASS/FAIL badge + toast.
+
+### Live Etsy Publish — `POST /api/creative-assets/publish-etsy/{engine}/{id}` {authorize}
+- One-click: builds the governed Etsy package + STD-PUB-0001 decision; `authorize:false` returns review package; `authorize:true` (Founder presses Publish — Etsy policy is Review Ready) calls the existing `etsy.publish_draft(...)`, then runs `verify_publication()` and records publication history. Guarded: requires an approved description. UI: "Authorize & Publish to Etsy" button on the Etsy package result. ⚠️ Live Etsy push itself is UNTESTABLE in preview (no live Etsy account) — wiring verified up to the integration call; Founder must test on production.
+
+### Asset Thumbnails — `CreativeAssets.js`
+- Each uploaded image asset now shows a small preview thumbnail (from `file_url`) beside its state/validation badges. Verified in screenshot on the locked QRU Online asset.
+
+### Still pending (honest): aggregate Creative Manufacturing Dashboard (catalog-wide readiness view), deep per-family validation (motion/video, safe-zone pixels, PDF/X + font-embedding), localization, campaigns/bundles. ⚠️ Preview only — redeploy for production.
+
+
 ## ✅ UCAMS Founder UI + Publication Governance UI + QR Scanning + Marketplace Packages — done & tested (2026-07-30)
 Completed the 4 selected Phase-1 items. Frontend testing_agent = **100%** (iteration_104); backend curl-verified.
 

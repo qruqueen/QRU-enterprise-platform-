@@ -4,7 +4,7 @@ import api, { formatApiError } from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import {
   Loader2, Layers, FileCog, UploadCloud, CheckCircle2, XCircle, AlertTriangle,
-  Lock, ShieldCheck, Package, QrCode, Ban, RefreshCw,
+  Lock, ShieldCheck, Package, QrCode, Ban, RefreshCw, ScanSearch, Rocket,
 } from "lucide-react";
 
 const STATE_TONE = {
@@ -38,6 +38,26 @@ export default function CreativeAssets() {
   const [pkg, setPkg] = useState(null);
   const [rightsOk, setRightsOk] = useState(true);
   const [qrUrl, setQrUrl] = useState("");
+  const [vqa, setVqa] = useState(null);
+
+  const runVisualQa = async () => {
+    setBusy("vqa");
+    try {
+      const { data } = await api.post(`/creative-assets/visual-qa/book/${sel}`);
+      setVqa(data);
+      toast[data.status === "VISUAL_QA_PASSED" ? "success" : "error"](
+        data.status === "VISUAL_QA_PASSED" ? "Visual QA passed — cleared to advance." : `Visual QA FAILED — ${data.report.fail_count} blocking issue(s).`);
+    } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); } finally { setBusy(""); }
+  };
+
+  const publishEtsy = async () => {
+    setBusy("etsy");
+    try {
+      const { data } = await api.post(`/creative-assets/publish-etsy/book/${sel}`, { authorize: true });
+      if (data.published) toast.success(`Etsy: ${data.verification?.status}`);
+      else toast.message(data.note || "Etsy review-ready.");
+    } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); } finally { setBusy(""); }
+  };
 
   useEffect(() => {
     api.get("/book-mfg/books").then(({ data }) => setBooks(data.books || [])).catch(() => {});
@@ -118,6 +138,15 @@ export default function CreativeAssets() {
                 className="rounded border px-2 py-1 text-[12px] w-64" />
             </span>
             <button data-testid="ca-refresh" onClick={() => load(sel)} className="inline-flex items-center gap-1 text-navy hover:underline"><RefreshCw className="w-3.5 h-3.5" /> Refresh</button>
+            <button data-testid="ca-visual-qa" onClick={runVisualQa} disabled={busy === "vqa"}
+              className="inline-flex items-center gap-1 bg-royal/10 text-royal px-3 py-1 rounded font-semibold">
+              {busy === "vqa" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ScanSearch className="w-3.5 h-3.5" />} Run Visual QA
+            </button>
+            {vqa && (
+              <span data-testid="ca-vqa-result" className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${vqa.status === "VISUAL_QA_PASSED" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                {vqa.status === "VISUAL_QA_PASSED" ? "Visual QA ✓ PASS" : `Visual QA ✗ FAIL (${vqa.report.fail_count})`}
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -151,11 +180,17 @@ export default function CreativeAssets() {
                   </div>
                   {present.map((a) => (
                     <div key={a.asset_id} data-testid={`ca-asset-${a.asset_id}`} className="mt-2 rounded bg-muted/40 p-2 flex items-center justify-between flex-wrap gap-2">
-                      <div className="text-[12px]">
-                        <span className="font-mono">{a.asset_id}</span> · {a.version} ·{" "}
-                        <Badge tone={STATE_TONE[a.lifecycle_state]}>{a.lifecycle_state}</Badge>{" "}
-                        <Badge tone={RESULT_TONE[a.validation?.result]} testid={`ca-val-${a.asset_id}`}>{a.validation?.result}</Badge>
-                        {a.validation?.qr_validation && <Badge tone={RESULT_TONE[a.validation.qr_validation.result]}>QR {a.validation.qr_validation.result}</Badge>}
+                      <div className="flex items-center gap-2">
+                        {a.file_url && /\.(png|jpg|jpeg|webp)$/i.test(a.filename || "") && (
+                          <img data-testid={`ca-thumb-${a.asset_id}`} src={a.file_url} alt={a.asset_role}
+                            className="w-10 h-12 object-cover rounded border bg-white" />
+                        )}
+                        <div className="text-[12px]">
+                          <span className="font-mono">{a.asset_id}</span> · {a.version} ·{" "}
+                          <Badge tone={STATE_TONE[a.lifecycle_state]}>{a.lifecycle_state}</Badge>{" "}
+                          <Badge tone={RESULT_TONE[a.validation?.result]} testid={`ca-val-${a.asset_id}`}>{a.validation?.result}</Badge>
+                          {a.validation?.qr_validation && <Badge tone={RESULT_TONE[a.validation.qr_validation.result]}>QR {a.validation.qr_validation.result}</Badge>}
+                        </div>
                       </div>
                       <div className="flex gap-1">
                         <button data-testid={`ca-approve-${a.asset_id}`} onClick={() => setState(a.asset_id, "Approved")} className="inline-flex items-center gap-1 text-emerald-700 hover:bg-emerald-50 px-2 py-1 rounded text-[11px]"><CheckCircle2 className="w-3.5 h-3.5" />Approve</button>
@@ -204,6 +239,12 @@ export default function CreativeAssets() {
               </div>
               {pkg.missing_assets?.length > 0 && <div className="mt-2 text-red-600">Missing: {pkg.missing_assets.map((m) => m.asset_role).join(", ")}</div>}
               {pkg.blocked_reason && <div className="mt-1 text-muted-foreground">{pkg.blocked_reason}</div>}
+              {pkg.marketplace === "etsy" && (
+                <button data-testid="ca-etsy-publish" onClick={publishEtsy} disabled={busy === "etsy"}
+                  className="mt-3 inline-flex items-center gap-1 bg-[#f1641e] text-white px-3 py-1.5 rounded text-[12px] font-semibold disabled:opacity-40">
+                  {busy === "etsy" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Rocket className="w-3.5 h-3.5" />} Authorize & Publish to Etsy
+                </button>
+              )}
             </div>
           )}
         </div>

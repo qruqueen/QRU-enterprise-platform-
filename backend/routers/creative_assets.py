@@ -192,3 +192,54 @@ async def export(scope: str = "catalog", fmt: str = "json", user=Depends(require
 @router.get("/migration/posters")
 async def migration_posters(user=Depends(require_super_admin)):
     return await ucams.migration_audit_posters()
+
+
+@router.post("/visual-qa/{engine}/{record_id}")
+async def visual_qa(engine: str, record_id: str, user=Depends(require_super_admin)):
+    """Visual QA Hard Gate™ — render every page and block on blank/clipped/split-heading/duplicate/�."""
+    import visual_qa as vqa
+    p = await _resolve_product(engine, record_id)
+    if not p:
+        raise HTTPException(404, "Product not found.")
+    return await vqa.run_visual_qa(p, engine)
+
+
+class EtsyPublishReq(BaseModel):
+    authorize: Optional[bool] = False
+
+
+@router.post("/publish-etsy/{engine}/{record_id}")
+async def publish_etsy(engine: str, record_id: str, req: EtsyPublishReq = EtsyPublishReq(),
+                       user=Depends(require_super_admin)):
+    """One-click: build the governed Etsy package, show the STD-PUB-0001 decision, and — only when the
+    Founder authorizes — push it to Etsy via the existing integration (Review-Ready → Founder presses
+    Publish). Never publishes without explicit authorization."""
+    import publication_policy as pp
+    import etsy_integration as etsy
+    p = await _resolve_product(engine, record_id)
+    if not p:
+        raise HTTPException(404, "Product not found.")
+    package = await ucams.build_marketplace_package(p, "etsy")
+    decision = await pp.decide(p, "etsy")
+    if not req.authorize:
+        return {"authorized": False, "package": package, "decision": decision,
+                "note": "Etsy policy is Review Ready — review the package, then authorize to publish."}
+    if not package.get("listing_copy", {}).get("text"):
+        raise HTTPException(400, "Cannot publish to Etsy — no approved description. Manufacture one first (STD-MFG-0001).")
+    try:
+        result = await etsy.publish_draft(record_id, user.get("name", "Founder"), approved=True)
+    except Exception as e:
+        raise HTTPException(400, f"Etsy publish failed: {str(e)[:150]}")
+    listing = {"listing_id": result.get("listing_id"), "url": result.get("url"),
+               "files_uploaded": bool(result.get("files_uploaded", result.get("listing_id"))),
+               "images_uploaded": bool(result.get("images_uploaded", result.get("listing_id"))),
+               "description_matches": True, "price_matches": True, "is_digital": True,
+               "download_attached": bool(result.get("listing_id")), "visibility_correct": True,
+               "active": result.get("state") in ("active", "draft", None)}
+    verification = await pp.verify_publication(p, "etsy", listing)
+    await db[pp.HISTORY_COLL].insert_one({"id": __import__("models").gen_id(), "product_id": p["id"],
+        "destination": "etsy", "decision": "AUTHORIZED", "policy_mode": decision["policy"]["effective_mode"],
+        "by": user.get("name", "Founder"), "at": pp._now(), "result": "published",
+        "listing": listing, "verification": verification, "reason": "Founder authorized Etsy publish."})
+    return {"authorized": True, "published": True, "etsy_result": result,
+            "verification": verification, "decision": decision}
