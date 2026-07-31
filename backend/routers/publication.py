@@ -66,6 +66,8 @@ async def resolve(engine: str, record_id: str, destination: str, user=Depends(ge
 
 class PublishReq(BaseModel):
     destination: str
+    founder_override: Optional[bool] = False
+    override_reason: Optional[str] = ""
 
 
 @router.post("/publish/{engine}/{record_id}")
@@ -73,7 +75,9 @@ async def publish(engine: str, record_id: str, req: PublishReq, user=Depends(req
     p = await _resolve(engine, record_id)
     if not p:
         raise HTTPException(404, "Product not found.")
-    return await pp.publish(p, req.destination, actor=user.get("name", "Founder"))
+    return await pp.publish(p, req.destination, actor=user.get("name", "Founder"),
+                            founder_override=bool(req.founder_override),
+                            override_reason=req.override_reason or "", engine=engine)
 
 
 @router.get("/history")

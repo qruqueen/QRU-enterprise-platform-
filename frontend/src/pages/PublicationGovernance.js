@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import api, { formatApiError } from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import {
-  Loader2, Gavel, CheckCircle2, XCircle, ShieldCheck, Rocket, History, Settings2, RefreshCw,
+  Loader2, Gavel, CheckCircle2, XCircle, ShieldCheck, Rocket, History, Settings2, RefreshCw, ShieldAlert,
 } from "lucide-react";
 
 const DESTINATIONS = ["qru_online", "etsy", "amazon_kdp", "tpt", "shopify"];
@@ -43,11 +43,17 @@ export default function PublicationGovernance() {
 
   useEffect(() => { if (sel) load(sel); }, [sel, load]);
 
-  const publish = async (dest) => {
+  const publish = async (dest, override = false) => {
+    let reason = "";
+    if (override) {
+      reason = window.prompt("Founder Override™ — you are authorizing publication even though some governance requirements are unmet. This is recorded for audit. Optional reason:", "Founder decision") || "Founder decision";
+      if (!window.confirm(`Publish "${books.find((b) => b.id === sel)?.title}" to ${dest.replace("_", " ")} by FOUNDER OVERRIDE™? Bypassed requirements will be logged honestly.`)) return;
+    }
     setBusy(`pub-${dest}`);
     try {
-      const { data } = await api.post(`/publication/publish/book/${sel}`, { destination: dest });
-      if (data.published) toast.success(`Published to ${dest} · ${data.verification?.status}`);
+      const { data } = await api.post(`/publication/publish/book/${sel}`, { destination: dest, founder_override: override, override_reason: reason });
+      if (data.published) toast.success(`${override ? "Founder Override — " : ""}Published to ${dest} · ${data.verification?.status}`);
+      else if (data.founder_override) toast.message(data.note || "Authorized by Founder Override (no live integration).");
       else toast.error(`Not published — ${data.decision?.decision}: ${data.decision?.human_readable?.slice(0, 90)}`);
       await load(sel);
     } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); } finally { setBusy(""); }
@@ -91,11 +97,18 @@ export default function PublicationGovernance() {
                     {dec && <Badge tone={DECISION_TONE[dec.decision]}>{dec.decision}</Badge>}
                     {dec?.policy && <span className="text-[11px] text-muted-foreground">from {dec.policy.resolved_from}</span>}
                   </div>
-                  <button data-testid={`pg-publish-${d}`} onClick={() => publish(d)} disabled={busy === `pub-${d}` || !dec?.auto_publish_authorized}
-                    title={dec?.auto_publish_authorized ? "" : "Auto-publish not authorized by policy/requirements"}
-                    className="inline-flex items-center gap-1 bg-navy text-white px-3 py-1.5 rounded text-[12px] font-semibold disabled:opacity-40">
-                    {busy === `pub-${d}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Rocket className="w-3.5 h-3.5" />} Publish
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button data-testid={`pg-publish-${d}`} onClick={() => publish(d)} disabled={busy === `pub-${d}` || !dec?.auto_publish_authorized}
+                      title={dec?.auto_publish_authorized ? "" : "Auto-publish not authorized by policy/requirements"}
+                      className="inline-flex items-center gap-1 bg-navy text-white px-3 py-1.5 rounded text-[12px] font-semibold disabled:opacity-40">
+                      {busy === `pub-${d}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Rocket className="w-3.5 h-3.5" />} Publish
+                    </button>
+                    <button data-testid={`pg-override-publish-${d}`} onClick={() => publish(d, true)} disabled={busy === `pub-${d}`}
+                      title="Founder Authority — bypass the governance gate and publish now (recorded for audit)"
+                      className="inline-flex items-center gap-1 bg-gold text-navy px-3 py-1.5 rounded text-[12px] font-bold hover:brightness-95">
+                      <ShieldAlert className="w-3.5 h-3.5" /> Founder Override
+                    </button>
+                  </div>
                 </div>
                 {dec && (
                   <div className="mt-2 text-[12px]">

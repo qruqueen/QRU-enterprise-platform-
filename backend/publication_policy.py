@@ -181,12 +181,26 @@ async def evaluate_requirements(product, destination):
     return {"satisfied": satisfied, "missing": missing, "all_pass": len(missing) == 0, "detail": results}
 
 
-async def decide(product, destination):
-    """Publication Decision Engine — evaluate policy + requirements and record exactly WHY."""
+async def decide(product, destination, founder_override=False):
+    """Publication Decision Engine — evaluate policy + requirements and record exactly WHY.
+    Founder Override™: the Founder may consciously authorize publication even when requirements are
+    unmet. This ALWAYS authorizes, but honestly records that it was a Founder Override and lists exactly
+    which requirements were bypassed (Treasure Standard™ — no fake 'all passed' state)."""
     policy = await resolve_policy(product, destination)
     reqs = await evaluate_requirements(product, destination)
     mode = policy["effective_mode"]
     can_auto = mode == "Authorized Auto Publish" and reqs["all_pass"]
+    if founder_override:
+        return {
+            "standard": STANDARD_ID, "product_id": product.get("id"), "title": product.get("title"),
+            "destination": destination, "policy": policy, "requirements": reqs,
+            "decision": "AUTHORIZED", "can_publish": True, "auto_publish_authorized": True,
+            "founder_override": True, "bypassed_requirements": reqs["missing"],
+            "human_readable": (f"Authorized by FOUNDER OVERRIDE™ (Founder Authority takes precedence). "
+                               f"Bypassed {len(reqs['missing'])} requirement(s): "
+                               f"{', '.join(reqs['missing']) or 'none — all passed anyway'}. Recorded for audit."),
+            "evaluated_at": _now(),
+        }
     if mode == "Disabled":
         action, reason = "BLOCKED", f"Publishing to {destination} is Disabled by governed policy ({policy['resolved_from']})."
     elif mode == "Export Only":
@@ -236,23 +250,28 @@ async def verify_publication(product, destination, listing):
     return {"status": status, "checks": checks, "failed_checks": fails, "verified_at": _now()}
 
 
-async def publish(product, destination, actor="Founder"):
-    """Perform a governed publication ONLY when the decision engine authorizes it. QRU Online is an
-    owned storefront so it publishes for real (sets visibility); external marketplaces without a live
-    integration are never auto-published (returns a Review-Ready/Export package instruction)."""
-    d = await decide(product, destination)
+async def publish(product, destination, actor="Founder", founder_override=False, override_reason="", engine="book"):
+    """Perform a governed publication when the decision engine authorizes it — OR when the Founder
+    consciously overrides. QRU Online is an owned storefront so it publishes for real; external
+    marketplaces without a live integration record an authorized override (no false 'published')."""
+    d = await decide(product, destination, founder_override=founder_override)
+    coll = {"book": "book_records", "publication": "products", "product": "products"}.get(engine, "products")
     entry = {"id": gen_id(), "product_id": product.get("id"), "destination": destination,
              "decision": d["decision"], "policy_mode": d["policy"]["effective_mode"],
-             "by": actor, "at": _now(), "reason": d["human_readable"], "standard": STANDARD_ID}
+             "by": actor, "at": _now(), "reason": d["human_readable"], "standard": STANDARD_ID,
+             "founder_override": bool(founder_override),
+             "bypassed_requirements": d.get("bypassed_requirements", []) if founder_override else [],
+             "override_reason": override_reason if founder_override else ""}
     if d["decision"] != "AUTHORIZED":
         entry["result"] = "not_published"
         await db[HISTORY_COLL].insert_one(dict(entry))
         return {"published": False, "decision": d, "history_id": entry["id"]}
     # AUTHORIZED — perform the real owned-store publish (QRU Online / internal draft).
     if destination in ("qru_online", "internal_draft"):
-        await db.products.update_one({"id": product["id"]}, {"$set": {
+        await db[coll].update_one({"id": product["id"]}, {"$set": {
             "qru_online_published": True, "qru_online_visibility": "public",
-            "published_at": _now(), "publication_destination": destination}})
+            "published_at": _now(), "publication_destination": destination,
+            "published_via_founder_override": bool(founder_override)}})
         listing = {"listing_id": f"QRU-{product['id'][:8]}", "url": f"https://qru-online.com/p/{product['id']}",
                    "files_uploaded": True, "images_uploaded": True, "description_matches": True,
                    "price_matches": True, "is_digital": True, "download_attached": True,
@@ -261,11 +280,13 @@ async def publish(product, destination, actor="Founder"):
         entry.update({"result": "published", "listing": listing, "verification": verification})
         await db[HISTORY_COLL].insert_one(dict(entry))
         return {"published": True, "decision": d, "listing": listing, "verification": verification,
-                "history_id": entry["id"]}
-    entry["result"] = "no_live_integration"
+                "founder_override": bool(founder_override), "history_id": entry["id"]}
+    entry["result"] = "authorized_override_no_live_integration" if founder_override else "no_live_integration"
     await db[HISTORY_COLL].insert_one(dict(entry))
-    return {"published": False, "decision": d,
-            "note": f"{destination} authorized by policy but no live publishing integration; Review-Ready package only.",
+    return {"published": False, "decision": d, "founder_override": bool(founder_override),
+            "note": f"{destination} authorized{' by Founder Override™' if founder_override else ' by policy'}, "
+                    f"but there is no live publishing integration for it — a review-ready package is produced. "
+                    f"Use the marketplace package to upload/publish manually or via its integration.",
             "history_id": entry["id"]}
 
 

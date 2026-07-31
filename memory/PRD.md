@@ -1,3 +1,11 @@
+## ✅ Founder Override™ Publish — done & verified (2026-07-31)
+Founder Authority now takes precedence over the constitutional gate (as STD-BLB/STD-MFG already declare). Everything was showing BLOCKED because existing products haven't had every upstream gate set (Knowledge Verified, Rendering Passed, Visual QA, locked assets, etc.) — the engine was correctly refusing to AUTO-publish. The Founder can now consciously override.
+- `publication_policy.decide(..., founder_override=True)` → always AUTHORIZED, but returns `founder_override:true` + `bypassed_requirements[]` (honest, no fake 'all passed'). `publish(..., founder_override, override_reason, engine)` publishes QRU Online for real, records the override + bypassed list + reason in publication_history; external marketplaces without a live integration return an honest "authorized override → review-ready package" (not a false "published").
+- Router `POST /api/publication/publish/{engine}/{id}` accepts `{founder_override, override_reason}`.
+- UI (`PublicationGovernance.js`): gold **"Founder Override"** button on every destination card (always enabled) with a confirm + optional reason prompt; the normal Publish button stays gated to authorized state.
+- Verified (curl): normal qru_online → BLOCKED; Founder Override qru_online → PUBLISHED + verification Published + bypassed list logged; Founder Override etsy → honest "no live integration" note. UI screenshot: 5 override buttons render. Test publish artifacts cleaned. ⚠️ Preview only — redeploy for production.
+
+
 ## ✅ Visual QA Hard Gate™ + Live Etsy Publish + Asset Thumbnails — done & verified (2026-07-31)
 
 ### Visual QA Hard Gate™ — `visual_qa.py` + `POST /api/creative-assets/visual-qa/{engine}/{id}`
