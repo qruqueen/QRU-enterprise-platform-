@@ -1514,3 +1514,8 @@ Founder froze new-feature dev; directed modernization by *wiring existing capabi
 - Bundle Builder: POST /api/printables/bundle/{engine}/{id} — merges 2+ finished printables (PyMuPDF) into one activity-pack PDF with a branded Table-of-Contents page; stored as product_type "activity_pack_bundle" (cannot be re-bundled). Sources preserved.
 - Attach To Listing: POST /api/printables/attach/{engine}/{id} — registers a finished PDF as product.download_files.<destination> and returns the Governed Publication Policy™ decision (etsy/qru_online/tpt). Never auto-publishes.
 - Frontend PrintableStudio.js: activity toggle, per-thumbnail Regenerate Larger, attach buttons on results + bundle results, and a Bundle Builder section (history list w/ QA badges, TOC preview). Verified E2E (curl + UI): activity auto-fill 2→8 pages, enhance 300×400→2250×3000, bundle→12 pages w/ TOC, attach returns policy decision.
+
+### Printable Studio™ fix (2026-07-31): product optional / Build button enablement
+- Build no longer requires a pre-selected product. Frontend button disabled only when no pages uploaded (was also gating on !sel → confused mobile users when selector scrolled off-screen).
+- Backend build/{engine}/{record_id} accepts record_id "standalone"/"none"/"" → builds with product={} (default palette, title from cover field). Returns product_id (null for standalone).
+- Product needed only for Bundle/Attach; result panel hides attach buttons + shows a note when standalone. Selector relabeled "No product — build a standalone printable".

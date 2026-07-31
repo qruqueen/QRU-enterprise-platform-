@@ -49,8 +49,10 @@ class BuildReq(BaseModel):
 
 @router.post("/build/{engine}/{record_id}")
 async def build(engine: str, record_id: str, req: BuildReq, user=Depends(get_current_user)):
-    product = await _resolve_product(engine, record_id)
-    if not product:
+    # record_id "standalone" (or "none") builds a printable without attaching to an existing product.
+    standalone = record_id in ("standalone", "none", "")
+    product = {} if standalone else await _resolve_product(engine, record_id)
+    if not standalone and not product:
         raise HTTPException(404, "Product not found.")
     if not req.images_base64:
         raise HTTPException(400, "Upload at least one page image.")
@@ -68,13 +70,14 @@ async def build(engine: str, record_id: str, req: BuildReq, user=Depends(get_cur
     fid = re._save("printable", "pdf", pdf_bytes)
     pdf_url = re._asset_url(fid)
     doc_title = req.title or product.get("title") or "QRU Printable"
-    record = {"id": gen_id(), "product_id": product["id"], "engine": engine, "title": doc_title,
+    record = {"id": gen_id(), "product_id": product.get("id"), "engine": engine, "title": doc_title,
               "product_type": result["product_type"], "page_count": result["page_count"],
               "qa_result": result["qa"]["result"], "quality_review_required": result["quality_review_required"],
               "pdf_url": pdf_url, "bytes": len(pdf_bytes), "created_by": user.get("name", "Founder"),
               "created_at": now_iso(), "standard": ppb.STANDARD_ID}
     await db[COLL].insert_one(dict(record))
-    return {**result, "pdf_url": pdf_url, "bytes": len(pdf_bytes), "printable_id": record["id"]}
+    return {**result, "pdf_url": pdf_url, "bytes": len(pdf_bytes), "printable_id": record["id"],
+            "product_id": product.get("id")}
 
 
 class EnhanceReq(BaseModel):

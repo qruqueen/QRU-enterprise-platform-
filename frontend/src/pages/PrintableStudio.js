@@ -96,17 +96,16 @@ export default function PrintableStudio() {
   const removeAt = (i) => setPages((p) => p.filter((_, idx) => idx !== i));
 
   const build = async () => {
-    if (!sel) { toast.error("Select a product first."); return; }
     if (!pages.length) { toast.error("Upload at least one page image."); return; }
     setBusy(true); setResult(null);
     try {
-      const { data } = await api.post(`/printables/build/book/${sel}`, {
+      const { data } = await api.post(`/printables/build/book/${sel || "standalone"}`, {
         product_type: ptype, images_base64: pages.map((p) => p.dataUrl),
         include_cover: incCover, include_instructions: incInstr,
         title: title || null, subtitle: subtitle || null, page_size: pageSize,
         activity_layout: activityLayout,
       });
-      setResult(data); loadHistory(sel);
+      setResult(data); if (sel) loadHistory(sel);
       const r = data.qa.result;
       toast[r === "FAIL" ? "error" : r === "REVISION_REQUIRED" ? "warning" : "success"](
         `${data.page_count}-page PDF built — QA: ${r.replace("_", " ")}`);
@@ -125,10 +124,10 @@ export default function PrintableStudio() {
       {/* Step 1 — product + type */}
       <div className="rounded-lg border bg-card p-4 space-y-4">
         <div>
-          <label className="text-xs font-semibold text-navy uppercase tracking-wide">Product</label>
+          <label className="text-xs font-semibold text-navy uppercase tracking-wide">Product <span className="text-muted-foreground normal-case font-normal">— optional (needed only to bundle or attach to a listing)</span></label>
           <select data-testid="ps-product-select" value={sel} onChange={(e) => { setSel(e.target.value); setResult(null); }}
             className="mt-2 block w-full rounded-md border px-3 py-2 text-sm">
-            <option value="">Select a product…</option>
+            <option value="">No product — build a standalone printable</option>
             {books.map((b) => <option key={b.id} value={b.id}>{b.book_code} — {b.title}</option>)}
           </select>
         </div>
@@ -196,7 +195,7 @@ export default function PrintableStudio() {
             ))}
           </div>
         )}
-        <button data-testid="ps-build" onClick={build} disabled={busy || !sel || !pages.length}
+        <button data-testid="ps-build" onClick={build} disabled={busy || !pages.length}
           className="mt-4 inline-flex items-center gap-2 bg-gold text-navy px-4 py-2 rounded-md text-[13px] font-bold disabled:opacity-40">
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />} Build Governed PDF
         </button>
@@ -239,15 +238,21 @@ export default function PrintableStudio() {
               )}
               <div className="mt-3">
                 <p className="text-[11px] font-semibold text-navy uppercase tracking-wide mb-1 flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5" /> Attach as download to a listing</p>
-                <div className="flex flex-wrap gap-2" data-testid="ps-attach">
-                  {result.suitable_destinations.map((d) => (
-                    <button key={d.id} data-testid={`ps-attach-${d.id}`} onClick={() => attach(result.printable_id, d.id)}
-                      className="inline-flex items-center gap-1 text-[11px] bg-navy text-white px-2.5 py-1 rounded-full hover:brightness-110">
-                      <Paperclip className="w-3 h-3" /> {d.label}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[10px] text-muted-foreground mt-1">Attaching registers the deliverable and runs Governed Publication Policy™ — the Factory never auto-publishes.</p>
+                {result.product_id ? (
+                  <>
+                    <div className="flex flex-wrap gap-2" data-testid="ps-attach">
+                      {result.suitable_destinations.map((d) => (
+                        <button key={d.id} data-testid={`ps-attach-${d.id}`} onClick={() => attach(result.printable_id, d.id)}
+                          className="inline-flex items-center gap-1 text-[11px] bg-navy text-white px-2.5 py-1 rounded-full hover:brightness-110">
+                          <Paperclip className="w-3 h-3" /> {d.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1">Attaching registers the deliverable and runs Governed Publication Policy™ — the Factory never auto-publishes.</p>
+                  </>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">Select a product above (before building) to attach this PDF to an Etsy / QRU / TpT listing. Standalone PDFs can still be downloaded and shared.</p>
+                )}
               </div>
             </div>
             <div>
