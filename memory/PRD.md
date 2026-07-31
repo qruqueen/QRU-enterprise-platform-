@@ -1,3 +1,17 @@
+## ✅ Founder Copy Package™ (STD-UCAMS-0001 enhancement) + PWA (installable) — done & verified (2026-07-31)
+
+### Founder Copy Package™ — three export modes on every UCAS™ spec
+- `build_founder_copy_package(spec)` in `creative_asset_system.py`, folded into `generate_spec()` output as `founder_copy_package` (does NOT affect the governance `spec_checksum` — fingerprint excludes it).
+- **Human Summary** (readable spec), **ChatGPT Prompt** (complete one-paste prompt: design intent + exact technical requirements/dimensions + brand standards + marketplace requirements + render instructions + governance ref), **Raw JSON** (technical archive). No manual editing required.
+- UI (`CreativeAssets.js`): spec panel now has 3 mode tabs (`ca-mode-*`), a per-mode Copy button, and a green **"Copy for ChatGPT"** button (`ca-copy-chatgpt`) → clipboard + toast. Verified: backend curl (prompt content correct, checksum preserved) + screenshot (tabs + copy button + toast).
+
+### PWA (installable web app) — no backend changes, $0 (icons reused from qru-shield.png)
+- `public/manifest.json` (standalone, navy theme #0f1e3d, 192/512/maskable icons), `public/service-worker.js` (app-shell cache; network-first navigations; NEVER caches /api), meta/link tags in `index.html`, SW registration in `index.js`.
+- Verified: manifest served, `theme-color` set, service worker **registered**, app loads at phone width (390px). The web app is fully intact (same URL/login/features) — PWA is additive.
+- ⚠️ Install prompt ("Add to Home Screen") requires the live HTTPS domain — **redeploy** to activate on qru-online.com.
+- KNOWN FOLLOW-UP (honest): interior screens still render the desktop layout on small phones (sidebar fixed) — a responsive "mobile polish" pass is a separate task, not part of the PWA request.
+
+
 ## ✅ Founder Override™ Publish — done & verified (2026-07-31)
 Founder Authority now takes precedence over the constitutional gate (as STD-BLB/STD-MFG already declare). Everything was showing BLOCKED because existing products haven't had every upstream gate set (Knowledge Verified, Rendering Passed, Visual QA, locked assets, etc.) — the engine was correctly refusing to AUTO-publish. The Founder can now consciously override.
 - `publication_policy.decide(..., founder_override=True)` → always AUTHORIZED, but returns `founder_override:true` + `bypassed_requirements[]` (honest, no fake 'all passed'). `publish(..., founder_override, override_reason, engine)` publishes QRU Online for real, records the override + bypassed list + reason in publication_history; external marketplaces without a live integration return an honest "authorized override → review-ready package" (not a false "published").

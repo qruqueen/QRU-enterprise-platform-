@@ -261,7 +261,7 @@ async def generate_spec(product, asset_role, platform_id, *, pages=None, paper_t
     # Deterministic fingerprint over the manufacturing requirements only (excludes any timestamps).
     fingerprint_src = {k: spec_body[k] for k in spec_body if k not in ("campaign",)}
     spec_checksum = _checksum(fingerprint_src)
-    return {
+    out = {
         "standard": STANDARD_ID, "spec_id": f"UCAS-{spec_checksum[:12]}",
         "spec_checksum": spec_checksum, "deterministic": True,
         "generated_at": _now(),
@@ -272,6 +272,111 @@ async def generate_spec(product, asset_role, platform_id, *, pages=None, paper_t
         "accessibility_requirements": ACCESSIBILITY_REQS,
         "provenance_required": RIGHTS_REQUIRED_FIELDS,
         "lifecycle_state": "Specification Verified" if profile["status"] in ("Verified", "Active") else "Specification Draft",
+    }
+    # Founder Copy Package™ — three ready-to-use export modes (does NOT affect the governance checksum).
+    out["founder_copy_package"] = build_founder_copy_package(out, product)
+    return out
+
+
+def _dimensions_text(spec):
+    g = spec.get("geometry")
+    if g:
+        return (f"Full print wrap (back + spine + front): EXACTLY {g['total_wrap_in'][0]} x {g['total_wrap_in'][1]} inches "
+                f"({g['total_wrap_px'][0]} x {g['total_wrap_px'][1]} px at {g['dpi']} DPI). "
+                f"Spine width {g['spine_in']} in ({g['page_count']} pages, {g['paper_type']} paper). "
+                f"Bleed {g['bleed_in']} in on all sides; keep all text/logos {g['zones']['safe_margin_in']} in inside the trim (safe area). "
+                f"Reserve a clear barcode zone of {g['zones']['barcode_zone_in'][0]} x {g['zones']['barcode_zone_in'][1]} in on the back cover.")
+    px = spec.get("target_px")
+    ar = spec.get("aspect_ratio")
+    req = spec.get("requirements", {})
+    if px:
+        return (f"EXACTLY {px[0]} x {px[1]} px" + (f" (aspect ratio {ar})" if ar else "") +
+                f", {req.get('color_space','RGB')}, {req.get('dpi',72)} DPI, format {req.get('format','png').upper()}"
+                + (f", max {req['max_mb']} MB" if req.get('max_mb') else "") + ".")
+    return "Follow the platform's published dimensions."
+
+
+def build_founder_copy_package(spec, product=None):
+    """Founder Copy Package™ (STD-UCAMS-0001) — three ready-to-use export modes for founder/external-AI
+    collaboration. No manual editing required. Governance JSON + checksum are preserved untouched."""
+    di = spec.get("design_intent", {})
+    req = spec.get("requirements", {})
+    info = spec.get("information_design")
+    title = spec.get("title") or ""
+    dims = _dimensions_text(spec)
+    colors = ", ".join(di.get("approved_colors", []))
+    fonts = ", ".join(di.get("approved_fonts", []))
+    prohibited = ", ".join(di.get("prohibited", []))
+    listing_roles = ", ".join(req.get("listing_image_roles", []) or req.get("image_roles", []) or [])
+
+    # 1) Human Summary — readable spec.
+    hs = [
+        f"QRU CREATIVE ASSET SPECIFICATION — {spec.get('spec_id')}",
+        f"Product: {title}" + (f" — {spec.get('subtitle')}" if spec.get('subtitle') else ""),
+        f"Asset: {spec.get('asset_family')} · Role: {spec.get('asset_role')} · Destination: {spec.get('platform_name')} (profile {spec.get('profile_version')}, {spec.get('profile_status')})",
+        "",
+        "TECHNICAL REQUIREMENTS:",
+        f"  • {dims}",
+        "",
+        "DESIGN INTENT:",
+        f"  • Purpose: {di.get('asset_purpose','')}",
+        f"  • Audience: {di.get('audience','')}",
+        f"  • Primary message: {di.get('primary_message','')}",
+        f"  • Tone: {di.get('emotional_tone','')}",
+        "",
+        "BRAND STANDARDS (inherited):",
+        f"  • Imprint: {di.get('imprint','')}  ·  Trademark: {', '.join(di.get('required_trademark_symbols', []))}",
+        f"  • Approved colors: {colors}",
+        f"  • Approved fonts: {fonts}",
+        f"  • Editorial: {di.get('editorial_bible_inheritance','')}",
+        f"  • Do NOT use: {prohibited}",
+    ]
+    if listing_roles:
+        hs += ["", f"MARKETPLACE REQUIREMENTS:", f"  • Listing image roles: {listing_roles}"]
+    if info:
+        hs += ["", "INFORMATION DESIGN:", f"  • Type: {info.get('visual_type')} · Outcome: {info.get('intended_outcome')}",
+               f"  • Hierarchy: {' > '.join(info.get('visual_hierarchy', []))}",
+               f"  • Quality bar: {info.get('quality_bar')}"]
+    hs += ["", f"GOVERNANCE: spec_id {spec.get('spec_id')} · checksum {spec.get('spec_checksum','')[:16]} · {spec.get('standard')}"]
+    human_summary = "\n".join(hs)
+
+    # 2) ChatGPT Prompt — complete, one-paste prompt formatted for AI image generation.
+    cg = [
+        f"You are a senior brand designer. Create a {spec.get('asset_family','').replace('_',' ')} "
+        f"({spec.get('asset_role','').replace('_',' ')}) for {spec.get('platform_name')}.",
+        "",
+        f"PRODUCT: \"{title}\"" + (f", subtitle \"{spec.get('subtitle')}\"" if spec.get('subtitle') else "")
+        + (f", by {di.get('imprint')}" if di.get('imprint') else "") + ".",
+        f"PRIMARY MESSAGE: {di.get('primary_message','')}",
+        f"AUDIENCE: {di.get('audience','')}.  TONE: {di.get('emotional_tone','')}.",
+        "",
+        f"EXACT TECHNICAL REQUIREMENTS (must match precisely): {dims}",
+        "",
+        f"BRAND STANDARDS (mandatory): Imprint {di.get('imprint','')}. "
+        f"Use ONLY these brand colors: {colors}. Use ONLY these fonts (or closest match): {fonts}. "
+        f"Include the ™ trademark on QRU marks. Follow the {di.get('editorial_bible_inheritance','QRU brand')}.",
+        f"DO NOT: {prohibited}. No generic AI-poster look, no clip art, no unverified claims.",
+    ]
+    if listing_roles:
+        cg += ["", f"MARKETPLACE: Produce the {spec.get('platform_name')} listing set covering these roles: {listing_roles}."]
+    if info:
+        cg += ["", f"INFORMATION DESIGN: This is a {info.get('visual_type')} whose goal is to {info.get('intended_outcome')}. "
+               f"Visual hierarchy (most to least prominent): {', '.join(info.get('visual_hierarchy', []))}. "
+               f"Quality bar: {info.get('quality_bar')}."]
+    cg += ["",
+           "RENDER INSTRUCTIONS: Deliver at the EXACT pixel dimensions above. Keep all text fully inside the safe "
+           "area (nothing clipped at edges). High contrast, legible typography, intentional hierarchy, premium finish. "
+           "Provide a flat, print/marketplace-ready image.",
+           "",
+           f"(Governance ref — do not render this line: QRU {spec.get('spec_id')} / checksum {spec.get('spec_checksum','')[:16]})"]
+    chatgpt_prompt = "\n".join(cg)
+
+    return {
+        "modes": ["human_summary", "chatgpt_prompt", "raw_json"],
+        "human_summary": human_summary,
+        "chatgpt_prompt": chatgpt_prompt,
+        "raw_json_note": "Full specification JSON (this object) is the technical archive; checksum preserved for governance.",
+        "spec_id": spec.get("spec_id"), "spec_checksum": spec.get("spec_checksum"),
     }
 
 

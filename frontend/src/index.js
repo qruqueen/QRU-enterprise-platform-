@@ -21,3 +21,13 @@ root.render(
     </QueryClientProvider>
   </React.StrictMode>,
 );
+
+
+// PWA — register the service worker so QRU Factory™ is installable ("Add to Home Screen").
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register(`${process.env.PUBLIC_URL || ""}/service-worker.js`)
+      .catch(() => {});
+  });
+}

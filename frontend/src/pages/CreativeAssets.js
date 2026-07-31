@@ -4,7 +4,7 @@ import api, { formatApiError } from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import {
   Loader2, Layers, FileCog, UploadCloud, CheckCircle2, XCircle, AlertTriangle,
-  Lock, ShieldCheck, Package, QrCode, Ban, RefreshCw, ScanSearch, Rocket,
+  Lock, ShieldCheck, Package, QrCode, Ban, RefreshCw, ScanSearch, Rocket, Copy,
 } from "lucide-react";
 
 const STATE_TONE = {
@@ -39,6 +39,19 @@ export default function CreativeAssets() {
   const [rightsOk, setRightsOk] = useState(true);
   const [qrUrl, setQrUrl] = useState("");
   const [vqa, setVqa] = useState(null);
+  const [specMode, setSpecMode] = useState("chatgpt_prompt");
+
+  const copyText = async (text, msg) => {
+    if (!text) { toast.error("Nothing to copy."); return; }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(msg || "Copied.");
+    } catch {
+      const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
+      toast.success(msg || "Copied.");
+    }
+  };
 
   const runVisualQa = async () => {
     setBusy("vqa");
@@ -210,11 +223,34 @@ export default function CreativeAssets() {
 
       {spec && (
         <div className="rounded-lg border bg-card p-4" data-testid="ca-spec-panel">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <h3 className="text-sm font-bold text-navy">Specification · {spec.spec_id}</h3>
-            <Badge tone="bg-navy/10 text-navy">checksum {spec.spec_checksum?.slice(0, 12)}</Badge>
+            <div className="flex items-center gap-2">
+              <Badge tone="bg-navy/10 text-navy">checksum {spec.spec_checksum?.slice(0, 12)}</Badge>
+              <button data-testid="ca-copy-chatgpt" onClick={() => copyText(spec.founder_copy_package?.chatgpt_prompt, "ChatGPT prompt copied — paste into ChatGPT to generate the artwork.")}
+                className="inline-flex items-center gap-1 bg-emerald-600 text-white px-3 py-1.5 rounded text-[12px] font-bold hover:brightness-95">
+                <Copy className="w-3.5 h-3.5" /> Copy for ChatGPT
+              </button>
+            </div>
           </div>
-          <pre className="mt-2 text-[11px] bg-muted/50 rounded p-3 overflow-auto max-h-72">{JSON.stringify({ requirements: spec.requirements, geometry: spec.geometry, target_px: spec.target_px, design_intent: spec.design_intent, cost_controls: spec.cost_controls }, null, 2)}</pre>
+          <div className="mt-3 flex gap-1" data-testid="ca-spec-modes">
+            {[["human_summary", "Human Summary"], ["chatgpt_prompt", "ChatGPT Prompt"], ["raw_json", "Raw JSON"]].map(([k, label]) => (
+              <button key={k} data-testid={`ca-mode-${k}`} onClick={() => setSpecMode(k)}
+                className={`px-3 py-1.5 rounded-t text-[12px] font-semibold border-b-2 ${specMode === k ? "border-navy text-navy" : "border-transparent text-muted-foreground hover:text-navy"}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {specMode !== "raw_json" && (
+            <div className="relative">
+              <button data-testid="ca-copy-mode" onClick={() => copyText(specMode === "chatgpt_prompt" ? spec.founder_copy_package?.chatgpt_prompt : spec.founder_copy_package?.human_summary, "Copied to clipboard.")}
+                className="absolute right-2 top-2 inline-flex items-center gap-1 bg-muted text-navy px-2 py-1 rounded text-[11px] font-semibold"><Copy className="w-3 h-3" /> Copy</button>
+              <pre data-testid="ca-spec-content" className="mt-2 text-[11px] bg-muted/50 rounded p-3 overflow-auto max-h-80 whitespace-pre-wrap">{specMode === "chatgpt_prompt" ? spec.founder_copy_package?.chatgpt_prompt : spec.founder_copy_package?.human_summary}</pre>
+            </div>
+          )}
+          {specMode === "raw_json" && (
+            <pre data-testid="ca-spec-content" className="mt-2 text-[11px] bg-muted/50 rounded p-3 overflow-auto max-h-80">{JSON.stringify({ spec_id: spec.spec_id, spec_checksum: spec.spec_checksum, requirements: spec.requirements, geometry: spec.geometry, target_px: spec.target_px, design_intent: spec.design_intent, cost_controls: spec.cost_controls, information_design: spec.information_design }, null, 2)}</pre>
+          )}
         </div>
       )}
 

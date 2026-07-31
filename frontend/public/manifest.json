@@ -1,0 +1,16 @@
+{
+  "short_name": "QRU Factory",
+  "name": "QRU Factory™ — Knowledge Manufacturing OS",
+  "description": "QRU Factory™ — the enterprise knowledge manufacturing operating system. Manufacture once, publish everywhere, to the Treasure Standard™.",
+  "icons": [
+    { "src": "icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+    { "src": "icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ],
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0f1e3d",
+  "background_color": "#0f1e3d"
+}
