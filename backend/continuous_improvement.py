@@ -48,9 +48,11 @@ async def probe_capacity(force=False):
         return dict(_capacity)
     available, reason = False, "unknown"
     try:
+        import asyncio
         chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id="capacity-probe",
                        system_message="Reply with the single word OK.").with_model(*MODEL)
-        resp = await chat.send_message(UserMessage(text="OK"))
+        # Explicit timeout so a hung provider call can't stall the watcher or leak a session.
+        resp = await asyncio.wait_for(chat.send_message(UserMessage(text="OK")), timeout=30)
         available, reason = True, "AI capacity available"
         logger.info("Capacity probe: AVAILABLE")
     except Exception as e:

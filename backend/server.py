@@ -114,6 +114,19 @@ logger = logging.getLogger("qru")
 app = FastAPI(title="QRU Factory Enterprise OS")
 
 
+# Lightweight liveness/readiness probe — MUST return immediately with a 200 and
+# never wait on the DB, seeds, Stripe, Etsy, LLMs, migrations, or any network call.
+# Deployment health check (nginx → GET /health on :8001) depends on this responding instantly.
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
+@app.get("/api/health")
+async def api_health():
+    return {"status": "ok"}
+
+
 @app.get("/api/")
 async def root():
     return {"message": "QRU Factory Enterprise OS", "status": "operational"}
@@ -196,54 +209,54 @@ app.add_middleware(
 )
 
 
+async def _run_startup_seeds():
+    """Runs the full seed/migration chain in the BACKGROUND so the app can finish startup and answer
+    /health immediately. Each step is isolated: a slow/failing step is logged (Treasure Standard — no
+    silent failures) and never blocks the others or the health probe."""
+    import asyncio
+
+    async def _step(name, coro):
+        try:
+            await asyncio.wait_for(coro, timeout=120)
+        except Exception as e:
+            logger.error(f"[startup-seed] '{name}' failed/skipped: {e}")
+
+    import commerce, qbos, qeds, constitution, character_registry, qiks, constitution_v1
+    import publishing_standard, manufacturing_flow, enterprise_architecture, refinement_engine
+    import little_legacy, capability_registry, distribution_architecture, ukr_standard
+    import seed_forex_seeds, book_manufacturing, continuous_improvement
+
+    await _step("core_seed", seed())
+    await _step("registry", seed_registry())
+    await _step("consumer_demo", seed_consumer_demo())
+    await _step("design_intelligence", seed_design_intelligence())
+    await _step("stripe_connection", commerce.ensure_stripe_connection())
+    await _step("qbos", qbos.seed_qbos())
+    await _step("qeds", qeds.seed_qeds())
+    await _step("constitution", constitution.seed_constitution())
+    await _step("characters", character_registry.seed_characters())
+    await _step("qiks", qiks.seed_qiks())
+    await _step("constitution_v1", constitution_v1.seed_constitution_v1())
+    await _step("publishing_standard", publishing_standard.seed_publishing_standard())
+    await _step("manufacturing_flow", manufacturing_flow.seed_flow())
+    await _step("enterprise_architecture", enterprise_architecture.seed_eip())
+    await _step("refinement", refinement_engine.seed_refinement())
+    await _step("little_legacy", little_legacy.seed())
+    await _step("capability_registry", capability_registry.seed())
+    await _step("distribution_experiences", distribution_architecture.seed_experiences())
+    await _step("ukr_migration", ukr_standard.migrate_to_canonical(actor="System (startup)"))
+    await _step("forex", seed_forex_seeds.seed())
+    await _step("book_pilot", book_manufacturing.seed_pilot())
+    asyncio.create_task(continuous_improvement.watcher_loop())
+    logger.info("QRU Factory background seeding complete and operational")
+
+
 @app.on_event("startup")
 async def startup():
-    await seed()
-    await seed_registry()
-    await seed_consumer_demo()
-    await seed_design_intelligence()
-    import commerce
-    await commerce.ensure_stripe_connection()
-    import qbos
-    await qbos.seed_qbos()
-    import qeds
-    await qeds.seed_qeds()
-    import constitution
-    await constitution.seed_constitution()
-    import character_registry
-    await character_registry.seed_characters()
-    import qiks
-    await qiks.seed_qiks()
-    import constitution_v1
-    await constitution_v1.seed_constitution_v1()
-    import publishing_standard
-    await publishing_standard.seed_publishing_standard()
-    import manufacturing_flow
-    await manufacturing_flow.seed_flow()
-    import enterprise_architecture
-    await enterprise_architecture.seed_eip()
-    import refinement_engine
-    await refinement_engine.seed_refinement()
-    import little_legacy
-    await little_legacy.seed()
-    import capability_registry
-    await capability_registry.seed()
-    import distribution_architecture
-    await distribution_architecture.seed_experiences()
-    import ukr_standard
-    try:
-        _ukr_rep = await ukr_standard.migrate_to_canonical(actor="System (startup)")
-        logger.info(f"UKR canonical migration: {_ukr_rep['migrated']}/{_ukr_rep['total']} records on v1.1 canonical spec ({_ukr_rep['sections_completed_count']} sections populated)")
-    except Exception as e:
-        logger.error(f"UKR canonical migration skipped: {e}")
-    import seed_forex_seeds
-    await seed_forex_seeds.seed()
-    import book_manufacturing
-    await book_manufacturing.seed_pilot()
+    # Do NOT block startup on seeds — return immediately so uvicorn binds :8001 and /health answers now.
     import asyncio
-    import continuous_improvement
-    asyncio.create_task(continuous_improvement.watcher_loop())
-    logger.info("QRU Factory seeded and operational")
+    asyncio.create_task(_run_startup_seeds())
+    logger.info("QRU Factory started — health endpoint live; seeding running in background")
 
 
 @app.on_event("shutdown")
