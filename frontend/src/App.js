@@ -56,6 +56,7 @@ import FirstDollarMode from "@/pages/FirstDollarMode";
 import FactoryReadiness from "@/pages/FactoryReadiness";
 import AssetVault from "@/pages/AssetVault";
 import CreativeAssets from "@/pages/CreativeAssets";
+import PrintableStudio from "@/pages/PrintableStudio";
 import PublicationGovernance from "@/pages/PublicationGovernance";
 import ManufacturingEconomics from "@/pages/ManufacturingEconomics";
 import PortabilityCenter from "@/pages/PortabilityCenter";
@@ -200,6 +201,7 @@ function EnterpriseRoutes() {
         <Route path="factory-readiness" element={<FactoryReadiness />} />
         <Route path="asset-vault" element={<AssetVault />} />
         <Route path="creative-assets" element={<CreativeAssets />} />
+        <Route path="printable-studio" element={<PrintableStudio />} />
         <Route path="publication-governance" element={<PublicationGovernance />} />
         <Route path="manufacturing-economics" element={<ManufacturingEconomics />} />
         <Route path="portability" element={<PortabilityCenter />} />

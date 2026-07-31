@@ -1498,3 +1498,19 @@ Founder froze new-feature dev; directed modernization by *wiring existing capabi
 - Frontend CreativeAssets.js: Asset Profile Audit™ table (source/date/version/status/review-due), Governed Render/Export panel on upload showing every action + review flag, "Revision Required" state tone.
 - Tests: /app/backend/tests/test_asset_profiles.py — 18/18 pass (1 valid + 1 invalid per image profile; PDF pass-through verified).
 - HONEST NOTE: legacy marketing preview graphics (design_language.export_formats) already render at exact sizes via contain-fit but still save KDP eBook preview as PNG; the AUTHORITATIVE governed exporter for marketplace uploads is UCAMS.
+
+### Printable Studio™ — Governed Printable Product Manufacturing (2026-07-31)
+- NEW `pdf_product_builder.py` (STD-PPB-0001) + `routers/printables.py`: upload PNG/JPEG → choose product type → arrange pages → QA → export a governed, distributable multi-page PDF (real application/pdf, embeddable).
+- 4 MVP product types: 1-Page Printable, 3-Page QuickStart, 5-Page Mini Workbook, 8-Page Coloring/Activity Book. Optional branded cover page + instructions page (auto-generated with brand palette/fonts from design_language). Page sizes: US Letter (default), A4, Square @300 DPI.
+- Resolution QUALITY GATE: images are contain-fit to the page (never distorted/cropped); per-page effective print DPI is measured. <150 DPI → LOW_RES → QA result REVISION_REQUIRED (human review); 150-300 → warning; ≥300 → clean. Never silently degrades.
+- Endpoints: GET /api/printables/config, POST /api/printables/build/{engine}/{record_id}, GET /api/printables/history/{engine}/{record_id}. PDFs stored via rendering_engine (public /api/rendering/asset/*), history in `printable_products` collection.
+- Frontend `PrintableStudio.js` (route /printable-studio, nav "Printable Studio™"): product/type pickers, multi-upload + reorder/remove, cover/instructions toggles, Build, per-page QA table, review banner, distribute-as chips, PDF iframe preview + download.
+- Suitable destinations surfaced: Etsy digital download, QRU Online download, TpT resource. Never auto-publishes (governed policy decides mode).
+- Verified: function tests + live API (build 200, PDF serves 200 application/pdf ~500KB) + UI E2E (low-res upload correctly triggers REVISION_REQUIRED). Build uses get_current_user (Founder/Admin usable).
+
+### Printable Studio™ — Bundle / Regenerate Larger / Activity Templates / Attach (2026-07-31)
+- Regenerate Larger: POST /api/printables/enhance-image + per-thumbnail button — Lanczos-upscales a page's source to fill its slot at ~300 DPI (honestly flagged "upscaled"; adds no real detail).
+- Activity Templates: eight_page_activity_book (and any type via "Activity layout" toggle) renders content pages with branded title strip + framed art + worksheet/coloring lines, and AUTO-FILLS to the target page count with blank activity/worksheet template pages so a few PNGs become a full book.
+- Bundle Builder: POST /api/printables/bundle/{engine}/{id} — merges 2+ finished printables (PyMuPDF) into one activity-pack PDF with a branded Table-of-Contents page; stored as product_type "activity_pack_bundle" (cannot be re-bundled). Sources preserved.
+- Attach To Listing: POST /api/printables/attach/{engine}/{id} — registers a finished PDF as product.download_files.<destination> and returns the Governed Publication Policy™ decision (etsy/qru_online/tpt). Never auto-publishes.
+- Frontend PrintableStudio.js: activity toggle, per-thumbnail Regenerate Larger, attach buttons on results + bundle results, and a Bundle Builder section (history list w/ QA badges, TOC preview). Verified E2E (curl + UI): activity auto-fill 2→8 pages, enhance 300×400→2250×3000, bundle→12 pages w/ TOC, attach returns policy decision.
