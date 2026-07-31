@@ -1488,3 +1488,13 @@ Founder froze new-feature dev; directed modernization by *wiring existing capabi
 - Layout.js: added native-style bottom tab bar (Console/Create/Knowledge/Concierge/Menu) on mobile (`lg:hidden`); gold active state.
 - Hamburger drawer polished: slide-in 300ms ease, 85vw max-w-xs width, shadow, safe-area inset, larger tap targets (py-2.5).
 - Main content padded (pb-24) so bottom bar never overlaps; verified on 390×844 viewport.
+
+### Asset Specification Registry Audit + Governed Render/Export (2026-07-31)
+- NEW `asset_normalizer.py` (Governed Render/Export Engine™): treats provider/designer output as SOURCE, renders the EXACT final file (exact px, format, color mode, DPI, transparency, max size). Safe normalizations (RGB, DPI, PNG↔JPEG, downscale, JPEG size-fit) auto-apply; quality-affecting changes (upscale, aspect PADDING — never crop) produce a compliant candidate but set quality_review_required → asset lands in "Revision Required" for human sign-off.
+- ROOT CAUSE FIXED: `kdp_ebook_cover` profile wrongly set min_px=1600×2560 (that is the IDEAL). True KDP min is 625×1000. A valid 992×1586 provider image was hard-FAILED. Now min=625×1000, governed export target=1600×2560 JPEG@300DPI. Verified end-to-end: 992×1586 → exact 1600×2560 JPEG PASS.
+- PSR profiles corrected + source-verified (2026-06 web sources) for KDP eBook/print, Etsy, TpT (square 750×750 min), QRU Online, YouTube, Pinterest, IG, TikTok — added accepted_formats, transparency rules, min_px. `seed_profiles()` now reconciles superseded seeds (appends honest change_history) without overwriting human-modified profiles.
+- Fixed aspect-ratio validation bug (was comparing w/h against a height:width field → always warned).
+- NEW endpoints: GET /api/creative-assets/profiles/audit (Asset Profile Audit table), POST /api/creative-assets/normalize/{engine}/{id} (dry-run). `upload` now routes through manufacture_final_asset (source→render→validate final→vault; source file preserved for lineage).
+- Frontend CreativeAssets.js: Asset Profile Audit™ table (source/date/version/status/review-due), Governed Render/Export panel on upload showing every action + review flag, "Revision Required" state tone.
+- Tests: /app/backend/tests/test_asset_profiles.py — 18/18 pass (1 valid + 1 invalid per image profile; PDF pass-through verified).
+- HONEST NOTE: legacy marketing preview graphics (design_language.export_formats) already render at exact sizes via contain-fit but still save KDP eBook preview as PNG; the AUTHORITATIVE governed exporter for marketplace uploads is UCAMS.

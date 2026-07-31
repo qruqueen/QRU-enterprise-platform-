@@ -31,6 +31,13 @@ async def profiles(user=Depends(get_current_user)):
     return {"profiles": await ucams.list_profiles()}
 
 
+@router.get("/profiles/audit")
+async def profiles_audit(user=Depends(get_current_user)):
+    """Asset Profile Audit™ — every destination × asset profile with the source used to verify each
+    requirement, date verified, version, and current status."""
+    return await ucams.profile_audit()
+
+
 @router.get("/inherited/{engine}/{record_id}")
 async def inherited(engine: str, record_id: str, user=Depends(get_current_user)):
     p = await _resolve_product(engine, record_id)
@@ -79,11 +86,47 @@ class UploadReq(BaseModel):
     rights: Optional[Dict[str, Any]] = None
     parent_asset_id: Optional[str] = None
     expected_qr_url: Optional[str] = None
+    auto_normalize: Optional[bool] = True
 
 
 @router.post("/upload/{engine}/{record_id}")
 async def upload(engine: str, record_id: str, req: UploadReq, user=Depends(require_super_admin)):
-    """Import an externally-produced asset → match spec → CAVE™ validate (incl. QR) → CAVL™ vault."""
+    """Import source artwork → Render/Export the EXACT governed final file → CAVE™ validate the FINAL
+    file (incl. QR) → CAVL™ vault. Provider/designer output is SOURCE only; the vaulted asset is the
+    technically-compliant final file (or, if a quality-affecting change was applied, held for review)."""
+    p = await _resolve_product(engine, record_id)
+    if not p:
+        raise HTTPException(404, "Product not found.")
+    try:
+        data = base64.b64decode(req.file_base64.split(",")[-1])
+    except Exception:
+        raise HTTPException(400, "Invalid file_base64.")
+    r = await ucams.manufacture_final_asset(
+        p, req.asset_role, req.platform_id, data, req.filename, rights=req.rights,
+        pages=req.pages, paper_type=req.paper_type or "white", expected_qr_url=req.expected_qr_url,
+        auto_normalize=req.auto_normalize if req.auto_normalize is not None else True,
+        actor=user.get("name", "Founder"), parent_asset_id=req.parent_asset_id)
+    if r.get("error"):
+        raise HTTPException(400, r["error"])
+    # Back-compat: expose the FINAL validation as `validation` (what the vaulted file passes/fails).
+    return {"validation": r["final_validation"], "source_validation": r["source_validation"],
+            "normalization": r["normalization"], "asset": r["asset"]}
+
+
+class NormalizeReq(BaseModel):
+    asset_role: str
+    platform_id: str
+    filename: str
+    file_base64: str
+    pages: Optional[int] = None
+    paper_type: Optional[str] = "white"
+
+
+@router.post("/normalize/{engine}/{record_id}")
+async def normalize(engine: str, record_id: str, req: NormalizeReq, user=Depends(require_super_admin)):
+    """Dry-run the Governed Render/Export — show what the factory would do to make the source file
+    exactly compliant, WITHOUT storing anything. Reports source vs final validation + every action."""
+    import asset_normalizer as norm
     p = await _resolve_product(engine, record_id)
     if not p:
         raise HTTPException(404, "Product not found.")
@@ -91,16 +134,17 @@ async def upload(engine: str, record_id: str, req: UploadReq, user=Depends(requi
                                          paper_type=req.paper_type or "white")
     if spec_obj.get("error"):
         raise HTTPException(400, spec_obj["error"])
-    try:
-        data = base64.b64decode(req.file_base64.split(",")[-1])
-    except Exception:
-        raise HTTPException(400, "Invalid file_base64.")
-    validation = ucams.validate_asset(spec_obj, data, mime="", asset_meta=req.rights,
-                                       expected_qr_url=req.expected_qr_url)
-    asset = await ucams.store_asset(product_id=p["id"], spec=spec_obj, data=data, filename=req.filename,
-                                    asset_meta=req.rights, validation=validation,
-                                    actor=user.get("name", "Founder"), parent_asset_id=req.parent_asset_id)
-    return {"validation": validation, "asset": asset}
+    data = base64.b64decode(req.file_base64.split(",")[-1])
+    source_validation = ucams.validate_asset(spec_obj, data)
+    export = norm.governed_export(spec_obj, data)
+    if export.get("error"):
+        return {"source_validation": source_validation, "error": export["error"]}
+    final_validation = ucams.validate_asset(spec_obj, export.get("data") if export.get("normalized") else data,
+                                            mime=export.get("mime", ""))
+    return {"spec_id": spec_obj.get("spec_id"), "source_validation": source_validation,
+            "normalization": {k: export[k] for k in ("normalized", "actions", "quality_review_required",
+                              "notes", "final_dimensions", "final_bytes", "final_format") if k in export},
+            "final_validation": final_validation}
 
 
 class ValidateReq(BaseModel):

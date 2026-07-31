@@ -10,6 +10,7 @@ import {
 const STATE_TONE = {
   Locked: "bg-emerald-100 text-emerald-700", Approved: "bg-emerald-50 text-emerald-700",
   "Under Review": "bg-blue-50 text-blue-700", "Rights Hold": "bg-amber-100 text-amber-700",
+  "Revision Required": "bg-orange-100 text-orange-700",
   Rejected: "bg-red-100 text-red-700", "Distribution Authorized": "bg-emerald-100 text-emerald-700",
 };
 const RESULT_TONE = {
@@ -40,6 +41,9 @@ export default function CreativeAssets() {
   const [qrUrl, setQrUrl] = useState("");
   const [vqa, setVqa] = useState(null);
   const [specMode, setSpecMode] = useState("chatgpt_prompt");
+  const [audit, setAudit] = useState(null);
+  const [auditOpen, setAuditOpen] = useState(false);
+  const [lastNorm, setLastNorm] = useState({});
 
   const copyText = async (text, msg) => {
     if (!text) { toast.error("Nothing to copy."); return; }
@@ -74,6 +78,7 @@ export default function CreativeAssets() {
 
   useEffect(() => {
     api.get("/book-mfg/books").then(({ data }) => setBooks(data.books || [])).catch(() => {});
+    api.get("/creative-assets/profiles/audit").then(({ data }) => setAudit(data)).catch(() => {});
   }, []);
 
   const load = useCallback(async (id) => {
@@ -106,7 +111,16 @@ export default function CreativeAssets() {
         rights: rightsOk ? RIGHTS_OK : null, expected_qr_url: qrUrl || null,
       });
       const v = data.validation;
-      toast[v.result === "FAIL" || v.result === "HOLD" ? "error" : "success"](`Validation: ${v.result}`);
+      const norm = data.normalization || {};
+      setLastNorm((m) => ({ ...m, [`${role}-${platform}`]: { ...norm, source: data.source_validation } }));
+      if (norm.normalized && norm.actions?.length) {
+        toast.message(`Rendered exact final file (${(norm.final_dimensions || []).join("×")})`, {
+          description: norm.quality_review_required
+            ? "Quality-affecting change applied — held for your review."
+            : "Auto-normalized safe technical differences.",
+        });
+      }
+      toast[v.result === "FAIL" || v.result === "HOLD" ? "error" : "success"](`Final validation: ${v.result}`);
       await load(sel);
     } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); } finally { setBusy(""); }
   };
@@ -191,6 +205,24 @@ export default function CreativeAssets() {
                       </label>
                     </div>
                   </div>
+                  {(() => {
+                    const nz = lastNorm[`${s.asset_role}-${s.platform_id}`];
+                    if (!nz || !nz.actions?.length) return null;
+                    return (
+                      <div data-testid={`ca-norm-${s.platform_id}`} className={`mt-2 rounded-md p-2 text-[11px] border ${nz.quality_review_required ? "bg-orange-50 border-orange-200" : "bg-emerald-50 border-emerald-200"}`}>
+                        <div className="font-semibold text-navy flex items-center gap-1">
+                          <FileCog className="w-3.5 h-3.5" /> Governed Render/Export
+                          {nz.final_dimensions && <span className="font-mono ml-1">→ {nz.final_dimensions.join("×")} {(nz.final_format || "").toUpperCase()}</span>}
+                          {nz.quality_review_required
+                            ? <Badge tone="bg-orange-100 text-orange-700">Human review required</Badge>
+                            : <Badge tone="bg-emerald-100 text-emerald-700">Auto-normalized (safe)</Badge>}
+                        </div>
+                        <ul className="mt-1 list-disc pl-4 space-y-0.5 text-muted-foreground">
+                          {nz.actions.map((a, i) => <li key={i}>{a}</li>)}
+                        </ul>
+                      </div>
+                    );
+                  })()}
                   {present.map((a) => (
                     <div key={a.asset_id} data-testid={`ca-asset-${a.asset_id}`} className="mt-2 rounded bg-muted/40 p-2 flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2">
@@ -250,6 +282,66 @@ export default function CreativeAssets() {
           )}
           {specMode === "raw_json" && (
             <pre data-testid="ca-spec-content" className="mt-2 text-[11px] bg-muted/50 rounded p-3 overflow-auto max-h-80">{JSON.stringify({ spec_id: spec.spec_id, spec_checksum: spec.spec_checksum, requirements: spec.requirements, geometry: spec.geometry, target_px: spec.target_px, design_intent: spec.design_intent, cost_controls: spec.cost_controls, information_design: spec.information_design }, null, 2)}</pre>
+          )}
+        </div>
+      )}
+
+      {audit && (
+        <div className="rounded-lg border bg-card p-4" data-testid="ca-audit">
+          <button data-testid="ca-audit-toggle" onClick={() => setAuditOpen((v) => !v)}
+            className="w-full flex items-center justify-between gap-2 text-left">
+            <h3 className="text-sm font-bold text-navy flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4" /> Asset Profile Audit™
+              <span className="text-[11px] font-normal text-muted-foreground">
+                {audit.destination_count} destinations · {audit.profile_count} profiles · every requirement source-verified
+              </span>
+            </h3>
+            <span className="text-[12px] text-navy">{auditOpen ? "Hide" : "Show table"}</span>
+          </button>
+          {auditOpen && (
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-[11px] border-collapse" data-testid="ca-audit-table">
+                <thead>
+                  <tr className="text-left text-muted-foreground border-b">
+                    {["Destination", "Asset Role", "Format", "Exact/Ideal px", "Min px", "Aspect", "Color",
+                      "DPI", "Max MB", "Transparency", "Print bleed/trim/spine", "Source (verified)", "Verified",
+                      "Ver", "Status"].map((h) => (
+                      <th key={h} className="py-2 px-2 font-semibold whitespace-nowrap align-bottom">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {audit.rows.map((r) => (
+                    <tr key={`${r.platform_id}-${r.asset_role}`} data-testid={`ca-audit-row-${r.platform_id}`}
+                      className="border-b hover:bg-muted/40 align-top">
+                      <td className="py-2 px-2 font-semibold text-navy whitespace-nowrap">{r.destination}</td>
+                      <td className="py-2 px-2 whitespace-nowrap">{r.asset_role}</td>
+                      <td className="py-2 px-2 whitespace-nowrap">{r.file_format}<div className="text-muted-foreground">{r.accepted_formats}</div></td>
+                      <td className="py-2 px-2 whitespace-nowrap font-mono">{r.exact_or_ideal_px}</td>
+                      <td className="py-2 px-2 whitespace-nowrap font-mono">{r.minimum_px}</td>
+                      <td className="py-2 px-2 whitespace-nowrap">{r.aspect_ratio}</td>
+                      <td className="py-2 px-2 whitespace-nowrap">{r.color_mode}</td>
+                      <td className="py-2 px-2 whitespace-nowrap">{r.dpi}</td>
+                      <td className="py-2 px-2 whitespace-nowrap">{r.max_file_size_mb}</td>
+                      <td className="py-2 px-2 max-w-[160px]">{r.transparency}</td>
+                      <td className="py-2 px-2 max-w-[160px]">{r.print_bleed_trim_spine}</td>
+                      <td className="py-2 px-2 max-w-[240px]"><span className="text-muted-foreground break-words">{r.source}</span></td>
+                      <td className="py-2 px-2 whitespace-nowrap">{r.date_verified}<div className="text-muted-foreground">{r.verified_by}</div></td>
+                      <td className="py-2 px-2 whitespace-nowrap">{r.profile_version}</td>
+                      <td className="py-2 px-2 whitespace-nowrap">
+                        <Badge tone={r.review_due ? "bg-amber-100 text-amber-700" : r.status === "Verified" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}>
+                          {r.review_due ? "Review Due" : r.status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="mt-2 text-[10px] text-muted-foreground">
+                Every requirement carries the source used to verify it, the date verified, the profile version, and its current status —
+                the canonical inherited destination profiles (STD-UCAMS-0001). No scattered hard-coded values.
+              </p>
+            </div>
           )}
         </div>
       )}

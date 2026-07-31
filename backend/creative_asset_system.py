@@ -88,65 +88,114 @@ _SEED_PROFILES = [
     _profile("kdp_paperback_wrap", "Amazon KDP", "print_marketplace", "print_cover_wrap",
              {"family": "print_cover_wrap", "trim_options_in": [[6, 9], [5, 8], [8.5, 11]],
               "default_trim_in": [6, 9], "bleed_in": 0.125, "safe_margin_in": 0.25, "dpi": 300,
-              "color_space": "CMYK", "format": "pdf", "spine_text_min_pages": 79,
-              "barcode_zone_in": [2.0, 1.2], "font_embedding": True, "uses_platform_template": True},
-             source="https://kdp.amazon.com/en_US/help/topic/G201953020 (KDP paperback cover spec)"),
+              "color_space": "CMYK", "format": "pdf", "accepted_formats": ["pdf"],
+              "pdf_standard_preferred": "PDF/X-1a:2001", "spine_text_min_pages": 79,
+              "barcode_zone_in": [2.0, 1.2], "font_embedding": True, "uses_platform_template": True,
+              "transparency_allowed": False, "transparency_rule": "Flatten — no transparency in print PDF.",
+              "no_crop_marks": True, "no_surrounding_whitespace": True},
+             verified="2026-06-01",
+             source="Amazon KDP Print Cover Guidelines — https://kdp.amazon.com/help/topic/G201953020 "
+                    "and Cover Calculator https://kdp.amazon.com/cover-calculator (verified 2026-06)"),
     _profile("kdp_ebook_cover", "Amazon KDP (eBook)", "digital_marketplace", "digital_cover",
-             {"family": "digital_cover", "min_px": [1600, 2560], "ideal_px": [1600, 2560],
-              "aspect_ratio": 1.6, "format": "jpeg", "color_space": "RGB", "max_mb": 50, "dpi": 72},
-             source="https://kdp.amazon.com/en_US/help/topic/G200645690 (KDP eBook cover)"),
+             {"family": "digital_cover", "min_px": [625, 1000], "ideal_px": [1600, 2560],
+              "aspect_ratio": 1.6, "format": "jpeg", "accepted_formats": ["jpeg", "tiff"],
+              "color_space": "RGB", "max_mb": 50, "dpi": 300,
+              "transparency_allowed": False, "transparency_rule": "Flatten — JPEG/TIFF are opaque.",
+              "note": "1600×2560 is the governed EXACT export target; 625×1000 is KDP's hard minimum."},
+             verified="2026-06-01",
+             source="Amazon KDP eBook Cover help — https://kdp.amazon.com/help/topic/G200645690 "
+                    "(min 625×1000, ideal 1600×2560 @1.6:1, JPEG/TIFF, <50MB; verified 2026-06)"),
     _profile("etsy_primary", "Etsy", "digital_marketplace", "marketplace_image",
              {"family": "marketplace_image", "min_px": [2000, 2000], "ideal_px": [3000, 2250],
-              "aspect_ratio": 1.3333, "format": "jpeg", "color_space": "RGB", "max_mb": 20, "dpi": 72,
+              "aspect_ratio": 1.3333, "format": "jpeg", "accepted_formats": ["jpeg", "png", "gif"],
+              "color_space": "RGB", "max_mb": 20, "dpi": 72,
+              "transparency_allowed": False, "transparency_rule": "Flatten for JPEG; PNG accepted. No animated GIF.",
               "listing_image_roles": ["primary", "contents", "usage", "digital_download_notice", "preview"]},
-             source="https://help.etsy.com/hc/en-us/articles/360000579548 (Etsy listing images)"),
+             verified="2026-06-01",
+             source="Etsy Image Requirements — https://help.etsy.com/hc/en-us/articles/115015663347 "
+                    "and Listing Image Policy https://www.etsy.com/legal/policy/listing-image-requirements/253962679005 "
+                    "(≥2000px shortest side, JPG/PNG/GIF; verified 2026-06)"),
     _profile("tpt_primary", "Teachers Pay Teachers", "education_marketplace", "marketplace_image",
-             {"family": "marketplace_image", "ideal_px": [2550, 3300], "aspect_ratio": 0.7727,
-              "format": "png", "color_space": "RGB", "max_mb": 20, "dpi": 300,
+             {"family": "marketplace_image", "min_px": [750, 750], "ideal_px": [1080, 1080],
+              "aspect_ratio": 1.0, "format": "png", "accepted_formats": ["png", "jpeg"],
+              "color_space": "RGB", "max_mb": 4, "dpi": 300,
+              "transparency_allowed": True, "transparency_rule": "PNG transparency allowed; TpT displays square thumbnails.",
               "listing_image_roles": ["cover", "preview", "contents", "usage", "terms"]},
-             source="https://help.teacherspayteachers.com (TpT product image guidance)"),
+             verified="2026-06-01",
+             source="TpT Thumbnail help — https://help.teacherspayteachers.com/hc/en-us/articles/360042865791 "
+                    "(square, min 750×750, PNG, <4MB; verified 2026-06)"),
     _profile("qru_online_primary", "QRU Online Store", "owned_storefront", "marketplace_image",
-             {"family": "marketplace_image", "ideal_px": [1600, 2000], "aspect_ratio": 0.8,
-              "format": "png", "color_space": "RGB", "max_mb": 15, "dpi": 72},
-             source="QRU Online storefront spec (internal authoritative)"),
+             {"family": "marketplace_image", "min_px": [1000, 1250], "ideal_px": [1600, 2000],
+              "aspect_ratio": 0.8, "format": "png", "accepted_formats": ["png", "jpeg", "webp"],
+              "color_space": "RGB", "max_mb": 15, "dpi": 72,
+              "transparency_allowed": True, "transparency_rule": "PNG/WebP transparency allowed on storefront."},
+             verified="2026-06-01",
+             source="QRU Online storefront spec (internal authoritative; verified 2026-06)"),
     _profile("youtube_thumbnail", "YouTube", "video_platform", "social_asset",
-             {"family": "social_asset", "ideal_px": [1280, 720], "aspect_ratio": 1.7778,
-              "format": "jpeg", "color_space": "RGB", "max_mb": 2, "dpi": 72,
-              "text_safe": True, "min_px": [640, 360]},
-             source="https://support.google.com/youtube/answer/72431 (YouTube thumbnail)"),
+             {"family": "social_asset", "ideal_px": [1280, 720], "min_px": [640, 360], "aspect_ratio": 1.7778,
+              "format": "jpeg", "accepted_formats": ["jpeg", "png"], "color_space": "RGB", "max_mb": 2, "dpi": 72,
+              "text_safe": True, "transparency_allowed": False, "transparency_rule": "Flatten for JPEG."},
+             verified="2026-06-01",
+             source="YouTube Thumbnail help — https://support.google.com/youtube/answer/72431 "
+                    "(1280×720 @16:9, <2MB, JPG/PNG/GIF; verified 2026-06)"),
     _profile("youtube_screen_16x9", "YouTube", "video_platform", "motion_asset",
              {"family": "motion_asset", "canvas_px": [1920, 1080], "aspect_ratio": 1.7778, "fps": 30,
               "format": "mp4", "codec": "h264", "audio": "aac", "caption_safe": True,
               "supports_slideshow_of_stills": True},
-             source="https://support.google.com/youtube/answer/6375112 (YouTube upload encoding)"),
+             verified="2026-06-01",
+             source="YouTube upload encoding — https://support.google.com/youtube/answer/6375112 (verified 2026-06)"),
     _profile("pinterest_pin", "Pinterest", "social_platform", "social_asset",
-             {"family": "social_asset", "ideal_px": [1000, 1500], "aspect_ratio": 0.6667,
-              "format": "png", "color_space": "RGB", "max_mb": 20, "dpi": 72},
-             source="https://help.pinterest.com/en/business/article/pinterest-product-specs"),
+             {"family": "social_asset", "ideal_px": [1000, 1500], "min_px": [600, 900], "aspect_ratio": 0.6667,
+              "format": "png", "accepted_formats": ["png", "jpeg"], "color_space": "RGB", "max_mb": 20, "dpi": 72,
+              "transparency_allowed": True, "transparency_rule": "PNG transparency allowed."},
+             verified="2026-06-01",
+             source="Pinterest product specs — https://help.pinterest.com/en/business/article/pinterest-product-specs (verified 2026-06)"),
     _profile("instagram_post", "Instagram", "social_platform", "social_asset",
-             {"family": "social_asset", "ideal_px": [1080, 1080], "aspect_ratio": 1.0,
-              "format": "jpeg", "color_space": "RGB", "max_mb": 30, "dpi": 72},
-             source="https://help.instagram.com (Instagram image sizes)"),
+             {"family": "social_asset", "ideal_px": [1080, 1080], "min_px": [600, 600], "aspect_ratio": 1.0,
+              "format": "jpeg", "accepted_formats": ["jpeg", "png"], "color_space": "RGB", "max_mb": 30, "dpi": 72,
+              "transparency_allowed": False, "transparency_rule": "Flatten for JPEG."},
+             verified="2026-06-01",
+             source="Instagram image sizes — https://help.instagram.com (verified 2026-06)"),
     _profile("tiktok_vertical", "TikTok", "video_platform", "social_asset",
-             {"family": "social_asset", "ideal_px": [1080, 1920], "aspect_ratio": 0.5625,
-              "format": "jpeg", "color_space": "RGB", "max_mb": 20, "dpi": 72,
-              "overlay_safe": True, "focal_point": "center"},
-             source="https://support.tiktok.com (TikTok video/cover specs)"),
+             {"family": "social_asset", "ideal_px": [1080, 1920], "min_px": [720, 1280], "aspect_ratio": 0.5625,
+              "format": "jpeg", "accepted_formats": ["jpeg", "png"], "color_space": "RGB", "max_mb": 20, "dpi": 72,
+              "overlay_safe": True, "focal_point": "center",
+              "transparency_allowed": False, "transparency_rule": "Flatten for JPEG."},
+             verified="2026-06-01",
+             source="TikTok video/cover specs — https://support.tiktok.com (verified 2026-06)"),
     _profile("one_page_visual_print", "QRU One-Page Knowledge Visual™ (Print)", "print_owned",
              "one_page_knowledge_visual",
              {"family": "one_page_knowledge_visual", "print_sizes_in": [[8.5, 11], [18, 24], [24, 36]],
               "default_size_in": [8.5, 11], "bleed_in": 0.125, "safe_margin_in": 0.25, "dpi": 300,
-              "color_space": "CMYK", "format": "pdf", "requires_information_design": True},
-             source="QRU One-Page Knowledge Visual™ Standard (internal authoritative)"),
+              "color_space": "CMYK", "format": "pdf", "accepted_formats": ["pdf"],
+              "transparency_allowed": False, "transparency_rule": "Flatten — no transparency in print PDF.",
+              "requires_information_design": True},
+             verified="2026-06-01",
+             source="QRU One-Page Knowledge Visual™ Standard (internal authoritative; verified 2026-06)"),
 ]
 
 
 async def seed_profiles():
-    """Idempotent PSR seed — never overwrites a profile the Founder has already re-verified/changed."""
+    """PSR seed + reconcile. Inserts missing profiles and CORRECTS profiles that still hold a superseded
+    seed (e.g., the old kdp_ebook min_px bug), appending an honest change_history entry. A profile that a
+    human has independently edited (extra change_history) is never silently overwritten."""
     for p in _SEED_PROFILES:
         existing = await db[PLATFORM_COLL].find_one({"platform_id": p["platform_id"], "asset_role": p["asset_role"]})
         if not existing:
             await db[PLATFORM_COLL].insert_one(dict(p))
+            continue
+        # Reconcile: same verified requirements/source? leave it. Otherwise, if not human-modified, correct it.
+        same = (existing.get("requirements") == p["requirements"]
+                and existing.get("source") == p["source"]
+                and existing.get("date_verified") == p["date_verified"])
+        human_modified = len(existing.get("change_history", []) or []) > 1
+        if not same and not human_modified:
+            updated = dict(p)
+            hist = list(existing.get("change_history", []) or [])
+            hist.append({"version": p["profile_version"], "date": p["date_verified"], "status": p["status"],
+                         "note": "Reconciled to verified source during Asset Profile Audit (corrected requirements)."})
+            updated["change_history"] = hist
+            await db[PLATFORM_COLL].replace_one({"_id": existing["_id"]}, {**updated, "_id": existing["_id"]})
 
 
 async def list_profiles(include_stale_warning=True):
@@ -409,15 +458,21 @@ def _validate_image_bytes(spec, data):
         return "FAIL", [f"Not a decodable image: {str(e)[:80]}"], []
     req = spec.get("requirements", {})
     w, h = im.width, im.height
-    target = spec.get("target_px")
+    target = spec.get("target_px") or req.get("ideal_px")
     minpx = req.get("min_px")
+    # HARD minimum — a genuine reject only if the source cannot meet the destination's floor.
     if minpx and (w < minpx[0] or h < minpx[1]):
-        issues.append(f"Below minimum pixels: got {w}x{h}, need >= {minpx[0]}x{minpx[1]}")
-    ar_req = req.get("aspect_ratio")
-    if ar_req:
+        issues.append(f"Below hard minimum pixels: got {w}x{h}, need >= {minpx[0]}x{minpx[1]}")
+    # Governed EXACT export target — below/above target but above minimum is NORMALIZABLE, not a failure.
+    if target and (w, h) != (int(target[0]), int(target[1])) and not (minpx and (w < minpx[0] or h < minpx[1])):
+        warnings.append(f"Not at exact governed size {target[0]}x{target[1]} (got {w}x{h}) — "
+                        f"the Render/Export engine will produce the exact final file.")
+    # Aspect — compare orientation-aware against the target dimensions (not the raw ratio field).
+    if target:
+        tgt_ar = round(int(target[0]) / int(target[1]), 4)
         ar = round(w / h, 4)
-        if abs(ar - ar_req) > 0.03:
-            warnings.append(f"Aspect ratio {ar} differs from target {ar_req}")
+        if abs(ar - tgt_ar) > 0.02:
+            warnings.append(f"Aspect ratio {ar} differs from target {tgt_ar} — will be padded (letterbox), never cropped.")
     fmt = (im.format or "").lower().replace("jpg", "jpeg")
     want_fmt = (req.get("format") or "").lower().replace("jpg", "jpeg")
     if want_fmt and fmt and want_fmt != fmt and not (want_fmt == "jpeg" and fmt == "mpo"):
@@ -559,13 +614,23 @@ def validate_asset(spec, data, *, mime="", asset_meta=None, expected_qr_url=None
 # CAVL™ — vault + lineage. Approved+locked assets are never silently replaced (§2.2).
 # ---------------------------------------------------------------------------
 async def store_asset(*, product_id, spec, data, filename, asset_meta, validation, actor="Founder",
-                      parent_asset_id=None):
+                      parent_asset_id=None, normalization=None, source_validation=None,
+                      source_file_url=None, source_checksum=None):
     import rendering_engine as re
     fid = re._save(f"ucams-{spec.get('asset_role','asset')}", (filename.rsplit(".", 1)[-1] if "." in filename else "bin"), data)
     checksum = hashlib.sha256(data).hexdigest()
     # Version: increment within the same (product, role, platform) family.
     prior = await db[ASSET_COLL].count_documents({"product_id": product_id, "asset_role": spec.get("asset_role"),
                                                   "platform_id": spec.get("platform_id")})
+    quality_review = bool((normalization or {}).get("quality_review_required"))
+    if validation["result"] == "HOLD":
+        state = "Rights Hold"
+    elif validation["result"] == "FAIL":
+        state = "Rejected"
+    elif quality_review:
+        state = "Revision Required"  # compliant file produced, but a quality-affecting change needs human sign-off
+    else:
+        state = "Under Review"
     asset = {
         "id": gen_id(), "asset_id": f"CA-{checksum[:12]}", "product_id": product_id,
         "asset_family": spec.get("asset_family"), "asset_role": spec.get("asset_role"),
@@ -576,14 +641,105 @@ async def store_asset(*, product_id, spec, data, filename, asset_meta, validatio
         "file_url": re._asset_url(fid), "filename": filename, "checksum": checksum,
         "bytes": len(data), "rights": asset_meta or {},
         "validation": validation,
-        "lifecycle_state": "Rights Hold" if validation["result"] == "HOLD"
-                           else ("Rejected" if validation["result"] == "FAIL" else "Under Review"),
+        # Governed Render/Export lineage — source artwork is preserved; final file is governed.
+        "normalization": normalization,
+        "source_validation": source_validation,
+        "source_file_url": source_file_url, "source_checksum": source_checksum,
+        "quality_review_required": quality_review,
+        "lifecycle_state": state,
         "created_by": actor, "created_at": _now(), "updated_at": _now(),
         "publication_history": [], "standard": STANDARD_ID,
     }
     await db[ASSET_COLL].insert_one(dict(asset))
     asset.pop("_id", None)
     return asset
+
+
+async def manufacture_final_asset(product, asset_role, platform_id, source_bytes, filename, *,
+                                  mime="", rights=None, pages=None, paper_type="white",
+                                  expected_qr_url=None, auto_normalize=True, actor="Founder",
+                                  parent_asset_id=None):
+    """Governed manufacturing path: source artwork → Render/Export the EXACT final file → validate the
+    FINAL file → vault. Provider/designer output is treated as SOURCE and never published as-is."""
+    import asset_normalizer as norm
+    import rendering_engine as re
+    spec_obj = await generate_spec(product, asset_role, platform_id, pages=pages, paper_type=paper_type or "white")
+    if spec_obj.get("error"):
+        return {"error": spec_obj["error"]}
+    # Validate the incoming SOURCE first (honest record of what arrived).
+    source_validation = validate_asset(spec_obj, source_bytes, mime=mime, asset_meta=rights, expected_qr_url=expected_qr_url)
+    source_checksum = hashlib.sha256(source_bytes).hexdigest()
+    source_fid = re._save(f"ucams-source-{asset_role}", (filename.rsplit(".", 1)[-1] if "." in filename else "bin"), source_bytes)
+    source_url = re._asset_url(source_fid)
+
+    export = norm.governed_export(spec_obj, source_bytes, mime=mime) if auto_normalize else \
+        {"normalized": False, "data": source_bytes, "ext": None, "actions": [], "quality_review_required": False, "error": None}
+    if export.get("error"):
+        return {"error": f"Render/Export failed: {export['error']}", "source_validation": source_validation}
+
+    final_data = export.get("data") if export.get("normalized") else source_bytes
+    if export.get("normalized") and export.get("ext"):
+        base = filename.rsplit(".", 1)[0] if "." in filename else filename
+        final_filename = f"{base}.{export['ext']}"
+    else:
+        final_filename = filename
+    # Validate the GOVERNED FINAL file — this is the compliance gate.
+    final_validation = validate_asset(spec_obj, final_data, mime=export.get("mime", ""),
+                                      asset_meta=rights, expected_qr_url=expected_qr_url)
+    asset = await store_asset(product_id=product["id"], spec=spec_obj, data=final_data, filename=final_filename,
+                              asset_meta=rights, validation=final_validation, actor=actor,
+                              parent_asset_id=parent_asset_id, normalization=export,
+                              source_validation=source_validation, source_file_url=source_url,
+                              source_checksum=source_checksum)
+    return {"spec_id": spec_obj.get("spec_id"), "source_validation": source_validation,
+            "normalization": {k: export[k] for k in ("normalized", "actions", "quality_review_required",
+                              "notes", "final_dimensions", "final_bytes", "final_format") if k in export},
+            "final_validation": final_validation, "asset": asset}
+
+
+# ---------------------------------------------------------------------------
+# Asset Profile Audit (§ registry audit) — every destination × asset profile in one governed table,
+# including the source used to verify each requirement, date verified, version, and current status.
+# ---------------------------------------------------------------------------
+def _fmt_px(v):
+    return f"{v[0]}×{v[1]}" if isinstance(v, (list, tuple)) and len(v) == 2 else "—"
+
+
+async def profile_audit():
+    profiles = await list_profiles()
+    today = datetime.now(timezone.utc).date().isoformat()
+    rows = []
+    for p in profiles:
+        req = p.get("requirements", {})
+        geom = "print wrap (computed per page count)" if req.get("family") == "print_cover_wrap" else None
+        exact = req.get("ideal_px") or req.get("canvas_px")
+        rows.append({
+            "platform_id": p["platform_id"], "destination": p["platform_name"],
+            "destination_type": p.get("destination_type"), "asset_role": p["asset_role"],
+            "asset_family": req.get("family"),
+            "file_format": (req.get("format") or "").upper(),
+            "accepted_formats": ", ".join([f.upper() for f in (req.get("accepted_formats") or [req.get("format")]) if f]),
+            "exact_or_ideal_px": geom or _fmt_px(exact),
+            "minimum_px": _fmt_px(req.get("min_px")) if req.get("min_px") else "—",
+            "aspect_ratio": req.get("aspect_ratio") or (round(exact[0] / exact[1], 4) if exact else "—"),
+            "color_mode": req.get("color_space") or "—",
+            "dpi": req.get("dpi") or "—",
+            "max_file_size_mb": req.get("max_mb") or "—",
+            "transparency": req.get("transparency_rule") or ("Allowed" if req.get("transparency_allowed") else "Not allowed"),
+            "print_bleed_trim_spine": (
+                f"bleed {req.get('bleed_in')}in, trim {req.get('default_trim_in') or req.get('default_size_in')}, "
+                f"spine ≥{req.get('spine_text_min_pages','—')}pp, safe {req.get('safe_margin_in')}in"
+                if req.get("family") in ("print_cover_wrap", "one_page_knowledge_visual") else "N/A (digital)"),
+            "source": p.get("source"),
+            "date_verified": p.get("date_verified"),
+            "verified_by": p.get("verified_by"),
+            "profile_version": p.get("profile_version"),
+            "status": p.get("status"),
+            "review_due": bool(p.get("next_review_date") and p["next_review_date"] < today),
+            "next_review_date": p.get("next_review_date"),
+        })
+    return {"standard": STANDARD_ID, "generated_at": _now(), "destination_count": len({r["destination"] for r in rows}),
+            "profile_count": len(rows), "rows": rows}
 
 
 async def set_asset_state(asset_id, new_state, actor="Founder"):
