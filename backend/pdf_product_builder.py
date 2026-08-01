@@ -18,6 +18,7 @@ or a Teachers Pay Teachers resource. It NEVER auto-publishes.
 import io
 
 import design_language as dl
+import layout_engine as lay
 
 STANDARD_ID = "STD-PPB-0001"
 
@@ -29,6 +30,7 @@ PAGE_SIZES = {
 }
 DEFAULT_DPI = 300
 MARGIN_IN = 0.5
+DEFAULT_MARGIN_IN = 0.25   # Universal Page Layout Engine™ printer-safe margin (configurable)
 MIN_PRINT_DPI = 150      # below this → blurry in print → human review required
 IDEAL_PRINT_DPI = 300    # at/above this → clean
 
@@ -150,7 +152,7 @@ def _instructions_page(title, lines, page_size, palette):
 
 def build(product, product_type, images, *, include_cover=None, include_instructions=None,
           title=None, subtitle=None, instructions=None, page_size="letter", activity_layout=None,
-          worksheet_presets=None):
+          worksheet_presets=None, layout=None, margin_in=None, custom_scale=100):
     """Assemble the governed PDF. `images` is a list of raw bytes in the desired page order.
 
     Returns {pdf_bytes, page_count, qa, quality_review_required, pages_meta} or {error}.
@@ -164,12 +166,21 @@ def build(product, product_type, images, *, include_cover=None, include_instruct
     inc_instr = ptype["instructions"] if include_instructions is None else bool(include_instructions)
     # Activity templates (title strip + worksheet lines) default ON for the activity book.
     use_activity = ptype.get("activity", False) if activity_layout is None else bool(activity_layout)
+    # Universal Page Layout Engine™ — default: Activity Book keeps "activity", everything else "poster".
+    if not layout:
+        layout = "activity" if use_activity else "poster"
+    if layout not in lay.LAYOUT_IDS:
+        return {"error": f"Unknown layout '{layout}'. Choose one of: {', '.join(sorted(lay.LAYOUT_IDS))}."}
+    margin_in = DEFAULT_MARGIN_IN if margin_in is None else max(float(margin_in), 0.0)
 
     p = product or {}
     palette = dl.resolve_palette(p.get("family", ""), p.get("department", p.get("college", "")),
                                  p.get("topic", ""), p.get("title", ""))
     title = title or p.get("title") or "QRU Printable"
     subtitle = subtitle if subtitle is not None else (p.get("subtitle") or "")
+
+    pw, ph, _, _ = _page_px(page_size)
+    margin_px = int(round(margin_in * DEFAULT_DPI))
 
     issues, warnings, pages_meta, canvases = [], [], [], []
 
@@ -186,12 +197,12 @@ def build(product, product_type, images, *, include_cover=None, include_instruct
     quality_review = False
     for img_bytes in images:
         try:
-            if use_activity:
-                c, meta = _activity_content_page(img_bytes, title, page_size, palette, len(canvases) + 1)
-            else:
-                c, meta = _content_page(img_bytes, page_size, palette, len(canvases) + 1)
+            artwork = lay.decode_artwork(img_bytes)
+            c, meta = lay.render_page(artwork, layout=layout, page_size_px=(pw, ph), margin_px=margin_px,
+                                      custom_scale=custom_scale or 100, palette=palette,
+                                      page_no=len(canvases) + 1, title=title)
         except Exception as e:
-            issues.append(f"Page {len(canvases)+1}: not a decodable image ({str(e)[:60]}).")
+            issues.append(f"Page {len(canvases)+1}: could not import artwork ({str(e)[:80]}).")
             continue
         canvases.append(c); pages_meta.append(meta)
         if meta["status"] == "LOW_RES":
