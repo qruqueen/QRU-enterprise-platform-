@@ -686,14 +686,18 @@ async def manufacture_final_asset(product, asset_role, platform_id, source_bytes
     # Validate the GOVERNED FINAL file — this is the compliance gate.
     final_validation = validate_asset(spec_obj, final_data, mime=export.get("mime", ""),
                                       asset_meta=rights, expected_qr_url=expected_qr_url)
+    # Strip raw file bytes from the export before it is stored/returned — `export["data"]` is the
+    # rendered image/PDF bytes and is NOT JSON-serializable (would 500 on the response).
+    clean_norm = {k: export[k] for k in ("normalized", "actions", "quality_review_required",
+                  "notes", "final_dimensions", "final_bytes", "final_format", "mime", "ext") if k in export}
     asset = await store_asset(product_id=product["id"], spec=spec_obj, data=final_data, filename=final_filename,
                               asset_meta=rights, validation=final_validation, actor=actor,
-                              parent_asset_id=parent_asset_id, normalization=export,
+                              parent_asset_id=parent_asset_id, normalization=clean_norm,
                               source_validation=source_validation, source_file_url=source_url,
                               source_checksum=source_checksum)
     return {"spec_id": spec_obj.get("spec_id"), "source_validation": source_validation,
-            "normalization": {k: export[k] for k in ("normalized", "actions", "quality_review_required",
-                              "notes", "final_dimensions", "final_bytes", "final_format") if k in export},
+            "normalization": {k: clean_norm[k] for k in ("normalized", "actions", "quality_review_required",
+                              "notes", "final_dimensions", "final_bytes", "final_format") if k in clean_norm},
             "final_validation": final_validation, "asset": asset}
 
 

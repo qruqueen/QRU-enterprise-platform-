@@ -195,13 +195,25 @@ async def package(engine: str, record_id: str, marketplace: str, user=Depends(re
     return r
 
 
+def _json_safe(obj):
+    """Defensively drop raw bytes (not JSON-serializable) anywhere in an asset doc — protects the
+    response from legacy docs that stored rendered file bytes inside `normalization` before the fix."""
+    if isinstance(obj, (bytes, bytearray)):
+        return None
+    if isinstance(obj, dict):
+        return {k: _json_safe(v) for k, v in obj.items() if not isinstance(v, (bytes, bytearray))}
+    if isinstance(obj, list):
+        return [_json_safe(v) for v in obj if not isinstance(v, (bytes, bytearray))]
+    return obj
+
+
 @router.get("/assets/{engine}/{record_id}")
 async def assets(engine: str, record_id: str, user=Depends(get_current_user)):
     p = await _resolve_product(engine, record_id)
     if not p:
         raise HTTPException(404, "Product not found.")
     rows = await db[ucams.ASSET_COLL].find({"product_id": p["id"]}, {"_id": 0}).to_list(200)
-    return {"product_id": p["id"], "assets": rows}
+    return {"product_id": p["id"], "assets": [_json_safe(r) for r in rows]}
 
 
 class StateReq(BaseModel):
