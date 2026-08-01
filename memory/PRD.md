@@ -1,3 +1,13 @@
+## ✅ Storybook: 2-scene Teaser mode + one-click Approve→Publish to YouTube (2026-08-01)
+- **Teaser mode**: `manufacture_pilot(..., teaser=True)` renders only the opening + Treasure Takeaway™ (2 scenes) — a cheap end-to-end test (~1/3 the AI cost). Marked `teaser:True`, honestly labeled, and BLOCKED from approve/publish (must run the full pilot). Router `POST /api/little-legacy/episodes/{id}/pilot {teaser}`. UI: "Quick 2-Scene Teaser (cheap test)" button + amber teaser banner + "Manufacture Full Pilot" follow-up.
+- **One-click YouTube publish**: `publish_pilot_youtube(episode_id, privacy="private")` — approves the pilot if needed, then uploads the rendered MP4 to the connected channel via the existing `youtube_publisher.publish_video` (real upload, Private by default), with title/description/keywords/Made-for-Kids from the Publishing Package™. Refuses teasers, ungoverned pilots; friendly "reconnect channel" message on expired OAuth. Router `POST /api/little-legacy/pilots/{id}/publish-youtube {privacy}`. UI: gold "Approve & Publish to YouTube (Private)" button + "On YouTube" link when live.
+- Verified: publish endpoint reached the REAL YouTube API end-to-end (preview token expired → honest reconnect message — expected; production has a valid connection). Teaser render path verified by code + $0 MP4-assembly proof (no paid render run). ⚠️ Redeploy required for production.
+
+## 📋 BACKLOG (Founder-requested 2026-08-01) — Full-Book Audiobook → YouTube Video
+- **Request**: for EVERY book generated, make the rendered **full audiobook** attachable to a YouTube video — produce a "video of the entire book" by pairing the audiobook narration with either (a) a motion picture of the manuscript, or (b) a single still frame (book cover / title card). Then publish that video to YouTube (reuse `youtube_publisher.publish_video`).
+- Notes for implementation: the full-book audiobook render already exists (`cinema_studio` / `book_manufacturing` audio + `media_render`). Needed: a "Book → YouTube Video" builder that muxes the full audiobook MP3 with a static cover/title-card frame (cheapest, $0 video) or optional Ken Burns over the cover, chapter markers from the audiobook chapter map, then hands the MP4 to the YouTube publisher with governed metadata. Keep it deploy-safe + resilient (same self-heal pattern as storybook renders). NOT started per Founder ("add to backlog, do not build now").
+
+
 ## ✅ Creative Assets upload 500 fix + Motion Storybook render resilience (2026-08-01)
 
 ### Creative Assets upload (Etsy image / print wrap) — 500 Internal Server Error FIXED

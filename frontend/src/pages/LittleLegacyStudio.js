@@ -498,12 +498,12 @@ function PilotTab({ episodes }) {
     }, 6000);
   };
 
-  const manufacture = async (id) => {
+  const manufacture = async (id, teaser = false) => {
     try {
-      const { data } = await api.post(`/little-legacy/episodes/${id}/pilot`);
+      const { data } = await api.post(`/little-legacy/episodes/${id}/pilot`, { teaser });
       if (!data.ok) { toast.warning(data.message); return; }
       toast.success(data.message);
-      setPilots((prev) => ({ ...prev, [id]: { status: "RENDERING" } }));
+      setPilots((prev) => ({ ...prev, [id]: { status: "RENDERING", teaser } }));
       poll(id);
     } catch (err) { toast.error(formatApiError(err.response?.data?.detail)); }
   };
@@ -513,6 +513,18 @@ function PilotTab({ episodes }) {
       if (!data.ok) { toast.warning(data.message); return; }
       toast.success(data.message); loadOne(id);
     } catch (err) { toast.error(formatApiError(err.response?.data?.detail)); }
+  };
+  const [publishing, setPublishing] = useState({});
+  const publishYouTube = async (id) => {
+    setPublishing((p) => ({ ...p, [id]: true }));
+    try {
+      const { data } = await api.post(`/little-legacy/pilots/${id}/publish-youtube`, { privacy: "private" });
+      if (!data.ok) { toast.warning(data.message); return; }
+      toast.success(data.message);
+      if (data.url) window.open(data.studio_url || data.url, "_blank");
+      loadOne(id);
+    } catch (err) { toast.error(formatApiError(err.response?.data?.detail)); }
+    finally { setPublishing((p) => ({ ...p, [id]: false })); }
   };
 
   return (
@@ -527,15 +539,17 @@ function PilotTab({ episodes }) {
             right={<StatusChip status={verified ? "Verified" : "Knowledge Required"} tone={verified ? "emerald" : "amber"} />}>
             <p className="text-[11px] text-muted-foreground mb-3">{e.kr_topic} · {e.age_band}</p>
             {!verified && <p className="text-sm text-amber-700">Knowledge-First: this episode's Knowledge Record is not externally Verified. Verify it before manufacturing a children's pilot.</p>}
-            {verified && p.status === "RENDERING" && <p className="text-sm text-royal flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Manufacturing pilot — generating scenes, narration & rendering MP4… (a few minutes)</p>}
-            {verified && p.status === "FAILED" && <p className="text-sm text-red-600">Render failed: {p.error} <button onClick={() => manufacture(e.id)} className="underline ml-2">Retry</button></p>}
+            {verified && p.status === "RENDERING" && <p className="text-sm text-royal flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {p.teaser ? "Rendering a quick 2-scene teaser… (about a minute)" : "Manufacturing pilot — generating scenes, narration & rendering MP4… (a few minutes)"}</p>}
+            {verified && p.status === "FAILED" && <p className="text-sm text-red-600">Render failed: {p.error} <button onClick={() => manufacture(e.id, !!p.teaser)} className="underline ml-2">Retry</button></p>}
             {verified && (p.status === "READY" || p.status === "APPROVED") && (
               <div className="space-y-3">
+                {p.teaser && <p className="text-[12px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2" data-testid={`ll-teaser-note-${e.id}`}>⚡ Teaser preview (2 scenes) — this is a cheap end-to-end test, not a publishable pilot. Manufacture the full pilot to approve & publish.</p>}
                 <video src={`${BACKEND}${p.video_url}`} controls className="w-full rounded-md border border-navy/10 bg-black" data-testid={`ll-pilot-video-${e.id}`} />
                 <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
                   <span>{p.duration_seconds}s · {p.scenes?.length} scenes · voice {p.voice}</span>
                   <a href={`${BACKEND}${p.captions_url}`} target="_blank" rel="noreferrer" className="text-royal font-semibold underline">Captions (.srt)</a>
                 </div>
+                {!p.teaser && (
                 <div className="grid sm:grid-cols-2 gap-2">
                   {Object.entries(p.gates || {}).map(([g, v]) => (
                     <div key={g} className="flex items-start gap-2 text-[11px]">
@@ -544,17 +558,28 @@ function PilotTab({ episodes }) {
                     </div>
                   ))}
                 </div>
+                )}
+                {p.teaser ? (
+                  <button onClick={() => manufacture(e.id, false)} data-testid={`ll-teaser-fullpilot-${e.id}`} className="text-xs font-bold px-4 py-2 rounded-md bg-royal text-white hover:bg-royal/90 transition-colors flex items-center gap-1.5"><PlayCircle className="w-4 h-4" /> Manufacture Full Pilot (all scenes)</button>
+                ) : (
+                <>
                 {p.publishing_package && <PublishingPackage pkg={p.publishing_package} approved={p.package_approved} />}
-                {p.status === "APPROVED"
-                  ? <div className="flex items-center gap-3 flex-wrap">
-                      <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700"><CheckCircle2 className="w-4 h-4" /> Approved · Publishing Package™ locked</span>
-                      <a href="/youtube" className="text-xs font-bold px-3 py-1.5 rounded-md bg-royal text-white hover:bg-royal/90 transition-colors" data-testid={`ll-open-youtube-${e.id}`}>Open in YouTube Publisher™ →</a>
-                    </div>
-                  : <button onClick={() => approve(e.id)} disabled={!p.governance_passed} data-testid={`ll-approve-pilot-${e.id}`} className="text-xs font-bold px-4 py-2 rounded-md bg-navy text-white hover:bg-navy/90 transition-colors disabled:opacity-50">Approve Pilot + Publishing Package™ (→ one-click publish)</button>}
+                {p.youtube_url && <p className="text-[12px] font-semibold text-emerald-700 flex items-center gap-1.5" data-testid={`ll-youtube-live-${e.id}`}><CheckCircle2 className="w-4 h-4" /> On YouTube ({p.youtube_privacy || "private"}): <a href={p.youtube_url} target="_blank" rel="noreferrer" className="underline">watch</a></p>}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {p.status === "APPROVED" && <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700"><CheckCircle2 className="w-4 h-4" /> Approved · Publishing Package™ locked</span>}
+                  {p.status !== "APPROVED" && <button onClick={() => approve(e.id)} disabled={!p.governance_passed} data-testid={`ll-approve-pilot-${e.id}`} className="text-xs font-bold px-4 py-2 rounded-md bg-navy text-white hover:bg-navy/90 transition-colors disabled:opacity-50">Approve Pilot + Publishing Package™</button>}
+                  {!p.youtube_url && <button onClick={() => publishYouTube(e.id)} disabled={!p.governance_passed || publishing[e.id]} data-testid={`ll-publish-youtube-${e.id}`} className="text-xs font-bold px-4 py-2 rounded-md bg-gold text-navy hover:bg-gold/90 transition-colors disabled:opacity-50 flex items-center gap-1.5">{publishing[e.id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />} Approve & Publish to YouTube (Private)</button>}
+                  <a href="/youtube" className="text-xs font-bold px-3 py-1.5 rounded-md border border-royal/30 text-royal hover:bg-royal/5 transition-colors" data-testid={`ll-open-youtube-${e.id}`}>YouTube Publisher™ →</a>
+                </div>
+                </>
+                )}
               </div>
             )}
             {verified && !["RENDERING", "READY", "APPROVED"].includes(p.status) && (
-              <button onClick={() => manufacture(e.id)} data-testid={`ll-manufacture-pilot-${e.id}`} className="text-xs font-bold px-4 py-2 rounded-md bg-royal text-white hover:bg-royal/90 transition-colors flex items-center gap-1.5"><PlayCircle className="w-4 h-4" /> Manufacture Animated Pilot</button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button onClick={() => manufacture(e.id, false)} data-testid={`ll-manufacture-pilot-${e.id}`} className="text-xs font-bold px-4 py-2 rounded-md bg-royal text-white hover:bg-royal/90 transition-colors flex items-center gap-1.5"><PlayCircle className="w-4 h-4" /> Manufacture Animated Pilot</button>
+                <button onClick={() => manufacture(e.id, true)} data-testid={`ll-teaser-pilot-${e.id}`} className="text-xs font-bold px-4 py-2 rounded-md border border-royal/40 text-royal hover:bg-royal/5 transition-colors flex items-center gap-1.5"><PlayCircle className="w-4 h-4" /> Quick 2-Scene Teaser (cheap test)</button>
+              </div>
             )}
           </Panel>
         );

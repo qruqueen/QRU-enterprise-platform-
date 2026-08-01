@@ -157,9 +157,13 @@ async def master_file(char_key: str, kind: str):
 
 
 # ─────────── PHASE 3 — Pilot Episode Manufacturing ───────────
+class PilotReq(BaseModel):
+    teaser: Optional[bool] = False
+
+
 @router.post("/episodes/{episode_id}/pilot")
-async def manufacture_pilot(episode_id: str, user=Depends(get_current_user)):
-    res = await llp.manufacture_pilot(episode_id, actor=user.get("email", "Founder"))
+async def manufacture_pilot(episode_id: str, body: PilotReq = PilotReq(), user=Depends(get_current_user)):
+    res = await llp.manufacture_pilot(episode_id, actor=user.get("email", "Founder"), teaser=bool(body.teaser))
     if res is None:
         raise HTTPException(404, "Episode not found.")
     return res
@@ -178,6 +182,18 @@ async def pilots(user=Depends(get_current_user)):
 @router.post("/pilots/{episode_id}/approve")
 async def approve_pilot(episode_id: str, user=Depends(get_current_user)):
     res = await llp.approve_pilot(episode_id, actor=user.get("email", "Founder"))
+    if res is None:
+        raise HTTPException(404, "Pilot not found.")
+    return res
+
+
+class PublishYouTubeReq(BaseModel):
+    privacy: Optional[str] = "private"
+
+
+@router.post("/pilots/{episode_id}/publish-youtube")
+async def publish_pilot_youtube(episode_id: str, body: PublishYouTubeReq = PublishYouTubeReq(), user=Depends(get_current_user)):
+    res = await llp.publish_pilot_youtube(episode_id, actor=user.get("email", "Founder"), privacy=body.privacy or "private")
     if res is None:
         raise HTTPException(404, "Pilot not found.")
     return res

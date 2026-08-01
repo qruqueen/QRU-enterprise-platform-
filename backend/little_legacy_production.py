@@ -414,13 +414,17 @@ def _build_publishing_package(ep, inh, char, title, total, episode_number):
     }
 
 
-async def _pilot_job(episode_id, actor):
+async def _pilot_job(episode_id, actor, teaser=False):
     try:
         ep = await db.ll_episodes.find_one({"id": episode_id})
         kr = await kri.load_kr(db, ep.get("primary_kr")) if ep.get("primary_kr") else None
         inh = kri.build_inheritance(kr) if kr else {}
         char = next((x for x in ll.CHARACTERS if x["key"] == ep.get("featured_character")), None)
         title, scenes = _build_scenes(ep, inh, char)
+        # Teaser mode: render only the opening + Treasure Takeaway™ (2 scenes) — a fast, cheap end-to-end
+        # test of the full pipeline for a fraction of the AI cost. NOT a publishable pilot.
+        if teaser:
+            scenes = [scenes[0], scenes[-1]]
         voice = VOICE_PROFILES.get(ep.get("featured_character"), {}).get("voice", NARRATOR_VOICE)
 
         # Reference consistency — inherit appearance from the approved Character Bible v1.0 identity anchor.
@@ -495,9 +499,12 @@ async def _pilot_job(episode_id, actor):
             "pilot_episode": episode_id, "franchise": "little-legacy-learners", "created_at": now_iso()}}, upsert=True)
 
         await db.ll_pilots.update_one({"episode_id": episode_id}, {"$set": {
-            "id": gen_id(), "episode_id": episode_id, "title": title, "status": "READY",
-            "technique": "QRU Animated Storybook Pilot™ — AI-generated key art with cinematic Ken Burns motion, "
-                         "TTS narration and burned captions. Not frame-by-frame cel animation (stated honestly).",
+            "id": gen_id(), "episode_id": episode_id, "title": title, "status": "READY", "teaser": teaser,
+            "technique": ("QRU Animated Storybook TEASER™ — a 2-scene test render (opening + Treasure Takeaway™) "
+                          "for cheap end-to-end validation. Manufacture the full pilot before approving/publishing."
+                          if teaser else
+                          "QRU Animated Storybook Pilot™ — AI-generated key art with cinematic Ken Burns motion, "
+                          "TTS narration and burned captions. Not frame-by-frame cel animation (stated honestly)."),
             "scenes": [{"label": s["label"], "caption": s["caption"], "narration": s["narration"]} for s in scenes],
             "duration_seconds": total, "voice": voice, "featured_character": ep.get("featured_character"),
             "reference_locked": bool(ref_pngs),
@@ -521,7 +528,7 @@ def _duration_from_bytes(audio):
         return _duration(f.name)
 
 
-async def manufacture_pilot(episode_id, actor="Founder"):
+async def manufacture_pilot(episode_id, actor="Founder", teaser=False):
     ep = await db.ll_episodes.find_one({"id": episode_id})
     if not ep:
         return None
@@ -529,11 +536,63 @@ async def manufacture_pilot(episode_id, actor="Founder"):
         return {"ok": False, "blocked": True,
                 "message": "Knowledge-First: this episode's Knowledge Record is not externally Verified. Route it through Knowledge Manufacturing & Verification Lion™ before manufacturing a children's pilot (Treasure Standard™)."}
     await db.ll_pilots.update_one({"episode_id": episode_id}, {"$set": {
-        "episode_id": episode_id, "title": ep.get("title"), "status": "RENDERING",
+        "episode_id": episode_id, "title": ep.get("title"), "status": "RENDERING", "teaser": bool(teaser),
         "error": None, "render_started_at": now_iso(), "created_by": actor, "updated_at": now_iso()}}, upsert=True)
-    asyncio.create_task(_pilot_job(episode_id, actor))
+    asyncio.create_task(_pilot_job(episode_id, actor, teaser=bool(teaser)))
+    if teaser:
+        return {"ok": True, "status": "RENDERING",
+                "message": "Rendering a quick 2-scene teaser (opening + Treasure Takeaway™) — a cheap end-to-end test. Ready in about a minute."}
     return {"ok": True, "status": "RENDERING",
             "message": "Manufacturing the animated pilot in the background — generating scenes, narration, captions and rendering the MP4. This takes a few minutes."}
+
+
+async def publish_pilot_youtube(episode_id, actor="Founder", privacy="private"):
+    """One-click: approve (if needed) and publish an approved storybook pilot to the connected YouTube
+    channel as PRIVATE (default) for review. Real upload via the existing YouTube Publisher™. Honest —
+    refuses teasers, ungoverned pilots, or when YouTube isn't connected."""
+    import youtube_publisher as yt
+    p = await db.ll_pilots.find_one({"episode_id": episode_id})
+    if not p:
+        return None
+    if p.get("teaser"):
+        return {"ok": False, "message": "This is a 2-scene teaser (a cheap test). Manufacture the full pilot before publishing to YouTube."}
+    if p.get("status") not in ("READY", "APPROVED"):
+        return {"ok": False, "message": "The pilot must finish rendering (READY) before it can be published."}
+    if not p.get("governance_passed"):
+        return {"ok": False, "message": "The pilot has not passed all governance gates — it cannot be published (Treasure Standard™)."}
+    # Approve first if it hasn't been (locks the Publishing Package™ + preps the Factory asset).
+    if p.get("status") != "APPROVED":
+        appr = await approve_pilot(episode_id, actor=actor)
+        if isinstance(appr, dict) and not appr.get("ok"):
+            return appr
+        p = await db.ll_pilots.find_one({"episode_id": episode_id})
+    out = pilot_file_path(episode_id)
+    if not out.exists():
+        return {"ok": False, "message": "The rendered MP4 is no longer on the server — re-manufacture the pilot, then publish."}
+    pkg = p.get("publishing_package") or {}
+    privacy = privacy if privacy in ("private", "unlisted", "public") else "private"
+    try:
+        pub = await yt.publish_video(
+            file_path=str(out),
+            title=pkg.get("youtube_title") or p.get("title") or "Little Legacy Learners",
+            description=pkg.get("seo_description") or "",
+            tags=pkg.get("keywords") or [],
+            privacy=privacy, actor=actor, made_for_kids=True)
+    except yt.YouTubeError as e:
+        msg = str(e)
+        low = msg.lower()
+        if "401" in msg or "invalid authentication" in low or "invalid_grant" in low or "unauthorized" in low:
+            msg = "YouTube rejected the upload — the channel connection has expired. Reconnect your channel in Publishing Connectors™ (approve the 'Manage your YouTube videos' scope), then publish again."
+            return {"ok": False, "not_connected": True, "message": msg}
+        return {"ok": False, "not_connected": "connect" in low, "message": msg}
+    await db.ll_pilots.update_one({"episode_id": episode_id}, {"$set": {
+        "youtube_video_id": pub.get("video_id"), "youtube_url": pub.get("url"),
+        "youtube_privacy": pub.get("privacy"), "youtube_published_at": pub.get("published_at"),
+        "updated_at": now_iso()}})
+    await ll.remember("pilot_published_youtube",
+                      f"Pilot '{p.get('title')}' published to YouTube ({pub.get('privacy')}) — {pub.get('url')}.", actor, episode_id)
+    return {"ok": True, "message": f"Published to YouTube as {pub.get('privacy')}. Review it in YouTube Studio, then set it Public when ready.",
+            "video_id": pub.get("video_id"), "url": pub.get("url"), "studio_url": pub.get("studio_url"), "privacy": pub.get("privacy")}
 
 
 async def pilot_status(episode_id):
@@ -565,6 +624,8 @@ async def approve_pilot(episode_id, actor="Founder"):
     p = await db.ll_pilots.find_one({"episode_id": episode_id})
     if not p:
         return None
+    if p.get("teaser"):
+        return {"ok": False, "message": "This is a 2-scene teaser (a cheap test render). Manufacture the full pilot before approving."}
     if p.get("status") != "READY":
         return {"ok": False, "message": "Pilot is not ready to approve yet."}
     if not p.get("governance_passed"):
