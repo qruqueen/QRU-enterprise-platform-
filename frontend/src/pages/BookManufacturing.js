@@ -130,7 +130,25 @@ export default function BookManufacturing() {
   };
   const doRelist = () => run(() => api.post(`/book-mfg/books/${book.id}/relist-to-store`), "Book re-listed to the storefront.");
 
-  const doAuthorize = () => run(() => api.post(`/book-mfg/books/${book.id}/authorize`), "Release authorized — the Factory is manufacturing your publication assets.").then(() => { api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)); api.get(`/book-mfg/books/${book.id}/post-publish`).then((r) => setPostPub(r.data)).catch(() => {}); });
+  const doAuthorize = async (ack = false) => {
+    setBusy(true);
+    try {
+      await api.post(`/book-mfg/books/${book.id}/authorize`, { acknowledge_imprint_mismatch: ack });
+      toast.success("Authorized — now live on QRU Online (qru-online.com).");
+      await reload(book.id);
+      api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)).catch(() => {});
+      api.get(`/book-mfg/books/${book.id}/post-publish`).then((r) => setPostPub(r.data)).catch(() => {});
+    } catch (e) {
+      const detail = formatApiError(e.response?.data?.detail);
+      if (!ack && /imprint mismatch/i.test(detail)) {
+        if (window.confirm(`${detail}\n\nRe-authorize with Founder acknowledgement to override the imprint and publish anyway?`)) {
+          setBusy(false); return doAuthorize(true);
+        }
+      } else {
+        toast.error(detail);
+      }
+    } finally { setBusy(false); }
+  };
   const doSanitize = () => run(() => api.post(`/book-mfg/books/${book.id}/sanitize`, { base_url: A }), "Publication Sanitization Pass™ complete — clean retail edition prepared.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
   const doDraftBlurb = () => run(async () => { const { data } = await api.post(`/book-mfg/books/${book.id}/draft-blurb`); toast.message("Blurb drafted — review & approve.", { description: data.status }); });
   const doSavePublication = (fields, ok) => run(() => api.post(`/book-mfg/books/${book.id}/publication-details`, fields), ok || "Publication details saved.");
@@ -312,7 +330,12 @@ export default function BookManufacturing() {
               className="inline-flex items-center gap-1.5 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50">
               <ShieldCheck className="w-4 h-4" /> Re-list to Store
             </button>
-          ) : null}
+          ) : (
+            <button data-testid="authorize-store-btn" onClick={doAuthorize} disabled={busy}
+              className="inline-flex items-center gap-1.5 bg-gold text-navy px-4 py-2 rounded-md text-sm font-bold disabled:opacity-50 shadow-sm hover:brightness-105">
+              <ShieldCheck className="w-4 h-4" /> Authorize &amp; Publish to QRU Online
+            </button>
+          )}
         </div>
       </div>
 
