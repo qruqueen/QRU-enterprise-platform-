@@ -8,11 +8,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 
-from auth import get_current_user
+from auth import get_current_user, require_super_admin
 from database import db
 from models import gen_id, now_iso
 import pdf_product_builder as ppb
 import rendering_engine as re
+import layout_engine as lay
 import design_language as dl
 
 router = APIRouter(prefix="/api/printables", tags=["printables"])
@@ -32,8 +33,37 @@ async def config(user=Depends(get_current_user)):
             "product_types": [{"id": k, **v} for k, v in ppb.PRODUCT_TYPES.items()],
             "page_sizes": [{"id": k, **v} for k, v in ppb.PAGE_SIZES.items()],
             "worksheet_presets": [{"id": k, "label": v} for k, v in ppb.WORKSHEET_PRESETS.items()],
+            "layouts": lay.LAYOUTS, "default_margin_in": ppb.DEFAULT_MARGIN_IN,
             "destinations": ppb.SUITABLE_DESTINATIONS,
             "gate": {"min_print_dpi": ppb.MIN_PRINT_DPI, "ideal_print_dpi": ppb.IDEAL_PRINT_DPI}}
+
+
+_SETTINGS_COLL = "printable_settings"
+
+
+@router.get("/settings")
+async def get_settings(user=Depends(get_current_user)):
+    """The user's saved default layout / margin — remembered for future products."""
+    doc = await db[_SETTINGS_COLL].find_one({"user": user.get("email") or user.get("name")}, {"_id": 0})
+    return doc or {"layout": "poster", "margin_in": ppb.DEFAULT_MARGIN_IN, "custom_scale": 100, "page_size": "letter"}
+
+
+class SettingsReq(BaseModel):
+    layout: Optional[str] = "poster"
+    margin_in: Optional[float] = None
+    custom_scale: Optional[int] = 100
+    page_size: Optional[str] = "letter"
+
+
+@router.post("/settings")
+async def save_settings(req: SettingsReq, user=Depends(get_current_user)):
+    key = user.get("email") or user.get("name")
+    doc = {"user": key, "layout": req.layout or "poster",
+           "margin_in": ppb.DEFAULT_MARGIN_IN if req.margin_in is None else req.margin_in,
+           "custom_scale": req.custom_scale or 100, "page_size": req.page_size or "letter",
+           "updated_at": now_iso()}
+    await db[_SETTINGS_COLL].update_one({"user": key}, {"$set": doc}, upsert=True)
+    return {"saved": True, **doc}
 
 
 @router.get("/library")
@@ -55,6 +85,9 @@ class BuildReq(BaseModel):
     page_size: Optional[str] = "letter"
     activity_layout: Optional[bool] = None
     worksheet_presets: Optional[List[str]] = None
+    layout: Optional[str] = None
+    margin_in: Optional[float] = None
+    custom_scale: Optional[int] = 100
 
 
 @router.post("/build/{engine}/{record_id}")
@@ -74,9 +107,16 @@ async def build(engine: str, record_id: str, req: BuildReq, user=Depends(get_cur
                        include_instructions=req.include_instructions, title=req.title,
                        subtitle=req.subtitle, instructions=req.instructions,
                        page_size=req.page_size or "letter", activity_layout=req.activity_layout,
-                       worksheet_presets=req.worksheet_presets)
+                       worksheet_presets=req.worksheet_presets, layout=req.layout,
+                       margin_in=req.margin_in, custom_scale=req.custom_scale or 100)
     if result.get("error"):
         raise HTTPException(400, result["error"])
+    # Remember the user's chosen layout/margin as their default for next time.
+    key = user.get("email") or user.get("name")
+    await db[_SETTINGS_COLL].update_one({"user": key}, {"$set": {
+        "user": key, "layout": result.get("layout"), "margin_in": result.get("margin_in"),
+        "custom_scale": result.get("custom_scale"), "page_size": result.get("page_size"),
+        "updated_at": now_iso()}}, upsert=True)
     pdf_bytes = result.pop("pdf_bytes")
     fid = re._save("printable", "pdf", pdf_bytes)
     pdf_url = re._asset_url(fid)
@@ -112,6 +152,82 @@ async def enhance_image(req: EnhanceReq, user=Depends(get_current_user)):
     return {"image_base64": "data:image/png;base64," + base64.b64encode(out["data"]).decode(),
             "upscaled": out["upscaled"], "new_px": out["new_px"], "original_px": out["original_px"],
             "target_dpi": out["target_dpi"]}
+
+
+class PreviewReq(BaseModel):
+    image_base64: str
+    layout: Optional[str] = "poster"
+    page_size: Optional[str] = "letter"
+    margin_in: Optional[float] = None
+    custom_scale: Optional[int] = 100
+    title: Optional[str] = None
+    engine: Optional[str] = None
+    record_id: Optional[str] = None
+
+
+@router.post("/preview-page")
+async def preview_page(req: PreviewReq, user=Depends(get_current_user)):
+    """Live single-page PNG preview for the chosen layout/margin — no PDF, nothing stored."""
+    try:
+        data = base64.b64decode(req.image_base64.split(",")[-1])
+    except Exception:
+        raise HTTPException(400, "Invalid image_base64.")
+    product = {}
+    if req.record_id and req.record_id not in ("standalone", "none", ""):
+        product = await _resolve_product(req.engine or "book", req.record_id) or {}
+    out = ppb.render_preview_page(product, data, layout=req.layout or "poster",
+                                  page_size=req.page_size or "letter", margin_in=req.margin_in,
+                                  custom_scale=req.custom_scale or 100, title=req.title)
+    if out.get("error"):
+        raise HTTPException(400, out["error"])
+    return {"preview_base64": "data:image/png;base64," + base64.b64encode(out.pop("png_bytes")).decode(), **out}
+
+
+class EtsyPublishReq(BaseModel):
+    printable_id: str
+    approved: Optional[bool] = False
+
+
+@router.post("/publish-etsy/{engine}/{record_id}")
+async def publish_etsy(engine: str, record_id: str, req: EtsyPublishReq, user=Depends(require_super_admin)):
+    """Auto-upload a finished printable PDF to Etsy as a digital-download file on the product's listing.
+    Runs Governed Publication Policy™ first, ensures the shop is connected, creates/uses a DRAFT listing,
+    then uploads the PDF. Honest: requires Etsy connected + an Etsy-eligible product."""
+    import etsy_integration as etsy
+    import publication_policy as pp
+    product = await _resolve_product(engine, record_id)
+    if not product:
+        raise HTTPException(404, "Product not found.")
+    pr = await db[COLL].find_one({"id": req.printable_id, "product_id": product["id"]}, {"_id": 0})
+    if not pr:
+        raise HTTPException(404, "Printable not found for this product. Build it against a product first.")
+    st = await etsy.status()
+    if not st.get("connected"):
+        raise HTTPException(400, "Etsy is not connected. Connect your Etsy shop in Etsy Integration™, then retry.")
+    decision = await pp.decide(product, "etsy")
+    if not decision["can_publish"] and not req.approved:
+        return {"published": False, "blocked": True, "decision": decision,
+                "note": "Governed Publication Policy™ is not authorizing an Etsy publish yet. Resolve the "
+                        "blocked requirements, or use the Founder Override on an authorized package."}
+    # Ensure a draft listing exists for this product, then attach the PDF as a downloadable file.
+    draft = await etsy.publish_draft(product["id"], user.get("name", "Founder"), approved=bool(req.approved))
+    if not draft.get("ok") and not draft.get("etsy_listing_id"):
+        raise HTTPException(400, f"Could not create/find an Etsy draft listing: {draft.get('error', 'unknown error')}")
+    mapping = await db[etsy.MAP].find_one({"qru_product_id": product["id"]}) or {}
+    shop_id, listing_id = mapping.get("etsy_shop_id"), mapping.get("etsy_listing_id")
+    if not (shop_id and listing_id):
+        raise HTTPException(400, "Etsy listing mapping is incomplete; cannot upload the file.")
+    access = await etsy._access_token()
+    safe = (pr.get("title") or "printable").replace("/", "-")[:60]
+    file_url = f"{re._asset_url(pr['pdf_url'].split('/')[-1])}" if not pr["pdf_url"].startswith("http") else pr["pdf_url"]
+    ok, err = await etsy._upload_file(shop_id, listing_id, pr["pdf_url"], f"{safe}.pdf", access)
+    if not ok:
+        raise HTTPException(400, f"Etsy accepted the listing but rejected the file upload: {err}")
+    await db[COLL].update_one({"id": pr["id"]}, {"$set": {"etsy": {
+        "shop_id": shop_id, "listing_id": listing_id, "state": "draft", "uploaded_at": now_iso()}}})
+    return {"published": True, "etsy_listing_id": listing_id, "etsy_shop_id": shop_id, "state": "draft",
+            "decision": decision,
+            "note": "Uploaded to Etsy as a DRAFT listing digital-download file. Review it in Etsy and set it live."}
 
 
 class BundleReq(BaseModel):

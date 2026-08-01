@@ -250,6 +250,7 @@ def build(product, product_type, images, *, include_cover=None, include_instruct
     return {
         "standard": STANDARD_ID, "product_type": product_type, "product_type_label": ptype["label"],
         "page_size": page_size, "page_size_label": PAGE_SIZES[page_size]["label"],
+        "layout": layout, "margin_in": margin_in, "custom_scale": custom_scale,
         "dpi": DEFAULT_DPI, "page_count": total, "pages_meta": pages_meta,
         "quality_review_required": quality_review,
         "qa": {"result": result, "issues": issues, "warnings": warnings,
@@ -257,6 +258,33 @@ def build(product, product_type, images, *, include_cover=None, include_instruct
         "suitable_destinations": SUITABLE_DESTINATIONS,
         "pdf_bytes": pdf_bytes,
     }
+
+
+def render_preview_page(product, image_bytes, *, layout="poster", page_size="letter",
+                        margin_in=None, custom_scale=100, title=None, max_px=760):
+    """Fast single-page PNG preview (base64-ready bytes) for the live layout preview — no PDF, no store."""
+    if page_size not in PAGE_SIZES:
+        page_size = "letter"
+    if layout not in lay.LAYOUT_IDS:
+        return {"error": f"Unknown layout '{layout}'."}
+    margin_in = DEFAULT_MARGIN_IN if margin_in is None else max(float(margin_in), 0.0)
+    p = product or {}
+    palette = dl.resolve_palette(p.get("family", ""), p.get("department", p.get("college", "")),
+                                 p.get("topic", ""), p.get("title", ""))
+    pw, ph, _, _ = _page_px(page_size)
+    try:
+        artwork = lay.decode_artwork(image_bytes)
+        canvas, meta = lay.render_page(artwork, layout=layout, page_size_px=(pw, ph),
+                                       margin_px=int(round(margin_in * DEFAULT_DPI)),
+                                       custom_scale=custom_scale or 100, palette=palette, page_no=1,
+                                       title=title or p.get("title") or "QRU Printable")
+    except Exception as e:
+        return {"error": f"Could not render preview: {str(e)[:100]}"}
+    from PIL import Image
+    canvas.thumbnail((max_px, max_px), Image.LANCZOS)
+    buf = io.BytesIO(); canvas.save(buf, format="PNG")
+    return {"png_bytes": buf.getvalue(), "effective_dpi": meta["effective_dpi"], "status": meta["status"],
+            "layout": layout, "margin_in": margin_in}
 
 
 

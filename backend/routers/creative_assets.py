@@ -216,6 +216,22 @@ async def set_state(asset_id: str, req: StateReq, user=Depends(require_super_adm
     return r
 
 
+@router.delete("/assets/{asset_id}")
+async def delete_asset(asset_id: str, user=Depends(require_super_admin)):
+    """Remove an uploaded asset that did NOT pass — only Rejected / Rights Hold / Revision Required
+    assets can be deleted (never a Locked/Approved/Distribution-Authorized asset). Frees the slot."""
+    doc = await db[ucams.ASSET_COLL].find_one({"$or": [{"asset_id": asset_id}, {"id": asset_id}]}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Asset not found.")
+    removable = {"Rejected", "Rights Hold", "Revision Required"}
+    state = doc.get("lifecycle_state")
+    if state not in removable:
+        raise HTTPException(400, f"Only failed/on-hold assets can be removed. This asset is '{state}'. "
+                                 f"Change its state first if you really need to remove it.")
+    await db[ucams.ASSET_COLL].delete_one({"asset_id": doc["asset_id"]})
+    return {"deleted": True, "asset_id": doc["asset_id"], "was_state": state}
+
+
 class ManifestReq(BaseModel):
     destinations: List[str]
 
