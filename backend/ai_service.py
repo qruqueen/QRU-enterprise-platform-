@@ -30,7 +30,8 @@ async def generate_image_with_reference(prompt: str, session_id: str, reference_
             if reference_pngs:
                 fc = [ImageContent(image_base64=base64.b64encode(p).decode()) for p in reference_pngs[:3]]
             msg = UserMessage(text=prompt, file_contents=fc) if fc else UserMessage(text=prompt)
-            _, images = await chat.send_message_multimodal_response(msg)
+            # Hard timeout so a hung provider call can never freeze a background render job forever.
+            _, images = await asyncio.wait_for(chat.send_message_multimodal_response(msg), timeout=120)
             if images:
                 try:
                     import cost_meter

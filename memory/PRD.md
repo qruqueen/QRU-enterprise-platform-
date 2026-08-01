@@ -1,3 +1,26 @@
+## ✅ Creative Assets upload 500 fix + Motion Storybook render resilience (2026-08-01)
+
+### Creative Assets upload (Etsy image / print wrap) — 500 Internal Server Error FIXED
+- Root cause: `creative_asset_system.manufacture_final_asset()` passed the FULL `export` dict (which contains the rendered file **bytes** in `export["data"]`) into `store_asset(normalization=...)`, so the stored asset — and the JSON response — carried raw bytes → FastAPI `serialize_response` crashed with `UnicodeDecodeError`. Every UCAMS upload (Etsy marketplace_image, KDP print_cover_wrap, etc.) 500'd.
+- Fix: strip bytes before store/return (`clean_norm` subset of `export`, no `data`). Also made the READ path defensive: `routers/creative_assets.py` `/assets/{engine}/{record_id}` now runs `_json_safe()` to drop any raw bytes from legacy byte-leaked docs → protects production's pre-existing docs after redeploy.
+- Verified (curl, HTTP 200): Etsy image upload with rights → PASS, normalized to exact 3000×2250; print wrap 200; assets-list GET 200. Cleaned 4 preview byte-leaked docs; preserved the user's 2 real uploads on BOOK-0020.
+
+### Motion Storybook (Little Legacy Animated Storybook Pilot™) — "never renders in production" FIXED
+- Root cause: `_pilot_job` render is a multi-minute fire-and-forget `asyncio.create_task` (6 AI images + 6 TTS + ffmpeg) inside the web process. When the production container recycles/scales/times-out mid-render, the job dies WITHOUT hitting its `except`, so the DB record stays `RENDERING` forever → UI spins indefinitely. (Confirmed by a real preview job stuck in RENDERING with no MP4 and no error.)
+- Fix (`little_legacy_production.py` + `ai_service.py`), all deploy-safe code:
+  1. **Self-healing** — `pilot_status()` / `master_status()` flip a stale RENDERING job (PILOT_STALE_S=900s / MASTER_STALE_S=600s, no output file) to `FAILED` with an honest, retryable message.
+  2. **Timeouts** — AI image call wrapped in `asyncio.wait_for(...120s)`; per-scene TTS `wait_for(...90s)` so one hung call can't freeze the whole render.
+  3. **Parallel render** — the 6 per-scene image+voice generations now run via `asyncio.gather` (all use the same approved anchor → independent), cutting wall-clock ~4-5× to fit inside production's window.
+  4. **Step logging** (`qru.little_legacy`) so the next production attempt records exactly what happened.
+  5. Frontend already renders a **Retry** button on FAILED (LittleLegacyStudio PilotTab) — now reachable because stuck jobs become FAILED.
+- Verified: self-heal live via direct call + HTTP (stuck "Brain Work Adventure" → FAILED + Retry, screenshot confirmed); ffmpeg MP4 assembly proven at $0 (valid 171KB / 7.13s). NOT run: a full paid 6-scene AI render (avoided AI spend) — that is the Founder's production validation, now resilient + logged.
+- ⚠️ PREVIEW code changes — Founder must **redeploy** for qru-online.com.
+
+### YouTube full-animation build — SCOPED, awaiting Founder inputs (not built)
+- Confirmed current capability: script → AI key-art scenes + Ken Burns motion + TTS narration + burned captions → 720p MP4 → real YouTube upload (`youtube_publisher.publish_video`). NOT frame-by-frame animation.
+- True AI video needs **fal.ai** (`FAL_KEY` from https://fal.ai/dashboard/keys) — Emergent key does NOT cover video. Playbook fetched. Blocked on: Founder's FAL_KEY + choices (video style / script source / cost cap / publish default).
+
+
 ## ✅ Founder Copy Package™ (STD-UCAMS-0001 enhancement) + PWA (installable) — done & verified (2026-07-31)
 
 ### Founder Copy Package™ — three export modes on every UCAS™ spec

@@ -34,6 +34,29 @@ LL_DIR = Path(os.environ.get("QRU_LL_DIR", "/app/backend/generated_little_legacy
 (LL_DIR / "masters").mkdir(parents=True, exist_ok=True)
 (LL_DIR / "pilots").mkdir(parents=True, exist_ok=True)
 
+import logging
+from datetime import datetime, timezone
+logger = logging.getLogger("qru.little_legacy")
+
+# Resilience constants — a render is a multi-minute background job; production containers can recycle
+# mid-render. These guard against a job hanging in RENDERING forever and against a single hung API call.
+TTS_TIMEOUT_S = 90          # per-scene narration synthesis
+PILOT_STALE_S = 900         # a pilot RENDERING longer than this with no output = interrupted → FAILED
+MASTER_STALE_S = 600        # a character master RENDERING longer than this = interrupted → FAILED
+
+
+def _age_seconds(iso_ts):
+    """Seconds elapsed since an ISO timestamp; large number if missing/unparseable (treat as stale)."""
+    if not iso_ts:
+        return 10 ** 9
+    try:
+        dt = datetime.fromisoformat(iso_ts)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - dt).total_seconds()
+    except Exception:
+        return 10 ** 9
+
 FONT_BOLD = "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf"
 FONT_REG = "/usr/share/fonts/truetype/freefont/FreeSans.ttf"
 NAVY = (31, 24, 64)
@@ -202,14 +225,27 @@ async def master_character(char_key, actor="Founder"):
     if not c:
         return None
     await db.ll_character_masters.update_one({"key": char_key}, {"$set": {
-        "key": char_key, "name": c["name"], "status": "RENDERING", "created_by": actor, "updated_at": now_iso()}}, upsert=True)
+        "key": char_key, "name": c["name"], "status": "RENDERING", "error": None,
+        "render_started_at": now_iso(), "created_by": actor, "updated_at": now_iso()}}, upsert=True)
     asyncio.create_task(_master_job(char_key, actor))
     return {"ok": True, "status": "RENDERING",
             "message": f"Mastering {c['name']} — generating model sheet, expression sheet and voice profile in the background."}
 
 
 async def master_status(char_key):
-    return await db.ll_character_masters.find_one({"key": char_key}, {"_id": 0}) or {"status": "NONE"}
+    m = await db.ll_character_masters.find_one({"key": char_key}, {"_id": 0})
+    if not m:
+        return {"status": "NONE"}
+    if m.get("status") == "RENDERING" and _age_seconds(m.get("render_started_at") or m.get("updated_at")) > MASTER_STALE_S:
+        sheet = master_file_path(char_key, "model_sheet")
+        if not sheet.exists():
+            await db.ll_character_masters.update_one({"key": char_key}, {"$set": {
+                "status": "FAILED",
+                "error": "Mastering was interrupted before it finished (the server likely recycled). Tap to try again.",
+                "updated_at": now_iso()}})
+            m["status"] = "FAILED"
+            m["error"] = "Mastering was interrupted before it finished (the server likely recycled). Tap to try again."
+    return m
 
 
 async def list_masters():
@@ -394,19 +430,36 @@ async def _pilot_job(episode_id, actor):
             ref_pngs = [anchor]
 
         segments, durations, captions = [], [], []
-        for idx, sc in enumerate(scenes):
+
+        async def _one_scene(idx, sc):
             prompt = (f"Scene: {sc['visual']} {STYLE}"
                       + (" Keep the featured character exactly on-model — match the appearance, proportions, "
                          "colors, crown/props and style of the provided approved reference sheet." if ref_pngs else ""))
-            png = await ai_service.generate_image_with_reference(prompt, session_id=f"ll-pilot-{episode_id[:8]}-{idx}", reference_pngs=ref_pngs)
+            try:
+                png = await ai_service.generate_image_with_reference(
+                    prompt, session_id=f"ll-pilot-{episode_id[:8]}-{idx}", reference_pngs=ref_pngs)
+            except Exception as ie:
+                logger.warning(f"[pilot {episode_id[:8]}] scene {idx} image failed: {str(ie)[:120]}")
+                png = None
             if not png:
                 png = _branded_card(title if sc["label"] == "Title" else sc["label"], sc["caption"] or "")
             framed = _burn_caption(png, sc["caption"])
-            audio = await mr.synthesize_voice(sc["narration"], voice=voice)
-            segments.append((framed, audio))
-            captions.append(sc["caption"] or sc["narration"][:80])
-            durations.append(max(3.0, min(12.0, _duration_from_bytes(audio) + 0.5)))
+            # TTS with a hard timeout — a hung narration call can never freeze the whole render.
+            audio = await asyncio.wait_for(mr.synthesize_voice(sc["narration"], voice=voice), timeout=TTS_TIMEOUT_S)
+            dur = max(3.0, min(12.0, _duration_from_bytes(audio) + 0.5))
+            logger.info(f"[pilot {episode_id[:8]}] scene {idx} ready ({dur}s)")
+            return idx, framed, audio, dur, (sc["caption"] or sc["narration"][:80])
 
+        logger.info(f"[pilot {episode_id[:8]}] rendering {len(scenes)} scenes (parallel image+voice)…")
+        # Parallelize the per-scene image generation + narration (the biggest wall-clock cost). Every
+        # scene uses the SAME approved character anchor, so they are independent and safe to run together.
+        results = await asyncio.gather(*[_one_scene(i, sc) for i, sc in enumerate(scenes)])
+        for idx, framed, audio, dur, cap in sorted(results, key=lambda r: r[0]):
+            segments.append((framed, audio))
+            durations.append(dur)
+            captions.append(cap)
+
+        logger.info(f"[pilot {episode_id[:8]}] encoding MP4 via ffmpeg…")
         mp4 = await asyncio.get_event_loop().run_in_executor(None, lambda: _render_pilot_mp4(segments))
         out_path = LL_DIR / "pilots" / f"{episode_id}.mp4"
         out_path.write_bytes(mp4)
@@ -457,6 +510,7 @@ async def _pilot_job(episode_id, actor):
     except Exception as e:
         import traceback
         traceback.print_exc()
+        logger.error(f"[pilot {episode_id[:8]}] render FAILED: {str(e)[:240]}")
         await db.ll_pilots.update_one({"episode_id": episode_id}, {"$set": {
             "episode_id": episode_id, "status": "FAILED", "error": str(e)[:240], "updated_at": now_iso()}}, upsert=True)
 
@@ -475,14 +529,32 @@ async def manufacture_pilot(episode_id, actor="Founder"):
         return {"ok": False, "blocked": True,
                 "message": "Knowledge-First: this episode's Knowledge Record is not externally Verified. Route it through Knowledge Manufacturing & Verification Lion™ before manufacturing a children's pilot (Treasure Standard™)."}
     await db.ll_pilots.update_one({"episode_id": episode_id}, {"$set": {
-        "episode_id": episode_id, "title": ep.get("title"), "status": "RENDERING", "created_by": actor, "updated_at": now_iso()}}, upsert=True)
+        "episode_id": episode_id, "title": ep.get("title"), "status": "RENDERING",
+        "error": None, "render_started_at": now_iso(), "created_by": actor, "updated_at": now_iso()}}, upsert=True)
     asyncio.create_task(_pilot_job(episode_id, actor))
     return {"ok": True, "status": "RENDERING",
             "message": "Manufacturing the animated pilot in the background — generating scenes, narration, captions and rendering the MP4. This takes a few minutes."}
 
 
 async def pilot_status(episode_id):
-    return await db.ll_pilots.find_one({"episode_id": episode_id}, {"_id": 0}) or {"status": "NONE"}
+    p = await db.ll_pilots.find_one({"episode_id": episode_id}, {"_id": 0})
+    if not p:
+        return {"status": "NONE"}
+    # Self-heal an interrupted render: if it has been RENDERING far longer than a real render takes and
+    # no MP4 was produced, the background job was killed (e.g. the production container recycled). Report
+    # it honestly as FAILED (retryable) instead of spinning in RENDERING forever.
+    if p.get("status") == "RENDERING":
+        out = LL_DIR / "pilots" / f"{episode_id}.mp4"
+        if _age_seconds(p.get("render_started_at") or p.get("updated_at")) > PILOT_STALE_S and not out.exists():
+            await db.ll_pilots.update_one({"episode_id": episode_id}, {"$set": {
+                "status": "FAILED",
+                "error": "Render was interrupted before it finished (the server likely recycled during the "
+                         "multi-minute render). Tap Retry to manufacture it again.",
+                "updated_at": now_iso()}})
+            p["status"] = "FAILED"
+            p["error"] = ("Render was interrupted before it finished (the server likely recycled during the "
+                          "multi-minute render). Tap Retry to manufacture it again.")
+    return p
 
 
 async def list_pilots():
