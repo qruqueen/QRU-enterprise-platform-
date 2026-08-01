@@ -37,10 +37,40 @@ export default function PrintableStudio() {
   const [bundleResult, setBundleResult] = useState(null);
   const [presets, setPresets] = useState([]);
   const [library, setLibrary] = useState([]);
+  const [layout, setLayout] = useState("poster");
+  const [marginIn, setMarginIn] = useState(0.25);
+  const [customScale, setCustomScale] = useState(100);
+  const [preview, setPreview] = useState(null);
+  const [previewing, setPreviewing] = useState(false);
 
   const loadLibrary = useCallback(() => {
     api.get("/printables/library").then(({ data }) => setLibrary(data.printables || [])).catch(() => {});
   }, []);
+
+  // Load the user's saved default layout/margin.
+  useEffect(() => {
+    api.get("/printables/settings").then(({ data }) => {
+      if (data.layout) setLayout(data.layout);
+      if (data.margin_in != null) setMarginIn(data.margin_in);
+      if (data.custom_scale) setCustomScale(data.custom_scale);
+    }).catch(() => {});
+  }, []);
+
+  // Live single-page preview whenever the first image or layout/margin changes.
+  useEffect(() => {
+    if (!pages.length) { setPreview(null); return; }
+    let cancelled = false;
+    setPreviewing(true);
+    const t = setTimeout(() => {
+      api.post("/printables/preview-page", {
+        image_base64: pages[0].dataUrl, layout, page_size: pageSize,
+        margin_in: marginIn, custom_scale: customScale, title: title || null,
+      }).then(({ data }) => { if (!cancelled) setPreview(data); })
+        .catch(() => { if (!cancelled) setPreview(null); })
+        .finally(() => { if (!cancelled) setPreviewing(false); });
+    }, 350);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [pages, layout, pageSize, marginIn, customScale, title]);
 
   useEffect(() => {
     api.get("/printables/config").then(({ data }) => setConfig(data)).catch(() => {});
@@ -111,6 +141,7 @@ export default function PrintableStudio() {
         include_cover: incCover, include_instructions: incInstr,
         title: title || null, subtitle: subtitle || null, page_size: pageSize,
         activity_layout: activityLayout, worksheet_presets: isActivity ? presets : null,
+        layout, margin_in: marginIn, custom_scale: customScale,
       });
       setResult(data); if (sel) loadHistory(sel); loadLibrary();
       const r = data.qa.result;
@@ -152,6 +183,52 @@ export default function PrintableStudio() {
             ))}
           </div>
         </div>
+
+        <div>
+          <label className="text-xs font-semibold text-navy uppercase tracking-wide">Page Layout <span className="text-muted-foreground normal-case font-normal">— Universal Page Layout Engine™ (default Poster = full page)</span></label>
+          <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2" data-testid="ps-layouts">
+            {(config?.layouts || []).map((l) => (
+              <button key={l.id} data-testid={`ps-layout-${l.id}`} onClick={() => setLayout(l.id)}
+                className={`text-left rounded-md border p-2.5 transition-colors ${layout === l.id ? "border-navy bg-navy/5 ring-1 ring-navy" : "hover:border-navy/40"}`}>
+                <div className="text-[12px] font-bold text-navy">{l.label}</div>
+                <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{l.desc}</div>
+              </button>
+            ))}
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-4 text-[12px]">
+            <label className="flex items-center gap-2">Safe margin (in)
+              <input data-testid="ps-margin" type="number" step="0.05" min="0" max="1" value={marginIn}
+                onChange={(e) => setMarginIn(parseFloat(e.target.value) || 0)} className="rounded border px-2 py-1 w-20" />
+            </label>
+            <button data-testid="ps-fullbleed" onClick={() => setMarginIn(0)} className={`px-2.5 py-1 rounded-full border ${marginIn === 0 ? "bg-navy text-white border-navy" : "text-navy hover:border-navy"}`}>Full-bleed (0")</button>
+            {layout === "custom_scale" && (
+              <label className="flex items-center gap-2">Scale %
+                <input data-testid="ps-customscale" type="number" step="5" min="5" max="400" value={customScale}
+                  onChange={(e) => setCustomScale(parseInt(e.target.value) || 100)} className="rounded border px-2 py-1 w-20" />
+              </label>
+            )}
+            <span className="text-[10px] text-muted-foreground">Your last-used layout &amp; margin are saved as your default.</span>
+          </div>
+        </div>
+
+        {pages.length > 0 && (
+          <div data-testid="ps-live-preview" className="rounded-md border bg-muted/30 p-3 flex gap-4 items-start">
+            <div className="shrink-0 w-[220px]">
+              {preview?.preview_base64 ? (
+                <img src={preview.preview_base64} alt="Live layout preview" className="w-full rounded border bg-white shadow-sm" />
+              ) : (
+                <div className="w-full h-[285px] rounded border bg-white flex items-center justify-center text-[11px] text-muted-foreground">{previewing ? "Rendering preview…" : "Preview will appear here"}</div>
+              )}
+            </div>
+            <div className="text-[12px] space-y-1">
+              <p className="font-bold text-navy">Live Preview {previewing && <Loader2 className="inline w-3 h-3 animate-spin ml-1" />}</p>
+              <p className="text-muted-foreground">Layout: <b className="text-navy">{(config?.layouts || []).find((l) => l.id === layout)?.label || layout}</b></p>
+              <p className="text-muted-foreground">Margin: <b className="text-navy">{marginIn}"</b>{marginIn === 0 && " (full-bleed)"}</p>
+              {preview && <p className="text-muted-foreground">Print resolution (page 1): <b className={preview.status === "LOW_RES" ? "text-red-600" : preview.status === "ACCEPTABLE" ? "text-amber-600" : "text-emerald-700"}>{preview.effective_dpi} DPI · {preview.status}</b></p>}
+              <p className="text-[10px] text-muted-foreground pt-1">This is page 1 only — the full PDF renders every page in this layout on Build.</p>
+            </div>
+          </div>
+        )}
         <div className="flex flex-wrap gap-4 items-center text-[12px]">
           <label className="flex items-center gap-2 cursor-pointer"><input data-testid="ps-cover" type="checkbox" checked={incCover} onChange={(e) => setIncCover(e.target.checked)} className="accent-navy" /> Add branded cover page</label>
           <label className="flex items-center gap-2 cursor-pointer"><input data-testid="ps-instr" type="checkbox" checked={incInstr} onChange={(e) => setIncInstr(e.target.checked)} className="accent-navy" /> Add instructions page</label>

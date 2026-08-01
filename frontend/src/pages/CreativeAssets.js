@@ -4,7 +4,7 @@ import api, { formatApiError } from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import {
   Loader2, Layers, FileCog, UploadCloud, CheckCircle2, XCircle, AlertTriangle,
-  Lock, ShieldCheck, Package, QrCode, Ban, RefreshCw, ScanSearch, Rocket, Copy,
+  Lock, ShieldCheck, Package, QrCode, Ban, RefreshCw, ScanSearch, Rocket, Copy, Trash2,
 } from "lucide-react";
 
 const STATE_TONE = {
@@ -133,6 +133,17 @@ export default function CreativeAssets() {
     } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); } finally { setBusy(""); }
   };
 
+  const deleteAsset = async (assetId) => {
+    if (!window.confirm("Remove this uploaded asset permanently?\n\nOnly failed / rejected / on-hold assets can be removed. This frees the slot so you can upload a replacement.")) return;
+    setBusy(`del-${assetId}`);
+    try {
+      await api.delete(`/creative-assets/assets/${assetId}`);
+      toast.success("Asset removed."); await load(sel);
+    } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); } finally { setBusy(""); }
+  };
+
+  const REMOVABLE = ["Rejected", "Rights Hold", "Revision Required"];
+
   const buildPackage = async (mk) => {
     setBusy(`pkg-${mk}`);
     try {
@@ -242,6 +253,9 @@ export default function CreativeAssets() {
                         <button data-testid={`ca-lock-${a.asset_id}`} onClick={() => setState(a.asset_id, "Locked")} className="inline-flex items-center gap-1 text-navy hover:bg-muted px-2 py-1 rounded text-[11px]"><Lock className="w-3.5 h-3.5" />Lock</button>
                         <button data-testid={`ca-reject-${a.asset_id}`} onClick={() => setState(a.asset_id, "Rejected")} className="inline-flex items-center gap-1 text-red-600 hover:bg-red-50 px-2 py-1 rounded text-[11px]"><XCircle className="w-3.5 h-3.5" />Reject</button>
                         <button data-testid={`ca-archive-${a.asset_id}`} onClick={() => setState(a.asset_id, "Archived")} className="inline-flex items-center gap-1 text-muted-foreground hover:bg-muted px-2 py-1 rounded text-[11px]"><Ban className="w-3.5 h-3.5" />Archive</button>
+                        {REMOVABLE.includes(a.lifecycle_state) && (
+                          <button data-testid={`ca-remove-${a.asset_id}`} onClick={() => deleteAsset(a.asset_id)} disabled={busy === `del-${a.asset_id}`} className="inline-flex items-center gap-1 text-red-700 bg-red-50 hover:bg-red-100 px-2 py-1 rounded text-[11px] font-semibold"><Trash2 className="w-3.5 h-3.5" />Remove</button>
+                        )}
                       </div>
                       {(a.validation?.issues?.length > 0) && <div className="w-full text-[11px] text-red-600 flex items-center gap-1"><AlertTriangle className="w-3 h-3" />{a.validation.issues.join("; ")}</div>}
                     </div>

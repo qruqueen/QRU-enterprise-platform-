@@ -1,0 +1,54 @@
+{
+  "summary": "Iteration 105 — Verified all 3 Founder-reported fixes: (1) Book Manufacturing shows a clearly visible gold 'Authorize & Publish to QRU Online' button (authorize-store-btn) on the store-listing row for an unauthorized book. (2) Creative Assets shows a Remove button (ca-remove-<asset_id>) only for Rejected/Rights Hold/Revision Required assets — Locked assets show Approve/Lock/Reject/Archive but NO Remove button. (3) Printable Studio's Universal Page Layout Engine renders all 11 layout cards with data-testid=ps-layout-<id>, live preview via ps-live-preview updates when uploading and switching layouts, ps-fullbleed sets margin to 0. Backend: 14/14 pytest cases pass covering config layouts (11 + default_margin_in=0.25), standalone poster/worksheet/bordered builds, preview-page (poster+full-bleed), settings save/read, build-persists-last-layout, and DELETE gate (200 for Rejected/Rights Hold/Revision Required, 400 for Locked/Approved, 404 for unknown).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "CreativeAssets/PrintableStudio/BookManufacturing product <select>", "issues": ["Console hydration warning 'In HTML, <span> cannot be a child of <option>' — pre-existing from iteration 104; caused by a devtools-injected <span> wrapper around option text. Cosmetic only."]}
+    ]
+  },
+  "test_evidence": {
+    "backend_pytest": "14 passed in 4.44s (test_iteration105_printables_and_ca_delete.py)",
+    "book_manufacturing": {
+      "url": "/book-manufacturing (BOOK-0020 'How to Learn Faster' — not authorized)",
+      "authorize-store-btn": "VISIBLE (gold, top-right of store-listing-row)",
+      "store-status-off": "shown ('Not on the store')",
+      "store-status-live": "NOT shown (correct)",
+      "remove-from-store-btn": "NOT shown (correct — not authorized)"
+    },
+    "creative_assets": {
+      "seeded_rejected_asset": "CA-UITEST-REJ-9647d7 (marketplace_image · Etsy) — ca-remove button rendered, click → toast 'Asset removed' → asset gone after reload; backend returned {deleted:true}",
+      "seeded_locked_asset": "CA-UITEST-LCK-724dbe (marketplace_image · QRU Online) — NO ca-remove button (only Approve/Lock/Reject/Archive)",
+      "verified": "REMOVABLE gate {Rejected, Rights Hold, Revision Required} enforced in both UI and backend"
+    },
+    "printable_studio": {
+      "layouts_rendered": ["poster","fill","original","custom_scale","coloring","bordered","book_illustration","worksheet","workbook","activity","cut_paste"],
+      "ps-live-preview": "img appeared after PNG upload (data:image/png;base64,…)",
+      "layout_switch_worksheet": "preview updated to worksheet variant",
+      "ps-fullbleed": "clicked → ps-margin value became 0",
+      "ps-margin": "editable numeric",
+      "ps-build": "enabled after upload"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration105_printables_and_ca_delete.py",
+    "/app/test_reports/pytest/iter105.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "creative_assets.py DELETE handler correctly uses require_super_admin (Administrator role passes) and enforces removable state gate with a clear 400 message.",
+    "printables.py /build persists the used layout+margin+custom_scale+page_size as the user's default (upsert on _SETTINGS_COLL) — matches the 'remembers the last-used layout' requirement.",
+    "PrintableStudio ps-live-preview and ps-layouts wiring is clean; all 11 layouts exposed with distinct data-testids.",
+    "BookManufacturing store-listing-row correctly branches between authorize-store-btn / remove-from-store-btn / relist-to-store-btn based on founder_authorization state."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration105_printables_and_ca_delete.py (new)"
+  ],
+  "success_rate": {"backend": "100% (14/14)", "frontend": "100% (all 3 flows verified)"},
+  "test_credentials": "demo.admin@qru.com / qru-demo-admin-2026 (Administrator, passes require_super_admin)",
+  "seed_data_creation": "Temporarily seeded 2 UI test assets on product d7671e81-27bc-44e6-95be-84d3ecdec81c (BOOK-0020): CA-UITEST-REJ-9647d7 (Rejected — deleted by test) and CA-UITEST-LCK-724dbe (Locked — cleaned up post-test). All CA-UITEST-* and CA-TEST-* rows purged from ucams_assets after tests.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend regression file: /app/backend/tests/test_iteration105_printables_and_ca_delete.py (uses REACT_APP_BACKEND_URL + MONGO_URL + DB_NAME env). Run with `pytest -o addopts='' <file>` because pytest.ini's default addopts includes xdist flags that can conflict. The Creative Assets UI only renders assets whose (asset_role, platform_id) pair matches an inherited spec for the selected product; seed with e.g. platform_id='etsy_primary' or 'qru_online_primary'. BOOK-0020's record.id is d7671e81-27bc-44e6-95be-84d3ecdec81c and its products-collection id is 209b8cf6-3799-49f6-bed6-1e3db0a6eb0a — the UI queries under the record.id."
+}
