@@ -168,6 +168,40 @@ async def select_cover(book_id: str, req: CoverReq, user=Depends(require_super_a
     return r
 
 
+class UploadCoverReq(BaseModel):
+    file_base64: str
+    filename: Optional[str] = ""
+    base_url: Optional[str] = ""
+
+
+@router.post("/books/{book_id}/upload-cover")
+async def upload_cover(book_id: str, req: UploadCoverReq, user=Depends(require_super_admin)):
+    """Upload your own FRONT cover — normalized to the exact KDP eBook spec and set as the selected cover."""
+    import base64 as _b64
+    try:
+        data = _b64.b64decode(req.file_base64.split(",")[-1])
+    except Exception:
+        raise HTTPException(400, "Invalid file_base64.")
+    r = await bm.upload_cover(book_id, data, user.get("name", "Founder"), req.base_url or "")
+    if isinstance(r, dict) and r.get("error"):
+        raise HTTPException(400, r["error"])
+    return r
+
+
+@router.post("/books/{book_id}/upload-print-wrap")
+async def upload_print_wrap(book_id: str, req: UploadCoverReq, user=Depends(require_super_admin)):
+    """Upload your own FULL print cover wrap (back+spine+front) PDF/image instead of the generated wrap."""
+    import base64 as _b64
+    try:
+        data = _b64.b64decode(req.file_base64.split(",")[-1])
+    except Exception:
+        raise HTTPException(400, "Invalid file_base64.")
+    r = await bm.upload_print_wrap(book_id, data, req.filename or "wrap", user.get("name", "Founder"))
+    if isinstance(r, dict) and r.get("error"):
+        raise HTTPException(400, r["error"])
+    return r
+
+
 class SanitizeReq(BaseModel):
     base_url: Optional[str] = ""
 

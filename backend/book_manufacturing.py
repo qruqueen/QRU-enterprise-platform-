@@ -717,12 +717,72 @@ async def select_cover(book_id, concept_no, actor, base_url=""):
     design_art["selected_cover"] = match
     await db[COLL].update_one({"id": book_id}, {"$set": {"artifacts.design": design_art, "updated_at": _now()}})
     await log_org("Book Manufacturing™", "Manufacturing", f"selected cover concept {concept_no} for '{b['title']}'", b["book_code"])
-    # Quiet Factory™: selecting the cover auto-runs the Publication Sanitization Pass™ so the clean
-    # retail edition (with the chosen cover) is always the one that ships — the Founder never has to
-    # remember a separate step, and share/review copies are never the raw manuscript.
     if b.get("editorial_locked"):
         await sanitization_pass(book_id, actor, base_url)
     return clean(await db[COLL].find_one({"id": book_id}))
+
+
+# --- Founder-uploaded cover source (STD-COV-0001) — upload your own art when generated options aren't right.
+_UPLOAD_COVER_SPEC = {
+    "requirements": {"family": "digital_cover", "min_px": [625, 1000], "ideal_px": [1600, 2560],
+                     "aspect_ratio": 1.6, "format": "jpeg", "color_space": "RGB", "max_mb": 50, "dpi": 300,
+                     "transparency_allowed": False},
+    "target_px": [1600, 2560],
+}
+
+
+async def upload_cover(book_id, image_bytes, actor, base_url="", mime=""):
+    """Use a Founder-uploaded image as the book's FRONT cover. The Governed Render/Export engine makes it
+    the exact KDP eBook spec (1600×2560 JPEG @300 DPI) — no distortion, padded (never cropped) if needed."""
+    import asset_normalizer as norm
+    import rendering_engine as re_engine
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return {"error": "Book not found."}
+    export = norm.governed_export(_UPLOAD_COVER_SPEC, image_bytes, mime=mime)
+    if export.get("error"):
+        return {"error": f"Could not use that image: {export['error']}"}
+    fid = re_engine._save("uploaded-cover", export.get("ext", "jpg"), export["data"])
+    url = re_engine._asset_url(fid)
+    design_art = b.get("artifacts", {}).get("design") or {"cover_concepts": [], "print": {}}
+    concept = {"concept": 0, "url": url, "status": "uploaded", "source": "uploaded", "mode": "uploaded",
+               "label": "Uploaded by Founder", "dimensions": export.get("final_dimensions"),
+               "review_required": bool(export.get("quality_review_required")),
+               "normalization": export.get("actions", [])}
+    design_art["selected_cover"] = concept
+    design_art["uploaded_cover"] = concept
+    await db[COLL].update_one({"id": book_id}, {"$set": {"artifacts.design": design_art, "updated_at": _now()}})
+    await log_org("Book Manufacturing™", "Manufacturing",
+                  f"uploaded a custom front cover for '{b['title']}'", b["book_code"])
+    if b.get("editorial_locked"):
+        await sanitization_pass(book_id, actor, base_url)
+    return {**clean(await db[COLL].find_one({"id": book_id})),
+            "cover_upload": {"url": url, "dimensions": export.get("final_dimensions"),
+                             "actions": export.get("actions", []),
+                             "review_required": bool(export.get("quality_review_required"))}}
+
+
+async def upload_print_wrap(book_id, file_bytes, filename, actor, mime=""):
+    """Use a Founder-uploaded FULL print cover wrap (back+spine+front) PDF/image instead of the generated
+    wrap. Stored honestly as an uploaded artifact — no silent alteration."""
+    import rendering_engine as re_engine
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return {"error": "Book not found."}
+    head = file_bytes[:5].lstrip()
+    is_pdf = head[:4] == b"%PDF" or (filename or "").lower().endswith(".pdf") or "pdf" in (mime or "")
+    ext = "pdf" if is_pdf else ((filename or "wrap.png").rsplit(".", 1)[-1] if "." in (filename or "") else "png")
+    fid = re_engine._save("uploaded-print-wrap", ext, file_bytes)
+    url = re_engine._asset_url(fid)
+    design_art = b.get("artifacts", {}).get("design") or {"cover_concepts": [], "print": {}}
+    wrap = {"url": url, "filename": filename, "uploaded": True, "kind": "pdf" if is_pdf else "image",
+            "bytes": len(file_bytes), "uploaded_at": _now(), "uploaded_by": actor}
+    design_art["print_cover_wrap"] = wrap
+    design_art["print_wrap_uploaded"] = wrap
+    await db[COLL].update_one({"id": book_id}, {"$set": {"artifacts.design": design_art, "updated_at": _now()}})
+    await log_org("Book Manufacturing™", "Manufacturing",
+                  f"uploaded a full print cover wrap for '{b['title']}'", b["book_code"])
+    return {**clean(await db[COLL].find_one({"id": book_id})), "print_wrap": wrap}
 
 
 # ------------------------- BUTTONS 4 & 5 — AUDIO / VIDEO -------------------------

@@ -112,6 +112,9 @@ export default function BookManufacturing() {
     if (remember && coverMode) setCoverPref((p) => ({ ...p, mode: coverMode, has_saved_default: true }));
   }, "Design drafted.");
   const doSelectCover = (concept) => run(() => api.post(`/book-mfg/books/${book.id}/select-cover`, { concept, base_url: A }), `Cover ${concept} selected — clean retail edition prepared.`);
+  const _fileB64 = (file) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+  const doUploadCover = (file) => run(async () => { const b64 = await _fileB64(file); await api.post(`/book-mfg/books/${book.id}/upload-cover`, { file_base64: b64, filename: file.name, base_url: A }); }, "Custom cover uploaded & set (normalized to KDP eBook spec).");
+  const doUploadWrap = (file) => run(async () => { const b64 = await _fileB64(file); await api.post(`/book-mfg/books/${book.id}/upload-print-wrap`, { file_base64: b64, filename: file.name }); }, "Full print cover wrap uploaded.");
   const doAssemble = async () => {
     setBusy(true);
     try {
@@ -447,7 +450,7 @@ export default function BookManufacturing() {
       {/* Panels */}
       {tab === "upload" && <UploadPanel book={book} busy={busy} doUploadFile={doUploadFile} />}
       {tab === "proof" && <ProofPanel book={book} proof={proof} busy={busy} doProof={doProof} doApprove={doApprove} doOpenRevision={doOpenRevision} doResolveFinding={doResolveFinding} doSaveManuscript={doSaveManuscript} />}
-      {tab === "design" && <DesignPanel book={book} busy={busy} doDesign={doDesign} doSelectCover={doSelectCover} coverPref={coverPref} />}
+      {tab === "design" && <DesignPanel book={book} busy={busy} doDesign={doDesign} doSelectCover={doSelectCover} doUploadCover={doUploadCover} doUploadWrap={doUploadWrap} coverPref={coverPref} />}
       {tab === "audio" && <AudioPanel book={book} audio={audio} busy={busy} onRender={doRenderAudio} />}
       {tab === "video" && <PlanPanel title="Video" icon={Video} data={video} render={renderVideo} />}
       {tab === "publish" && <PublishPanel data={publish} kdp={kdp} postPub={postPub} book={book} busy={busy} doPricing={doPricing} doAuthorize={doAuthorize} doSanitize={doSanitize} doDraftBlurb={doDraftBlurb} doSavePublication={doSavePublication} doPrintWrap={doPrintWrap} />}
@@ -825,7 +828,7 @@ function LegibilityPreview({ concepts }) {
   );
 }
 
-function DesignPanel({ book, busy, doDesign, doSelectCover, coverPref }) {
+function DesignPanel({ book, busy, doDesign, doSelectCover, doUploadCover, doUploadWrap, coverPref }) {
   const d = book.artifacts?.design;
   const prov = d?.cover_provenance;
   const modeInfo = d?.cover_mode;
@@ -876,8 +879,33 @@ function DesignPanel({ book, busy, doDesign, doSelectCover, coverPref }) {
             )}
           </div>
         )}
-        {!d ? (
-          <p className="text-sm text-muted-foreground py-4">Generate print interior, EPUB, and three cover concepts from the approved edition.</p>
+        {book.editorial_locked && (
+          <div data-testid="upload-cover-card" className="mb-5 rounded-md border border-navy/20 bg-navy/5 p-3">
+            <p className="text-xs font-bold text-navy uppercase tracking-wide mb-1">Or upload your own cover</p>
+            <p className="text-[11px] text-muted-foreground mb-2">Don't like the generated options? Upload a PNG/JPG — the Governed Render/Export engine makes it the exact KDP eBook spec (1600×2560 @300 DPI, no cropping) and sets it as your selected cover.</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <label data-testid="upload-cover-btn" className="inline-flex items-center gap-1.5 bg-gold text-navy px-3 py-1.5 rounded text-[12px] font-bold cursor-pointer">
+                <Upload className="w-3.5 h-3.5" /> Upload Front Cover
+                <input type="file" accept="image/png,image/jpeg" className="hidden" disabled={busy}
+                  onChange={(e) => e.target.files[0] && doUploadCover(e.target.files[0])} />
+              </label>
+              <label data-testid="upload-wrap-btn" className="inline-flex items-center gap-1.5 border border-navy/30 text-navy px-3 py-1.5 rounded text-[12px] font-semibold cursor-pointer">
+                <Upload className="w-3.5 h-3.5" /> Upload Full Print Wrap (PDF/Image)
+                <input type="file" accept="application/pdf,image/png,image/jpeg" className="hidden" disabled={busy}
+                  onChange={(e) => e.target.files[0] && doUploadWrap(e.target.files[0])} />
+              </label>
+            </div>
+            {d?.uploaded_cover && (
+              <div data-testid="uploaded-cover-status" className="mt-2 flex items-center gap-3 text-[11px]">
+                <img src={abs(d.uploaded_cover.url)} alt="Uploaded cover" className="w-10 h-16 object-cover rounded border" />
+                <span className="text-emerald-700 font-semibold">Custom cover in use{d.uploaded_cover.review_required ? " — flagged for sharpness review (upscaled)" : ""}.</span>
+              </div>
+            )}
+            {d?.print_wrap_uploaded && (
+              <p className="mt-1 text-[11px] text-emerald-700 font-semibold" data-testid="uploaded-wrap-status">Uploaded print wrap in use: {d.print_wrap_uploaded.filename}.</p>
+            )}
+          </div>
+        )}
         ) : (
           <div className="space-y-5">
             {modeInfo && (
