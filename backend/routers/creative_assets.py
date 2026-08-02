@@ -225,7 +225,7 @@ async def set_state(asset_id: str, req: StateReq, user=Depends(require_super_adm
     r = await ucams.set_asset_state(asset_id, req.state, actor=user.get("name", "Founder"))
     if isinstance(r, dict) and r.get("error"):
         raise HTTPException(400, r["error"])
-    return r
+    return _json_safe(r)
 
 
 @router.delete("/assets/{asset_id}")

@@ -757,8 +757,12 @@ async def set_asset_state(asset_id, new_state, actor="Founder"):
         return {"error": f"Cannot move to {new_state} — asset is on {a['lifecycle_state']}. Resolve first."}
     await db[ASSET_COLL].update_one({"asset_id": asset_id}, {"$set": {
         "lifecycle_state": new_state, "updated_at": _now()},
+        "$unset": {"normalization.data": ""},
         "$push": {"publication_history": {"state": new_state, "by": actor, "at": _now()}}})
-    return await db[ASSET_COLL].find_one({"asset_id": asset_id}, {"_id": 0})
+    doc = await db[ASSET_COLL].find_one({"asset_id": asset_id}, {"_id": 0})
+    # Defensive: legacy docs (created before the byte-leak fix) may still carry raw bytes inside
+    # `normalization` — drop anything non-JSON-serializable so the state change can't 500 the response.
+    return {k: v for k, v in doc.items() if not isinstance(v, (bytes, bytearray))} if doc else doc
 
 
 # ---------------------------------------------------------------------------
