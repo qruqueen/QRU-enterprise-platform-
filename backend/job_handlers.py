@@ -7,3 +7,5 @@ import audiobook_video as abv
 def register_all():
     job_engine.register("ll_pilot_render", llp.pilot_render_handler)
     job_engine.register("book_audiobook_video", abv._job_render)
+    import book_manufacturing as bm
+    job_engine.register("book_full_audiobook", bm.full_audiobook_handler)

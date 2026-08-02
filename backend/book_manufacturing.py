@@ -958,9 +958,33 @@ async def start_full_audiobook(book_id, actor, voice=None, speed=None):
     await db[AUDIOBOOK_JOBS].update_one({"id": book_id}, {"$set": {
         "id": book_id, "status": "running", "total": len(chapters), "done": 0, "voice": v, "speed": sp,
         "started_at": _now(), "finished_at": None, "error": None, "url": None}}, upsert=True)
-    import asyncio
-    asyncio.create_task(_full_audiobook_worker(book_id, actor, v, sp, chapters))
+    # Run on the durable Orchestration Spine™ so a long full-length render survives server restarts.
+    import job_engine
+    await job_engine.enqueue("book_full_audiobook",
+                             {"book_id": book_id, "actor": actor, "voice": v, "speed": sp},
+                             title=f"Full audiobook: {b.get('title')}",
+                             dedupe_key=f"book_audiobook:{book_id}", max_attempts=2, created_by=actor)
     return {"ok": True, "status": "started", "total": len(chapters), "message": "Full audiobook render started."}
+
+
+async def full_audiobook_handler(job, progress):
+    """Durable-spine handler for a full audiobook render. Re-raises on failure so the engine retries."""
+    p = job.get("payload", {})
+    book_id = p["book_id"]
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        raise RuntimeError("Book Record not found.")
+    content = (b.get("editorial_edition") or b.get("working_copy") or {}).get("content", "")
+    chapters = _chapter_texts(content)
+    if not chapters:
+        raise RuntimeError("No chapters detected to narrate.")
+    if progress:
+        await progress(total=len(chapters), message=f"Narrating {len(chapters)} chapters…")
+    await _full_audiobook_worker(book_id, p.get("actor", "Founder"), p.get("voice"), p.get("speed"), chapters)
+    st = await db[AUDIOBOOK_JOBS].find_one({"id": book_id})
+    if st and st.get("status") == "error":
+        raise RuntimeError(st.get("error") or "Full audiobook render failed.")
+    return {"book_id": book_id, "url": (st or {}).get("url")}
 
 
 async def _full_audiobook_worker(book_id, actor, voice, speed, chapters):

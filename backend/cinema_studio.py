@@ -15,7 +15,7 @@ from database import db
 from models import gen_id, now_iso, clean
 from ai_service import llm_generate, parse_json, generate_image
 from media_production import _tts
-from little_legacy_production import _render_pilot_mp4, _duration_from_bytes
+from little_legacy_production import _render_pilot_mp4, _duration_from_bytes, _branded_card
 import rendering_engine as re_engine
 from media_division import _resolve_kr, _is_verified, _promise_manifest
 from org_activity import log_org
@@ -136,7 +136,11 @@ async def _make_video(kr, spec):
         try:
             img = await generate_image(f"{visual}. {IMG_STYLE}", f"studio-scene-{kr.get('id')}-{spec['id']}-{i}")
         except Exception as e:
-            raise RuntimeError(f"Scene image generation failed: {str(e)[:100]}")
+            img = None
+        # Never pass None to the encoder — fall back to a branded card so one failed image can't
+        # crash the whole production ("a bytes-like object is required, not 'NoneType'").
+        if not img:
+            img = _branded_card(plan.get("title") or kr.get("title") or "QRU Studio", narration[:90])
         audio = await _tts_bytes(narration)
         segments.append((img, audio))
         durations.append(round(_duration_from_bytes(audio), 1))
