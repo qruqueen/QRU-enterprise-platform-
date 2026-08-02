@@ -416,6 +416,10 @@ def _build_publishing_package(ep, inh, char, title, total, episode_number):
 
 async def _pilot_job(episode_id, actor, teaser=False):
     try:
+        # Refresh the render clock each (re)run so the stale-render self-heal doesn't fire while the
+        # durable job is actively (re)executing after a reclaim.
+        await db.ll_pilots.update_one({"episode_id": episode_id}, {"$set": {
+            "status": "RENDERING", "render_started_at": now_iso(), "error": None, "updated_at": now_iso()}})
         ep = await db.ll_episodes.find_one({"id": episode_id})
         kr = await kri.load_kr(db, ep.get("primary_kr")) if ep.get("primary_kr") else None
         inh = kri.build_inheritance(kr) if kr else {}
@@ -538,7 +542,13 @@ async def manufacture_pilot(episode_id, actor="Founder", teaser=False):
     await db.ll_pilots.update_one({"episode_id": episode_id}, {"$set": {
         "episode_id": episode_id, "title": ep.get("title"), "status": "RENDERING", "teaser": bool(teaser),
         "error": None, "render_started_at": now_iso(), "created_by": actor, "updated_at": now_iso()}}, upsert=True)
-    asyncio.create_task(_pilot_job(episode_id, actor, teaser=bool(teaser)))
+    # Run on the durable Orchestration Spine™ — survives server restarts (reclaimed & resumed) instead
+    # of the old fire-and-forget task that died on every recycle.
+    import job_engine
+    await job_engine.enqueue("ll_pilot_render",
+                             {"episode_id": episode_id, "actor": actor, "teaser": bool(teaser)},
+                             title=f"Storybook render: {ep.get('title')}" + (" (teaser)" if teaser else ""),
+                             dedupe_key=f"ll_pilot:{episode_id}", max_attempts=3, created_by=actor)
     if teaser:
         return {"ok": True, "status": "RENDERING",
                 "message": "Rendering a quick 2-scene teaser (opening + Treasure Takeaway™) — a cheap end-to-end test. Ready in about a minute."}
@@ -618,6 +628,19 @@ async def pilot_status(episode_id):
 
 async def list_pilots():
     return [p async for p in db.ll_pilots.find({}, {"_id": 0}).sort("created_at", -1).limit(50)]
+
+
+async def pilot_render_handler(job, progress):
+    """Durable-spine handler for a storybook render. Re-raises on FAILED so the engine retries."""
+    p = job.get("payload", {})
+    episode_id = p["episode_id"]
+    if progress:
+        await progress(message="Rendering storybook…")
+    await _pilot_job(episode_id, p.get("actor", "Founder"), teaser=p.get("teaser", False))
+    rec = await db.ll_pilots.find_one({"episode_id": episode_id})
+    if rec and rec.get("status") == "FAILED":
+        raise RuntimeError(rec.get("error") or "Storybook render failed.")
+    return {"episode_id": episode_id, "status": (rec or {}).get("status")}
 
 
 async def approve_pilot(episode_id, actor="Founder"):

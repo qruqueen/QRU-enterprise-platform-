@@ -1,3 +1,21 @@
+## ✅ ORCHESTRATION SPINE™ (durable job engine) + AUDIOBOOK → YOUTUBE VIDEO (2026-08-02)
+
+### Orchestration Spine™ — durable, restart-proof job engine (foundation for autonomy)
+- Problem: every long task (storybook render, character master, full audiobook, bulk orchestrator) used fire-and-forget `asyncio.create_task` that died on any server recycle → jobs stuck forever.
+- New `job_engine.py` (collection `factory_jobs`): Mongo-persisted jobs + a worker loop launched at backend startup (`server.py`) that LEASES one job at a time with a heartbeat, RETRIES with exponential backoff (max_attempts), and — the key — RECLAIMS orphaned jobs whose lease expired (i.e. killed mid-run) so they auto-resume after any restart. Supports dedupe_key, scheduled (`run_at`) and recurring (`interval_seconds`) jobs. Deploy-safe: NO new infra (no Redis/Celery), runs in-process, carries to production.
+- Handlers registered in `job_handlers.py`: `ll_pilot_render` (storybook), `book_audiobook_video`.
+- `little_legacy_production.manufacture_pilot` now ENQUEUES a durable `ll_pilot_render` job instead of `asyncio.create_task` → storybook renders now survive production recycling. `_pilot_job` refreshes render_started_at each (re)run so the stale self-heal doesn't fight the spine.
+- API `routers/factory_jobs.py` (`/api/factory-jobs`): list (with status counts), get, retry, cancel. Frontend `FactoryJobs.js` + route `/factory-jobs` + nav "Factory Jobs™" (Founder/Admin) — live monitor with status chips, filters, progress bars, retry/cancel.
+- Verified ($0): engine unit test (dedupe, lease, complete, RECLAIM-stale, retry-backoff, fail-after-max) all pass; real `book_audiobook_video` job end-to-end via the LIVE server worker → complete with valid MP4; Factory Jobs API + UI render (screenshot).
+
+### Audiobook → YouTube Video
+- New `audiobook_video.py`: takes a book's existing full audiobook (`artifacts.audio.full_audiobook.url`) + a branded 1920×1080 cover title-card (PIL) → static-cover MP4 over the narration (ffmpeg, reliable at any length) → stores at `artifacts.audio.full_audiobook.video`. Runs as a spine job (`book_audiobook_video`). Separate `publish_audiobook_video()` uploads to YouTube (real, Private default) via `youtube_publisher.publish_video`; friendly reconnect message on expired OAuth.
+- API: `POST /api/book-mfg/books/{id}/audiobook/video` (enqueue), `POST .../audiobook/video/publish`. UI: "Create YouTube Video" + "Publish to YouTube (Private)" buttons in Book Manufacturing Audio panel (appear once the full audiobook exists), with inline video player + YouTube link.
+- Verified end-to-end at $0 (synthetic book + tiny generated audio → job → valid 1920×1080 H.264+AAC MP4). Collection is `book_records` (not `books`).
+- ⚠️ NOT run: a paid full storybook render or a real full-audiobook TTS render. Storybook migration is code-complete and the spine is proven with a real handler; the first true storybook render is the Founder's production validation — now durable + observable in Factory Jobs.
+- ⚠️ Requires REDEPLOY for production (includes this + the earlier `set_state` byte-leak fix).
+
+
 ## ✅ FOLLOW-UP FIX (2026-08-01, production-reported): Asset lifecycle actions 500 on legacy assets
 - Symptom: production (qru-online.com) still showed "Something went wrong. Please try again." on the Creative Assets page even after redeploy. Uploads themselves now worked (assets listed with PASS), but clicking **Approve / Lock / Reject / Archive** on OLDER assets (e.g. CA-266ec55e721e, created before the byte-leak fix) crashed.
 - Root cause: `set_asset_state()` returned the raw Mongo asset doc, which for pre-fix assets still contained raw image bytes in `normalization.data` → `serialize_response` UnicodeDecodeError → 500. (My earlier fix covered the upload return + the assets-LIST GET, but NOT the per-asset state endpoint.)

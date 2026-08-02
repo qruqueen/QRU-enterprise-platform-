@@ -276,6 +276,10 @@ class FullAudiobookReq(BaseModel):
     speed: Optional[float] = None
 
 
+class PublishABVideoReq(BaseModel):
+    privacy: Optional[str] = "private"
+
+
 @router.post("/books/{book_id}/audiobook")
 async def start_audiobook(book_id: str, req: Optional[FullAudiobookReq] = None, user=Depends(require_super_admin)):
     req = req or FullAudiobookReq()
@@ -290,6 +294,36 @@ async def start_audiobook(book_id: str, req: Optional[FullAudiobookReq] = None, 
 @router.get("/books/{book_id}/audiobook/status")
 async def audiobook_status(book_id: str, user=Depends(get_current_user)):
     return await bm.full_audiobook_status(book_id)
+
+
+@router.post("/books/{book_id}/audiobook/video")
+async def create_audiobook_video(book_id: str, user=Depends(require_super_admin)):
+    """Turn the finished full audiobook into a YouTube-ready video (cover title-card + narration).
+    Runs on the durable Orchestration Spine™ so a long full-length encode survives restarts."""
+    import job_engine
+    b = await bm.db[bm.COLL].find_one({"id": book_id})
+    if not b:
+        raise HTTPException(404, "Book Record not found.")
+    fa = ((b.get("artifacts", {}).get("audio", {}) or {}).get("full_audiobook")) or {}
+    if not fa.get("url"):
+        raise HTTPException(400, "No full audiobook yet — render the full audiobook first, then create the video.")
+    job = await job_engine.enqueue("book_audiobook_video",
+                                   {"book_id": book_id, "actor": user.get("name", "Founder")},
+                                   title=f"Audiobook video: {b.get('title')}",
+                                   dedupe_key=f"book_abvideo:{book_id}", max_attempts=3,
+                                   created_by=user.get("name", "Founder"))
+    return {"ok": True, "job_id": job["id"], "status": job["status"],
+            "message": "Building your audiobook video in the background. Track it in Factory Jobs."}
+
+
+@router.post("/books/{book_id}/audiobook/video/publish")
+async def publish_audiobook_video(book_id: str, req: Optional[PublishABVideoReq] = None, user=Depends(require_super_admin)):
+    import audiobook_video as abv
+    req = req or PublishABVideoReq()
+    r = await abv.publish_audiobook_video(book_id, actor=user.get("name", "Founder"), privacy=req.privacy or "private")
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    return r
 
 
 @router.get("/books/{book_id}/post-publish")

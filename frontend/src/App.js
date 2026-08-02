@@ -106,6 +106,7 @@ import MediaDivision from "@/pages/MediaDivision";
 import CinemaStudio from "@/pages/CinemaStudio";
 import DecoderEngine from "@/pages/DecoderEngine";
 import BookManufacturing from "@/pages/BookManufacturing";
+import FactoryJobs from "@/pages/FactoryJobs";
 import ProductFamily from "@/pages/ProductFamily";
 import ConsumerHome from "@/pages/consumer/ConsumerHome";
 import ConsumerLearn from "@/pages/consumer/ConsumerLearn";
@@ -251,6 +252,7 @@ function EnterpriseRoutes() {
         <Route path="cinema-studio" element={<CinemaStudio />} />
         <Route path="decoder-engine" element={<DecoderEngine />} />
         <Route path="book-manufacturing" element={<BookManufacturing />} />
+        <Route path="factory-jobs" element={<FactoryJobs />} />
         <Route path="product-family" element={<ProductFamily />} />
         <Route path="connectors" element={<Connectors />} />
         <Route path="etsy" element={<EtsyIntegration />} />

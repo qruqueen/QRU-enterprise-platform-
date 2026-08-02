@@ -15,6 +15,7 @@ from routers.command import router as command_router
 from routers.translation import router as translation_router
 from routers.colleges import router as colleges_router
 from routers.jobs import router as jobs_router
+from routers.factory_jobs import router as factory_jobs_router
 from routers.organization import router as organization_router, seed_registry
 from routers.consumer import router as consumer_router
 from routers.command_center import router as command_center_router
@@ -197,6 +198,7 @@ for r in [
     distribution_arch_router,
     bundles_router,
     public_bundles_router,
+    factory_jobs_router,
 ]:
     app.include_router(r)
 
@@ -256,6 +258,14 @@ async def startup():
     # Do NOT block startup on seeds — return immediately so uvicorn binds :8001 and /health answers now.
     import asyncio
     asyncio.create_task(_run_startup_seeds())
+    # Orchestration Spine™ — register durable job handlers and launch the restart-proof worker loop.
+    try:
+        import job_engine, job_handlers
+        job_handlers.register_all()
+        job_engine.start()
+        logger.info("QRU Orchestration Spine™ worker started")
+    except Exception as e:
+        logger.error(f"[startup] job engine failed to start: {e}")
     logger.info("QRU Factory started — health endpoint live; seeding running in background")
 
 

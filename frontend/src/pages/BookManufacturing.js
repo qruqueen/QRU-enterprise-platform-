@@ -1026,6 +1026,45 @@ function AudioPanel({ book, audio, busy, onRender }) {
     } catch (e) { toast.error(e?.response?.data?.detail || "Could not start audiobook render."); }
   };
 
+  const [vidBusy, setVidBusy] = useState(false);
+  const [video, setVideo] = useState(book.artifacts?.audio?.full_audiobook?.video || null);
+  const createVideo = async () => {
+    setVidBusy(true);
+    try {
+      const { data } = await api.post(`/book-mfg/books/${book.id}/audiobook/video`);
+      toast.success(data.message || "Audiobook video queued.");
+      // poll the factory job to completion
+      const jid = data.job_id;
+      const t = setInterval(async () => {
+        try {
+          const { data: j } = await api.get(`/factory-jobs/${jid}`);
+          if (j.status === "complete") {
+            clearInterval(t);
+            const { data: bk } = await api.get(`/book-mfg/books/${book.id}`);
+            setVideo(bk.artifacts?.audio?.full_audiobook?.video || null);
+            setVidBusy(false);
+            toast.success("Audiobook video ready.");
+          } else if (j.status === "failed") {
+            clearInterval(t); setVidBusy(false);
+            toast.error(`Video render failed: ${j.error || "unknown error"}`);
+          }
+        } catch { clearInterval(t); setVidBusy(false); }
+      }, 3000);
+    } catch (e) { setVidBusy(false); toast.error(e?.response?.data?.detail || "Could not start audiobook video."); }
+  };
+  const publishVideo = async () => {
+    setVidBusy(true);
+    try {
+      const { data } = await api.post(`/book-mfg/books/${book.id}/audiobook/video/publish`, { privacy: "private" });
+      if (!data.ok) { toast.warning(data.message); return; }
+      toast.success(data.message);
+      const { data: bk } = await api.get(`/book-mfg/books/${book.id}`);
+      setVideo(bk.artifacts?.audio?.full_audiobook?.video || null);
+      if (data.url) window.open(data.studio_url || data.url, "_blank");
+    } catch (e) { toast.error(e?.response?.data?.detail || "Could not publish video."); }
+    finally { setVidBusy(false); }
+  };
+
   return (
     <div data-testid="panel-audio">
       <Panel title="Audio" icon={Mic} accent="royal"
@@ -1096,6 +1135,31 @@ function AudioPanel({ book, audio, busy, onRender }) {
               <audio controls src={abs(ab.url)} className="w-full" />
               <p className="text-[11px] text-muted-foreground mt-1">{ab.duration_min} min · {ab.chapters?.length || 0} chapters · voice {ab.voice_id}</p>
               <p className="text-[10px] text-amber-700 mt-1">{ab.label}</p>
+
+              <div className="mt-3 border-t border-border/60 pt-3" data-testid="audiobook-video-block">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-navy mb-1.5">Audiobook → YouTube Video</p>
+                <p className="text-[11px] text-muted-foreground mb-2">Turn this full audiobook into a YouTube-ready video (your cover as a title-card over the narration). Renders on the durable Factory Jobs™ spine.</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button onClick={createVideo} disabled={vidBusy} data-testid="create-audiobook-video-btn"
+                    className="text-xs font-bold px-3 py-1.5 rounded-md bg-royal text-white hover:bg-royal/90 transition-colors disabled:opacity-50 flex items-center gap-1.5">
+                    {vidBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                    {video ? "Re-create video" : "Create YouTube Video"}
+                  </button>
+                  {video && !video.youtube_url && (
+                    <button onClick={publishVideo} disabled={vidBusy} data-testid="publish-audiobook-video-btn"
+                      className="text-xs font-bold px-3 py-1.5 rounded-md bg-gold text-navy hover:bg-gold/90 transition-colors disabled:opacity-50 flex items-center gap-1.5">
+                      <Play className="w-3.5 h-3.5" /> Publish to YouTube (Private)
+                    </button>
+                  )}
+                </div>
+                {video && (
+                  <div className="mt-2" data-testid="audiobook-video-player">
+                    <video controls src={abs(video.url)} className="w-full rounded-md border border-border/60 bg-black" />
+                    <p className="text-[11px] text-muted-foreground mt-1">{video.duration_min} min video</p>
+                    {video.youtube_url && <p className="text-[11px] font-semibold text-emerald-700 mt-1" data-testid="audiobook-video-live">On YouTube ({video.youtube_privacy}): <a href={video.youtube_url} target="_blank" rel="noreferrer" className="underline">watch</a></p>}
+                  </div>
+                )}
+              </div>
             </div>
           )}
           {!ab && !abRunning && (

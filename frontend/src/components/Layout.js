@@ -20,7 +20,7 @@ const ICON = {
   "/knowledge": BookOpen, "/kr2": BookOpenCheck, "/kr-manufacturing": FlaskConical, "/topic-registry": ClipboardList, "/promotion-pipeline": Sprout,
   "/library-import": FolderUp, "/translation-engine": Wand2, "/research": FlaskConical, "/verification": ShieldCheck,
   "/verification-team": ShieldCheck, "/memory-engineering": Brain, "/qiks": BookOpenCheck,
-  "/refinement": Cog, "/flow": Workflow, "/architecture": Compass, "/workflows": Workflow, "/orchestrator": Boxes,
+  "/refinement": Cog, "/flow": Workflow, "/architecture": Compass, "/workflows": Workflow, "/orchestrator": Boxes, "/factory-jobs": Boxes,
   "/director": Gavel, "/manufacturing": Factory, "/manufacture": Sparkles, "/knowledge-manufacturing": Boxes,
   "/manufacturing-studio": PackageCheck, "/mfg-command": Gauge,
   "/publishing": BookOpenCheck, "/media-division": Boxes, "/cover-studio": Palette, "/products": PackageOpen, "/product-library": Library, "/companion": QrCode,
@@ -151,6 +151,9 @@ export default function Layout() {
           )}
           {["Founder & CEO", "Administrator"].includes(user?.role) && (
             <NavItem item={{ id: "publication-governance", label: "Publication Governance™", route: "/publication-governance" }} onNavigate={close} />
+          )}
+          {["Founder & CEO", "Administrator"].includes(user?.role) && (
+            <NavItem item={{ id: "factory-jobs", label: "Factory Jobs™", route: "/factory-jobs" }} onNavigate={close} />
           )}
 
           {/* All Capabilities — every other working page, one click away (collapsed) */}
