@@ -8,42 +8,41 @@ logger = logging.getLogger("qru.ai")
 
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
 MODEL = ("openai", "gpt-5.5")
-IMAGE_MODEL = "gemini-3.1-flash-image-preview"
+# The Emergent Universal Key's allowed image model is gpt-image-2 (OpenAI). The old Gemini
+# "Nano Banana" model is no longer permitted on this key (AuthenticationError: key not allowed).
+IMAGE_MODEL = os.environ.get("QRU_IMAGE_MODEL", "gpt-image-2")
 
 
 async def generate_image(prompt: str, session_id: str):
-    """Generate a branded image via Gemini Nano Banana (Emergent key). Returns raw PNG bytes or None."""
+    """Generate a branded image via OpenAI gpt-image-2 (Emergent key). Returns raw PNG bytes or None."""
     return await generate_image_with_reference(prompt, session_id, reference_pngs=None)
 
 
 async def generate_image_with_reference(prompt: str, session_id: str, reference_pngs=None):
-    """Generate an image, optionally conditioned on reference image(s) for visual consistency."""
-    import base64
+    """Generate an image with gpt-image-2 via the Emergent key. Returns raw PNG bytes or None.
+
+    Note: gpt-image-2 through emergentintegrations generates from a TEXT prompt; it does not accept
+    reference-image conditioning, so any character/style detail must be expressed in the prompt."""
     import asyncio
-    from emergentintegrations.llm.chat import ImageContent
+    from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
     for attempt in range(3):
         try:
-            chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=session_id,
-                           system_message="You are QRU Creative Studio, a premium educational brand designer.")
-            chat.with_model("gemini", IMAGE_MODEL).with_params(modalities=["image", "text"])
-            fc = None
-            if reference_pngs:
-                fc = [ImageContent(image_base64=base64.b64encode(p).decode()) for p in reference_pngs[:3]]
-            msg = UserMessage(text=prompt, file_contents=fc) if fc else UserMessage(text=prompt)
-            # Hard timeout so a hung provider call can never freeze a background render job forever.
-            _, images = await asyncio.wait_for(chat.send_message_multimodal_response(msg), timeout=120)
-            if images:
+            image_gen = OpenAIImageGeneration(api_key=EMERGENT_LLM_KEY)
+            images = await asyncio.wait_for(
+                image_gen.generate_images(prompt=prompt, model=IMAGE_MODEL, number_of_images=1),
+                timeout=120)
+            if images and len(images) > 0 and images[0]:
                 try:
                     import cost_meter
                     await cost_meter.record("image", est_cost=cost_meter.UNIT_COST["image"])
                 except Exception:
                     pass
-                return base64.b64decode(images[0]["data"])
+                return images[0]  # already raw image bytes
         except Exception as e:
             if "Budget has been exceeded" in str(e) or "spend limit" in str(e).lower():
                 logger.error(f"image generation failed (limit): {e}")
                 return None
-            logger.warning(f"image attempt {attempt+1} failed: {str(e)[:100]}")
+            logger.warning(f"image attempt {attempt+1} failed: {str(e)[:150]}")
             await asyncio.sleep(2 * (attempt + 1))
     return None
 

@@ -1,3 +1,14 @@
+## 🔥 CRITICAL FIX (2026-08-02): Image generation broken → "AI failed workflow" everywhere
+- Root cause: the Emergent Universal LLM key's ALLOWED MODEL LIST changed. Image gen was calling Gemini "Nano Banana" (`gemini-*-flash-image-preview`) → `AuthenticationError: key not allowed to access model. This key can only access [...'gpt-image-2'...]`. TEXT gen (gpt-5.5) still worked, so only image-dependent steps failed → cascaded into WF "AI Provider Error"/"Unknown Error" and blocked covers, storyboard scenes, storybook art, media renders.
+- Fix: `ai_service.py` now uses `emergentintegrations.llm.openai.image_generation.OpenAIImageGeneration` with model **gpt-image-2** (`IMAGE_MODEL`, overridable via env `QRU_IMAGE_MODEL`). `generate_images()` returns raw PNG bytes. Reference-image conditioning is not supported by this API (character detail must live in the prompt) — acceptable; storybook already falls back to branded cards.
+- All image generation in the app routes through `ai_service` (verified single fix point). Verified with a real call → valid 1254×1254 PNG returned.
+- ⚠️ PREVIEW fix — REQUIRES REDEPLOY to fix production qru-online.com.
+
+### Notes on the Founder's other questions (2026-08-02)
+- "Where do I verify?" → media products show "VERIFICATION REQUIRED" because they INHERIT the source Knowledge Record's `verification_status`. Verify the KR in the **Verification Center** (route `/verification`, linked from each Knowledge Record detail page "Review"). Once the KR is Verified, the media gate clears. (Backlog: make this an actionable link directly on the render gate.)
+- "Factory Jobs shows nothing" → the failing WF-xxxx runs are the OLDER workflow/manufacturing subsystem, NOT the new Orchestration Spine. Only storybook renders + audiobook videos route through Factory Jobs today. Backlog: migrate workflow/manufacturing/full-audiobook renders onto the spine so ALL jobs appear there.
+
+
 ## ✅ ORCHESTRATION SPINE™ (durable job engine) + AUDIOBOOK → YOUTUBE VIDEO (2026-08-02)
 
 ### Orchestration Spine™ — durable, restart-proof job engine (foundation for autonomy)
