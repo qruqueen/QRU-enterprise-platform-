@@ -1,3 +1,15 @@
+## 🔍 2026-08-03: Code-review report audit — findings were FALSE POSITIVES (no harmful changes applied)
+- A static code-review report flagged eval() injection, 4 circular-import chains, is-vs-==, hardcoded secrets, 92 undefined vars, high complexity. Audited each against the ACTUAL code:
+  - **eval()**: does NOT exist anywhere in backend (line 164 is a comment). False positive.
+  - **Circular imports**: all 9 modules import cleanly (verified) — handled via lazy in-function imports; app runs. Not breaking.
+  - **is vs ==**: every flagged production/test line is `is None` / `is True` / `is False` (correct, PEP8) or the word "is" inside a string literal. Changing to ==None/==False would be an ANTI-pattern. False positive.
+  - **Hardcoded secrets**: demo test-account passwords in the test harness (qru-admin-2026 etc.), not API keys/production secrets. Low risk.
+  - **92 undefined vars**: backend imports+runs clean → conditional-path static noise.
+  - **Complexity (governed_export cx40, _recon_audit main cx47, autonomous_engine gate_ladder cx27)**: REAL but not bugs. Refactoring working, recently-touched production logic = regression risk, zero functional gain. Deferred as optional.
+- DECISION: made NO code changes (applying the report as-written would degrade/break working code — against Treasure Standard). 
+- Ran a pre-redeploy REGRESSION via testing_agent (iteration_106.json) on the REAL recent fixes: verification /queue (+ count invariant), KR 2.0 verify, creative-assets state 500-fix, Factory Jobs spine, frontend smoke — **100% pass, zero issues, retest_needed=false**. Credit-safe (no AI renders triggered).
+
+
 ## ✅ 2026-08-03 (cont.): "Manufacture Full Understanding" fixed (timeout + 0%/incomplete) + deploy-safe
 - Root cause of both the timeout AND the incomplete/"Topic Seed"/0% records: `manufacturing_engine.start_manufacturing_job` used fire-and-forget `asyncio.create_task(_process_job(...))` for the 8-stage AI pipeline → died on restart / didn't retry transient AI errors → stuck at 0%, button spins forever.
 - Fix: migrated it onto the durable spine — `start_manufacturing_job` now `enqueue`s a `kr_manufacture_understanding` job; new `manufacture_handler` runs `_process_job` and re-raises on all-failed so the engine retries. `_process_job` is idempotent (only fills EMPTY fields) so reclaim/retry safely resumes. Registered in `job_handlers`.
