@@ -1647,3 +1647,11 @@ Founder froze new-feature dev; directed modernization by *wiring existing capabi
 - Creative Assets Remove: DELETE /api/creative-assets/assets/{asset_id} deletes ONLY Rejected/Rights Hold/Revision Required (400 for Locked/Approved). Frontend ca-remove-{asset_id} button shown only for those states, with confirm.
 - ffmpeg: already handled via bundled imageio-ffmpeg (no raw ffmpeg calls) — DB errors were stale. No install needed.
 - All verified by testing_agent iteration_105 (14/14 backend, all frontend flows).
+
+### Production Knowledge Records not loading — N+1 timeout fix (2026-08-03) — VERIFIED
+- SYMPTOM (production qru-online.com only): "Browse Verified Knowledge" stuck on "Loading Knowledge…" showing 0 records; toast "Could not load Knowledge Records."; Factory Jobs empty. Preview worked fine (HTTP 200, 129 records).
+- ROOT CAUSE: manufacturing_dashboard.kr_manufacturing_list() ran 5 sequential count_documents() PER knowledge record (129 records × 5 ≈ 645 round-trips). Fast on preview localhost Mongo (~0.4s) but on production's remote Emergent-managed Mongo the per-query latency stacked past the ingress request timeout → hung request + 502/504 → error toast. NOT a missing-data problem.
+- FIX (manufacturing_dashboard.py kr_manufacturing_list): replaced per-record count loop with 5 grouped $group aggregations (_count_map) → constant ~7 queries regardless of record count. Endpoint now 0.13s. Counts identical (45 records with assets, verified).
+- Factory Jobs endpoint checked — clean (2 queries, no N+1); "no jobs" on production just means none exist in its separate DB.
+- ACTION REQUIRED: this is a code fix in preview — user must REDEPLOY to push to production.
+- Minor observed (not fixed, out of scope): detail dashboard header can render "null — Living Manufacturing Dashboard" for some KRs whose topic field is null in the detail endpoint.

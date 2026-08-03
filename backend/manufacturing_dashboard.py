@@ -131,6 +131,22 @@ async def kr_manufacturing_list():
             if k.get("id") and k["id"] not in seen:
                 seen.add(k["id"])
                 krs.append(k)
+    # Asset counts per KR — computed with 5 grouped aggregations instead of
+    # 5 count_documents() per record. On remote/production Mongo the per-record
+    # loop stacked hundreds of round-trips and timed out; this is constant-query.
+    async def _count_map(coll, field):
+        m = {}
+        async for row in coll.aggregate([{"$group": {"_id": f"${field}", "n": {"$sum": 1}}}]):
+            if row["_id"]:
+                m[row["_id"]] = row["n"]
+        return m
+
+    poster_c = await _count_map(db.poster_assets, "kr_id")
+    media_c = await _count_map(db.media_products, "kr_id")
+    story_c = await _count_map(db.storyboard_masters, "kr_id")
+    inherit_c = await _count_map(db.inherited_products, "kr_id")
+    product_c = await _count_map(db.products, "knowledge_record_id")
+
     out = []
     for k in krs:
         kr_id = k["id"]
@@ -138,11 +154,8 @@ async def kr_manufacturing_list():
         topic = (k.get("topic") or k.get("title") or k.get("the_question") or k.get("subtitle") or "").strip()
         if not topic:
             continue  # skip empty/incomplete shells (no knowledge to manufacture from)
-        counts = (await db.poster_assets.count_documents({"kr_id": kr_id})
-                  + await db.media_products.count_documents({"kr_id": kr_id})
-                  + await db.storyboard_masters.count_documents({"kr_id": kr_id})
-                  + await db.inherited_products.count_documents({"kr_id": kr_id})
-                  + await db.products.count_documents({"knowledge_record_id": kr_id}))
+        counts = (poster_c.get(kr_id, 0) + media_c.get(kr_id, 0) + story_c.get(kr_id, 0)
+                  + inherit_c.get(kr_id, 0) + product_c.get(kr_id, 0))
         verif = k.get("verification") or {}
         # Verified across BOTH schemas: engine evidence flag OR legacy Verified/Approved status.
         verified = bool(
