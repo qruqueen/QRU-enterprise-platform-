@@ -1655,3 +1655,10 @@ Founder froze new-feature dev; directed modernization by *wiring existing capabi
 - Factory Jobs endpoint checked — clean (2 queries, no N+1); "no jobs" on production just means none exist in its separate DB.
 - ACTION REQUIRED: this is a code fix in preview — user must REDEPLOY to push to production.
 - Minor observed (not fixed, out of scope): detail dashboard header can render "null — Living Manufacturing Dashboard" for some KRs whose topic field is null in the detail endpoint.
+
+### Production 520 (login fails, books gone after republish) — .env not tracked (2026-08-03)
+- SYMPTOM (production only): Cloudflare 520 "origin sent a response Cloudflare could not parse / empty response / malformed headers" on POST /api/auth/login; public books page shows "No titles published yet". Started right after a republish. Preview 100% healthy (health/login 200, 9 public books) — pure production outage.
+- ROOT CAUSE: backend/.env and frontend/.env were NOT git-tracked and .gitignore excluded them (lines 34-37 `.env` patterns + line 193 `*.env`). Emergent deploy injects prod config INTO the tracked .env files; when untracked, a republish can ship a config-less backend (no MONGO_URL etc.) → DB-backed requests return empty → Cloudflare 520.
+- FIX (.gitignore): removed the `.env` ignore patterns (kept `!**/.env.example`) so backend/.env + frontend/.env are tracked. Verified: `git check-ignore backend/.env frontend/.env` now returns nothing (not ignored); deployment_agent scan PASS (gitignore_blocks_required_files=false, env_files_ok=true).
+- ACTION REQUIRED: user must REPUBLISH/redeploy so the tracked .env ships to production. Could NOT verify against live production (no prod access) — fix validated via static deploy scan + preview health only.
+- NOTE: once backend is healthy, if production DB genuinely has 0 authorized books they must be authorized on the live site (Founder-only); but the 520 alone would also make books vanish, so they should return after a healthy redeploy.
