@@ -30,11 +30,8 @@ next-env.d.ts
 dist/
 dist
 
-# Environment files (comprehensive coverage)
-.env
-.env.*
-**/.env
-**/.env.*
+# Environment files — MUST be tracked for Emergent deployment (values auto-injected at deploy).
+# Do NOT ignore .env; ignoring it ships a config-less backend to production (origin 520).
 !**/.env.example
 
 *token.json*
@@ -190,7 +187,6 @@ frontend/node_modules/.cache/default-development/133.pack
 frontend/node_modules/.cache/default-development/134.pack
 frontend/node_modules/.cache/default-development/95.pack
 frontend/node_modules/.cache/default-development/138.pack
-*.env
 credentials.json
 *.key
 .credentials
