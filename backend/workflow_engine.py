@@ -26,6 +26,7 @@ from verification_engine import ai_verify_record
 import orchestrator as orch
 import integration_hub as hub
 from org_activity import log_org
+import job_engine
 
 logger = logging.getLogger("qru.workflow")
 
@@ -211,7 +212,15 @@ async def _run_job(job_id, topic, template, division, owner_id, actor, kr_id=Non
                    current_task=f"Manufacturing {len(products)} products in parallel")
         await _log(job_id, "Parallel Manufacturing",
                    f"Launching {len(products)} independent production pipelines in parallel")
-        await asyncio.gather(*[_manufacture_product(job_id, kr, pt, owner_id) for pt in products])
+        # Idempotent on durable re-run: skip product types already manufactured in a prior attempt
+        # (a workflow reclaimed by the Spine after a restart resumes instead of duplicating work).
+        _existing = await db.workflow_jobs.find_one({"id": job_id}, {"_id": 0, "products": 1})
+        _done_types = {p["product_type"] for p in (_existing or {}).get("products", []) if p.get("status") == "done"}
+        _todo = [pt for pt in products if pt not in _done_types]
+        if _done_types:
+            await _log(job_id, "Parallel Manufacturing",
+                       f"Resuming after restart — {len(_done_types)} product(s) already made, manufacturing {len(_todo)} remaining")
+        await asyncio.gather(*[_manufacture_product(job_id, kr, pt, owner_id) for pt in _todo])
         job = await db.workflow_jobs.find_one({"id": job_id})
         made = [p for p in job.get("products", []) if p["status"] == "done"]
         await _set(job_id, progress=75)
@@ -298,8 +307,44 @@ async def start_workflow(template, topic=None, kr_id=None, division=None, owner_
         "started_at": None, "completed_at": None,
     }
     await db.workflow_jobs.insert_one(dict(job))
-    asyncio.create_task(_run_job(job["id"], topic, template, division, owner_id, actor, kr_id))
+    # Durable Orchestration Spine™ — enqueue instead of a fire-and-forget asyncio task.
+    # Fire-and-forget tasks DIED on production container recycles, leaving workflows stuck
+    # "running" at ~35% forever. The Spine runs jobs serially (no more 503/524 overload from
+    # many concurrent workflows) and reclaims interrupted jobs after a restart.
+    await job_engine.enqueue(
+        "workflow_run",
+        payload={"job_id": job["id"], "topic": topic, "template": template,
+                 "division": division, "owner_id": owner_id, "actor": actor, "kr_id": kr_id},
+        title=f"{job['job_number']} · {template}",
+        dedupe_key=f"workflow:{job['id']}",
+        max_attempts=2,
+        created_by=actor,
+    )
     return clean(await db.workflow_jobs.find_one({"id": job["id"]})), None
+
+
+async def workflow_run_handler(job, progress):
+    """Durable-spine handler: executes a queued workflow_job to completion (restart-proof)."""
+    p = job.get("payload") or {}
+    await _run_job(p["job_id"], p["topic"], p["template"], p["division"],
+                   p.get("owner_id"), p.get("actor", "Founder"), p.get("kr_id"))
+    return {"workflow_job_id": p["job_id"]}
+
+
+async def reconcile_stale_workflows():
+    """One-time healing at startup: workflow_jobs left 'running'/'queued' by the old fire-and-forget
+    engine (killed by a container recycle) are surfaced honestly as failed so the founder can retry
+    through the now-durable Spine — never left silently stuck at a partial percentage."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
+    r = await db.workflow_jobs.update_many(
+        {"status": {"$in": ["running", "queued"]}, "updated_at": {"$lt": cutoff}},
+        {"$set": {"status": "failed", "completed_at": now_iso(), "updated_at": now_iso(),
+                  "note": "Interrupted by a server restart before the durable engine was enabled. "
+                          "The Orchestration Spine™ is now active — please retry this workflow."},
+         "$push": {"errors": "Interrupted by a server restart — please retry (now durable)."}})
+    if r.modified_count:
+        logger.info(f"[workflow] reconciled {r.modified_count} stale workflow(s) interrupted by restart")
+    return r.modified_count
 
 
 # ---------------- Executive Factory Monitor™ ----------------

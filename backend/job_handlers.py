@@ -11,3 +11,7 @@ def register_all():
     job_engine.register("book_full_audiobook", bm.full_audiobook_handler)
     import manufacturing_engine as me
     job_engine.register("kr_manufacture_understanding", me.manufacture_handler)
+    import workflow_engine as wfe
+    job_engine.register("workflow_run", wfe.workflow_run_handler)
+    import prod_migrations as pm
+    job_engine.register("asset_upgrade_run", pm.asset_upgrade_handler)

@@ -1089,6 +1089,29 @@ async def asset_upgrade_preflight():
     }
 
 
+async def asset_upgrade_handler(job, progress):
+    """Durable-spine handler: runs the resumable asset upgrade to completion (restart-proof)."""
+    p = job.get("payload") or {}
+    await _asset_upgrade_worker(p.get("actor", "Founder"), bool(p.get("force")))
+    return {"operation": "asset_upgrade"}
+
+
+async def reconcile_stale_asset_upgrade():
+    """Heal an asset-upgrade batch left 'running' by the old fire-and-forget task (killed by a
+    container recycle). Safe to auto-resume: the operation is $0 AI and idempotent — it skips
+    products already upgraded and finishes only the remaining ones."""
+    import job_engine
+    j = await db[ASSET_UPGRADE_JOB].find_one({"id": "current"}, {"_id": 0})
+    if not j or j.get("status") != "running":
+        return False
+    await job_engine.enqueue(
+        "asset_upgrade_run",
+        payload={"actor": j.get("by", "System (resume)"), "force": False},
+        title="Batch Upgrade Assets™ (resumed after restart)",
+        dedupe_key="asset_upgrade:current", max_attempts=3, created_by="System")
+    return True
+
+
 
 # =========================================================================== #
 # Imprint Canonicalization & Duplicate Merge (RI-IMPRINT-0001)

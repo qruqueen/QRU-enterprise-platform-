@@ -91,12 +91,18 @@ async def assets_upgrade_preflight(user=Depends(require_super_admin)):
 @router.post("/assets-upgrade")
 async def assets_upgrade(body: AssetUpgradeInput, user=Depends(require_super_admin)):
     """Re-render catalog product covers via the hardened deterministic renderer (zero AI).
-    Runs in the background; poll /assets-upgrade/status."""
-    existing = await pm.asset_upgrade_status()
-    if existing.get("status") == "running":
+    Runs on the durable Orchestration Spine™ (restart-proof); poll /assets-upgrade/status."""
+    import job_engine
+    active = (await job_engine.list_jobs(status="running", job_type="asset_upgrade_run", limit=1)
+              or await job_engine.list_jobs(status="queued", job_type="asset_upgrade_run", limit=1))
+    if active:
+        existing = await pm.asset_upgrade_status()
         return {"ok": True, "status": "running", "message": "An asset upgrade batch is already running.",
                 **{k: existing.get(k) for k in ("total", "done", "ok", "failed", "skipped")}}
-    asyncio.create_task(pm._asset_upgrade_worker(user.get("name", "Founder"), body.force))
+    await job_engine.enqueue("asset_upgrade_run",
+                             payload={"actor": user.get("name", "Founder"), "force": body.force},
+                             title="Batch Upgrade Assets™", dedupe_key="asset_upgrade:current",
+                             max_attempts=3, created_by=user.get("name", "Founder"))
     return {"ok": True, "status": "started",
             "message": "Batch Upgrade Assets started (zero AI spend). Poll status to track."}
 

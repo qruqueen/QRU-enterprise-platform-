@@ -266,6 +266,18 @@ async def startup():
         logger.info("QRU Orchestration Spine™ worker started")
     except Exception as e:
         logger.error(f"[startup] job engine failed to start: {e}")
+    # Heal any workflows left stuck 'running' by a pre-Spine restart (surfaced honestly for retry).
+    try:
+        import workflow_engine as wfe
+        await wfe.reconcile_stale_workflows()
+    except Exception as e:
+        logger.error(f"[startup] workflow reconcile failed: {e}")
+    # Resume any asset-upgrade batch left stuck 'running' by a pre-Spine restart ($0, idempotent).
+    try:
+        import prod_migrations as _pm
+        await _pm.reconcile_stale_asset_upgrade()
+    except Exception as e:
+        logger.error(f"[startup] asset-upgrade reconcile failed: {e}")
     logger.info("QRU Factory started — health endpoint live; seeding running in background")
 
 
