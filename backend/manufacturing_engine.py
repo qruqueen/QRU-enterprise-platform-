@@ -142,8 +142,28 @@ async def start_manufacturing_job(kr_id, actor):
         "updated_at": now_iso(),
     }
     await db.manufacturing_jobs.insert_one(dict(job))
-    asyncio.create_task(_process_job(job["id"], kr_id, actor))
+    # Durable Orchestration Spine™ — survives restarts (reclaimed & resumed) and retries transient AI
+    # errors, so the pipeline can no longer get stuck at 0% or die mid-run.
+    import job_engine
+    await job_engine.enqueue("kr_manufacture_understanding",
+                             {"job_id": job["id"], "kr_id": kr_id, "actor": actor},
+                             title=f"Manufacture understanding: {rec.get('kr_code') or rec.get('title')}",
+                             dedupe_key=f"kr_mfg:{kr_id}", max_attempts=2, created_by=actor)
     return job["id"]
+
+
+async def manufacture_handler(job, progress):
+    """Durable-spine handler for the full understanding pipeline. Re-raises if all stages failed so
+    the engine retries (transient AI errors)."""
+    p = job.get("payload", {})
+    jid, kr_id = p["job_id"], p["kr_id"]
+    if progress:
+        await progress(message="Manufacturing full understanding…")
+    await _process_job(jid, kr_id, p.get("actor", "Founder"))
+    mj = await db.manufacturing_jobs.find_one({"id": jid})
+    if mj and mj.get("status") == "failed":
+        raise RuntimeError("Manufacturing failed — every stage errored (likely a transient AI error). Retrying.")
+    return {"kr_id": kr_id, "fields": (mj or {}).get("fields_manufactured", 0)}
 
 
 async def _process_job(job_id, kr_id, actor):
