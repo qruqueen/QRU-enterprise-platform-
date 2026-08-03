@@ -2325,7 +2325,6 @@ async def assemble_master_package(book_id, actor):
                    "filename": fid, "size_kb": len(data) // 1024, "assembled_at": _now(), "by": actor}
     # Treasure Standard: keep only the CURRENT package. Remove prior Master Output Package entries and
     # delete their files from disk so the Deliverables Library never shows stale/broken download links.
-    import os
     existing = b.get("deliverables", []) or []
     for d in existing:
         if d.get("type") == "Master Output Package" and d.get("url"):

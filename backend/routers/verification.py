@@ -107,15 +107,24 @@ async def _review_all_job(kr_ids, actor):
             pass
 
 
+async def review_all_handler(job, progress):
+    p = job.get("payload") or {}
+    await _review_all_job(p.get("kr_ids", []), p.get("actor", "Founder"))
+    return {"reviewed": len(p.get("kr_ids", []))}
+
+
 @router.post("/ai-review-all")
 async def ai_review_all(user=Depends(require_super_admin)):
-    """Autonomously verify every manufactured-but-unverified record in the background."""
+    """Autonomously verify every manufactured-but-unverified record on the durable Spine."""
+    import job_engine
     krs = await db.knowledge_records.find(
         {"understanding_status": {"$in": ["Draft", "Verified"]},
          "verification_status": {"$in": ["Draft", "In Review", "Revision Requested", "Not Manufactured"]}},
         {"id": 1}).to_list(1000)
     ids = [k["id"] for k in krs]
-    asyncio.create_task(_review_all_job(ids, user["name"]))
+    await job_engine.enqueue("kr_review_all", payload={"kr_ids": ids, "actor": user["name"]},
+                             title=f"AI Review All ({len(ids)})", dedupe_key="kr_review_all",
+                             max_attempts=2, created_by=user["name"])
     return {"queued": len(ids)}
 
 

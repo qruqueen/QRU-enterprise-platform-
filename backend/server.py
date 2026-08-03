@@ -278,6 +278,17 @@ async def startup():
         await _pm.reconcile_stale_asset_upgrade()
     except Exception as e:
         logger.error(f"[startup] asset-upgrade reconcile failed: {e}")
+    # Resume bulk-manufacturing batches + document re-renders left stuck by a pre-Spine restart.
+    try:
+        import orchestrator as _orch
+        await _orch.reconcile_stale_batches()
+    except Exception as e:
+        logger.error(f"[startup] batch reconcile failed: {e}")
+    try:
+        from routers import products as _prouter
+        await _prouter.reconcile_stale_rerender()
+    except Exception as e:
+        logger.error(f"[startup] rerender reconcile failed: {e}")
     logger.info("QRU Factory started — health endpoint live; seeding running in background")
 
 

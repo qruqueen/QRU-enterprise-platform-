@@ -133,7 +133,7 @@ async def get_one(aid: str, user=Depends(get_current_user)):
 async def serve(fname: str, download: bool = False, name: str = None):
     if "/" in fname or ".." in fname:
         raise HTTPException(400, "Invalid asset name")
-    path = os.path.join(vault.VAULT_DIR, fname)
+    path = vault.local_path(fname)
     if not os.path.exists(path):
         raise HTTPException(404, "Asset not found")
     ext = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""

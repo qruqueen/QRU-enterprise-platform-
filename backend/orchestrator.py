@@ -16,6 +16,7 @@ from ai_service import llm_generate, parse_json, RESEARCH_SYSTEM, QRU_METHODOLOG
 from verification_engine import ai_verify_record
 import product_protection as pp
 from org_activity import log_org
+import job_engine
 
 logger = logging.getLogger("qru.orchestrator")
 
@@ -81,7 +82,7 @@ async def start_batch(batch_id):
     await db.manufacturing_batches.update_one(
         {"id": batch_id}, {"$set": {"status": "running", "updated_at": now_iso()}})
     await _log(batch_id, "info", "Batch started.")
-    asyncio.create_task(_worker(batch_id))
+    await _enqueue_worker(batch_id)
     return await db.manufacturing_batches.find_one({"id": batch_id})
 
 
@@ -99,7 +100,7 @@ async def resume_batch(batch_id):
     await db.manufacturing_batches.update_one(
         {"id": batch_id}, {"$set": {"status": "running", "updated_at": now_iso()}})
     await _log(batch_id, "info", "Batch resumed.")
-    asyncio.create_task(_worker(batch_id))
+    await _enqueue_worker(batch_id)
     return await db.manufacturing_batches.find_one({"id": batch_id})
 
 
@@ -118,7 +119,7 @@ async def retry_failed(batch_id):
     await db.manufacturing_batches.update_one(
         {"id": batch_id}, {"$set": {"items": items, "failed": 0, "status": "running", "updated_at": now_iso()}})
     await _log(batch_id, "info", f"Retrying {reset} failed topic(s).")
-    asyncio.create_task(_worker(batch_id))
+    await _enqueue_worker(batch_id)
     return await db.manufacturing_batches.find_one({"id": batch_id})
 
 
@@ -330,6 +331,32 @@ async def _worker(batch_id):
         logger.error(f"batch worker crashed: {e}")
         await db.manufacturing_batches.update_one(
             {"id": batch_id}, {"$set": {"status": "failed", "updated_at": now_iso()}})
+
+
+async def _enqueue_worker(batch_id):
+    """Run the batch worker on the durable Orchestration Spine™ (restart-proof). The worker is
+    fully resumable — its per-topic state lives in the batch document — so a reclaimed job simply
+    continues with the next pending topic."""
+    await job_engine.enqueue("batch_manufacture_run", payload={"batch_id": batch_id},
+                             title=f"Bulk Manufacturing · {batch_id[:8]}",
+                             dedupe_key=f"batch:{batch_id}", max_attempts=5, created_by="System")
+
+
+async def batch_manufacture_run_handler(job, progress):
+    await _worker((job.get("payload") or {}).get("batch_id"))
+    return {"batch_id": (job.get("payload") or {}).get("batch_id")}
+
+
+async def reconcile_stale_batches():
+    """Resume bulk-manufacturing batches left 'running' by a pre-Spine restart (idempotent —
+    the worker picks up the next pending topic; already-done topics are untouched)."""
+    n = 0
+    async for b in db.manufacturing_batches.find({"status": "running"}, {"_id": 0, "id": 1}):
+        await _enqueue_worker(b["id"])
+        n += 1
+    if n:
+        logger.info(f"[orchestrator] resumed {n} interrupted batch(es) on the Spine")
+    return n
 
 
 async def approve_batch(batch_id, actor):

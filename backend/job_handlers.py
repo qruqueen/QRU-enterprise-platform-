@@ -15,3 +15,9 @@ def register_all():
     job_engine.register("workflow_run", wfe.workflow_run_handler)
     import prod_migrations as pm
     job_engine.register("asset_upgrade_run", pm.asset_upgrade_handler)
+    import orchestrator as orch
+    job_engine.register("batch_manufacture_run", orch.batch_manufacture_run_handler)
+    from routers import verification as vrouter
+    job_engine.register("kr_review_all", vrouter.review_all_handler)
+    from routers import products as prouter
+    job_engine.register("doc_rerender_run", prouter.rerender_handler)

@@ -59,11 +59,25 @@ def _asset_url(fid):
 def save_bytes(data: bytes, ext: str) -> dict:
     ext = (ext or "bin").lower().lstrip(".")
     fid = f"vault-{gen_id()[:10]}.{ext}"
-    with open(os.path.join(VAULT_DIR, fid), "wb") as f:
-        f.write(data)
+    media = MEDIA_TYPE.get(ext, "application/octet-stream")
+    # Durable object storage is the source of truth (pod disk is ephemeral / wiped on deploy).
+    # The local disk is only a cache, repopulated on demand via storage.ensure_local().
+    import storage
+    if not storage.mirror_file(fid, data, media):
+        logger.error(f"vault: durable storage write failed for {fid}")
     return {"filename": fid, "url": _asset_url(fid), "ext": ext,
-            "media_type": MEDIA_TYPE.get(ext, "application/octet-stream"),
+            "media_type": media,
             "bytes": len(data), "previewable": ext in PREVIEWABLE}
+
+
+def local_path(fid: str) -> str:
+    """Absolute path to a vault asset on local disk, materializing it from durable object
+    storage first if the ephemeral cache copy is missing."""
+    import storage
+    path = os.path.join(VAULT_DIR, fid)
+    if not os.path.exists(path):
+        storage.ensure_local(fid, path)
+    return path
 
 
 async def create_asset(name, asset_type, file_info, source="Founder Imported",
@@ -242,7 +256,7 @@ async def apply_to_product(pid, asset_id, actor="Founder"):
     if a.get("file", {}).get("previewable") and a["file"].get("ext") in ("png", "jpg", "jpeg", "webp"):
         import rendering_engine as re_engine
         import design_language as dl
-        vpath = os.path.join(VAULT_DIR, a["file"]["filename"])
+        vpath = local_path(a["file"]["filename"])
         if os.path.exists(vpath):
             with open(vpath, "rb") as f:
                 cover = f.read()

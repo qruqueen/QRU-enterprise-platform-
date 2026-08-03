@@ -326,16 +326,41 @@ async def _eligible_doc_count():
     return sum(1 for p in prods if pr.get_recipe(p.get("product_type", "")).get("category") in _DOC_CATS)
 
 
+async def rerender_handler(job, progress):
+    p = job.get("payload") or {}
+    await _rerender_worker(p.get("actor", "Founder"), p.get("base_url", ""))
+    return {"operation": "doc_rerender"}
+
+
+async def reconcile_stale_rerender():
+    """Resume a document re-render batch left 'running' by a pre-Spine restart ($0 AI, safe)."""
+    import job_engine
+    j = await db[_RERENDER_JOB].find_one({"id": "current"}, {"_id": 0})
+    if not j or j.get("status") != "running":
+        return False
+    await job_engine.enqueue("doc_rerender_run",
+                             payload={"actor": j.get("by", "System (resume)"), "base_url": ""},
+                             title="Publication Quality re-render (resumed)",
+                             dedupe_key="doc_rerender:current", max_attempts=3, created_by="System")
+    return True
+
+
 @router.post("/rerender-documents")
 async def rerender_documents(request: Request, user=Depends(require_super_admin)):
     """Re-render EVERY document-family product so it inherits the QRU Publication Quality Standard™.
-    Zero AI cover spend. Runs in the background; poll /rerender-documents/status."""
-    existing = await db[_RERENDER_JOB].find_one({"id": "current"}, {"_id": 0})
-    if existing and existing.get("status") == "running":
+    Zero AI cover spend. Runs on the durable Spine; poll /rerender-documents/status."""
+    import job_engine
+    active = (await job_engine.list_jobs(status="running", job_type="doc_rerender_run", limit=1)
+              or await job_engine.list_jobs(status="queued", job_type="doc_rerender_run", limit=1))
+    if active:
+        existing = await db[_RERENDER_JOB].find_one({"id": "current"}, {"_id": 0}) or {}
         return {"ok": True, "status": "running", "message": "A re-render batch is already running.",
                 **{k: existing.get(k) for k in ("total", "done", "ok", "failed")}}
     base_url = str(request.base_url).rstrip("/")
-    asyncio.create_task(_rerender_worker(user.get("name", "Founder"), base_url))
+    await job_engine.enqueue("doc_rerender_run",
+                             payload={"actor": user.get("name", "Founder"), "base_url": base_url},
+                             title="Publication Quality re-render", dedupe_key="doc_rerender:current",
+                             max_attempts=3, created_by=user.get("name", "Founder"))
     return {"ok": True, "status": "started",
             "message": "Publication Quality re-render started (zero AI spend). Poll status to track."}
 

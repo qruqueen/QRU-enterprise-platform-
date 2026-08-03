@@ -30,6 +30,7 @@ POLL_INTERVAL_S = 3        # how often the worker looks for work
 LEASE_SECONDS = 90         # a running job must heartbeat within this window or it's reclaimed
 HEARTBEAT_S = 25           # how often a running job extends its lease
 DEFAULT_MAX_ATTEMPTS = 3
+MAX_CONCURRENCY = 2        # run a few durable jobs at once (durable + no unbounded-503/524 bursts)
 
 # Registered handlers: job_type -> async fn(job: dict, progress: callable) -> dict | None
 _HANDLERS = {}
@@ -232,14 +233,19 @@ async def worker_loop():
         await _reclaim_stale()
     except Exception as e:
         logger.error(f"[job_engine] initial reclaim failed: {e}")
+    active = set()
     while True:
         try:
             await _reclaim_stale()
-            job = await _lease_next()
-            if job:
+            # Fill the worker pool up to MAX_CONCURRENCY with due jobs.
+            while len(active) < MAX_CONCURRENCY:
+                job = await _lease_next()
+                if not job:
+                    break
                 logger.info(f"[job_engine] running job {job['id']} ({job['job_type']})")
-                await _run_job(job)
-                continue  # immediately look for the next job
+                t = asyncio.create_task(_run_job(job))
+                active.add(t)
+                t.add_done_callback(active.discard)
         except Exception as e:
             logger.error(f"[job_engine] worker loop error: {e}")
         await asyncio.sleep(POLL_INTERVAL_S)
