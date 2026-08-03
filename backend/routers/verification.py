@@ -17,6 +17,79 @@ async def config(user=Depends(get_current_user)):
     return {"confidence_threshold": CONFIDENCE_THRESHOLD}
 
 
+# Statuses that mean a legacy record still needs a Founder verification decision.
+_LEGACY_NEEDS = ["Draft", "In Review", "Revision Requested", "Not Manufactured",
+                 "Extracted — Needs Founder Review", "Verification Required", "Internal Review"]
+_LEGACY_VERIFIED = ["Verified"]
+_AWAITING_MFG = ["Topic Seed"]
+
+
+def _kr2_verified(status):
+    s = str(status or "")
+    return "Verified External" in s or "Gold Standard" in s
+
+
+@router.get("/queue")
+async def verification_queue(user=Depends(get_current_user)):
+    """Unified, honest verification queue across BOTH knowledge collections. Surfaces every record
+    that still needs a decision (previously hidden 'Extracted — Needs Founder Review' + KR 2.0), and
+    reports true counts so the screen can never falsely claim 'all verified'."""
+    needs, awaiting = [], []
+    verified_count = 0
+    # Legacy knowledge_records
+    proj = {"id": 1, "kr_code": 1, "title": 1, "verified_truth": 1, "verification_status": 1, "category": 1}
+    async for r in db.knowledge_records.find({}, proj):
+        vs = r.get("verification_status")
+        item = {"id": r["id"], "code": r.get("kr_code"), "title": r.get("title") or "Untitled",
+                "summary": (r.get("verified_truth") or "")[:220], "status": vs,
+                "category": r.get("category"), "collection": "legacy"}
+        if vs in _LEGACY_VERIFIED:
+            verified_count += 1
+        elif vs in _AWAITING_MFG:
+            awaiting.append(item)
+        elif vs == "Rejected":
+            continue
+        else:
+            needs.append(item)
+    # KR 2.0 knowledge_engine_records
+    proj2 = {"id": 1, "kr_code": 1, "topic": 1, "single_source_of_truth": 1, "status": 1}
+    async for r in db.knowledge_engine_records.find({}, proj2):
+        st = r.get("status")
+        if _kr2_verified(st):
+            verified_count += 1
+            continue
+        needs.append({"id": r["id"], "code": r.get("kr_code"), "title": r.get("topic") or "Untitled",
+                      "summary": (str(r.get("single_source_of_truth") or ""))[:220], "status": st,
+                      "category": "KR 2.0", "collection": "kr2"})
+    total = verified_count + len(needs) + len(awaiting)
+    return {"needs_verification": clean(needs), "awaiting_manufacturing": clean(awaiting),
+            "counts": {"verified": verified_count, "pending": len(needs),
+                       "awaiting_manufacturing": len(awaiting), "total": total}}
+
+
+class KR2Verify(BaseModel):
+    decision: str = "approve"  # approve | reject
+    note: Optional[str] = ""
+
+
+@router.post("/kr2/{rid}/verify")
+async def verify_kr2(rid: str, data: KR2Verify, user=Depends(require_super_admin)):
+    """Founder decision on a KR 2.0 record → mark it Verified External™ (Gold Standard) so media built
+    on it can render, or reject it."""
+    rec = await db.knowledge_engine_records.find_one({"id": rid})
+    if not rec:
+        raise HTTPException(404, "KR 2.0 record not found")
+    if data.decision == "approve":
+        new_status = "Verified External™ · Gold Standard Knowledge Record™"
+    else:
+        new_status = "Rejected"
+    await db.knowledge_engine_records.update_one({"id": rid}, {"$set": {
+        "status": new_status, "verified_by": user["name"], "verified_at": now_iso(),
+        "verification_note": data.note, "updated_at": now_iso()}})
+    return {"ok": True, "status": new_status}
+
+
+
 @router.post("/ai-review/{kr_id}")
 async def ai_review(kr_id: str, user=Depends(get_current_user)):
     kr = await db.knowledge_records.find_one({"id": kr_id})

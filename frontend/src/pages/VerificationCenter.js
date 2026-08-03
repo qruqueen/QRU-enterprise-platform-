@@ -100,14 +100,31 @@ function ReviewDialog({ record, onDone, onClose }) {
 }
 
 export default function VerificationCenter() {
-  const [records, setRecords] = useState([]);
+  const [needs, setNeeds] = useState([]);
+  const [awaiting, setAwaiting] = useState([]);
+  const [counts, setCounts] = useState({ verified: 0, pending: 0, awaiting_manufacturing: 0, total: 0 });
   const [selected, setSelected] = useState(null);
+  const [busy, setBusy] = useState("");
 
   const load = async () => {
-    const res = await api.get("/knowledge-records");
-    setRecords(res.data.filter((r) => ["Draft", "In Review", "Revision Requested"].includes(r.verification_status)));
+    const res = await api.get("/verification/queue");
+    setNeeds(res.data.needs_verification || []);
+    setAwaiting(res.data.awaiting_manufacturing || []);
+    setCounts(res.data.counts || {});
   };
   useEffect(() => { load().catch(() => {}); }, []);
+
+  const verifyKr2 = async (id, decision) => {
+    setBusy(id + decision);
+    try {
+      await api.post(`/verification/kr2/${id}/verify`, { decision });
+      toast.success(decision === "approve" ? "Marked Verified External™ · Gold Standard." : "Record rejected.");
+      load();
+    } catch (e) { toast.error(e?.response?.data?.detail || "Action failed."); }
+    finally { setBusy(""); }
+  };
+
+  const allClear = counts.pending === 0 && counts.awaiting_manufacturing === 0;
 
   return (
     <div>
@@ -117,27 +134,71 @@ export default function VerificationCenter() {
         description="Reviewers evaluate evidence, sources, observed facts, calculated data, and conflicting evidence — then Approve, Reject, or Request Revision. Nothing becomes verified truth without rigorous scrutiny."
       />
 
-      {records.length === 0 ? (
-        <EmptyState icon={ShieldCheck} title="Nothing pending" description="All knowledge records are verified. Excellent." />
+      <div className="flex flex-wrap gap-2 mb-6" data-testid="verification-counts">
+        <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700" data-testid="count-verified">✓ {counts.verified} verified</span>
+        <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-amber-100 text-amber-800" data-testid="count-pending">{counts.pending} need verification</span>
+        {counts.awaiting_manufacturing > 0 && <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-blue-50 text-blue-700" data-testid="count-awaiting">{counts.awaiting_manufacturing} awaiting manufacturing</span>}
+        <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-navy/5 text-navy">{counts.total} total</span>
+      </div>
+
+      {allClear && needs.length === 0 ? (
+        <EmptyState icon={ShieldCheck} title="Nothing pending" description={`All ${counts.verified} knowledge records are verified. Excellent.`} />
       ) : (
-        <div className="space-y-3">
-          {records.map((r) => (
-            <div key={r.id} data-testid={`verify-row-${r.id}`} className="bg-card border rounded-md p-5 flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-1 flex-wrap">
-                  <span className="font-mono text-xs text-muted-foreground">{r.kr_code}</span>
-                  <StatusBadge status={r.verification_status} />
-                  <span className="text-xs text-muted-foreground">{r.category}</span>
-                </div>
-                <Link to={`/knowledge/${r.id}`} className="font-medium hover:text-primary transition-colors">{r.title}</Link>
-                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{r.verified_truth}</p>
+        <div className="space-y-8">
+          {needs.length > 0 && (
+            <div>
+              <h3 className="text-sm font-bold text-navy mb-3">Needs your verification ({needs.length})</h3>
+              <div className="space-y-3">
+                {needs.map((r) => (
+                  <div key={r.id} data-testid={`verify-row-${r.id}`} className="bg-card border rounded-md p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-1 flex-wrap">
+                        <span className="font-mono text-xs text-muted-foreground">{r.code}</span>
+                        <StatusBadge status={r.status} />
+                        {r.collection === "kr2" && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">KR 2.0</span>}
+                        <span className="text-xs text-muted-foreground">{r.category}</span>
+                      </div>
+                      <Link to={r.collection === "kr2" ? `/knowledge` : `/knowledge/${r.id}`} className="font-medium hover:text-primary transition-colors">{r.title}</Link>
+                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{r.summary}</p>
+                    </div>
+                    {r.collection === "kr2" ? (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button data-testid={`kr2-approve-${r.id}`} disabled={busy === r.id + "approve"} onClick={() => verifyKr2(r.id, "approve")}
+                          className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-2 rounded-sm text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">
+                          <CheckCircle2 className="w-4 h-4" /> Mark Verified External™
+                        </button>
+                        <button data-testid={`kr2-reject-${r.id}`} disabled={busy === r.id + "reject"} onClick={() => verifyKr2(r.id, "reject")}
+                          className="flex items-center gap-1.5 border px-3 py-2 rounded-sm text-sm font-medium hover:bg-red-50 text-red-600">
+                          <XCircle className="w-4 h-4" /> Reject
+                        </button>
+                      </div>
+                    ) : (
+                      <button data-testid={`verify-open-${r.id}`} onClick={() => setSelected(r)}
+                        className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-sm text-sm font-medium hover:bg-primary/90 transition-colors shrink-0">
+                        <Eye className="w-4 h-4" /> Review
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
-              <button data-testid={`verify-open-${r.id}`} onClick={() => setSelected(r)}
-                className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-sm text-sm font-medium hover:bg-primary/90 transition-colors shrink-0">
-                <Eye className="w-4 h-4" /> Review
-              </button>
             </div>
-          ))}
+          )}
+
+          {awaiting.length > 0 && (
+            <div>
+              <h3 className="text-sm font-bold text-navy mb-1">Awaiting full manufacturing ({awaiting.length})</h3>
+              <p className="text-xs text-muted-foreground mb-3">These are Topic Seeds — the knowledge hasn't been fully manufactured yet, so they can't be verified until their full content is generated.</p>
+              <div className="space-y-2">
+                {awaiting.map((r) => (
+                  <div key={r.id} data-testid={`awaiting-row-${r.id}`} className="bg-blue-50/40 border border-blue-100 rounded-md p-4 flex items-center gap-3">
+                    <span className="font-mono text-[11px] text-muted-foreground">{r.code}</span>
+                    <Link to={`/knowledge/${r.id}`} className="text-sm font-medium hover:text-primary flex-1 min-w-0 truncate">{r.title}</Link>
+                    <StatusBadge status={r.status} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
