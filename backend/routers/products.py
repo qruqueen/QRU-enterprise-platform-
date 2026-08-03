@@ -333,16 +333,13 @@ async def rerender_handler(job, progress):
 
 
 async def reconcile_stale_rerender():
-    """Resume a document re-render batch left 'running' by a pre-Spine restart ($0 AI, safe)."""
-    import job_engine
-    j = await db[_RERENDER_JOB].find_one({"id": "current"}, {"_id": 0})
-    if not j or j.get("status") != "running":
-        return False
-    await job_engine.enqueue("doc_rerender_run",
-                             payload={"actor": j.get("by", "System (resume)"), "base_url": ""},
-                             title="Publication Quality re-render (resumed)",
-                             dedupe_key="doc_rerender:current", max_attempts=3, created_by="System")
-    return True
+    """Surface a document re-render left 'running' by a restart as idle so it can be re-run on
+    demand (durable). No heavy work is auto-launched at boot."""
+    r = await db[_RERENDER_JOB].update_one(
+        {"id": "current", "status": "running"},
+        {"$set": {"status": "interrupted", "updated_at": now_iso(),
+                  "note": "Interrupted by a server restart — re-run to finish."}})
+    return bool(r.modified_count)
 
 
 @router.post("/rerender-documents")

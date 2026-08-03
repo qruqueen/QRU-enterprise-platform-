@@ -348,15 +348,17 @@ async def batch_manufacture_run_handler(job, progress):
 
 
 async def reconcile_stale_batches():
-    """Resume bulk-manufacturing batches left 'running' by a pre-Spine restart (idempotent —
-    the worker picks up the next pending topic; already-done topics are untouched)."""
-    n = 0
-    async for b in db.manufacturing_batches.find({"status": "running"}, {"_id": 0, "id": 1}):
-        await _enqueue_worker(b["id"])
-        n += 1
-    if n:
-        logger.info(f"[orchestrator] resumed {n} interrupted batch(es) on the Spine")
-    return n
+    """Surface bulk-manufacturing batches left 'running' by a restart as PAUSED so the Founder can
+    resume them on demand (via resume_batch → durable Spine). Deliberately does NOT auto-launch heavy
+    manufacturing at boot, so a fresh container is never overwhelmed on startup."""
+    r = await db.manufacturing_batches.update_many(
+        {"status": "running"},
+        {"$set": {"status": "paused", "updated_at": now_iso()},
+         "$push": {"logs": {"at": now_iso(), "level": "warning",
+                            "message": "Interrupted by a server restart — resume when ready (now durable)."}}})
+    if r.modified_count:
+        logger.info(f"[orchestrator] paused {r.modified_count} interrupted batch(es) for manual resume")
+    return r.modified_count
 
 
 async def approve_batch(batch_id, actor):

@@ -1097,19 +1097,15 @@ async def asset_upgrade_handler(job, progress):
 
 
 async def reconcile_stale_asset_upgrade():
-    """Heal an asset-upgrade batch left 'running' by the old fire-and-forget task (killed by a
-    container recycle). Safe to auto-resume: the operation is $0 AI and idempotent — it skips
-    products already upgraded and finishes only the remaining ones."""
-    import job_engine
-    j = await db[ASSET_UPGRADE_JOB].find_one({"id": "current"}, {"_id": 0})
-    if not j or j.get("status") != "running":
-        return False
-    await job_engine.enqueue(
-        "asset_upgrade_run",
-        payload={"actor": j.get("by", "System (resume)"), "force": False},
-        title="Batch Upgrade Assets™ (resumed after restart)",
-        dedupe_key="asset_upgrade:current", max_attempts=3, created_by="System")
-    return True
+    """Surface an asset-upgrade batch left 'running' by a restart as idle so the Founder can re-run
+    it on demand (endpoint enqueues to the durable Spine). The live status endpoint still reports the
+    true 'remaining' count. No heavy work is auto-launched at boot."""
+    from models import now_iso
+    r = await db[ASSET_UPGRADE_JOB].update_one(
+        {"id": "current", "status": "running"},
+        {"$set": {"status": "interrupted", "updated_at": now_iso(),
+                  "note": "Interrupted by a server restart — re-run to finish the remaining products."}})
+    return bool(r.modified_count)
 
 
 

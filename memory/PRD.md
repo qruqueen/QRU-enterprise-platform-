@@ -1686,3 +1686,13 @@ Founder froze new-feature dev; directed modernization by *wiring existing capabi
 ### Deploy-blocker lint fixes (2026-08-03)
 - vault.py save_bytes: Founder-uploaded assets were written ONLY to pod-local disk (ephemeral → gone after deploy/recycle). Now the durable Emergent object storage is the source of truth (storage.mirror_file); added vault.local_path() which re-materializes the local cache on demand via storage.ensure_local(). routers/vault.py serve() + apply_to_product() use it. Verified: upload → object_exists True; local cache wiped → re-fetched from durable storage (bytes match).
 - book_manufacturing.py: removed duplicate `import os` (ruff F811) inside assemble_master_package (os already imported at module top + line 2201).
+
+### Production 520 AGAIN after hardening redeploy — startup blocked on reconcilers (2026-08-03)
+- SYMPTOM (production only): Cloudflare 520 "origin sent empty/malformed response" on ALL data endpoints (capability-registry/Manufacturing Map, distribution-architecture, knowledge, products) right after republishing the Spine-hardening changes. Preview always healthy.
+- ROOT CAUSE: last session's startup() AWAITED four reconcilers directly in the blocking startup path (no timeout). One (reconcile_stale_batches) looped over 'running' batches doing per-batch job_engine.enqueue (dedupe find_one on factory_jobs); on production's remote Mongo / larger data this stalled → uvicorn never finished startup → origin never bound → total 520. Auto-resuming heavy jobs at boot was also a resource risk.
+- FIX:
+  1. server.py: removed the 4 awaited reconciler blocks from startup(); moved them into the BACKGROUND _run_startup_seeds chain (each wrapped in _step → 120s timeout, isolated). startup() now only fires the seed task + starts the Spine worker → health binds immediately (verified 200 in 0.34s at t+3s).
+  2. Reconcilers are now SURFACE-ONLY (no auto heavy work at boot): orchestrator.reconcile_stale_batches → marks running batches 'paused' (Founder resumes via durable resume_batch); prod_migrations + products reconcilers → mark stuck 'running' as 'interrupted' (re-run on demand). No per-item enqueue loops.
+  3. job_engine.MAX_CONCURRENCY reverted 2 → 1 (serial; safest for production resources; matches last-known-good).
+- VERIFIED (preview): fast non-blocking startup; all previously-520'ing endpoints return 200; reconcilers run in background surface-only; worker idles (no auto heavy jobs). Cleaned leftover test jobs.
+- ACTION REQUIRED: redeploy. Could NOT verify against production directly (no access) — if 520 persists after redeploy it is a platform/infra/env issue → contact Emergent Support.

@@ -249,6 +249,15 @@ async def _run_startup_seeds():
     await _step("ukr_migration", ukr_standard.migrate_to_canonical(actor="System (startup)"))
     await _step("forex", seed_forex_seeds.seed())
     await _step("book_pilot", book_manufacturing.seed_pilot())
+    # Heal jobs left stuck by a pre-Spine restart. Runs in the BACKGROUND (never blocks the health
+    # probe) and only SURFACES stuck jobs for manual resume — it does NOT auto-launch heavy work at
+    # boot, so a fresh container can never be overwhelmed on startup.
+    import workflow_engine as _wfe, prod_migrations as _pm, orchestrator as _orch
+    from routers import products as _prouter
+    await _step("reconcile_workflows", _wfe.reconcile_stale_workflows())
+    await _step("reconcile_asset_upgrade", _pm.reconcile_stale_asset_upgrade())
+    await _step("reconcile_batches", _orch.reconcile_stale_batches())
+    await _step("reconcile_rerender", _prouter.reconcile_stale_rerender())
     asyncio.create_task(continuous_improvement.watcher_loop())
     logger.info("QRU Factory background seeding complete and operational")
 
@@ -266,29 +275,6 @@ async def startup():
         logger.info("QRU Orchestration Spine™ worker started")
     except Exception as e:
         logger.error(f"[startup] job engine failed to start: {e}")
-    # Heal any workflows left stuck 'running' by a pre-Spine restart (surfaced honestly for retry).
-    try:
-        import workflow_engine as wfe
-        await wfe.reconcile_stale_workflows()
-    except Exception as e:
-        logger.error(f"[startup] workflow reconcile failed: {e}")
-    # Resume any asset-upgrade batch left stuck 'running' by a pre-Spine restart ($0, idempotent).
-    try:
-        import prod_migrations as _pm
-        await _pm.reconcile_stale_asset_upgrade()
-    except Exception as e:
-        logger.error(f"[startup] asset-upgrade reconcile failed: {e}")
-    # Resume bulk-manufacturing batches + document re-renders left stuck by a pre-Spine restart.
-    try:
-        import orchestrator as _orch
-        await _orch.reconcile_stale_batches()
-    except Exception as e:
-        logger.error(f"[startup] batch reconcile failed: {e}")
-    try:
-        from routers import products as _prouter
-        await _prouter.reconcile_stale_rerender()
-    except Exception as e:
-        logger.error(f"[startup] rerender reconcile failed: {e}")
     logger.info("QRU Factory started — health endpoint live; seeding running in background")
 
 

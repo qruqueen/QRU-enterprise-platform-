@@ -30,7 +30,8 @@ POLL_INTERVAL_S = 3        # how often the worker looks for work
 LEASE_SECONDS = 90         # a running job must heartbeat within this window or it's reclaimed
 HEARTBEAT_S = 25           # how often a running job extends its lease
 DEFAULT_MAX_ATTEMPTS = 3
-MAX_CONCURRENCY = 2        # run a few durable jobs at once (durable + no unbounded-503/524 bursts)
+MAX_CONCURRENCY = 1        # process durable jobs serially (safest for production resources; a stuck
+                           # or heavy job can never overwhelm a freshly-recycled container)
 
 # Registered handlers: job_type -> async fn(job: dict, progress: callable) -> dict | None
 _HANDLERS = {}
