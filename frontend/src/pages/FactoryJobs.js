@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import api, { formatApiError } from "@/lib/api";
 import { PageHeader } from "@/components/shared";
-import { Loader2, Boxes, RefreshCw, RotateCcw, Ban, CheckCircle2, XCircle, Clock, Cog } from "lucide-react";
+import { Loader2, Boxes, RefreshCw, RotateCcw, Ban, CheckCircle2, XCircle, Clock, Cog, AlertTriangle, PlayCircle } from "lucide-react";
 
 const STATUS_TONE = {
   queued: "bg-blue-50 text-blue-700",
@@ -19,6 +19,7 @@ const FILTERS = ["all", "running", "queued", "failed", "complete"];
 
 export default function FactoryJobs() {
   const [data, setData] = useState({ jobs: [], counts: {}, total: 0 });
+  const [attention, setAttention] = useState({ items: [], count: 0 });
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState({});
@@ -26,8 +27,12 @@ export default function FactoryJobs() {
   const load = useCallback(async () => {
     try {
       const params = filter === "all" ? {} : { status: filter };
-      const { data } = await api.get("/factory-jobs", { params });
-      setData(data);
+      const [jobsRes, attnRes] = await Promise.all([
+        api.get("/factory-jobs", { params }),
+        api.get("/factory-jobs/attention").catch(() => ({ data: { items: [], count: 0 } })),
+      ]);
+      setData(jobsRes.data);
+      setAttention(attnRes.data);
     } catch (err) {
       toast.error(formatApiError(err.response?.data?.detail));
     } finally {
@@ -54,12 +59,57 @@ export default function FactoryJobs() {
     }
   };
 
+  const resume = async (item) => {
+    if (!item.resume_path) return;
+    setBusy((b) => ({ ...b, [item.id]: true }));
+    try {
+      await api.post(item.resume_path);
+      toast.success(`${item.title} resumed.`);
+      load();
+    } catch (err) {
+      toast.error(formatApiError(err.response?.data?.detail));
+    } finally {
+      setBusy((b) => ({ ...b, [item.id]: false }));
+    }
+  };
+
   const counts = data.counts || {};
 
   return (
     <div className="space-y-6" data-testid="factory-jobs-page">
       <PageHeader title="Factory Jobs™" icon={Boxes}
         subtitle="Orchestration Spine™ — every long-running job (storybook renders, audiobook videos, and more) runs here durably. Jobs survive server restarts: an interrupted job is automatically reclaimed and resumed, never left hanging." />
+
+      {attention.count > 0 && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3" data-testid="needs-attention-panel">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+            <h3 className="font-bold text-amber-900 text-sm" data-testid="needs-attention-title">
+              Needs attention — {attention.count} {attention.count === 1 ? "item" : "items"} interrupted by a restart
+            </h3>
+          </div>
+          <p className="text-[12px] text-amber-800/80 -mt-1">These were paused mid-run and are safe to resume — nothing is lost.</p>
+          <div className="space-y-2">
+            {attention.items.map((it) => (
+              <div key={`${it.kind}-${it.id}`} className="flex items-start gap-3 rounded-lg bg-white border border-amber-200 p-3" data-testid={`attention-${it.kind}-${it.id}`}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-navy text-sm truncate">{it.title}</span>
+                    <span className="text-[10px] font-mono text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">{it.kind}</span>
+                  </div>
+                  <p className="text-[12px] text-muted-foreground mt-0.5">{it.detail}</p>
+                </div>
+                {it.resume_path && (
+                  <button onClick={() => resume(it)} disabled={busy[it.id]} data-testid={`attention-resume-${it.id}`}
+                    className="text-[11px] font-bold px-3 py-1.5 rounded-md bg-royal text-white hover:bg-royal/90 disabled:opacity-50 flex items-center gap-1 shrink-0">
+                    {busy[it.id] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PlayCircle className="w-3.5 h-3.5" />} {it.resume_label}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2" data-testid="job-status-summary">
         {["running", "queued", "complete", "failed", "cancelled"].map((s) => (

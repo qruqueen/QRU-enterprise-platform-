@@ -211,6 +211,33 @@ app.add_middleware(
 )
 
 
+async def _prune_disk_caches():
+    """Keep the ephemeral disk from filling (a full disk = total outage): delete cached rendered/vault
+    files older than 3 days. They are mirrored to durable object storage and re-materialized on demand,
+    so removing the local cache is safe."""
+    import time, asyncio, os
+
+    def _prune():
+        cutoff = time.time() - 3 * 86400
+        removed = 0
+        for d in ("/app/backend/rendered_assets", "/app/backend/asset_vault"):
+            if not os.path.isdir(d):
+                continue
+            for fn in os.listdir(d):
+                p = os.path.join(d, fn)
+                try:
+                    if os.path.isfile(p) and os.path.getmtime(p) < cutoff:
+                        os.remove(p)
+                        removed += 1
+                except Exception:
+                    pass
+        return removed
+
+    n = await asyncio.to_thread(_prune)
+    if n:
+        logger.info(f"[cache-prune] removed {n} stale cached asset file(s) to protect disk")
+
+
 async def _run_startup_seeds():
     """Runs the full seed/migration chain in the BACKGROUND so the app can finish startup and answer
     /health immediately. Each step is isolated: a slow/failing step is logged (Treasure Standard — no
@@ -249,6 +276,7 @@ async def _run_startup_seeds():
     await _step("ukr_migration", ukr_standard.migrate_to_canonical(actor="System (startup)"))
     await _step("forex", seed_forex_seeds.seed())
     await _step("book_pilot", book_manufacturing.seed_pilot())
+    await _step("cache_prune", _prune_disk_caches())
     # Heal jobs left stuck by a pre-Spine restart. Runs in the BACKGROUND (never blocks the health
     # probe) and only SURFACES stuck jobs for manual resume — it does NOT auto-launch heavy work at
     # boot, so a fresh container can never be overwhelmed on startup.
