@@ -1710,3 +1710,8 @@ Founder froze new-feature dev; directed modernization by *wiring existing capabi
 - EnterpriseAutonomy.js: added clearly-labeled ON/OFF switch card (default OFF) + toggle wiring.
 - VERIFIED in preview (no paid AI): fresh restart → zero LiteLLM/capacity-probe/watcher activity; default settings enabled:false; enabling ran a full watcher cycle with ZERO AI calls; toggle on/off works; capacity endpoint deterministic. Setting left OFF.
 - NOT deployed (Founder to review). Universal Key untouched. No manufacturing resumed. All data/integrations preserved.
+
+### Book Manufacturer Design tab crash — broken ternary fix (2026-08-04) — VERIFIED, NOT deployed
+- ROOT CAUSE: frontend/src/pages/BookManufacturing.js DesignPanel had a dangling `) : (` (~line 909) — the ternary's opening `{cond ? ( ...placeholder... )` had been deleted, a JSX syntax error that crashed the panel (ErrorBoundary → "This section is being prepared…"). Books with no design artifact (d undefined) also hit `d.cover_concepts.map` → TypeError.
+- FIX (BookManufacturing.js only): restored the ternary `{!d?.cover_concepts?.length ? (<placeholder design-not-ready>) : (<cover concepts>)}`; guarded `(d?.cover_concepts || []).map(...)` and `<LegibilityPreview concepts={d?.cover_concepts || []} />`.
+- TESTED: BOOK-0024 is production-only (absent in preview). Tested all 7 preview books lacking a design artifact (Sleep Strengthens Memory, Consistent Sleep, Day Trading, Brain Deconstructed, The Bridge LargePrint, How to Understand AI, How to Learn Faster) → all load Design tab with crashed=False, panel rendered, placeholder shown. Zero AI/LLM calls (read-only navigation; Generate Design NOT clicked). No data/DB/Universal-Key changes. NOT deployed.

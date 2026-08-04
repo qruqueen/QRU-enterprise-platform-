@@ -906,6 +906,12 @@ function DesignPanel({ book, busy, doDesign, doSelectCover, doUploadCover, doUpl
             )}
           </div>
         )}
+        {!d?.cover_concepts?.length ? (
+          <div data-testid="design-not-ready" className="rounded-md border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+            No cover design has been generated for this book yet. {book.editorial_locked
+              ? <>Click <span className="font-semibold text-navy">Generate Design</span> above to create the cover concepts.</>
+              : "Lock the editorial edition first, then generate the design."}
+          </div>
         ) : (
           <div className="space-y-5">
             {modeInfo && (
@@ -922,7 +928,7 @@ function DesignPanel({ book, busy, doDesign, doSelectCover, doUploadCover, doUpl
                 </span>}
               </div>
               <div className="grid grid-cols-3 gap-3" data-testid="cover-concepts">
-                {d.cover_concepts.map((c) => {
+                {(d?.cover_concepts || []).map((c) => {
                   const sel = d.selected_cover?.concept === c.concept;
                   const ok = c.status === "success";
                   return (
@@ -949,7 +955,7 @@ function DesignPanel({ book, busy, doDesign, doSelectCover, doUploadCover, doUpl
                 })}
               </div>
             </div>
-            <LegibilityPreview concepts={d.cover_concepts} />
+            <LegibilityPreview concepts={d?.cover_concepts || []} />
             <div className="flex flex-wrap gap-3" data-testid="design-files">
               {d.print?.paperback_interior_pdf && (
                 <a href={abs(d.print.paperback_interior_pdf)} target="_blank" rel="noreferrer"
