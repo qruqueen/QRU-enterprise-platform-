@@ -253,7 +253,7 @@ async def _run_startup_seeds():
     import commerce, qbos, qeds, constitution, character_registry, qiks, constitution_v1
     import publishing_standard, manufacturing_flow, enterprise_architecture, refinement_engine
     import little_legacy, capability_registry, distribution_architecture, ukr_standard
-    import seed_forex_seeds, book_manufacturing, continuous_improvement
+    import seed_forex_seeds, book_manufacturing
 
     await _step("core_seed", seed())
     await _step("registry", seed_registry())
@@ -286,7 +286,9 @@ async def _run_startup_seeds():
     await _step("reconcile_asset_upgrade", _pm.reconcile_stale_asset_upgrade())
     await _step("reconcile_batches", _orch.reconcile_stale_batches())
     await _step("reconcile_rerender", _prouter.reconcile_stale_rerender())
-    asyncio.create_task(continuous_improvement.watcher_loop())
+    # Continuous Improvement / autonomy watcher is OFF by default and Founder-controlled.
+    # It is intentionally NOT started on boot — no autonomous AI process runs merely because
+    # the server or preview starts. The Founder enables it via POST /api/continuous/settings/enable.
     logger.info("QRU Factory background seeding complete and operational")
 
 

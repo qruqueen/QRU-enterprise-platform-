@@ -14,10 +14,8 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage
-
 from database import db
-from ai_service import EMERGENT_LLM_KEY, MODEL
+from ai_service import EMERGENT_LLM_KEY
 from models import now_iso
 import qiks
 
@@ -25,9 +23,58 @@ logger = logging.getLogger("qru.continuous")
 
 ACTION_COL = db["autonomy_actions"]
 AAR_COL = db["after_action_reviews"]
+SETTINGS_COL = db["settings"]
+_SETTING_ID = "continuous_improvement"
+_watcher_task = None
 
 _capacity = {"available": False, "reason": "not yet probed", "checked_at": None}
-_PROBE_TTL_SECONDS = 600  # re-probe at most every 10 minutes
+_PROBE_TTL_SECONDS = 600  # retained for API compatibility (no longer gates any AI call)
+
+
+# ---------------- Founder-controlled on/off switch (default OFF) ----------------
+async def is_enabled():
+    """Continuous Improvement is OFF unless the Founder has explicitly turned it on.
+    Defaults to OFF in every environment (production and preview) — the flag lives in the
+    database and is absent by default, so this returns False."""
+    doc = await SETTINGS_COL.find_one({"id": _SETTING_ID})
+    return bool(doc and doc.get("enabled"))
+
+
+def watcher_running():
+    return _watcher_task is not None and not _watcher_task.done()
+
+
+def start_watcher():
+    """Start the deterministic watcher task. Only ever invoked by an explicit Founder toggle —
+    NEVER on server/preview startup."""
+    global _watcher_task
+    if watcher_running():
+        return False
+    _watcher_task = asyncio.create_task(watcher_loop())
+    logger.info("Continuous Improvement watcher STARTED by Founder toggle.")
+    return True
+
+
+def stop_watcher():
+    global _watcher_task
+    if _watcher_task is not None and not _watcher_task.done():
+        _watcher_task.cancel()
+        logger.info("Continuous Improvement watcher STOPPED by Founder toggle.")
+    _watcher_task = None
+    return True
+
+
+async def set_enabled(enabled, actor="Founder"):
+    await SETTINGS_COL.update_one(
+        {"id": _SETTING_ID},
+        {"$set": {"id": _SETTING_ID, "enabled": bool(enabled), "updated_by": actor, "updated_at": now_iso()}},
+        upsert=True)
+    if enabled:
+        start_watcher()
+    else:
+        stop_watcher()
+    logger.info(f"Continuous Improvement set to {'ON' if enabled else 'OFF'} by {actor}.")
+    return {"enabled": bool(enabled), "watcher_running": watcher_running()}
 
 
 def _age_seconds(ts):
@@ -43,28 +90,17 @@ def _age_seconds(ts):
 
 
 async def probe_capacity(force=False):
-    """Cheap check: is AI text capacity available right now?"""
-    if not force and _age_seconds(_capacity["checked_at"]) < _PROBE_TTL_SECONDS:
-        return dict(_capacity)
-    available, reason = False, "unknown"
-    try:
-        import asyncio
-        chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id="capacity-probe",
-                       system_message="Reply with the single word OK.").with_model(*MODEL)
-        # Explicit timeout so a hung provider call can't stall the watcher or leak a session.
-        resp = await asyncio.wait_for(chat.send_message(UserMessage(text="OK")), timeout=30)
-        available, reason = True, "AI capacity available"
-        logger.info("Capacity probe: AVAILABLE")
-    except Exception as e:
-        msg = str(e)
-        if "spend limit" in msg.lower():
-            reason = "Daily spend limit reached (resets on daily cycle)"
-        elif "Budget has been exceeded" in msg:
-            reason = "Budget exceeded — add balance"
-        else:
-            reason = f"Transient/unknown: {msg[:120]}"
-        logger.info(f"Capacity probe: BLOCKED — {reason}")
-    _capacity.update({"available": available, "reason": reason, "checked_at": now_iso()})
+    """DETERMINISTIC capacity check — makes NO external AI call.
+
+    Previously this sent a live LLM 'OK' probe to the provider, which spent credits and ran
+    autonomously from the background watcher. That AI call has been removed: capacity is now
+    reported purely from deterministic local state (whether a Universal Key is configured), so
+    starting the server/preview or polling status never triggers a paid AI call."""
+    available = bool(EMERGENT_LLM_KEY)
+    reason = ("Universal Key configured (deterministic check — no AI call made)"
+              if available else "No Universal Key configured")
+    _capacity.update({"available": available, "reason": reason, "checked_at": now_iso(),
+                      "deterministic": True})
     return dict(_capacity)
 
 
@@ -244,25 +280,27 @@ async def overview():
         "diagnostics": diags,
         "diagnostics_count": len(diags),
         "enterprise_first_checklist": ENTERPRISE_FIRST_CHECKLIST,
-        "watcher": {"interval_seconds": 180, "running": True,
-                    "policy": "Auto-resume safe jobs when capacity returns; escalated/high-impact work always requires the Founder."},
+        "watcher": {"interval_seconds": 180, "running": watcher_running(), "enabled": await is_enabled(),
+                    "policy": "OFF by default. When the Founder turns it ON, the watcher runs ONLY "
+                              "deterministic After-Action Reviews — it makes no AI calls and never "
+                              "resumes manufacturing automatically. Resuming jobs is Founder-controlled."},
     }
 
 
-# ---------------- Background watcher ----------------
+# ---------------- Background watcher (Founder-controlled; OFF by default) ----------------
 async def watcher_loop():
-    """Periodically probe capacity, auto-resume safe jobs, and review completed batches."""
+    """Deterministic housekeeping loop. Started ONLY by an explicit Founder toggle — never on boot.
+    It performs no external AI calls and NEVER auto-resumes paused/failed/interrupted manufacturing;
+    it only runs After-Action Reviews on already-completed batches."""
     await asyncio.sleep(20)  # let startup settle
     while True:
+        if not await is_enabled():
+            logger.info("Continuous Improvement is OFF — watcher stopping.")
+            return
         try:
-            await auto_resume_safe_jobs()
+            # Deterministic only. Auto-resume and the autonomous AI engine are intentionally
+            # NOT invoked here: manufacturing is never resumed automatically.
             await review_completed_batches()
-            # AO-001 — Autonomous Manufacturing Engine™ advances safe products when enabled.
-            try:
-                import autonomous_engine as ae
-                await ae.run_cycle(actor="Autonomy Watcher™")
-            except Exception as e:
-                logger.warning(f"autonomous engine cycle error: {e}")
         except Exception as e:
             logger.warning(f"watcher loop error: {e}")
         await asyncio.sleep(180)

@@ -16,11 +16,25 @@ export default function EnterpriseAutonomy() {
   const [graph, setGraph] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [settings, setSettings] = useState(null);
 
   const load = () => api.get("/continuous/overview").then(({ data }) => setData(data)).catch(() => {}).finally(() => setLoading(false));
+  const loadSettings = () => api.get("/continuous/settings").then(({ data }) => setSettings(data)).catch(() => {});
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); loadSettings(); }, []);
   useEffect(() => { if (tab === "relationships" && !graph) api.get("/relationships/graph").then(({ data }) => setGraph(data)).catch(() => {}); }, [tab]);
+
+  const toggleCI = async () => {
+    setBusy(true);
+    try {
+      const on = !settings?.enabled;
+      const { data } = await api.post(`/continuous/settings/${on ? "enable" : "disable"}`);
+      toast.success(`Continuous Improvement turned ${data.enabled ? "ON" : "OFF"}.`);
+      loadSettings(); load();
+    } catch (e) {
+      toast.error("Only the Founder can change this setting.");
+    } finally { setBusy(false); }
+  };
 
   const probe = async () => {
     setBusy(true);
@@ -60,6 +74,24 @@ export default function EnterpriseAutonomy() {
         </button>
         <button data-testid="auto-resume-btn" onClick={autoResume} disabled={busy} className="text-xs px-3 py-1.5 rounded-sm bg-navy text-white hover:bg-navy/90 flex items-center gap-1.5 disabled:opacity-50">
           <PlayCircle className="w-3.5 h-3.5" /> Auto-resume safe jobs
+        </button>
+      </div>
+
+      {/* Founder-controlled on/off switch — Continuous Improvement defaults to OFF */}
+      <div data-testid="ci-switch-card" className={`rounded-md border p-4 flex flex-wrap items-center gap-4 ${settings?.enabled ? "border-emerald-300 bg-emerald-50" : "border-navy/20 bg-navy/5"}`}>
+        <div className="flex-1 min-w-[240px]">
+          <p className="font-semibold text-navy text-sm" data-testid="ci-switch-label">
+            Continuous Improvement (Autonomy Watcher) — {settings?.enabled ? "ON" : "OFF"}
+          </p>
+          <p className="text-xs text-foreground/70 mt-0.5">
+            Default is OFF. When ON, it runs only deterministic After-Action Reviews — it makes no AI calls
+            and never resumes manufacturing automatically. Nothing autonomous runs on server startup.
+          </p>
+        </div>
+        <button data-testid="ci-toggle-btn" onClick={toggleCI} disabled={busy}
+          className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors disabled:opacity-50 ${settings?.enabled ? "bg-emerald-500" : "bg-navy/30"}`}
+          role="switch" aria-checked={!!settings?.enabled}>
+          <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${settings?.enabled ? "translate-x-8" : "translate-x-1"}`} />
         </button>
       </div>
 

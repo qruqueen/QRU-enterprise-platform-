@@ -1,10 +1,33 @@
 """QRU Enterprise Autonomy & Continuous Improvement™ endpoints."""
 from fastapi import APIRouter, Depends
 
-from auth import get_current_user
+from auth import get_current_user, require_super_admin
 import continuous_improvement as ci
 
 router = APIRouter(prefix="/api/continuous", tags=["continuous-improvement"])
+
+
+@router.get("/settings")
+async def ci_settings(user=Depends(get_current_user)):
+    """Founder on/off switch state. Continuous Improvement defaults to OFF (no autonomous AI)."""
+    return {
+        "label": "Continuous Improvement (Autonomy Watcher)",
+        "enabled": await ci.is_enabled(),
+        "watcher_running": ci.watcher_running(),
+        "default": False,
+        "description": "OFF by default. When ON, runs only deterministic After-Action Reviews — "
+                       "no AI calls and no automatic resuming of manufacturing.",
+    }
+
+
+@router.post("/settings/enable")
+async def ci_enable(user=Depends(require_super_admin)):
+    return await ci.set_enabled(True, actor=user.get("name", "Founder"))
+
+
+@router.post("/settings/disable")
+async def ci_disable(user=Depends(require_super_admin)):
+    return await ci.set_enabled(False, actor=user.get("name", "Founder"))
 
 
 @router.get("/overview")
