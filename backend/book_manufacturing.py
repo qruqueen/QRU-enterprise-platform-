@@ -1289,6 +1289,22 @@ async def run_post_publish_recipe(book_id, actor):
 
 
 
+async def confirm_rights(book_id, actor):
+    """Founder explicitly confirms that publication rights are cleared for this title.
+    Records ONLY the confirmer + timestamp in a dedicated `rights_confirmation` object — it does
+    NOT alter the manuscript, cover, metadata, price, or files."""
+    b = await db[COLL].find_one({"id": book_id})
+    if not b:
+        return None
+    rc = {"confirmed": True, "by": actor, "at": _now()}
+    await db[COLL].update_one({"id": book_id}, {
+        "$set": {"rights_confirmation": rc, "updated_at": _now()},
+        "$push": {"revision_history": {"stage": "Rights Confirmation", "by": actor, "at": _now(),
+                                       "note": "Founder confirmed publication rights are cleared."}}})
+    await log_org("Book Manufacturing™", "Manufacturing", f"Rights confirmed for '{b['title']}'", b["book_code"], "success")
+    return clean(await db[COLL].find_one({"id": book_id}))
+
+
 async def authorize_release(book_id, actor, acknowledge_imprint_mismatch=False):
     """Human final judgment for the irreversible release action. Requires the rest of the gate met."""
     b = await db[COLL].find_one({"id": book_id})
@@ -1627,7 +1643,7 @@ async def publish_center(book_id):
     gate = {
         "title_author": bool(b.get("title") and b.get("author")),
         "imprint": bool(b.get("imprint")),
-        "rights_confirmed": bool(b.get("rights_holder")),
+        "rights_confirmed": bool((b.get("rights_confirmation") or {}).get("confirmed")) or bool(b.get("rights_holder")),
         "proof_approved": b.get("editorial_locked", False),
         "cover_approved": cover_selected,
         "metadata_approved": design_done,
@@ -1639,6 +1655,8 @@ async def publish_center(book_id):
     }
     return {"book_title": b["title"], "book_code": b["book_code"], "destinations": destinations,
             "final_release_gate": gate,
+            "rights_confirmation": b.get("rights_confirmation"),
+            "founder_authorization": b.get("founder_authorization"),
             "gate_ready": all(gate.values()),
             "gate_ready_for_authorization": all(v for k, v in gate.items() if k != "founder_authorization_received"),
             "honesty": "No publication, sale, or irreversible external action occurs without explicit Founder authorization. The Factory never reports a platform action succeeded unless it truly did."}

@@ -363,6 +363,14 @@ class AuthorizeReq(BaseModel):
 
 
 
+@router.post("/books/{book_id}/confirm-rights")
+async def confirm_rights(book_id: str, user=Depends(require_super_admin)):
+    r = await bm.confirm_rights(book_id, user.get("name", "Founder"))
+    if r is None:
+        raise HTTPException(404, "Book Record not found.")
+    return r
+
+
 @router.post("/books/{book_id}/authorize")
 async def authorize(book_id: str, data: AuthorizeReq = AuthorizeReq(), user=Depends(require_super_admin)):
     ack = bool(data.acknowledge_imprint_mismatch) if data else False

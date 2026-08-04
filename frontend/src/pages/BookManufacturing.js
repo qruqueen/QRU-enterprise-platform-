@@ -152,6 +152,7 @@ export default function BookManufacturing() {
       }
     } finally { setBusy(false); }
   };
+  const doConfirmRights = () => run(() => api.post(`/book-mfg/books/${book.id}/confirm-rights`), "Publication rights confirmed.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)).catch(() => {}));
   const doSanitize = () => run(() => api.post(`/book-mfg/books/${book.id}/sanitize`, { base_url: A }), "Publication Sanitization Pass™ complete — clean retail edition prepared.").then(() => api.get(`/book-mfg/books/${book.id}/publish`).then((r) => setPublish(r.data)));
   const doDraftBlurb = () => run(async () => { const { data } = await api.post(`/book-mfg/books/${book.id}/draft-blurb`); toast.message("Blurb drafted — review & approve.", { description: data.status }); });
   const doSavePublication = (fields, ok) => run(() => api.post(`/book-mfg/books/${book.id}/publication-details`, fields), ok || "Publication details saved.");
@@ -453,7 +454,7 @@ export default function BookManufacturing() {
       {tab === "design" && <DesignPanel book={book} busy={busy} doDesign={doDesign} doSelectCover={doSelectCover} doUploadCover={doUploadCover} doUploadWrap={doUploadWrap} coverPref={coverPref} />}
       {tab === "audio" && <AudioPanel book={book} audio={audio} busy={busy} onRender={doRenderAudio} />}
       {tab === "video" && <PlanPanel title="Video" icon={Video} data={video} render={renderVideo} />}
-      {tab === "publish" && <PublishPanel data={publish} kdp={kdp} postPub={postPub} book={book} busy={busy} doPricing={doPricing} doAuthorize={doAuthorize} doSanitize={doSanitize} doDraftBlurb={doDraftBlurb} doSavePublication={doSavePublication} doPrintWrap={doPrintWrap} />}
+      {tab === "publish" && <PublishPanel data={publish} kdp={kdp} postPub={postPub} book={book} busy={busy} doPricing={doPricing} doAuthorize={doAuthorize} doConfirmRights={doConfirmRights} doSanitize={doSanitize} doDraftBlurb={doDraftBlurb} doSavePublication={doSavePublication} doPrintWrap={doPrintWrap} />}
       {tab === "monitor" && <PlanPanel title="Monitor" icon={Activity} data={monitor} render={renderMonitor} />}
     </div>
   );
@@ -1617,10 +1618,12 @@ function FounderReleaseReview({ book, data, busy, doAuthorize }) {
   );
 }
 
-function PublishPanel({ data, kdp, postPub, book, busy, doPricing, doAuthorize, doSanitize, doDraftBlurb, doSavePublication, doPrintWrap }) {
+function PublishPanel({ data, kdp, postPub, book, busy, doPricing, doAuthorize, doConfirmRights, doSanitize, doDraftBlurb, doSavePublication, doPrintWrap }) {
   const [price, setPrice] = useState(book?.pricing?.paperback_price || book?.pricing?.list_price || "");
   if (!data) return <Panel title="Publish" icon={Send}><p className="text-sm text-muted-foreground py-4">Loading…</p></Panel>;
   const g = data.final_release_gate;
+  const rc = data.rights_confirmation || book?.rights_confirmation;
+  const fa = data.founder_authorization || book?.founder_authorization;
   return (
     <div className="space-y-5" data-testid="panel-publish">
       <SanitizationPanel book={book} busy={busy} doSanitize={doSanitize} />
@@ -1643,11 +1646,36 @@ function PublishPanel({ data, kdp, postPub, book, busy, doPricing, doAuthorize, 
       <Panel title="Final Release Gate" icon={ShieldCheck} accent="gold" testid="release-gate">
         <div className="space-y-1.5" data-testid="gate-items">
           {Object.entries(g).map(([k, v]) => (
-            <div key={k} className="flex items-center justify-between gap-2 text-sm">
+            <div key={k} className="flex items-center justify-between gap-2 text-sm flex-wrap">
               <span className="text-navy capitalize">{k.replace(/_/g, " ").replace(/\btitle author\b/i, "Title & Author").replace(/\bai\b/gi, "AI")}</span>
-              {v ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <StatusChip status="Pending" tone="amber" />}
+              {v ? <CheckCircle2 className="w-4 h-4 text-emerald-600" data-testid={`gate-ok-${k}`} />
+                 : (k === "rights_confirmed"
+                    ? <button data-testid="confirm-rights-btn" onClick={doConfirmRights} disabled={busy}
+                        className="bg-navy text-white px-3 py-1.5 rounded-md text-xs font-bold disabled:opacity-40 min-h-[36px]">
+                        Confirm Rights
+                      </button>
+                    : <StatusChip status="Pending" tone="amber" />)}
             </div>
           ))}
+        </div>
+
+        {/* Rights confirmation control — records confirmer + timestamp; alters no manuscript/cover/metadata/price/files */}
+        <div className="mt-3 rounded-md border border-border/70 bg-muted/20 p-3" data-testid="rights-confirmation-control">
+          <p className="text-[12px] font-semibold text-navy mb-1">Rights Confirmation</p>
+          {rc?.confirmed ? (
+            <p className="text-[12px] text-emerald-700" data-testid="rights-confirmed-text">
+              <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" />
+              Rights confirmed by {rc.by} · {rc.at ? new Date(rc.at).toLocaleString() : ""}
+            </p>
+          ) : (
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <p className="text-[12px] text-muted-foreground flex-1 min-w-[160px]">Confirm you hold or have cleared the rights to publish this title.</p>
+              <button data-testid="confirm-rights-inline-btn" onClick={doConfirmRights} disabled={busy}
+                className="bg-navy text-white px-3 py-2 rounded-md text-xs font-bold disabled:opacity-40 min-h-[40px]">
+                Confirm Rights
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Pricing input — always editable (the founder's pencil); pre-filled with the current/estimated price */}
@@ -1669,10 +1697,25 @@ function PublishPanel({ data, kdp, postPub, book, busy, doPricing, doAuthorize, 
         )}
 
         <div className="mt-4">
-          {book?.founder_authorization?.authorized
-            ? <StatusChip status={`Authorized by ${book.founder_authorization.by}`} tone="emerald" testid="authorized-chip" />
-            : <StatusChip status={(data.gate_ready_for_authorization ?? data.gate_ready) ? "Gate ready — complete the Founder Release Review™ below to authorize" : "Gate not yet ready"} tone={(data.gate_ready_for_authorization ?? data.gate_ready) ? "emerald" : "amber"} testid="gate-ready" />}
+          {fa?.authorized
+            ? <StatusChip status={`Authorized by ${fa.by}`} tone="emerald" testid="authorized-chip" />
+            : <StatusChip status={(data.gate_ready_for_authorization ?? data.gate_ready) ? "Gate ready — authorize below to release" : "Gate not yet ready"} tone={(data.gate_ready_for_authorization ?? data.gate_ready) ? "emerald" : "amber"} testid="gate-ready" />}
         </div>
+
+        {/* Authorize Final Release — enabled once the gate (incl. Rights) is complete */}
+        {!fa?.authorized && (
+          <button data-testid="authorize-final-release-btn" onClick={() => doAuthorize(false)}
+            disabled={busy || !(data.gate_ready_for_authorization ?? data.gate_ready)}
+            className="mt-3 w-full inline-flex items-center justify-center gap-2 bg-gold text-navy px-4 py-3 rounded-md text-sm font-bold disabled:opacity-40 min-h-[44px]">
+            <ShieldCheck className="w-4 h-4" /> Authorize Final Release
+          </button>
+        )}
+        {fa?.authorized && (
+          <p className="text-[12px] text-emerald-700 mt-3" data-testid="founder-authorization-text">
+            <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" />
+            Founder Authorization received from {fa.by} · {fa.at ? new Date(fa.at).toLocaleString() : ""}
+          </p>
+        )}
         <p className="text-[11px] text-amber-700 mt-2">{data.honesty}</p>
       </Panel>
       </div>
