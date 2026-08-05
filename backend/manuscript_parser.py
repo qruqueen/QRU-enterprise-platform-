@@ -20,13 +20,25 @@ _BARE_NUM_RE = re.compile(r"^\s*\d{1,4}\s*$")                       # standalone
 _SENT_END = tuple(".?!:;,")
 
 
+def _alpha_len(text):
+    return len(re.sub(r"[^A-Za-z]", "", text or ""))
+
+
 def _looks_like_chapter(text):
     t = (text or "").strip()
     if not t or len(t) > 90:
         return False
+    # reject decoration / symbol-only lines ("™", "•", "* * *", bare numbers)
+    if _alpha_len(t) < 2:
+        return False
+    words = [w for w in re.split(r"\s+", t) if w]
     if _CHAPTER_RE.match(t):
-        return True
-    if _NUMBERED_RE.match(t) and len(t) <= 80:
+        # a real heading is short & title-shaped — not a prose sentence that
+        # merely happens to start with a keyword ("book, and it is worth ...").
+        if len(words) <= 9 and "," not in t and not t.endswith(_SENT_END):
+            return True
+        return False
+    if _NUMBERED_RE.match(t) and len(t) <= 80 and len(words) <= 10 and not t.endswith(_SENT_END):
         return True
     return False
 
@@ -199,10 +211,10 @@ def pdf_to_markdown(raw_bytes):
                 dropped += 1; method_bits.add("stripped page numbers"); continue
             if low in repeating and (pos == 0 or pos == len(lines) - 1):
                 dropped += 1; method_bits.add("stripped running headers/footers"); continue
-            if title_size and sz >= title_size and not title_set and len(t) <= 90:
+            if title_size and sz >= title_size and not title_set and len(t) <= 90 and _alpha_len(t) >= 2:
                 out.append(f"# {_title_case(t)}"); title_set = True
                 method_bits.add("font-size title"); continue
-            if sz >= body * 1.25 and len(t) <= 90:
+            if sz >= body * 1.25 and len(t) <= 90 and _alpha_len(t) >= 2 and len(t.split()) <= 14:
                 out.append(f"## {t}"); method_bits.add("font-size chapter detection"); continue
             if _looks_like_chapter(t) and sz >= body:
                 out.append(f"## {t}"); method_bits.add("chapter keyword/number patterns"); continue

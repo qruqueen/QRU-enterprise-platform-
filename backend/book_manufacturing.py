@@ -19,6 +19,7 @@ from database import db
 from models import gen_id, now_iso, clean
 from org_activity import log_org
 import book_structure as bs
+import manuscript_parser
 import product_governance as pg
 import manufacturing_recipes as recipes
 import manufacturing_foundation as mf
@@ -70,7 +71,7 @@ def _intake_scan(title, content, meta):
     if not chapters:
         missing.append("Detected chapter structure (use '## ' headings)")
     readiness = "Ready to Proof" if chapters and not missing else ("Ready to Proof (minor gaps)" if chapters else "Needs structure")
-    return {
+    scan = {
         "files_received": files_received,
         "missing_essentials": missing,
         "detected_structure": {
@@ -81,6 +82,9 @@ def _intake_scan(title, content, meta):
         "readiness_status": readiness,
         "recommended_next_action": "Run Proof & Polish" if chapters else "Add chapter headings, then Proof & Polish",
     }
+    if meta.get("_structure_report"):
+        scan["structure_report"] = meta["_structure_report"]
+    return scan
 
 
 async def create_book_record(payload, actor):
@@ -358,13 +362,19 @@ async def upload_manuscript_file(filename, file_base64, meta, actor):
     if not raw:
         return {"error": "The uploaded file is empty."}
     try:
-        content = (_extract_manuscript(filename, raw) or "").strip()
+        content, parse_meta = manuscript_parser.extract_markdown(filename, raw)
+        content = (content or "").strip()
     except Exception as e:
         return {"error": f"Could not read this file. Supported types: .docx, .pdf, .txt, .md. ({str(e)[:80]})"}
+    structure_report = manuscript_parser.analyze_structure(content, parse_meta)
+    if parse_meta.get("scanned"):
+        return {"error": structure_report.get("confidence_note")
+                or "This looks like a scanned image PDF. OCR is required before manufacturing (not performed automatically)."}
     if len(content) < 20:
         return {"error": "No readable manuscript text was found in the file (is it a scanned image PDF?)."}
     meta = dict(meta or {})
     meta.setdefault("source_filename", filename or "manuscript")
+    meta["_structure_report"] = structure_report
     title = (meta.get("title") or "").strip()
     if not title:
         import os as _os

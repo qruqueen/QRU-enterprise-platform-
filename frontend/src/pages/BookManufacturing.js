@@ -570,12 +570,63 @@ function UploadManuscript({ busy, doUploadFile }) {
   );
 }
 
+function StructureConfidencePanel({ report }) {
+  if (!report) return null;
+  const conf = report.confidence || "low";
+  const tone = { high: "emerald", medium: "amber", low: "red", none: "red" }[conf] || "amber";
+  const toneCls = {
+    emerald: "bg-emerald-100 text-emerald-800 border-emerald-300",
+    amber: "bg-amber-100 text-amber-800 border-amber-300",
+    red: "bg-red-100 text-red-800 border-red-300",
+  }[tone];
+  return (
+    <Panel title="Structure Detection" icon={FileText} accent="royal" testid="structure-confidence">
+      <div className="flex items-center gap-3 mb-3">
+        <span data-testid="structure-confidence-badge"
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold uppercase tracking-wide ${toneCls}`}>
+          <CheckCircle2 className="w-3.5 h-3.5" /> {conf} confidence
+        </span>
+        <span className="text-[11px] text-muted-foreground">Deterministic — no AI used</span>
+      </div>
+      <p className="text-[12px] text-navy mb-3" data-testid="structure-confidence-note">{report.confidence_note}</p>
+      <div className="grid sm:grid-cols-3 gap-2 mb-3">
+        {[["Detected title", report.title], ["Chapters", report.chapter_count], ["Sections", report.section_count]].map(([k, v]) => (
+          <div key={k} className="rounded-md border border-border bg-card px-2.5 py-1.5">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{k}</p>
+            <p className="text-sm font-semibold text-navy truncate" title={String(v)} data-testid={`structure-${k.toLowerCase().replace(/\s+/g, "-")}`}>{v ?? "—"}</p>
+          </div>
+        ))}
+      </div>
+      <p className="text-[11px] text-muted-foreground mb-2"><b className="text-navy">Detection method:</b> {report.method}</p>
+      {(report.preview || []).length > 0 && (
+        <div className="mb-3" data-testid="structure-preview">
+          <p className="text-[11px] font-bold text-navy uppercase tracking-wide mb-1">Detected chapters</p>
+          <ol className="grid sm:grid-cols-2 gap-x-4 gap-y-0.5 text-[11px] text-foreground/80 list-decimal list-inside">
+            {report.preview.map((c, i) => <li key={i} className="truncate" title={c}>{c}</li>)}
+          </ol>
+        </div>
+      )}
+      {(report.warnings || []).length > 0 && (
+        <ul className="space-y-1" data-testid="structure-warnings">
+          {report.warnings.map((w, i) => (
+            <li key={i} className="flex items-start gap-1.5 text-[11px] text-amber-700">
+              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> {w}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
+  );
+}
+
 function UploadPanel({ book, busy, doUploadFile }) {
   const p = book.transparent_provenance || {};
   const ds = book.intake_scan?.detected_structure || {};
+  const structureReport = book.intake_scan?.structure_report;
   return (
     <div className="space-y-5" data-testid="panel-upload">
       <UploadManuscript busy={busy} doUploadFile={doUploadFile} />
+      {structureReport && <StructureConfidencePanel report={structureReport} />}
       <div className="grid lg:grid-cols-2 gap-5">
       <Panel title="Canonical Book Record" icon={BookOpen} accent="gold" testid="canonical-record">
         <dl className="text-sm space-y-1.5">

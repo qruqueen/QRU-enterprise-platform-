@@ -1,3 +1,12 @@
+## ✅ 2026-08-05: Book Manufacturer — Phase A (Deterministic Manuscript Structure Detection) — DONE & verified ($0, no AI)
+- **What**: Wired the new deterministic parser `manuscript_parser.py` (DOCX heading styles/heuristics + PDF pdfplumber font-size/position analysis, no AI, no OCR) into the upload pipeline and surfaced a Structure-Confidence panel in the Upload tab.
+- **Backend** (`book_manufacturing.py`): `upload_manuscript_file` now calls `manuscript_parser.extract_markdown` (replacing the basic pypdf/legacy docx extractor); computes `analyze_structure` → stores `structure_report` (title, chapter_count, section_count, method, preview, warnings, confidence high/medium/low/none) inside `intake_scan`. Scanned image PDFs are honestly reported (never OCR'd). Manual `##`/`###` overrides still work (TXT/MD passthrough).
+- **PDF heuristics tightened** (`manuscript_parser.py`): reject symbol/decoration-only lines (e.g. stray "™") as titles/chapters via `_alpha_len`; `_looks_like_chapter` now requires keyword matches to be short, comma-free, non-sentence headings so mid-sentence prose ("book, and it is worth…") is no longer flagged. PDF now detects the same 7 Parts as DOCX (was 11 with garbage).
+- **Frontend** (`BookManufacturing.js`): new `StructureConfidencePanel` in the Upload tab — confidence badge (emerald/amber/red), detected title + chapter/section counts, detection method, detected-chapters list, and warnings. testids: `structure-confidence`, `structure-confidence-badge`, `structure-preview`, `structure-warnings`.
+- **Verified ($0)**: parser + end-to-end `upload_manuscript_file` on both fixtures (bridge.docx → 7 ch/33 sec high; bridge.pdf → 7 ch high, 41 header/footer lines stripped); UI screenshot confirms the panel renders. All test book_records cleaned up.
+- **STOPPED for Founder review before Phase B (cover templates)** per directive. No paid AI/book/cover generation run.
+
+
 ## 🔍 2026-08-03: Code-review report audit — findings were FALSE POSITIVES (no harmful changes applied)
 - A static code-review report flagged eval() injection, 4 circular-import chains, is-vs-==, hardcoded secrets, 92 undefined vars, high complexity. Audited each against the ACTUAL code:
   - **eval()**: does NOT exist anywhere in backend (line 164 is a comment). False positive.
