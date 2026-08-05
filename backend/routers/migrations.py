@@ -160,3 +160,19 @@ async def imprint_canonicalize(body: ApplyInput, user=Depends(require_super_admi
 @router.post("/imprint-canonicalization/rollback")
 async def imprint_canonicalize_rollback(body: ApplyInput, user=Depends(require_super_admin)):
     return await pm.imprint_canonicalize_rollback(apply=body.apply)
+
+
+
+@router.get("/cover-repair/preflight")
+async def cover_repair_preflight(user=Depends(require_super_admin)):
+    return await pm.cover_repair_preflight()
+
+
+@router.post("/cover-repair")
+async def cover_repair(body: ApplyInput, user=Depends(require_super_admin)):
+    return await pm.cover_repair(apply=body.apply)
+
+
+@router.post("/cover-repair/rollback")
+async def cover_repair_rollback(body: ApplyInput, user=Depends(require_super_admin)):
+    return await pm.cover_repair_rollback(apply=body.apply)

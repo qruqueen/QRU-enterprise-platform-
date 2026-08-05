@@ -61,6 +61,122 @@ def _cover_filename(book: dict) -> str | None:
     return url.rsplit("/", 1)[-1] if url else None
 
 
+# --- Resilient cover resolution -------------------------------------------------
+# A cover master can be absent from durable storage (never mirrored, or lost). We
+# NEVER hammer a known-broken durable key on every request (negative cache), and we
+# fall back to the next available Founder-generated concept. The selected concept is
+# always tried FIRST, so the storefront self-restores the moment it becomes available.
+_MISSING_TTL = 600  # seconds a master is treated as missing before re-checking (self-heal)
+_missing_masters: dict[str, float] = {}
+
+
+def _cover_candidates(book: dict) -> list[str]:
+    """Cover asset filenames to try, in order: Founder-selected concept first, then the
+    remaining concepts, then any Founder-uploaded cover."""
+    design = (book.get("artifacts") or {}).get("design") or {}
+    concepts = design.get("cover_concepts") or []
+    selected = design.get("selected_cover") or {}
+    sel_no = selected.get("concept")
+    urls: list[str] = []
+    if selected.get("url"):
+        urls.append(selected["url"])
+    if sel_no is not None:
+        for c in concepts:
+            if c.get("concept") == sel_no and c.get("url"):
+                urls.append(c["url"])
+    for c in concepts:
+        if c.get("url"):
+            urls.append(c["url"])
+    up = design.get("uploaded_cover") or {}
+    if up.get("url"):
+        urls.append(up["url"])
+    out, seen = [], set()
+    for u in urls:
+        fn = u.rsplit("/", 1)[-1]
+        if fn and fn not in seen:
+            seen.add(fn)
+            out.append(fn)
+    return out
+
+
+def _master_available(fname: str) -> bool:
+    """True if the cover master is present locally or retrievable from durable storage.
+    Uses a negative cache so a known-missing key is not re-fetched on every request."""
+    if not fname:
+        return False
+    import time
+    src = os.path.join(re_engine.ASSET_DIR, fname)
+    if os.path.exists(src):
+        return True
+    ts = _missing_masters.get(fname)
+    if ts and (time.time() - ts) < _MISSING_TTL:
+        return False
+    import storage
+    ok = False
+    try:
+        if storage.object_exists(fname):
+            ok = storage.ensure_local(fname, src) and os.path.exists(src)
+    except Exception:
+        ok = False
+    if ok:
+        _missing_masters.pop(fname, None)
+    else:
+        _missing_masters[fname] = time.time()
+    return ok
+
+
+def _resolve_available_cover(book: dict) -> str | None:
+    """The first cover concept whose master is actually retrievable (selected first)."""
+    for fname in _cover_candidates(book):
+        if _master_available(fname):
+            return fname
+    return None
+
+
+def _placeholder_thumb(book: dict) -> str:
+    """A controlled, cached branded placeholder for when NO cover master is retrievable.
+    Honest 'cover unavailable' state — never a broken image."""
+    bid = book.get("id") or "unknown"
+    thumb_fname = f"{_THUMB_PREFIX}placeholder-{bid}.jpg"
+    thumb_path = os.path.join(re_engine.ASSET_DIR, thumb_fname)
+    if not os.path.exists(thumb_path):
+        from PIL import ImageDraw, ImageFont
+        w, h = _THUMB_WIDTH, int(_THUMB_WIDTH * 1.6)
+        im = Image.new("RGB", (w, h), (15, 30, 61))  # QRU navy
+        d = ImageDraw.Draw(im)
+        d.rectangle([8, 8, w - 8, h - 8], outline=(197, 160, 89), width=3)  # gold frame
+        title = (book.get("title") or "QRU Press").strip()
+
+        def _font(sz):
+            try:
+                return ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf", sz)
+            except Exception:
+                return ImageFont.load_default()
+
+        # wrapped title
+        words, lines, cur = title.split(), [], ""
+        for wd in words:
+            t = (cur + " " + wd).strip()
+            if len(t) > 18 and cur:
+                lines.append(cur); cur = wd
+            else:
+                cur = t
+        if cur:
+            lines.append(cur)
+        f = _font(30)
+        y = h // 2 - (len(lines) * 20) - 20
+        for ln in lines[:5]:
+            bbox = d.textbbox((0, 0), ln, font=f)
+            d.text(((w - (bbox[2] - bbox[0])) / 2, y), ln, font=f, fill=(240, 236, 225))
+            y += 40
+        fs = _font(15)
+        msg = "Cover coming soon"
+        bb = d.textbbox((0, 0), msg, font=fs)
+        d.text(((w - (bb[2] - bb[0])) / 2, h - 60), msg, font=fs, fill=(197, 160, 89))
+        im.save(thumb_path, "JPEG", quality=82, optimize=True)
+    return thumb_fname
+
+
 def _ensure_thumbnail(canonical_fname: str) -> str | None:
     """Derive (once, cached) a web-optimized JPEG thumbnail from the canonical cover.
     Returns the thumbnail filename, or None if the master is unavailable."""
@@ -179,10 +295,17 @@ async def cover_thumb(book_id: str):
     book = await db.book_records.find_one({"id": book_id, **_PUBLISHED_QUERY}, {"_id": 0})
     if not book:
         raise HTTPException(status_code=404, detail="This title is not available.")
-    canonical = _cover_filename(book)
+    canonical = _resolve_available_cover(book)
     thumb = _ensure_thumbnail(canonical) if canonical else None
     if not thumb:
-        raise HTTPException(status_code=404, detail="Cover not available.")
+        # No cover master is retrievable — serve an honest, controlled placeholder (never a
+        # broken image, never a durable-storage retry storm). Short cache so it self-heals.
+        placeholder = _placeholder_thumb(book)
+        return FileResponse(
+            os.path.join(re_engine.ASSET_DIR, placeholder),
+            media_type="image/jpeg",
+            headers={"Cache-Control": "public, max-age=300"},
+        )
     return FileResponse(
         os.path.join(re_engine.ASSET_DIR, thumb),
         media_type="image/jpeg",

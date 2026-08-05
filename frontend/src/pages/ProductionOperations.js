@@ -48,6 +48,9 @@ const OUTCOME = {
   WOULD_MERGE: "bg-amber-100 text-amber-700",
   RESTORED_FROM_TRASH: "bg-blue-100 text-blue-700",
   WOULD_RESTORE_FROM_TRASH: "bg-amber-100 text-amber-700",
+  REPAIRED: "bg-emerald-100 text-emerald-700",
+  WOULD_REPAIR: "bg-amber-100 text-amber-700",
+  SKIPPED_NO_REPLACEMENT: "bg-red-100 text-red-700",
 };
 
 function Badge({ v }) {
@@ -102,6 +105,8 @@ export default function ProductionOperations() {
   const [assetJob, setAssetJob] = useState(null);
   const [imprintPre, setImprintPre] = useState(null);
   const [reportG, setReportG] = useState(null);
+  const [coverPre, setCoverPre] = useState(null);
+  const [reportCover, setReportCover] = useState(null);
 
   const loadSummary = () => api.get("/admin/migrations/summary").then((r) => setSummary(r.data)).catch(() => setSummary(false));
   useEffect(() => { loadSummary(); }, []);
@@ -308,14 +313,41 @@ export default function ProductionOperations() {
     setBusy("");
   };
 
-  if (summary === null) return <div className="flex justify-center py-32"><Loader2 className="w-6 h-6 animate-spin text-royal" /></div>;
+  const runCoverPreflight = async () => {
+    setBusy("COV-preflight");
+    try {
+      const { data } = await api.get("/admin/migrations/cover-repair/preflight");
+      setCoverPre(data);
+      toast.success("Cover audit complete (read-only).");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Cover audit failed.");
+    }
+    setBusy("");
+  };
 
+  const runCoverRepair = async (mode) => {
+    if (mode === "apply" && !window.confirm("Repair broken cover references in THIS environment? For every book whose ACTIVE cover is missing from durable storage, the active cover is repointed to the first Founder-generated concept that IS retrievable. No AI spend, no re-render. Fully reversible via Rollback.")) return;
+    setBusy(`COV-${mode}`);
+    try {
+      let data;
+      if (mode === "rollback") ({ data } = await api.post("/admin/migrations/cover-repair/rollback", { apply: true }));
+      else ({ data } = await api.post("/admin/migrations/cover-repair", { apply: mode === "apply" }));
+      setReportCover(data);
+      toast.success(mode === "dry" ? "Dry run complete — no changes written." : mode === "apply" ? "Cover references repaired." : "Rollback complete — original covers restored.");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Cover repair failed.");
+    }
+    setBusy("");
+  };
+
+  if (summary === null) return <div className="flex justify-center py-32"><Loader2 className="w-6 h-6 animate-spin text-royal" /></div>;
   const a = summary?.workstream_a || {};
   const c = summary?.workstream_c || {};
   const rowsA = reportA?.stages?.flatMap((s) => s.rows) || reportA?.rows || [];
   const rowsC = reportC?.hold_actions || reportC?.rows || reportC?.classification || [];
   const rowsE = reportE?.actions || reportE?.rows || testPre?.classification || [];
   const rowsG = reportG?.actions || reportG?.rows || [];
+  const rowsCover = reportCover?.rows || [];
 
   return (
     <div className="space-y-6" data-testid="production-operations">
@@ -740,6 +772,65 @@ export default function ProductionOperations() {
               <Stat label="Failed" value={assetJob.failed} tone={assetJob.failed ? "bad" : "ok"} />
               <Stat label="Remaining" value={assetJob.remaining} />
             </div>
+          </div>
+        )}
+      </section>
+
+      {/* Cover Reference Repair — RI-COVER-REPAIR-0001 */}
+      <section className="rounded-xl border bg-card p-5" data-testid="cover-repair">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-royal font-semibold">Store Hygiene · Cover Integrity</div>
+            <div className="flex items-center gap-2 mt-1"><ImageIcon className="w-4 h-4 text-navy" /><span className="font-heading font-bold text-navy">Cover Reference Repair</span></div>
+            <p className="text-xs text-muted-foreground mt-1 max-w-2xl">Finds books whose <span className="font-medium">active (Founder-selected) cover</span> is missing from durable object storage (the cause of broken cover thumbnails) and repoints the active cover to the first <span className="font-medium">Founder-generated concept that is still retrievable</span>. Deterministic, <span className="font-medium">no AI spend</span>, no re-render. If the original cover ever returns, the storefront restores it automatically. Fully reversible via Rollback.</p>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button onClick={runCoverPreflight} disabled={!!busy} data-testid="cov-preflight" className="inline-flex items-center gap-2 rounded-lg border border-navy/30 text-navy px-4 py-2 text-sm font-medium hover:bg-navy/5 disabled:opacity-50">
+            {busy === "COV-preflight" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Audit (read-only)
+          </button>
+          <button onClick={() => runCoverRepair("dry")} disabled={!!busy} data-testid="cov-dry" className="inline-flex items-center gap-2 rounded-lg border border-navy/30 text-navy px-4 py-2 text-sm font-medium hover:bg-navy/5 disabled:opacity-50">
+            {busy === "COV-dry" ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Dry Run
+          </button>
+          <button onClick={() => runCoverRepair("apply")} disabled={!!busy} data-testid="cov-apply" className="inline-flex items-center gap-2 rounded-lg bg-navy text-white px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50">
+            {busy === "COV-apply" ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} Repair Cover References
+          </button>
+          <button onClick={() => runCoverRepair("rollback")} disabled={!!busy} data-testid="cov-rollback" className="inline-flex items-center gap-2 rounded-lg border border-red-200 text-red-700 px-4 py-2 text-sm font-medium hover:bg-red-50 disabled:opacity-50">
+            {busy === "COV-rollback" ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />} Rollback
+          </button>
+        </div>
+
+        {coverPre && (
+          <div className="mt-4 rounded-lg border p-4" data-testid="cover-preflight">
+            <div className="flex flex-wrap items-center gap-2 text-xs mb-3">
+              <span className="font-semibold text-navy">Audit</span>
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold ${coverPre.affected > 0 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
+                {coverPre.affected > 0 ? <AlertTriangle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                {coverPre.affected > 0 ? `${coverPre.repairable} repairable` : "All covers healthy"}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+              <Stat label="Books with broken cover" value={coverPre.affected} tone={coverPre.affected ? "warn" : "ok"} />
+              <Stat label="Repairable (alternate available)" value={coverPre.repairable} tone={coverPre.repairable ? "warn" : "ok"} />
+              <Stat label="Unrepairable (no concept survives)" value={coverPre.unrepairable} tone={coverPre.unrepairable ? "bad" : "ok"} />
+            </div>
+            <EvidenceRows rows={(coverPre.rows || []).map((r) => ({
+              code: r.code, outcome: r.repairable ? "WOULD_REPAIR" : "SKIPPED_NO_REPLACEMENT",
+              detail: `${r.title} — broken: ${r.broken_cover}${r.repairable ? ` → concept ${r.replacement_concept}` : " (no alternate)"}`,
+            }))} />
+          </div>
+        )}
+
+        {reportCover && (
+          <div className="mt-4" data-testid="report-cover">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold bg-emerald-100 text-emerald-700">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                {reportCover.action === "rollback" ? "Rollback" : reportCover.mode === "APPLY" ? "Repaired" : "Dry run"}
+              </span>
+            </div>
+            <EvidenceRows rows={rowsCover} />
+            <details className="mt-2 text-[11px] text-muted-foreground"><summary className="cursor-pointer">Raw report (JSON)</summary><pre className="mt-2 p-3 bg-muted rounded-lg overflow-x-auto">{JSON.stringify(reportCover, null, 2)}</pre></details>
           </div>
         )}
       </section>

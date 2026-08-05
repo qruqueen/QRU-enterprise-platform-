@@ -1273,3 +1273,108 @@ async def imprint_canonicalize_rollback(apply: bool = False):
                          "detail": "recover duplicate record from trash"})
     return {"operation": "Imprint Canonicalization", "action": "rollback",
             "mode": "APPLY" if apply else "DRY_RUN", "at": _now(), "rows": rows}
+
+
+
+# =========================================================================== #
+# COVER REFERENCE REPAIR — repoint books whose ACTIVE (Founder-selected) cover
+# master is missing from durable storage to the first Founder-generated concept
+# that IS retrievable. Reversible; preserves the original selection in
+# artifacts.design.cover_repair.preimage. Idempotent.
+# =========================================================================== #
+COVER_REPAIR_MARK = "RI-COVER-REPAIR-0001"
+
+
+async def _cover_repair_plan():
+    """Books whose ACTIVE cover master is missing from durable storage, with the first
+    alternate Founder-generated concept that IS retrievable (if any)."""
+    rows = []
+    async for b in db[COLL].find({}, {"_id": 0}):
+        design = (b.get("artifacts") or {}).get("design") or {}
+        concepts = design.get("cover_concepts") or []
+        selected = design.get("selected_cover") or {}
+        if not selected or not selected.get("url"):
+            continue
+        sel_fname = _basename(selected.get("url"))
+        if await _asset_ok(sel_fname):
+            continue  # active cover is healthy — nothing to repair
+        replacement = None
+        for c in concepts:
+            if not c.get("url") or _basename(c["url"]) == sel_fname or c.get("status") == "failed":
+                continue
+            if await _asset_ok(_basename(c["url"])):
+                replacement = c
+                break
+        rows.append({
+            "id": b.get("id"), "code": b.get("book_code"), "title": b.get("title"),
+            "authorized": bool((b.get("founder_authorization") or {}).get("authorized")),
+            "broken_cover": sel_fname, "selected_concept": selected.get("concept"),
+            "replacement_concept": replacement.get("concept") if replacement else None,
+            "replacement_cover": _basename(replacement["url"]) if replacement else None,
+            "repairable": bool(replacement),
+        })
+    return rows
+
+
+async def cover_repair_preflight():
+    rows = await _cover_repair_plan()
+    repairable = [r for r in rows if r["repairable"]]
+    return {
+        "operation": "Cover Reference Repair", "action": "preflight", "at": _now(),
+        "affected": len(rows), "repairable": len(repairable),
+        "unrepairable": len(rows) - len(repairable), "ready": len(repairable) > 0,
+        "rows": rows,
+    }
+
+
+async def cover_repair(apply: bool = False):
+    rows = await _cover_repair_plan()
+    out = []
+    for r in rows:
+        if not r["repairable"]:
+            out.append({**r, "outcome": "SKIPPED_NO_REPLACEMENT",
+                        "detail": "No alternate concept is retrievable in durable storage."})
+            continue
+        if not apply:
+            out.append({**r, "outcome": "WOULD_REPAIR",
+                        "detail": f"repoint active cover concept {r['selected_concept']}→{r['replacement_concept']}"})
+            continue
+        b = await db[COLL].find_one({"id": r["id"]}, {"_id": 0})
+        design = (b.get("artifacts") or {}).get("design") or {}
+        concepts = design.get("cover_concepts") or []
+        new_sel = next((c for c in concepts if c.get("concept") == r["replacement_concept"]), None)
+        if not new_sel:
+            out.append({**r, "outcome": "SKIPPED_NO_REPLACEMENT"})
+            continue
+        existing = design.get("cover_repair") or {}
+        preimage = existing.get("preimage") or design.get("selected_cover")  # preserve ORIGINAL once
+        await db[COLL].update_one({"id": r["id"]}, {"$set": {
+            "artifacts.design.selected_cover": new_sel,
+            "artifacts.design.cover_repair": {
+                "ref": COVER_REPAIR_MARK, "at": _now(), "preimage": preimage,
+                "broken_cover": r["broken_cover"], "repaired_to_concept": r["replacement_concept"],
+            },
+            "updated_at": _now(),
+        }})
+        out.append({**r, "outcome": "REPAIRED",
+                    "detail": f"active cover repointed concept {r['selected_concept']}→{r['replacement_concept']}"})
+    return {"operation": "Cover Reference Repair", "action": "repair",
+            "mode": "APPLY" if apply else "DRY_RUN", "at": _now(), "rows": out}
+
+
+async def cover_repair_rollback(apply: bool = False):
+    rows = []
+    async for b in db[COLL].find({"artifacts.design.cover_repair.ref": COVER_REPAIR_MARK}, {"_id": 0}):
+        cr = (b.get("artifacts") or {}).get("design", {}).get("cover_repair") or {}
+        pre = cr.get("preimage")
+        if apply and pre is not None:
+            await db[COLL].update_one({"id": b["id"]}, {
+                "$set": {"artifacts.design.selected_cover": pre, "updated_at": _now()},
+                "$unset": {"artifacts.design.cover_repair": ""}})
+            rows.append({"code": b.get("book_code"), "title": b.get("title"), "outcome": "RESTORED",
+                         "detail": f"active cover restored to concept {(pre or {}).get('concept')}"})
+        else:
+            rows.append({"code": b.get("book_code"), "title": b.get("title"), "outcome": "WOULD_RESTORE",
+                         "detail": f"restore active cover to concept {(pre or {}).get('concept')}"})
+    return {"operation": "Cover Reference Repair", "action": "rollback",
+            "mode": "APPLY" if apply else "DRY_RUN", "at": _now(), "rows": rows}

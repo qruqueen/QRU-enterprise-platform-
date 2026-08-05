@@ -714,6 +714,36 @@ async def design(book_id, actor, base_url="", cover_mode=None, remember_preferen
     return clean(b)
 
 
+async def _verify_cover_durable(url):
+    """Preventative safeguard (Treasure Standard™): a cover may only be written as the ACTIVE
+    selected cover once its master is confirmed in durable storage — durable upload succeeded
+    AND retrieval is verified. If only a local copy exists, mirror it up and re-verify.
+    Returns (ok, error_message)."""
+    import os as _os
+    import storage
+    import rendering_engine as _re
+    fname = (url or "").rsplit("/", 1)[-1]
+    if not fname:
+        return False, "This cover has no asset file."
+    try:
+        if await storage.aobject_exists(fname):
+            return True, None
+    except Exception:
+        pass
+    local = _os.path.join(_re.ASSET_DIR, fname)
+    if _os.path.exists(local):
+        try:
+            with open(local, "rb") as f:
+                await storage.amirror_file(fname, f.read())
+            if await storage.aobject_exists(fname):
+                return True, None
+        except Exception:
+            pass
+    return False, ("This cover could not be confirmed in durable storage (upload/retrieval "
+                   "verification failed), so it was NOT set as the active cover. Re-run Design "
+                   "or try again — the storefront never points at an asset that isn't durable.")
+
+
 async def select_cover(book_id, concept_no, actor, base_url=""):
     b = await db[COLL].find_one({"id": book_id})
     if not b or not b.get("artifacts", {}).get("design"):
@@ -724,6 +754,9 @@ async def select_cover(book_id, concept_no, actor, base_url=""):
         return {"error": "Cover concept not found."}
     if match.get("status") == "failed":
         return {"error": "That concept's AI art failed — choose a successful concept."}
+    ok, err = await _verify_cover_durable(match.get("url"))
+    if not ok:
+        return {"error": err}
     design_art["selected_cover"] = match
     await db[COLL].update_one({"id": book_id}, {"$set": {"artifacts.design": design_art, "updated_at": _now()}})
     await log_org("Book Manufacturing™", "Manufacturing", f"selected cover concept {concept_no} for '{b['title']}'", b["book_code"])
@@ -759,6 +792,9 @@ async def upload_cover(book_id, image_bytes, actor, base_url="", mime=""):
                "label": "Uploaded by Founder", "dimensions": export.get("final_dimensions"),
                "review_required": bool(export.get("quality_review_required")),
                "normalization": export.get("actions", [])}
+    ok, err = await _verify_cover_durable(url)
+    if not ok:
+        return {"error": err}
     design_art["selected_cover"] = concept
     design_art["uploaded_cover"] = concept
     await db[COLL].update_one({"id": book_id}, {"$set": {"artifacts.design": design_art, "updated_at": _now()}})
