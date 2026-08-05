@@ -505,6 +505,13 @@ async def manufacture_design_concepts(context, *, kind="cover", size=None, n=3, 
         fid = re_engine._save(f"{slug}-c{it['concept']}", "png", it["png"])
         c = {k: v for k, v in it.items() if k != "png"}
         c["url"] = re_engine._asset_url(fid)
+        # Durable-verification stamp: confirm the cover is retrievable from durable storage
+        # before it is ever offered as selectable (prevents future lost-master incidents).
+        try:
+            import storage
+            c["durable_verified"] = await storage.aobject_exists(fid)
+        except Exception:
+            c["durable_verified"] = False
         concepts.append(c)
     return concepts
 

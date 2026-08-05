@@ -114,14 +114,26 @@ def object_exists(fid: str) -> bool:
 
 
 def mirror_file(fid: str, data: bytes, content_type: str = None) -> bool:
-    """Best-effort durable mirror of a rendered asset. NEVER raises — a storage hiccup
-    must not fail a render. Returns True on success."""
-    try:
-        put_object(asset_object_path(fid), data, content_type or content_type_for(fid))
-        return True
-    except Exception as e:
-        logger.warning("asset mirror failed for %s: %s", fid, e)
-        return False
+    """Best-effort durable mirror of a rendered asset WITH retrieval verification.
+    A successful PUT is NOT proof the object is actually retrievable (that gap is exactly
+    what lost cover masters in production), so we verify with a ranged GET and retry once.
+    NEVER raises — a storage hiccup must not fail a render. Returns True only when the
+    object is confirmed retrievable from durable storage."""
+    ct = content_type or content_type_for(fid)
+    for attempt in range(2):
+        try:
+            put_object(asset_object_path(fid), data, ct)
+        except Exception as e:
+            logger.warning("asset mirror put failed for %s (attempt %d): %s", fid, attempt + 1, e)
+            continue
+        try:
+            if object_exists(fid):
+                return True
+        except Exception as e:
+            logger.warning("asset mirror verify errored for %s: %s", fid, e)
+        logger.warning("asset mirror UNVERIFIED for %s (attempt %d) — retrying", fid, attempt + 1)
+    logger.warning("asset mirror FAILED durable verification for %s", fid)
+    return False
 
 
 def ensure_local(fid: str, dest_path: str) -> bool:

@@ -4,7 +4,7 @@ import api from "@/lib/api";
 import { PageHeader } from "@/components/shared";
 import {
   Loader2, RefreshCw, CheckCircle2, AlertTriangle, XCircle, Store,
-  BookOpen, ShieldCheck, Mail, ShoppingCart, Sparkles,
+  BookOpen, ShieldCheck, Mail, ShoppingCart, Sparkles, Image as ImageIcon,
 } from "lucide-react";
 
 const STATUS = {
@@ -56,6 +56,7 @@ export default function StoreHealth() {
   const hy = data.hygiene || {};
   const cm = data.commerce || {};
   const or = data.orders || {};
+  const ci = data.cover_integrity || {};
   const st = STATUS[o.status] || STATUS.warnings;
 
   return (
@@ -113,6 +114,36 @@ export default function StoreHealth() {
           <div className="mt-3 text-[11px] text-amber-700">
             {hy.test_products_visible_in_catalog} internal test products are visible to learners. Run <span className="font-medium">Test Product Cleanup</span> in Production Operations™ to archive them.
           </div>
+        )}
+      </Section>
+
+      {/* Cover Integrity — live durable check of every book's active cover */}
+      <Section icon={ImageIcon} title="Cover Integrity">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Stat label="Covers checked" value={ci.checked ?? 0} />
+          <Stat label="Broken (not durable)" value={ci.broken ?? 0} tone={ci.broken ? "bad" : "ok"} />
+          <Stat label="Repairable (alternate available)" value={ci.repairable ?? 0} tone={ci.repairable ? "warn" : "ok"} />
+          <Stat label="Unrepairable" value={ci.unrepairable ?? 0} tone={ci.unrepairable ? "bad" : "ok"} />
+        </div>
+        {ci.broken > 0 ? (
+          <div className="mt-3 space-y-2" data-testid="broken-covers">
+            {(ci.books || []).map((b) => (
+              <div key={b.code} className="flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm" data-testid={`broken-cover-${b.code}`}>
+                <AlertTriangle className={`w-4 h-4 shrink-0 ${b.repairable ? "text-amber-600" : "text-red-600"}`} />
+                <span className="font-medium text-foreground">{b.code}</span>
+                <span className="text-muted-foreground">{b.title}</span>
+                <span className="text-[11px] font-mono text-muted-foreground">{b.active_cover}</span>
+                <span className={`ml-auto text-[11px] font-semibold rounded-full px-2.5 py-1 ${b.repairable ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
+                  {b.repairable ? `Fallback → concept ${b.fallback_concept}` : "No alternate concept"}
+                </span>
+              </div>
+            ))}
+            <div className="text-[11px] text-amber-700">
+              Storefront auto-falls-back to an available concept for these titles. Run <span className="font-medium">Cover Reference Repair</span> in Production Operations™ to make the fix permanent.
+            </div>
+          </div>
+        ) : (
+          <div className="mt-3 text-[11px] text-emerald-700">Every live book's active cover is confirmed retrievable from durable storage.</div>
         )}
       </Section>
 

@@ -97,7 +97,41 @@ async def _orders():
     }
 
 
-def _overall(storefront, hygiene, commerce, orders):
+async def _cover_integrity():
+    """Live durable check of every published book's ACTIVE cover master. Flags books whose
+    active cover is missing from durable storage (the root cause of broken cover thumbnails)
+    and whether a Founder-generated alternate concept is available to fall back to."""
+    docs = await db.book_records.find(_PUBLISHED_QUERY, {"_id": 0}).to_list(1000)
+    broken, repairable, unrepairable, checked = [], 0, 0, 0
+    for b in docs:
+        design = (b.get("artifacts") or {}).get("design") or {}
+        concepts = design.get("cover_concepts") or []
+        selected = design.get("selected_cover") or {}
+        url = selected.get("url") or _cover_url(b)
+        if not url:
+            continue  # missing-cover books are reported under storefront
+        checked += 1
+        fname = url.rsplit("/", 1)[-1]
+        if await pm._asset_ok(fname):
+            continue
+        alt = None
+        for c in concepts:
+            cu = c.get("url")
+            if not cu or cu.rsplit("/", 1)[-1] == fname or c.get("status") == "failed":
+                continue
+            if await pm._asset_ok(cu.rsplit("/", 1)[-1]):
+                alt = c.get("concept")
+                break
+        rep = alt is not None
+        repairable += 1 if rep else 0
+        unrepairable += 0 if rep else 1
+        broken.append({"code": b.get("book_code"), "title": b.get("title"),
+                       "active_cover": fname, "repairable": rep, "fallback_concept": alt})
+    return {"checked": checked, "broken": len(broken), "repairable": repairable,
+            "unrepairable": unrepairable, "books": broken[:50]}
+
+
+def _overall(storefront, hygiene, commerce, orders, cover=None):
     """Deterministic health rollup — honest signals, not a vanity score."""
     checks = []
     checks.append({"key": "storefront_has_books", "ok": storefront["live_on_storefront"] > 0,
@@ -121,6 +155,10 @@ def _overall(storefront, hygiene, commerce, orders):
     checks.append({"key": "no_failed_confirmations", "ok": orders["confirmation_failed"] == 0,
                    "label": "No failed purchase-confirmation emails",
                    "detail": f"{orders['confirmation_failed']} failed"})
+    if cover is not None:
+        checks.append({"key": "covers_durable", "ok": cover["broken"] == 0,
+                       "label": "Every live book's active cover is retrievable from durable storage",
+                       "detail": "all durable" if cover["broken"] == 0 else f"{cover['broken']} broken ({cover['repairable']} repairable)"})
     passed = sum(1 for c in checks if c["ok"])
     critical = {"storefront_has_books", "no_visible_test_products", "checkout_configured"}
     critical_fail = [c["key"] for c in checks if not c["ok"] and c["key"] in critical]
@@ -138,7 +176,8 @@ async def report():
     hygiene = await _hygiene()
     commerce = _commerce_config()
     orders = await _orders()
-    overall = _overall(storefront, hygiene, commerce, orders)
+    cover = await _cover_integrity()
+    overall = _overall(storefront, hygiene, commerce, orders, cover)
     return {
         "at": _now(),
         "overall": overall,
@@ -146,4 +185,5 @@ async def report():
         "hygiene": hygiene,
         "commerce": commerce,
         "orders": orders,
+        "cover_integrity": cover,
     }
