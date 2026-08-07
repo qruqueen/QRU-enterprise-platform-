@@ -1,0 +1,142 @@
+[
+  {
+    "id": "teen-limited-skin",
+    "layer": "teen",
+    "title": "The Limited Skin",
+    "prompt": "Your favorite game releases a limited skin for 2,000 credits. You don't have enough. The app offers to sell you the credits for $19.99 using the debit card saved on your account.",
+    "categories": [4, 2, 1, 5],
+    "method_guidance": [
+      "This is real money buying virtual credits, which then buy a cosmetic item inside one game.",
+      "It's coming straight out of your bank balance through the saved debit card.",
+      "You're agreeing to a real charge, and probably to owning the skin only inside this one app.",
+      "Your balance drops by $19.99, permanently, even if the skin or game disappears later.",
+      "Check your actual bank balance before buying, and ask whether you'd want this without the countdown timer."
+    ]
+  },
+  {
+    "id": "teen-first-paycheck",
+    "layer": "teen",
+    "title": "The First Paycheck",
+    "prompt": "You worked 20 hours at $12/hour — you expected $240. Your paycheck shows direct deposit of $211.40, with lines for \"Federal,\" \"FICA,\" and \"State.\"",
+    "categories": [1, 6, 3],
+    "method_guidance": [
+      "This is your pay stub — a breakdown of what you earned versus what actually landed in your account.",
+      "The $240 came from your hours worked; the missing $28.60 was withheld and sent to the government, not lost.",
+      "By taking the job, you agreed to have taxes withheld automatically — this isn't optional or a mistake.",
+      "This gap between gross pay and take-home pay happens every paycheck, so budget using the deposited amount, not the hourly math.",
+      "Log into the payroll or banking app and match the deposit amount and each withholding line against your pay stub."
+    ]
+  },
+  {
+    "id": "teen-zero-percent-bnpl",
+    "layer": "teen",
+    "title": "Zero Percent for Six Months",
+    "prompt": "An online store offers to split your $180 sneaker order into 4 payments of $45, \"0% interest, no fees.\" You just tap \"Pay in 4\" at checkout.",
+    "categories": [3, 2, 1],
+    "method_guidance": [
+      "This is Buy Now, Pay Later (BNPL) — a short-term loan that splits one purchase into several future payments.",
+      "The store gets paid in full today by the BNPL company; you now owe that company the remaining three payments from your future money.",
+      "You're agreeing to three more automatic charges to your card on set dates, whether or not you have the money then.",
+      "If a payment fails or is late, \"0% interest\" can turn into late fees, and missed BNPL payments can eventually affect your credit.",
+      "Check the payment schedule and your calendar together, and confirm you'll actually have $45 available on each due date."
+    ]
+  },
+  {
+    "id": "teen-forgotten-subscription",
+    "layer": "teen",
+    "title": "The Subscription You Forgot",
+    "prompt": "You check your bank app and see $9.99 charged monthly for the last five months from an app you tried once and never opened again.",
+    "categories": [2, 6, 1],
+    "method_guidance": [
+      "This is a recurring subscription — an automatic charge that repeats until someone cancels it.",
+      "Nearly $50 total has quietly come out of your checking account for something you're not using.",
+      "When you signed up, you agreed to let the app charge your card every month until you cancel.",
+      "Left alone, this keeps charging every month indefinitely — small recurring charges add up fast over a year.",
+      "Scroll through a full month of bank transactions (or the app's subscription settings) to find and cancel it directly."
+    ]
+  },
+  {
+    "id": "teen-instagram-support-dm",
+    "layer": "teen",
+    "title": "DM from 'Instagram Support'",
+    "prompt": "An account with the platform's logo as its picture messages you: \"Your account will be deleted in 24 hours. Verify your identity by entering your password and card details at this link.\"",
+    "categories": [5, 8, 2],
+    "method_guidance": [
+      "This is a phishing message — a fake \"support\" account impersonating the real platform to create panic.",
+      "It's not asking for money yet; it's trying to get your password and card number so it can take money later.",
+      "If you click the link and enter details, you're handing over the keys to your account and possibly your card.",
+      "Scammers can lock you out, post as you, or use your saved card for charges you never approved.",
+      "Real platforms never DM you asking for your password. Go to the app directly (not the link) to check your account status."
+    ]
+  },
+  {
+    "id": "teen-overdraft-text",
+    "layer": "teen",
+    "title": "The Overdraft Text",
+    "prompt": "You buy a $6 coffee with your debit card. Ten minutes later: \"Your account balance is -$14.20. An overdraft fee of $35 has been applied.\"",
+    "categories": [6, 3, 1],
+    "method_guidance": [
+      "This is an overdraft — the bank let you spend more than you had, then charged a fee for covering the gap.",
+      "The bank temporarily covered the shortfall using its own money, then billed you for that service.",
+      "By opening the account, you agreed to the bank's overdraft terms — whether that's automatic coverage with a fee, or declined transactions.",
+      "You now owe the bank $49.20 total, and further transactions could trigger more fees until the balance is fixed.",
+      "Check your account settings for overdraft protection options, and always check your real balance (not just what you think you have) before spending."
+    ]
+  },
+  {
+    "id": "teen-robux-reseller",
+    "layer": "teen",
+    "title": "The Robux Reseller",
+    "prompt": "A stranger on a forum offers to buy your 15,000 in-game currency for $80 cash via a payment app — \"cheaper than the official store, DM me your login.\"",
+    "categories": [4, 5, 7],
+    "method_guidance": [
+      "This is an unofficial, outside-the-game trade of virtual currency for real cash — not something the game company runs or protects.",
+      "The $80 would come from the stranger, but only after you hand over full access to your account.",
+      "Sharing your login means agreeing to trust a stranger with everything on your account, not just the currency.",
+      "The most common outcome: they take the account and never pay, and most games ban accounts caught in outside trades — you could lose everything, officially, for breaking the rules.",
+      "Check the platform's own terms of service — official in-app stores are the only verified way to convert real money and game currency."
+    ]
+  },
+  {
+    "id": "teen-crypto-tip",
+    "layer": "teen",
+    "title": "The Crypto Tip from a Classmate",
+    "prompt": "A classmate shows you a chart: \"I put in $50 last month and it's already worth $140. You should buy in now before it goes even higher.\"",
+    "categories": [7, 5, 1],
+    "method_guidance": [
+      "This is a cryptocurrency — a digital asset whose price moves based on what people are willing to pay for it, not a bank-set value.",
+      "Any gain your classmate has exists only on paper until they actually sell — and the money to buy it has to come from you, at today's price, whatever that is.",
+      "Buying in means agreeing to a price that can swing sharply in either direction, with no guarantee it keeps climbing.",
+      "The same coin that tripled can also drop back down fast — \"it's already worth more\" is not a promise about tomorrow.",
+      "Look up the asset's price history yourself on a reputable source, and never invest money you can't afford to lose based on a friend's screenshot."
+    ]
+  },
+  {
+    "id": "teen-ai-stylist-app",
+    "layer": "teen",
+    "title": "The AI Stylist Wants Your Card",
+    "prompt": "A shopping app's AI assistant says: \"Based on your style, I found the perfect jacket. Should I go ahead and complete the purchase for you?\" and shows a 60-second countdown before it auto-confirms.",
+    "categories": [8, 2, 3],
+    "method_guidance": [
+      "This is an AI shopping agent that can complete a real purchase on your behalf, not just suggest one.",
+      "If you let it proceed, the money comes straight from your saved card or connected account, just like checking out yourself.",
+      "Confirming (or letting the timer run out) means agreeing to the price, the item, and whatever return policy applies — decided in seconds.",
+      "You could end up with something you didn't fully choose, and returning AI-driven purchases isn't always as simple as normal ones.",
+      "Turn off auto-confirm timers where possible, and always review the price and item yourself before an AI completes a purchase — don't let a countdown decide for you."
+    ]
+  },
+  {
+    "id": "teen-debit-vs-prepaid",
+    "layer": "teen",
+    "title": "Debit Card or Prepaid Card?",
+    "prompt": "You're opening your first card. One option links straight to a bank account you control; the other is a prepaid card you reload with cash and has a monthly fee.",
+    "categories": [2, 6, 1],
+    "method_guidance": [
+      "Both are cards for spending, but one draws from a real bank account, and the other only holds whatever you've loaded onto it.",
+      "A debit card's money comes from your linked account balance; a prepaid card's money comes only from what you or a parent load onto it.",
+      "Opening either means agreeing to that provider's fees and rules — prepaid cards often charge monthly or reload fees that debit accounts don't.",
+      "A debit account tied to a real bank can build a banking history and may offer protections; a prepaid card's fees can quietly eat into your balance over time.",
+      "Read the fee schedule for each option side by side before choosing — the difference is usually in the fine print, not the plastic."
+    ]
+  }
+]

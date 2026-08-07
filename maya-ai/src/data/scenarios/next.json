@@ -1,0 +1,142 @@
+[
+  {
+    "id": "next-24-apr-card",
+    "layer": "next",
+    "title": "The 24% APR Card",
+    "prompt": "You get approved for your first credit card: $1,500 limit, 24.99% APR. The app suggests you \"just pay the minimum, $35, to stay in good standing.\"",
+    "categories": [3, 6, 1],
+    "method_guidance": [
+      "This is a credit card — a line of credit from the bank that lets you borrow now and repay later, with interest if you carry a balance.",
+      "Every purchase is money the bank fronts you; you owe it back, plus interest on whatever isn't paid off by the due date.",
+      "Applying and using the card means agreeing to the APR, the minimum payment terms, and any fees in the cardholder agreement.",
+      "Paying only the minimum lets interest compound on the rest — a $1,500 balance at 24.99% can take years and cost hundreds extra if you only pay the minimum.",
+      "Pull up the card's full terms (APR, grace period, fees) and run the numbers on paying in full each month versus minimum-only before you swipe."
+    ]
+  },
+  {
+    "id": "next-paycheck-after-taxes",
+    "layer": "next",
+    "title": "Your Paycheck After Taxes",
+    "prompt": "Your first full-time offer is $50,000/year — about $4,167/month. Your first pay stub shows $3,190 deposited, after federal, state, Social Security, Medicare, and a 401(k) contribution.",
+    "categories": [1, 6],
+    "method_guidance": [
+      "This is your real take-home pay — the amount left after mandatory taxes and any benefits you opted into.",
+      "The gross $4,167 came from your employer; the roughly $977 difference is split between government withholding and your own retirement savings.",
+      "Accepting the job and benefits enrollment means agreeing to these withholdings automatically each pay period.",
+      "Budgeting off the $4,167 instead of $3,190 leads to a shortfall every single month — the deposited number is the only one that matters for spending.",
+      "Read your full pay stub line by line and match each deduction against your benefits enrollment paperwork."
+    ]
+  },
+  {
+    "id": "next-guaranteed-return-dm",
+    "layer": "next",
+    "title": "The 'Guaranteed 30% Return' DM",
+    "prompt": "A polished account with client testimonials messages you: \"Our AI trading algorithm guarantees 30% monthly returns. Minimum investment $500, act before spots fill.\"",
+    "categories": [5, 7, 8],
+    "method_guidance": [
+      "This is almost certainly an investment scam, dressed up with the language of AI and algorithmic trading to sound credible.",
+      "The $500 would come from you, sent to an account or wallet the scammer controls — not into any real regulated investment.",
+      "Sending the money means agreeing to trust a stranger's unverifiable claim, with no contract, regulator, or recourse behind it.",
+      "The most likely outcome is losing the full amount, sometimes after being shown fake \"returns\" to convince you to send more.",
+      "No legitimate investment can guarantee returns — verify any offer through a licensed platform or regulator (like checking FINRA/SEC registration) before sending anything."
+    ]
+  },
+  {
+    "id": "next-bnpl-for-rent",
+    "layer": "next",
+    "title": "Buy Now, Pay Later for Rent?",
+    "prompt": "You're short this month. A new app offers to pay your $1,200 rent for you today, and you repay it in four installments over six weeks, plus a $40 service fee.",
+    "categories": [3, 1, 6],
+    "method_guidance": [
+      "This is a short-term loan marketed as a rent-payment service — you're borrowing against your next paychecks.",
+      "The app fronts your landlord the money now; the repayments come out of your bank account on their schedule, not yours.",
+      "Signing up means agreeing to four future automatic withdrawals plus the fee, on top of whatever you owe next month anyway.",
+      "If next month's rent is due before you've caught up, this can start a cycle where you're always borrowing against income you haven't earned yet.",
+      "Compare the $40 fee against a payment plan directly with your landlord, or a lower-cost overdraft/credit option, before signing up."
+    ]
+  },
+  {
+    "id": "next-robo-advisor",
+    "layer": "next",
+    "title": "The Robo-Advisor Auto-Invest",
+    "prompt": "An investing app offers to auto-invest $200 every payday into an AI-optimized portfolio, no confirmation needed once you turn it on.",
+    "categories": [8, 7, 6],
+    "method_guidance": [
+      "This is automated investing — an algorithm buying assets on your behalf according to a strategy you selected once.",
+      "The $200 comes from your bank account on a recurring schedule, same as any other automatic transfer.",
+      "Turning it on means agreeing to let the algorithm rebalance and invest without asking you each time, within whatever settings you chose.",
+      "Automatic investing can build savings consistently, but markets can also drop — recurring investing doesn't remove investment risk.",
+      "Check the app's fee structure, what it's actually invested in, and whether it's a registered, regulated advisor before connecting your bank account."
+    ]
+  },
+  {
+    "id": "next-roommate-venmo-request",
+    "layer": "next",
+    "title": "Your Roommate's Payment Request",
+    "prompt": "Your roommate sends a $340 request for \"utilities\" through a P2P payment app. You don't have an itemized bill to check it against.",
+    "categories": [2, 6],
+    "method_guidance": [
+      "This is a peer-to-peer payment request — money moving directly between two personal bank accounts, with no bank or company double-checking the amount.",
+      "The money would come straight from your checking account into your roommate's, once you approve.",
+      "Approving the request means agreeing the amount is correct — P2P apps generally don't offer dispute protection like a credit card would.",
+      "If the amount is wrong, getting money back depends entirely on your roommate, not the app — there's usually no chargeback.",
+      "Ask for the actual utility bill or a breakdown before paying, and keep a receipt/screenshot of what you agreed to and why."
+    ]
+  },
+  {
+    "id": "next-stablecoin-payroll",
+    "layer": "next",
+    "title": "The Stablecoin Payroll Offer",
+    "prompt": "A freelance client offers to pay your $3,000 invoice in a USD-pegged stablecoin instead of a bank transfer, saying \"it's basically the same as dollars, but faster.\"",
+    "categories": [7, 6, 3],
+    "method_guidance": [
+      "This is a stablecoin — a cryptocurrency designed to track the value of a real currency like the US dollar, but issued and backed outside the traditional banking system.",
+      "The $3,000 in value comes from your client, converted into the stablecoin instead of moved through your bank.",
+      "Accepting it means agreeing to hold and eventually convert an asset that isn't legal tender and isn't FDIC-insured the way bank deposits are.",
+      "\"Basically the same as dollars\" depends entirely on the issuer keeping full backing — most major stablecoins have held their peg, but some have broken it before, and conversion to cash can involve fees or delays.",
+      "Look up the specific stablecoin's issuer, reserves, and track record, and check what it actually costs and how long it takes to convert to real dollars in your bank."
+    ]
+  },
+  {
+    "id": "next-ai-agent-auto-renewed-insurance",
+    "layer": "next",
+    "title": "The AI Agent Auto-Renewed Your Insurance",
+    "prompt": "You gave a budgeting AI assistant permission to \"optimize and manage\" your subscriptions and policies. It just renewed your car insurance at a higher rate without asking, saying it was \"the best available option at renewal time.\"",
+    "categories": [8, 3, 2],
+    "method_guidance": [
+      "This is an AI agent acting with standing authority — it made a real financial decision on your behalf, not just a recommendation.",
+      "The higher premium is now committed to come out of your account on the policy's normal billing schedule.",
+      "When you granted \"manage\" permission, you agreed to let it act without asking each time — the renewal was inside the authority you gave it.",
+      "Unless you catch it and switch, you'll keep paying the higher rate every renewal period going forward.",
+      "Review exactly what authority you granted (in the app's permissions settings), and check the new policy's actual terms against competitors before letting it stand."
+    ]
+  },
+  {
+    "id": "next-student-loan-interest",
+    "layer": "next",
+    "title": "The Student Loan Interest Statement",
+    "prompt": "Your annual loan statement shows: principal balance $22,000, but you paid $2,400 this year and the balance only dropped by $600.",
+    "categories": [3, 1, 6],
+    "method_guidance": [
+      "This is a loan statement showing how your payments split between interest (the cost of borrowing) and principal (what you actually still owe).",
+      "Most of your $2,400 in payments went to interest that accrued on the balance, not toward reducing what you originally borrowed.",
+      "Taking out the loan meant agreeing to an interest rate that keeps charging on the unpaid balance until it's fully paid off.",
+      "At this pace, paying off the loan will take far longer and cost far more in total interest than the original amount borrowed.",
+      "Use the loan servicer's amortization breakdown (or a calculator) to see the interest-vs-principal split, and check if extra payments toward principal are allowed without penalty."
+    ]
+  },
+  {
+    "id": "next-nft-concert-ticket",
+    "layer": "next",
+    "title": "The NFT Concert Ticket",
+    "prompt": "A concert sells tickets as NFTs on a blockchain marketplace for $150 — the seller says it's \"more secure than a normal ticket and you can resell it for a profit.\"",
+    "categories": [7, 4, 5],
+    "method_guidance": [
+      "This is a blockchain-based ticket — ownership recorded on a public ledger instead of (or alongside) a traditional ticketing system.",
+      "The $150 goes to the seller or marketplace, and in return you receive a token that's supposed to represent your entry to the event.",
+      "Buying it means agreeing to the marketplace's and venue's specific rules for how that token gets checked at the door.",
+      "If the venue doesn't actually honor the token, the marketplace shuts down, or the resale market never materializes, you could be left with no entry and no value — \"can resell for profit\" is never guaranteed.",
+      "Confirm directly with the venue's official site that this specific token is a recognized, honored ticket before paying, not just the seller's word."
+    ]
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "id": "little-birthday-money",
+    "layer": "little",
+    "title": "The Birthday Money",
+    "prompt": "You got $40 in birthday cards. Your mom says you can keep $10 in your wallet and put the rest \"somewhere it can grow.\" You're not sure what that means.",
+    "categories": [1, 6],
+    "method_guidance": [
+      "This is money you now own, and a choice about where to keep it: your wallet, or a bank.",
+      "It came from people who love you giving you a gift, not from work — but it's still yours to manage.",
+      "You're not agreeing to anything yet, but choosing to save some means agreeing to wait to spend it.",
+      "Money in a savings account is safe and can slowly earn a little more money over time; money in your wallet can't grow, and it can get lost.",
+      "Ask a grown-up to show you the account balance online or on a receipt, so the number matches what you put in."
+    ]
+  },
+  {
+    "id": "little-game-skin-sale",
+    "layer": "little",
+    "title": "The Countdown Skin",
+    "prompt": "A game you love shows a glowing outfit for your character. A red clock is counting down: \"Only 2 hours left! Buy now for 500 gems.\" You have 300 gems saved up.",
+    "categories": [4, 2, 1],
+    "method_guidance": [
+      "This is a virtual item — a costume for your character that only exists inside this one game.",
+      "The gems either came from time you already spent playing, or from real money a grown-up paid to buy them.",
+      "You're agreeing to trade something you have (gems, or a grown-up's money) for something you can only use in this game.",
+      "The outfit might get boring in a week, or the game could change and take it away — but the gems or money spent are gone either way.",
+      "Ask: would I still want this if the clock wasn't counting down? Countdown clocks are designed to make you decide fast, not carefully."
+    ]
+  },
+  {
+    "id": "little-grandmas-gift-card",
+    "layer": "little",
+    "title": "Grandma's Gift Card",
+    "prompt": "Grandma gives you a $25 gift card to a toy store's app. It shows a balance on the screen, but it doesn't look like real cash.",
+    "categories": [4, 1],
+    "method_guidance": [
+      "This is a gift card — a stored amount of spending power that only works at one store or app.",
+      "The value came from Grandma paying real money to load the card for you.",
+      "You're agreeing to spend it only where the card works, and once it's spent, it can't turn back into cash.",
+      "If you don't use it, the balance usually just sits there — some cards even lose value over time, so it's smart to use it before too long.",
+      "Check the real balance in the app or on the receipt after you buy something, so you always know what's left."
+    ]
+  },
+  {
+    "id": "little-free-robux-website",
+    "layer": "little",
+    "title": "The Free Coins Video",
+    "prompt": "A video pops up: a cartoon character says \"Type your username here and get 10,000 free game coins right now!\" It looks fun and colorful.",
+    "categories": [5, 4, 8],
+    "method_guidance": [
+      "This is an ad or website pretending it can give you free game currency just for typing your info.",
+      "Real game coins only come from the actual game company — not from a random outside site or video.",
+      "By typing your username or password there, you'd be agreeing to hand over your account to strangers.",
+      "\"Free coins\" sites almost never work — instead, they can steal your account, your saved items, or trick a grown-up's card into being charged.",
+      "The only place to trust for coins is the real game app or website. When in doubt, ask a grown-up before typing anything."
+    ]
+  },
+  {
+    "id": "little-moms-phone-wallet",
+    "layer": "little",
+    "title": "Mom's Phone Wallet",
+    "prompt": "At the store, Mom taps her phone on a little machine instead of using cash, and the cashier says \"Thank you!\" No money or card ever came out.",
+    "categories": [2, 6],
+    "method_guidance": [
+      "This is a digital wallet — Mom's phone is standing in for a debit or credit card that's connected to her bank account.",
+      "The money is coming straight out of Mom's real bank account, the same as if she'd swiped a card.",
+      "By tapping, she's agreeing to pay the store the exact amount shown on the screen.",
+      "Her bank balance goes down right away (or very soon), just like paying with cash — the phone just made it faster.",
+      "A receipt or the banking app will show the exact charge, so she can check it matches what she bought."
+    ]
+  },
+  {
+    "id": "little-lemonade-stand",
+    "layer": "little",
+    "title": "The Lemonade Stand",
+    "prompt": "You sell lemonade all afternoon and end up with a jar of $17 in coins and bills. Your dad asks, \"What's the plan for this?\"",
+    "categories": [1, 6],
+    "method_guidance": [
+      "This is money you earned yourself by selling something people wanted — not a gift, not an allowance.",
+      "It came from the neighbors who paid you for cups of lemonade.",
+      "There's no agreement yet — this is the moment you get to decide: spend some, save some, maybe share some.",
+      "Coins in a jar don't grow and can be lost or spent without noticing; money moved to a savings account stays safer and can add up.",
+      "Count it together with a grown-up and write the number down, so you can check later that it's all still there."
+    ]
+  },
+  {
+    "id": "little-stranger-dm",
+    "layer": "little",
+    "title": "The Stranger Who Says They're an Admin",
+    "prompt": "Someone messages you in a game: \"Hi! I'm a game admin. Send me your login so I can give you a special prize.\" They have a badge icon next to their name.",
+    "categories": [5, 8],
+    "method_guidance": [
+      "This is a message from someone claiming to be in charge of the game — but anyone can put a badge-looking icon in their name.",
+      "There's no real prize coming from anywhere; the goal is to get your password so they can take your account and anything in it.",
+      "If you sent your login, you'd be agreeing to give a stranger full control of your account.",
+      "They could lock you out, spend or trade away everything you've earned, and message your friends pretending to be you.",
+      "Real game staff never ask for your password in a chat. Always check with a grown-up before sending any login information to anyone."
+    ]
+  },
+  {
+    "id": "little-chore-chart-app",
+    "layer": "little",
+    "title": "The Chore Chart App",
+    "prompt": "Your family uses an app where finishing chores adds \"stars\" to your name, and every 10 stars turns into $1 in your savings app.",
+    "categories": [1, 2],
+    "method_guidance": [
+      "This is a digital way of tracking your earnings — stars for chores that convert into real money.",
+      "The money is coming from your parents, as a reward for the work you did around the house.",
+      "By doing the chore and tapping it done, you and your parents are agreeing on what work equals what reward.",
+      "The stars add up over time into real dollars you can see in the app — but only if the chores actually get marked complete.",
+      "Check the app together with a grown-up each week to make sure your stars and your chores actually match up."
+    ]
+  },
+  {
+    "id": "little-big-brothers-iou",
+    "layer": "little",
+    "title": "Big Brother's IOU",
+    "prompt": "Your older brother is short on cash and asks to borrow $5 from your piggy bank. He promises, \"I'll give you back $6 next week.\"",
+    "categories": [3, 1],
+    "method_guidance": [
+      "This is a loan — you're giving up money now with a promise you'll get more back later.",
+      "The extra dollar he's promising has to come from his own future money, like his allowance.",
+      "By lending it, you're agreeing to wait and trust that he'll actually pay you back the full $6.",
+      "He might pay you back exactly as promised — or he might forget, spend his allowance on something else, and you're left waiting.",
+      "Write down the deal (how much, and when) so you both remember, and check in on the date you agreed on."
+    ]
+  },
+  {
+    "id": "little-shiny-coin-app",
+    "layer": "little",
+    "title": "The Shiny Coin App",
+    "prompt": "An ad shows a shiny gold coin: \"Collect ShinyCoins in this app — they could be worth real money someday!\" Your friend says his cousin made $50 from it.",
+    "categories": [7, 4],
+    "method_guidance": [
+      "This is a made-up digital coin inside an app — different from the money in a bank, and different from real coins.",
+      "Its value doesn't come from a bank or the government — it only has value if someone else agrees to pay real money for it, which might never happen.",
+      "Collecting the coins doesn't cost you anything by itself, but the app is hoping you'll agree to spend real money to get more, faster.",
+      "The coins could stay worth nothing forever, or the app could shut down and they'd disappear completely — \"could be worth money someday\" is not a promise.",
+      "Ask a grown-up to help you find out if anyone has actually turned these coins into real money, or if it's just an ad's story."
+    ]
+  }
+]
