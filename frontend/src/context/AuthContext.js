@@ -5,7 +5,11 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Only genuinely "loading" if there's a stored session to verify. An anonymous
+  // visitor (no token — the common case for public/storefront traffic, including
+  // crawlers and link-preview bots) has nothing to wait on, so the public routes
+  // must not be held behind a network round-trip that will never resolve to a user.
+  const [loading, setLoading] = useState(() => !!localStorage.getItem("qru_token"));
 
   useEffect(() => {
     const token = localStorage.getItem("qru_token");
