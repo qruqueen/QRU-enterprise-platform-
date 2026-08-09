@@ -26,17 +26,79 @@
  * clear summary and leaves the static routes (/ and /catalog) as the only
  * output — the SPA itself is completely unaffected either way for real visitors,
  * since every generated file is still a normal entry point into the same app.
+ *
+ * Config resolution: `npm run build` (craco build) loads .env files itself via
+ * dotenv to embed REACT_APP_* values into the client bundle — but that happens
+ * entirely inside react-scripts/craco's own process. `postbuild` is a separate
+ * child process of npm and only inherits whatever was already exported into the
+ * actual shell/CI environment; it never sees values that a *different* process
+ * merely parsed out of a .env file. If the build environment supplies these
+ * values via a .env file rather than a true exported variable, process.env.*
+ * is empty here even though the very same build correctly embedded them into
+ * the JS bundle a moment earlier. readConfig() below closes that gap by
+ * checking process.env first, then reading the exact same .env files CRA
+ * itself would (same precedence order), and only that one named key from
+ * each — nothing else in the file is read, logged, or written anywhere.
  */
 const fs = require("fs");
 const path = require("path");
 
 const BUILD_DIR = path.join(__dirname, "..", "build");
 const INDEX_HTML = path.join(BUILD_DIR, "index.html");
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-// Optional: when set, canonical/og:url become fully-qualified. Root-relative
-// (still valid) otherwise, since this build step doesn't otherwise know its
-// eventual public domain.
-const SITE_URL = (process.env.PUBLIC_SITE_URL || "").replace(/\/+$/, "");
+const FRONTEND_DIR = path.join(__dirname, "..");
+const KNOWN_PRODUCTION_SITE_URL = "https://qru-online.com";
+
+/** Parse KEY=value lines only; ignores comments/blank lines. Never returns or
+ * logs anything but the single value the caller asked for. */
+function readKeyFromEnvFile(filePath, key) {
+  if (!fs.existsSync(filePath)) return null;
+  let content;
+  try {
+    content = fs.readFileSync(filePath, "utf8");
+  } catch {
+    return null;
+  }
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    if (eq === -1) continue;
+    if (line.slice(0, eq).trim() !== key) continue;
+    let val = line.slice(eq + 1).trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+    return val || null;
+  }
+  return null;
+}
+
+/** process.env first (a true exported variable always wins, matching how CRA
+ * itself resolves config), then the same .env files CRA loads for a production
+ * build, in CRA's own precedence order, so this script only ever reaches a
+ * DIFFERENT value than the client bundle embedded if the build environment
+ * genuinely disagrees with itself. */
+function readConfig(key) {
+  if (process.env[key]) return process.env[key];
+  const nodeEnv = process.env.NODE_ENV || "production";
+  const candidates = [
+    path.join(FRONTEND_DIR, `.env.${nodeEnv}.local`),
+    path.join(FRONTEND_DIR, ".env.local"),
+    path.join(FRONTEND_DIR, `.env.${nodeEnv}`),
+    path.join(FRONTEND_DIR, ".env"),
+  ];
+  for (const file of candidates) {
+    const val = readKeyFromEnvFile(file, key);
+    if (val) return val;
+  }
+  return null;
+}
+
+const BACKEND_URL = readConfig("REACT_APP_BACKEND_URL");
+// PUBLIC_SITE_URL from process.env or .env, else the known production origin —
+// canonical/og:url must always be absolute and unambiguous, never silently
+// fall back to a relative path.
+const SITE_URL = (readConfig("PUBLIC_SITE_URL") || KNOWN_PRODUCTION_SITE_URL).replace(/\/+$/, "");
 const FETCH_TIMEOUT_MS = 8000;
 const MAX_ATTEMPTS = 2;
 const DEFAULT_DESC =
