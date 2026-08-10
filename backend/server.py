@@ -90,6 +90,7 @@ from routers.book_manufacturing import router as book_manufacturing_router
 from routers.family import router as family_router
 from routers.audit_exports import router as audit_exports_router
 from routers.public_site import router as public_site_router
+from routers.public_products import router as public_products_router
 from routers.public_commerce import router as public_commerce_router
 from routers.pilot import router as pilot_router
 from routers.migrations import router as migrations_router
@@ -186,6 +187,7 @@ for r in [
     audit_exports_router,
     manufacturing_standards_router,
     public_site_router,
+    public_products_router,
     public_commerce_router,
     pilot_router,
     migrations_router,

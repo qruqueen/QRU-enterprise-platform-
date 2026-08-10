@@ -15,13 +15,17 @@ export default function PublicLayout() {
               QRU <span className="text-[#C5A059]">Online</span>
             </span>
           </Link>
-          <nav className="flex items-center gap-8 text-sm">
+          {/* Primary nav stays concise on purpose — the 5 customer pathways (Read, Learning
+              Resources, Teach, Families, Professional) are merchandising/discovery surfaces, not
+              a requirement to permanently occupy the header. They're reachable from the homepage
+              pathway tiles and the footer below, both real clicked-through UI, not just URLs. */}
+          <nav className="flex items-center gap-6 lg:gap-8 text-sm">
             <Link to="/" data-testid="nav-home"
               className={`transition-colors hover:text-[#C5A059] ${pathname === "/" ? "text-[#1C1C1A]" : "text-[#575754]"}`}>Home</Link>
             <Link to="/catalog" data-testid="nav-catalog"
-              className={`transition-colors hover:text-[#C5A059] ${pathname.startsWith("/catalog") || pathname.startsWith("/book/") ? "text-[#1C1C1A]" : "text-[#575754]"}`}>Books</Link>
+              className={`transition-colors hover:text-[#C5A059] ${pathname.startsWith("/catalog") || pathname.startsWith("/book/") || pathname.startsWith("/product/") ? "text-[#1C1C1A]" : "text-[#575754]"}`}>Explore All</Link>
             <Link to="/bundles" data-testid="nav-bundles"
-              className={`transition-colors hover:text-[#C5A059] ${pathname.startsWith("/bundle") ? "text-[#1C1C1A]" : "text-[#575754]"}`}>Bundles</Link>
+              className={`hidden md:inline transition-colors hover:text-[#C5A059] ${pathname.startsWith("/bundle") ? "text-[#1C1C1A]" : "text-[#575754]"}`}>Bundles</Link>
             <Link to="/login" data-testid="nav-founder-login"
               className="hidden sm:inline-flex items-center rounded-full border border-[#C5A059] text-[#C5A059] px-4 py-1.5 text-xs uppercase tracking-[0.15em] transition-colors hover:bg-[#C5A059] hover:text-[#FAFAF8]">
               Founder Login
@@ -52,7 +56,12 @@ export default function PublicLayout() {
           <div className="flex flex-col gap-3 text-sm">
             <span className="text-xs uppercase tracking-[0.2em] text-[#9BA3B5] mb-1">Explore</span>
             <Link to="/" className="hover:text-[#D4AF37] transition-colors">Home</Link>
-            <Link to="/catalog" className="hover:text-[#D4AF37] transition-colors">Books</Link>
+            <Link to="/catalog" className="hover:text-[#D4AF37] transition-colors">Explore All</Link>
+            <Link to="/for/read" className="hover:text-[#D4AF37] transition-colors">Read</Link>
+            <Link to="/for/learn" className="hover:text-[#D4AF37] transition-colors">Learn</Link>
+            <Link to="/for/teach" className="hover:text-[#D4AF37] transition-colors">Teach</Link>
+            <Link to="/for/families" className="hover:text-[#D4AF37] transition-colors">Families</Link>
+            <Link to="/for/professional" className="hover:text-[#D4AF37] transition-colors">Professional</Link>
             <Link to="/bundles" className="hover:text-[#D4AF37] transition-colors">Bundles</Link>
             <Link to="/privacy" data-testid="footer-privacy" className="hover:text-[#D4AF37] transition-colors">Privacy</Link>
             <Link to="/terms" data-testid="footer-terms" className="hover:text-[#D4AF37] transition-colors">Terms &amp; Conditions</Link>
