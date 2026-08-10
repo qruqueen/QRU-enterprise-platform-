@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowLeft, BookOpen, Loader2, ShieldCheck } from "lucide-react";
 import { publicApi, assetUrl } from "./publicApi";
 import Seo from "./Seo";
+import FounderStorefrontControls from "@/components/FounderStorefrontControls";
 
 function Meta({ label, value }) {
   if (!value) return null;
@@ -21,10 +22,12 @@ export default function QRUBookPage() {
   const [error, setError] = useState(false);
   const [buying, setBuying] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     setBook(null); setError(false);
     publicApi.get(`/books/${slug}`).then((r) => setBook(r.data)).catch(() => setError(true));
   }, [slug]);
+
+  useEffect(() => { load(); }, [load]);
 
   const buy = async () => {
     if (!book) return;
@@ -60,6 +63,8 @@ export default function QRUBookPage() {
       <Link to="/catalog" data-testid="book-back" className="inline-flex items-center gap-2 text-sm text-[#575754] hover:text-[#C5A059] transition-colors mb-10">
         <ArrowLeft className="w-4 h-4" /> Catalog
       </Link>
+
+      <FounderStorefrontControls kind="book" id={book.id} published={book.published} onChanged={load} />
 
       <div className="grid lg:grid-cols-12 gap-12 lg:gap-16">
         {/* Sticky cover */}

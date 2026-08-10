@@ -126,6 +126,9 @@ import QRUAccess from "@/pages/public/QRUAccess";
 import QRUPrivacy from "@/pages/public/QRUPrivacy";
 import QRUTerms from "@/pages/public/QRUTerms";
 import QRURefunds from "@/pages/public/QRURefunds";
+import QRUPathway from "@/pages/public/QRUPathway";
+import QRUCollection from "@/pages/public/QRUCollection";
+import QRUProductPage from "@/pages/public/QRUProductPage";
 import QRUOnlineOrders from "@/pages/QRUOnlineOrders";
 import PilotCoordinator from "@/pages/PilotCoordinator";
 import ProductionOperations from "@/pages/ProductionOperations";
@@ -282,21 +285,16 @@ function ConsumerRoutes() {
   );
 }
 
+// Only the bare root is decided by auth state (Mission Control for a signed-in Founder,
+// the storefront home for everyone else — unchanged from today). Every other public page
+// is hoisted to App()'s top-level router below, reachable regardless of auth state, so a
+// signed-in Founder can view the actual storefront experience (with FounderStorefrontControls
+// layered in by each page) rather than always being routed into the Enterprise console.
 function PublicRoutes() {
   return (
     <Routes>
       <Route path="/" element={<PublicLayout />}>
         <Route index element={<QRUHome />} />
-        <Route path="catalog" element={<QRUCatalog />} />
-        <Route path="bundles" element={<QRUBundles />} />
-        <Route path="bundle/:slug" element={<QRUBundlePage />} />
-        <Route path="bundle-access/:token" element={<QRUBundleAccess />} />
-        <Route path="book/:slug" element={<QRUBookPage />} />
-        <Route path="purchase/success" element={<QRUPurchaseSuccess />} />
-        <Route path="access/:token" element={<QRUAccess />} />
-        <Route path="privacy" element={<QRUPrivacy />} />
-        <Route path="terms" element={<QRUTerms />} />
-        <Route path="refunds" element={<QRURefunds />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -320,6 +318,25 @@ function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
+              {/* Path-less layout route: no path here means none of these match bare "/",
+                  which stays owned by ModeRouter below. Each child's own absolute path
+                  wins over ModeRouter's "/*" catch-all regardless of auth state, per
+                  React Router's route ranking (explicit paths outrank a splat). */}
+              <Route element={<PublicLayout />}>
+                <Route path="/catalog" element={<QRUCatalog />} />
+                <Route path="/bundles" element={<QRUBundles />} />
+                <Route path="/bundle/:slug" element={<QRUBundlePage />} />
+                <Route path="/bundle-access/:token" element={<QRUBundleAccess />} />
+                <Route path="/book/:slug" element={<QRUBookPage />} />
+                <Route path="/product/:slug" element={<QRUProductPage />} />
+                <Route path="/for/:slug" element={<QRUPathway />} />
+                <Route path="/collections/:subject" element={<QRUCollection />} />
+                <Route path="/purchase/success" element={<QRUPurchaseSuccess />} />
+                <Route path="/access/:token" element={<QRUAccess />} />
+                <Route path="/privacy" element={<QRUPrivacy />} />
+                <Route path="/terms" element={<QRUTerms />} />
+                <Route path="/refunds" element={<QRURefunds />} />
+              </Route>
               <Route path="/*" element={<ModeRouter />} />
             </Routes>
             <Toaster position="top-right" />
