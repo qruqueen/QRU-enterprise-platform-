@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowLeft, BookOpen, Loader2, ShieldCheck } from "lucide-react";
 import { publicApi, assetUrl } from "./publicApi";
 import Seo from "./Seo";
+import FounderStorefrontControls from "@/components/FounderStorefrontControls";
+import CollectionTeaser from "./CollectionTeaser";
 
 function Meta({ label, value }) {
   if (!value) return null;
@@ -21,10 +23,18 @@ export default function QRUBookPage() {
   const [error, setError] = useState(false);
   const [buying, setBuying] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     setBook(null); setError(false);
-    publicApi.get(`/books/${slug}`).then((r) => setBook(r.data)).catch(() => setError(true));
+    // publicApi never attaches auth by design (see publicApi.js), but the detail endpoint's
+    // Founder-only bypass for a hidden book needs the token when one is present — otherwise a
+    // signed-in Founder gets the same 404 an anonymous visitor gets and can never reach the
+    // page to restore it. Scoped to this one call only; every other publicApi caller is unaffected.
+    const token = localStorage.getItem("qru_token");
+    publicApi.get(`/books/${slug}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
+      .then((r) => setBook(r.data)).catch(() => setError(true));
   }, [slug]);
+
+  useEffect(() => { load(); }, [load]);
 
   const buy = async () => {
     if (!book) return;
@@ -60,6 +70,8 @@ export default function QRUBookPage() {
       <Link to="/catalog" data-testid="book-back" className="inline-flex items-center gap-2 text-sm text-[#575754] hover:text-[#C5A059] transition-colors mb-10">
         <ArrowLeft className="w-4 h-4" /> Catalog
       </Link>
+
+      <FounderStorefrontControls kind="book" id={book.id} published={book.published} onChanged={load} />
 
       <div className="grid lg:grid-cols-12 gap-12 lg:gap-16">
         {/* Sticky cover */}
@@ -124,6 +136,8 @@ export default function QRUBookPage() {
               <ShieldCheck className="w-5 h-5 text-[#C5A059] shrink-0 mt-0.5" />
               <p>Manufactured and verified to the <span style={{ color: "#1C1C1A", fontWeight: 500 }}>Treasure Standard™</span> — authorized for release by QRU Press™.</p>
             </div>
+
+            <CollectionTeaser family={book.family} excludeKind="book" excludeId={book.id} />
           </div>
         </div>
       </div>

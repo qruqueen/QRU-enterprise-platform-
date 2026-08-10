@@ -6,7 +6,7 @@ internals (no provenance, manifests, working copy, states, or unpublished work).
 
 Published gate for a book = founder_authorization.authorized == True.
 """
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import os
@@ -16,7 +16,24 @@ from PIL import Image
 import rendering_engine as re_engine
 
 from database import db
-from auth import require_super_admin
+from auth import require_super_admin, get_current_user
+import public_pathway as pp
+import public_subject as psub
+import public_family as pf
+
+_SUPER_ADMIN_ROLES = ("Founder & CEO", "Administrator")
+
+
+async def _optional_super_admin(request: Request) -> dict | None:
+    """Best-effort super-admin check for a read endpoint that stays public by default but
+    reveals a removed book to an authenticated Founder — the one carve-out that lets them
+    inspect and relist something they just removed, from the same storefront experience.
+    Never raises: no/invalid/insufficient auth just means 'treat as a customer'."""
+    try:
+        user = await get_current_user(request)
+    except Exception:
+        return None
+    return user if user.get("role") in _SUPER_ADMIN_ROLES else None
 
 router = APIRouter(prefix="/api/public", tags=["qru-online"])
 
@@ -215,7 +232,7 @@ def _cover_url(book: dict) -> str | None:
     return None
 
 
-def _public_book(book: dict, detail: bool = False, slug: str | None = None) -> dict:
+def _public_book(book: dict, family_index: dict | None = None, detail: bool = False, slug: str | None = None) -> dict:
     """Project a book_record down to public-safe fields only."""
     pricing = book.get("pricing") or {}
     meta = book.get("publication_metadata") or {}
@@ -232,6 +249,12 @@ def _public_book(book: dict, detail: bool = False, slug: str | None = None) -> d
         "thumb_url": f"/api/public/books/{book.get('id')}/cover-thumb",
         "list_price": pricing.get("list_price"),
         "currency": pricing.get("currency", "USD"),
+        "pathways": pp.classify(book, "Book"),
+        "subject": psub.reconcile_subject(book),
+        # Cross-format collection (e.g. "The Understanding Tree Collection") — see
+        # public_family.py. Distinct from subject: this is "what else was manufactured from
+        # the exact same Founder assembly action", not "what domain is this about".
+        "family": pf.family_for_book(family_index or pf.EMPTY_INDEX, book.get("id")),
     }
     if not detail:
         blurb = (book.get("description") or "").strip()
@@ -245,7 +268,7 @@ def _public_book(book: dict, detail: bool = False, slug: str | None = None) -> d
         "publisher": meta.get("publisher"),
         "ebook_price": pricing.get("ebook_price"),
         "paperback_price": pricing.get("paperback_price"),
-        "published": True,
+        "published": bool((book.get("founder_authorization") or {}).get("authorized")),
     })
     return card
 
@@ -255,7 +278,8 @@ async def home():
     """Public landing content — featured published books + honest catalog counts."""
     docs = await db.book_records.find(_PUBLISHED_QUERY, {"_id": 0}).to_list(500)
     slugs = _slug_map(docs)
-    public = [_public_book(b, slug=slugs.get(b.get("id"))) for b in docs]
+    family_index = await pf.load_index()
+    public = [_public_book(b, family_index, slug=slugs.get(b.get("id"))) for b in docs]
     public = [b for b in public if b.get("cover_url")]
     fids = await _featured_ids()
     if fids:
@@ -276,16 +300,30 @@ async def home():
 
 
 @router.get("/books")
-async def books(imprint: str | None = None):
+async def books(imprint: str | None = None, pathway: str | None = None, subject: str | None = None,
+                family_id: str | None = None):
     """Public catalog — every authorized, published book (public-safe fields only).
-    Optional ?imprint= filters to one imprint; the response also lists available imprints."""
+    Optional ?imprint= filters to one imprint; the response also lists available imprints.
+    Optional ?pathway=/?subject= additively filter by the deterministic storefront
+    classification (see public_pathway.py / public_subject.py) — computed at read time,
+    absent by default, so existing callers (including the SEO metadata generator's book
+    discovery call) see byte-identical behavior when these params aren't passed. Optional
+    ?family_id= filters to one Product Family Assembly™ collection (see public_family.py) —
+    distinct from subject/pathway, unaffected when absent."""
     docs = await db.book_records.find(_PUBLISHED_QUERY, {"_id": 0}).to_list(1000)
     slugs = _slug_map(docs)
-    items = [_public_book(b, slug=slugs.get(b.get("id"))) for b in docs]
+    family_index = await pf.load_index()
+    items = [_public_book(b, family_index, slug=slugs.get(b.get("id"))) for b in docs]
     items = [b for b in items if b.get("cover_url")]
     imprints = sorted({(b.get("imprint") or "QRU Press™") for b in items})
     if imprint:
         items = [b for b in items if (b.get("imprint") or "QRU Press™") == imprint]
+    if subject:
+        items = [b for b in items if b.get("subject") == subject]
+    if pathway:
+        items = [b for b in items if pathway in (b.get("pathways") or [])]
+    if family_id:
+        items = [b for b in items if b.get("family") and b["family"]["id"] == family_id]
     return {"books": items, "count": len(items), "imprints": imprints}
 
 
@@ -314,19 +352,25 @@ async def cover_thumb(book_id: str):
 
 
 @router.get("/books/{key}")
-async def book_detail(key: str):
-    """Public book page — resolves by book id OR SEO slug. 404 if not published."""
-    book = await db.book_records.find_one({"id": key, **_PUBLISHED_QUERY}, {"_id": 0})
+async def book_detail(key: str, request: Request):
+    """Public book page — resolves by book id OR SEO slug. 404 if not published for an
+    ordinary visitor. The one carve-out: an authenticated Founder/Administrator can still
+    reach a removed book's page (read-only otherwise) so they can inspect and relist it
+    from the same storefront experience they just removed it from."""
+    founder = await _optional_super_admin(request)
+    published_query = {} if founder else _PUBLISHED_QUERY
+    book = await db.book_records.find_one({"id": key, **published_query}, {"_id": 0})
     slug = _slugify(book.get("title")) if book else None
     if not book:
-        docs = await db.book_records.find(_PUBLISHED_QUERY, {"_id": 0}).to_list(1000)
+        docs = await db.book_records.find(published_query, {"_id": 0}).to_list(1000)
         slugs = _slug_map(docs)
         match = next((d for d in docs if slugs.get(d.get("id")) == key), None)
         if match:
             book, slug = match, key
     if not book:
         raise HTTPException(status_code=404, detail="This title is not available.")
-    return _public_book(book, detail=True, slug=slug)
+    family_index = await pf.load_index()
+    return _public_book(book, family_index, detail=True, slug=slug)
 
 
 def _welcome_html() -> str:

@@ -233,8 +233,8 @@ async function main() {
       description: DEFAULT_DESC,
     }) &&
     writeRoute(template, "/catalog", {
-      title: "Books · QRU Press™",
-      description: "Browse authorized titles from QRU Press™ — each book manufactured and verified to the Treasure Standard™.",
+      title: "Explore All · QRU Press™",
+      description: "Browse every authorized title and product from QRU Press™ — each one manufactured and verified to the Treasure Standard™.",
     });
 
   const { books, apiAvailable } = await discoverBooks();

@@ -8,6 +8,40 @@ import NewsletterSignup from "./NewsletterSignup";
 
 const HERO_IMG = "/qru-hero.png";
 
+const PATHWAY_TILES = [
+  { slug: "read", label: "Read", blurb: "Books for the general reader." },
+  { slug: "learn", label: "Learning Resources", blurb: "Workbooks, guides, and lessons." },
+  { slug: "teach", label: "Teach", blurb: "For educators and classrooms." },
+  { slug: "families", label: "Families", blurb: "For children and parents together." },
+  { slug: "professional", label: "Professional", blurb: "For practitioners and teams." },
+];
+
+function PathwaySection() {
+  const [counts, setCounts] = useState(null);
+  useEffect(() => { publicApi.get("/pathways").then((r) => setCounts(r.data.pathways || [])).catch(() => setCounts([])); }, []);
+  const countFor = (label) => counts?.find((p) => p.id === label)?.count;
+
+  return (
+    <section className="max-w-7xl mx-auto px-6 md:px-10 py-16 md:py-20" data-testid="home-pathways">
+      <p className="text-xs uppercase tracking-[0.2em] text-[#C5A059] mb-2">Shop by pathway</p>
+      <h2 className="qru-serif text-3xl md:text-4xl font-semibold tracking-tight mb-10">Find what you're here for.</h2>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {PATHWAY_TILES.map((t) => {
+          const count = countFor(t.label);
+          return (
+            <Link key={t.slug} to={`/for/${t.slug}`} data-testid={`home-pathway-${t.slug}`}
+              className="group block rounded-lg border border-[#E5E5E0] p-5 transition-colors hover:border-[#C5A059] hover:bg-[#FAFAF8]">
+              <h3 className="qru-serif text-lg font-semibold group-hover:text-[#C5A059] transition-colors">{t.label}</h3>
+              <p className="text-xs text-[#575754] mt-1.5 leading-relaxed">{t.blurb}</p>
+              {count != null && <p className="text-xs text-[#C5A059] mt-3">{count} {count === 1 ? "item" : "items"}</p>}
+            </Link>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function CoverCard({ book, large }) {
   return (
     <div>
@@ -78,6 +112,8 @@ export default function QRUHome() {
       </section>
 
       <TrustMarks />
+
+      <PathwaySection />
 
       {/* Featured */}
       <section className="max-w-7xl mx-auto px-6 md:px-10 py-20 md:py-28">
