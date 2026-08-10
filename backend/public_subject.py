@@ -38,6 +38,14 @@ _BUCKET_TO_DOMAIN = {
     # "Literary Fiction", "Educational", "Legal" have no confident 1:1 DOMAINS equivalent.
 }
 
+# Real Factory KR-category values whose correct domain isn't recoverable by the substring
+# pass below (they contain no DOMAINS token). Kept deliberately small and explicit — a
+# conservative, Founder-explainable alias, not a second taxonomy. "General"/"Research" are
+# intentionally NOT here: they correctly fall through to General.
+_CATEGORY_ALIASES = {
+    "prevention & wellness": "Health",
+}
+
 
 def reconcile_subject(record: dict) -> str:
     """Deterministic storefront subject for a book/product record. Pure function — reads
@@ -46,14 +54,24 @@ def reconcile_subject(record: dict) -> str:
     Resolution order (Founder-approved):
       1. genre is already a recognized DOMAINS value -> use it as-is.
       2. genre is a recognized canonical_genre() bucket -> map to the nearest DOMAINS value.
-      3. unknown / empty / anything else -> General.
+      3. genre is a known real KR-category alias -> its confident domain.
+      4. genre CONTAINS a DOMAINS token -> that domain (same substring approach already used
+         by decoder_engine._classify(), so real Factory categories like "Heart Health",
+         "Brain Health", "Metabolic Health" resolve to Health instead of General).
+      5. unknown / empty / anything else -> General.
     """
     raw = (record.get("genre") or "").strip()
     if raw in DOMAINS:
         return raw
     if raw in _BUCKET_TO_DOMAIN:
         return _BUCKET_TO_DOMAIN[raw]
-    return GENERAL
+    low = raw.lower()
+    if not low:
+        return GENERAL
+    if low in _CATEGORY_ALIASES:
+        return _CATEGORY_ALIASES[low]
+    match = next((d for d in DOMAINS if d != GENERAL and d.lower() in low), None)
+    return match or GENERAL
 
 
 def resolve_genre(record: dict, kr_category: str | None = None) -> str | None:

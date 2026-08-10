@@ -42,6 +42,12 @@ _AUDIENCE_MAP = {
     "corporate learners": {PROFESSIONAL},
     "general reader": {READ},
     "general readers": {READ},
+    # Real values written by existing manufacturing interfaces (Round 1 normalization,
+    # conservative & explainable — no free-text guessing):
+    "professional audience": {PROFESSIONAL},
+    "entrepreneur": {PROFESSIONAL},
+    "teen learner": {LEARNING_RESOURCES},
+    "student": {LEARNING_RESOURCES},
 }
 
 # Carries no pathway signal on its own -> Explore All, unless the product-type overlay

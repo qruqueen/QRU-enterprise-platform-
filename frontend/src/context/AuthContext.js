@@ -5,6 +5,10 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  // True only when a stored session existed but failed verification (expired/invalid token).
+  // A genuinely anonymous visitor (no token) never sets this, so ordinary customers never see
+  // any auth signal — only a Founder whose session lapsed does.
+  const [sessionExpired, setSessionExpired] = useState(false);
   // Only genuinely "loading" if there's a stored session to verify. An anonymous
   // visitor (no token — the common case for public/storefront traffic, including
   // crawlers and link-preview bots) has nothing to wait on, so the public routes
@@ -20,7 +24,13 @@ export function AuthProvider({ children }) {
     api
       .get("/auth/me")
       .then((res) => setUser(res.data))
-      .catch(() => localStorage.removeItem("qru_token"))
+      .catch(() => {
+        // Session expired/invalid: still clear the dead token (no privilege), but remember
+        // WHY so the UI can show an unobtrusive "session expired" signal instead of silently
+        // behaving as anonymous.
+        localStorage.removeItem("qru_token");
+        setSessionExpired(true);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -28,16 +38,18 @@ export function AuthProvider({ children }) {
     const { data } = await api.post("/auth/login", { email, password });
     localStorage.setItem("qru_token", data.access_token);
     setUser(data.user);
+    setSessionExpired(false);
     return data.user;
   };
 
   const logout = () => {
     localStorage.removeItem("qru_token");
     setUser(null);
+    setSessionExpired(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, sessionExpired, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

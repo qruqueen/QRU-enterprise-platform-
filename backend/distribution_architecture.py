@@ -131,6 +131,23 @@ def resolve_destinations(product: dict):
     return recommend_destinations(product.get("product_type"))
 
 
+# The public-commerce experiences that make up QRU Online's browsable storefront. `learn`
+# is deliberately excluded — it is QRU Learn™ (a separate, protected experience). A product
+# belongs in QRU Online storefront discovery when its ACTUAL destinations intersect this set.
+STOREFRONT_EXPERIENCES = frozenset({"books", "resources", "media", "bundles"})
+
+
+def in_storefront(product: dict) -> bool:
+    """True when a product's Factory-decided destinations place it in the public storefront.
+    Reuses resolve_destinations() — which already handles legacy records that carry no
+    distribution.experiences by falling back to the recommended defaults for their
+    product_type (Compatibility rule, Round 1: a Published product with missing distribution
+    info is routed by its type's default, so a legacy Interactive Lesson correctly resolves
+    Learn-only and drops out, while a legacy Poster stays under resources). A Learn-only
+    product (destinations == ['learn']) has no storefront intersection and is excluded."""
+    return bool(set(resolve_destinations(product)) & STOREFRONT_EXPERIENCES)
+
+
 async def destinations_map():
     """The full auto-distribution table for the Founder UI."""
     exps = {e["id"]: e for e in await list_experiences()}

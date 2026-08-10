@@ -16,10 +16,33 @@ const SUPER_ADMIN_ROLES = ["Founder & CEO", "Administrator"];
  * underlying book/product, its manufacturing assets, source material, or history.
  */
 export default function FounderStorefrontControls({ kind, id, published, onChanged }) {
-  const { user } = useAuth();
+  const { user, sessionExpired } = useAuth();
   const [busy, setBusy] = useState(false);
 
-  if (!user || !SUPER_ADMIN_ROLES.includes(user.role)) return null;
+  // Anonymous visitor: show nothing — UNLESS a Founder session just expired, in which case
+  // give an unobtrusive, non-sensitive nudge so a returning Founder understands why their
+  // management controls are absent (instead of the page silently looking anonymous). This is
+  // never shown to ordinary customers (they never had a token) and exposes no controls/data.
+  if (!user) {
+    if (!sessionExpired) return null;
+    return (
+      <div
+        data-testid="founder-session-expired"
+        className="mb-6 flex items-center gap-2 rounded-xl border border-dashed px-4 py-2.5 text-xs"
+        style={{ borderColor: "#C5A059", background: "rgba(197,160,89,0.06)", color: "#8A6A1F" }}
+      >
+        <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+        <span>
+          Your Founder session has expired.{" "}
+          <a href="/login" className="underline font-medium" data-testid="founder-relogin-link">Sign in</a>{" "}
+          to manage this page.
+        </span>
+      </div>
+    );
+  }
+
+  // Signed in but not an authorized Founder/Administrator: never reveal management controls.
+  if (!SUPER_ADMIN_ROLES.includes(user.role)) return null;
 
   const toggle = async () => {
     setBusy(true);

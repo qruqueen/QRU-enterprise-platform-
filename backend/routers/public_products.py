@@ -42,10 +42,14 @@ import product_recipes as recipes
 import public_subject as psub
 import public_pathway as pp
 import public_family as pf
+import distribution_architecture as da
 
 router = APIRouter(prefix="/api/public", tags=["qru-online-products"])
 
 _PUBLISHED_QUERY = {"status": "Published"}
+# Public storefront discovery query: Published, and never demo/seed inventory (is_demo True).
+# Read-side exclusion only — demo records are preserved untouched in the database (Round 1 D).
+_STOREFRONT_QUERY = {"status": "Published", "is_demo": {"$ne": True}}
 _SUPER_ADMIN_ROLES = ("Founder & CEO", "Administrator")
 
 
@@ -136,7 +140,8 @@ async def list_products(pathway: str | None = None, subject: str | None = None,
     not stored — so a filter always reflects the current deterministic rule, never a stale
     cached label. family_id filters to a single Product Family Assembly™ collection (see
     public_family.py) — distinct from layout_family, which is the product's own layout type."""
-    docs = await db.products.find(_PUBLISHED_QUERY, {"_id": 0}).to_list(2000)
+    docs = await db.products.find(_STOREFRONT_QUERY, {"_id": 0}).to_list(2000)
+    docs = [p for p in docs if da.in_storefront(p)]
     slugs = _slug_map(docs)
     kr_category_by_id = await _kr_category_lookup(docs)
     family_index = await pf.load_index()
@@ -162,9 +167,9 @@ async def product_detail(key: str, request: Request):
     hidden product's page (read-only otherwise) so they can inspect and restore it from the
     same storefront experience they just unpublished it from."""
     founder = await _optional_super_admin(request)
-    query = {"id": key} if founder else {"id": key, **_PUBLISHED_QUERY}
+    query = {"id": key} if founder else {"id": key, **_STOREFRONT_QUERY}
     p = await db.products.find_one(query, {"_id": 0})
-    all_docs = await db.products.find({} if founder else _PUBLISHED_QUERY, {"_id": 0}).to_list(2000)
+    all_docs = await db.products.find({} if founder else _STOREFRONT_QUERY, {"_id": 0}).to_list(2000)
     if not p:
         slugs = _slug_map(all_docs)
         match = next((d for d in all_docs if slugs.get(d.get("id")) == key), None)
@@ -187,8 +192,10 @@ async def list_pathways():
         {"founder_authorization.authorized": True}, {"_id": 0, "audience": 1, "genre": 1}
     ).to_list(2000)
     product_docs = await db.products.find(
-        _PUBLISHED_QUERY, {"_id": 0, "audience": 1, "genre": 1, "product_type": 1, "knowledge_record_id": 1}
+        _STOREFRONT_QUERY, {"_id": 0, "audience": 1, "genre": 1, "product_type": 1,
+                            "knowledge_record_id": 1, "distribution": 1}
     ).to_list(2000)
+    product_docs = [p for p in product_docs if da.in_storefront(p)]
     kr_category_by_id = await _kr_category_lookup(product_docs)
     counts = {p: 0 for p in pp.PATHWAYS}
     for b in book_docs:
@@ -211,8 +218,10 @@ async def list_collections():
         {"founder_authorization.authorized": True}, {"_id": 0, "genre": 1}
     ).to_list(2000)
     product_docs = await db.products.find(
-        _PUBLISHED_QUERY, {"_id": 0, "genre": 1, "knowledge_record_id": 1}
+        _STOREFRONT_QUERY, {"_id": 0, "genre": 1, "knowledge_record_id": 1,
+                            "product_type": 1, "distribution": 1}
     ).to_list(2000)
+    product_docs = [p for p in product_docs if da.in_storefront(p)]
     kr_category_by_id = await _kr_category_lookup(product_docs)
     counts = {}
     for b in book_docs:
