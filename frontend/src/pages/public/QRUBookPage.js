@@ -24,7 +24,13 @@ export default function QRUBookPage() {
 
   const load = useCallback(() => {
     setBook(null); setError(false);
-    publicApi.get(`/books/${slug}`).then((r) => setBook(r.data)).catch(() => setError(true));
+    // publicApi never attaches auth by design (see publicApi.js), but the detail endpoint's
+    // Founder-only bypass for a hidden book needs the token when one is present — otherwise a
+    // signed-in Founder gets the same 404 an anonymous visitor gets and can never reach the
+    // page to restore it. Scoped to this one call only; every other publicApi caller is unaffected.
+    const token = localStorage.getItem("qru_token");
+    publicApi.get(`/books/${slug}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
+      .then((r) => setBook(r.data)).catch(() => setError(true));
   }, [slug]);
 
   useEffect(() => { load(); }, [load]);

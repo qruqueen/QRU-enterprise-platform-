@@ -23,7 +23,10 @@ export default function QRUProductPage() {
   const load = useCallback(() => {
     setProduct(null);
     setError(false);
-    publicApi.get(`/products/${slug}`).then((r) => setProduct(r.data)).catch(() => setError(true));
+    // Same Founder-bypass token carve-out as QRUBookPage.js's load() — see its comment.
+    const token = localStorage.getItem("qru_token");
+    publicApi.get(`/products/${slug}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
+      .then((r) => setProduct(r.data)).catch(() => setError(true));
   }, [slug]);
 
   useEffect(() => { load(); }, [load]);
