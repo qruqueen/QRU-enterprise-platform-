@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
 import { publicApi, assetUrl } from "./publicApi";
 import Seo from "./Seo";
 import FounderStorefrontControls from "@/components/FounderStorefrontControls";
+import CollectionTeaser from "./CollectionTeaser";
 
 function Meta({ label, value }) {
   if (!value) return null;
@@ -95,13 +96,15 @@ export default function QRUProductPage() {
           <dl className="mt-10 pt-10 border-t border-[#E5E5E0] grid grid-cols-2 sm:grid-cols-3 gap-6">
             <Meta label="Subject" value={product.subject} />
             <Meta label="Format" value={product.format} />
-            <Meta label="Family" value={product.family} />
+            <Meta label="Layout" value={product.layout_family} />
           </dl>
 
           <div className="mt-10 pt-8 border-t border-[#E5E5E0] flex items-start gap-3 text-sm" style={{ color: "#575754" }}>
             <ShieldCheck className="w-5 h-5 text-[#C5A059] shrink-0 mt-0.5" />
             <p>Manufactured and verified to the <span style={{ color: "#1C1C1A", fontWeight: 500 }}>Treasure Standard™</span>.</p>
           </div>
+
+          <CollectionTeaser family={product.family} excludeKind="product" excludeId={product.id} />
         </div>
       </div>
     </div>

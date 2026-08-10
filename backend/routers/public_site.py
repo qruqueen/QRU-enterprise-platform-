@@ -19,6 +19,7 @@ from database import db
 from auth import require_super_admin, get_current_user
 import public_pathway as pp
 import public_subject as psub
+import public_family as pf
 
 _SUPER_ADMIN_ROLES = ("Founder & CEO", "Administrator")
 
@@ -231,7 +232,7 @@ def _cover_url(book: dict) -> str | None:
     return None
 
 
-def _public_book(book: dict, detail: bool = False, slug: str | None = None) -> dict:
+def _public_book(book: dict, family_index: dict | None = None, detail: bool = False, slug: str | None = None) -> dict:
     """Project a book_record down to public-safe fields only."""
     pricing = book.get("pricing") or {}
     meta = book.get("publication_metadata") or {}
@@ -250,6 +251,10 @@ def _public_book(book: dict, detail: bool = False, slug: str | None = None) -> d
         "currency": pricing.get("currency", "USD"),
         "pathways": pp.classify(book, "Book"),
         "subject": psub.reconcile_subject(book),
+        # Cross-format collection (e.g. "The Understanding Tree Collection") — see
+        # public_family.py. Distinct from subject: this is "what else was manufactured from
+        # the exact same Founder assembly action", not "what domain is this about".
+        "family": pf.family_for_book(family_index or pf.EMPTY_INDEX, book.get("id")),
     }
     if not detail:
         blurb = (book.get("description") or "").strip()
@@ -273,7 +278,8 @@ async def home():
     """Public landing content — featured published books + honest catalog counts."""
     docs = await db.book_records.find(_PUBLISHED_QUERY, {"_id": 0}).to_list(500)
     slugs = _slug_map(docs)
-    public = [_public_book(b, slug=slugs.get(b.get("id"))) for b in docs]
+    family_index = await pf.load_index()
+    public = [_public_book(b, family_index, slug=slugs.get(b.get("id"))) for b in docs]
     public = [b for b in public if b.get("cover_url")]
     fids = await _featured_ids()
     if fids:
@@ -294,16 +300,20 @@ async def home():
 
 
 @router.get("/books")
-async def books(imprint: str | None = None, pathway: str | None = None, subject: str | None = None):
+async def books(imprint: str | None = None, pathway: str | None = None, subject: str | None = None,
+                family_id: str | None = None):
     """Public catalog — every authorized, published book (public-safe fields only).
     Optional ?imprint= filters to one imprint; the response also lists available imprints.
     Optional ?pathway=/?subject= additively filter by the deterministic storefront
     classification (see public_pathway.py / public_subject.py) — computed at read time,
     absent by default, so existing callers (including the SEO metadata generator's book
-    discovery call) see byte-identical behavior when these params aren't passed."""
+    discovery call) see byte-identical behavior when these params aren't passed. Optional
+    ?family_id= filters to one Product Family Assembly™ collection (see public_family.py) —
+    distinct from subject/pathway, unaffected when absent."""
     docs = await db.book_records.find(_PUBLISHED_QUERY, {"_id": 0}).to_list(1000)
     slugs = _slug_map(docs)
-    items = [_public_book(b, slug=slugs.get(b.get("id"))) for b in docs]
+    family_index = await pf.load_index()
+    items = [_public_book(b, family_index, slug=slugs.get(b.get("id"))) for b in docs]
     items = [b for b in items if b.get("cover_url")]
     imprints = sorted({(b.get("imprint") or "QRU Press™") for b in items})
     if imprint:
@@ -312,6 +322,8 @@ async def books(imprint: str | None = None, pathway: str | None = None, subject:
         items = [b for b in items if b.get("subject") == subject]
     if pathway:
         items = [b for b in items if pathway in (b.get("pathways") or [])]
+    if family_id:
+        items = [b for b in items if b.get("family") and b["family"]["id"] == family_id]
     return {"books": items, "count": len(items), "imprints": imprints}
 
 
@@ -357,7 +369,8 @@ async def book_detail(key: str, request: Request):
             book, slug = match, key
     if not book:
         raise HTTPException(status_code=404, detail="This title is not available.")
-    return _public_book(book, detail=True, slug=slug)
+    family_index = await pf.load_index()
+    return _public_book(book, family_index, detail=True, slug=slug)
 
 
 def _welcome_html() -> str:

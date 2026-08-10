@@ -54,3 +54,29 @@ def reconcile_subject(record: dict) -> str:
     if raw in _BUCKET_TO_DOMAIN:
         return _BUCKET_TO_DOMAIN[raw]
     return GENERAL
+
+
+def resolve_genre(record: dict, kr_category: str | None = None) -> str | None:
+    """The best available genre-equivalent signal for a record that may not carry `genre` at all.
+
+    Real gap this closes: manufacturing_foundation._resolve_listing() shows most non-book
+    manufacturing engines (poster, recipe, media) never copy a genre/domain field onto the
+    canonical db.products listing — only `knowledge_record_id` survives reliably. Calling
+    reconcile_subject() directly against such a record always silently returns General, not
+    because the product has no real subject, but because the field it reads was never populated
+    for that engine. `kr_category` is the caller's batched, request-scoped lookup of the linked
+    Knowledge Record's own `category` field (see routers/public_products.py) — resolved via the
+    existing knowledge_record_id relationship, not a new authoritative field. Still pure: this
+    function does no I/O itself, so it stays as directly testable as reconcile_subject().
+
+    Precedence: the record's own genre (when a caller does have one — e.g. books, which always
+    set genre at creation) always wins; the Knowledge Record's category is only a fallback for
+    when genre is genuinely absent.
+    """
+    return record.get("genre") or kr_category
+
+
+def reconcile_subject_for(record: dict, kr_category: str | None = None) -> str:
+    """reconcile_subject() with the resolve_genre() fallback applied in one call — the shape
+    routers/public_products.py actually needs for a non-book product record."""
+    return reconcile_subject({"genre": resolve_genre(record, kr_category)})

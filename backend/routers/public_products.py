@@ -14,6 +14,23 @@ book's own defensive unlist code already read and write these exact values.
 Not in scope for this file: checkout/purchase for non-book products. Preserving the existing
 checkout/payment/delivery pipeline (Founder requirement) means this file does discovery only —
 list, detail, filter. Nothing here fabricates a buy action Stripe isn't actually wired for.
+
+Classification against REAL Factory records (corrected from an earlier round that assumed a
+book-shaped genre/audience on every product): manufacturing_foundation._resolve_listing() shows
+most non-book engines never copy a genre/domain field onto the canonical db.products listing —
+only `knowledge_record_id` survives reliably. Subject is recovered from the linked Knowledge
+Record's own `category` field via that relationship (public_subject.resolve_genre()/
+reconcile_subject_for()), batched once per request (_kr_category_lookup) — never per item, so
+list/pathway/collection endpoints stay O(1) queries regardless of catalog size. audience is used
+exactly as stored (present for decoder-bridge-manufactured products, absent for most others);
+public_pathway.classify() already degrades gracefully when it's missing.
+
+layout_family vs family/collection: product_recipes.RECIPES[type].category (e.g. "guide",
+"workbook", "poster") is the product's LAYOUT family — useful, but not the customer-facing
+"other formats of the same work" concept. That concept is served by public_family.py, which reads
+the Factory's own Product Family Assembly™ records (db.product_families) — see that module's
+docstring for the full resolution story. The two are exposed as separate fields (layout_family vs
+family) so they are never conflated in the API or the UI.
 """
 import re
 
@@ -24,6 +41,7 @@ from auth import require_super_admin, get_current_user
 import product_recipes as recipes
 import public_subject as psub
 import public_pathway as pp
+import public_family as pf
 
 router = APIRouter(prefix="/api/public", tags=["qru-online-products"])
 
@@ -62,24 +80,42 @@ def _slug_map(docs: list[dict]) -> dict:
     return out
 
 
-def _public_product(p: dict, slug: str | None = None, detail: bool = False) -> dict:
+async def _kr_category_lookup(product_docs: list[dict]) -> dict:
+    """One batched query resolving every distinct knowledge_record_id among the given products to
+    that Knowledge Record's `category` field — the nearest existing subject signal for a product
+    whose own doc never got a genre/domain copied onto it (see module docstring). Called exactly
+    once per request by every caller below; never inside a per-item loop."""
+    ids = sorted({p.get("knowledge_record_id") for p in product_docs if p.get("knowledge_record_id")})
+    if not ids:
+        return {}
+    docs = await db.knowledge_records.find({"id": {"$in": ids}}, {"_id": 0, "id": 1, "category": 1}).to_list(len(ids))
+    return {d["id"]: d.get("category") for d in docs}
+
+
+def _public_product(p: dict, kr_category_by_id: dict, family_index: dict, slug: str | None = None,
+                    detail: bool = False) -> dict:
     """Project a db.products record down to public-safe fields only. No download_url, no
     internal provenance — matches _public_book()'s discipline in public_site.py."""
     ptype = p.get("product_type")
     recipe = recipes.get_recipe(ptype)
+    kr_category = kr_category_by_id.get(p.get("knowledge_record_id"))
+    # Same merged-genre view feeds both classify() and reconcile_subject() so the Adult-family
+    # subject check inside public_pathway.classify() sees the identical resolved signal.
+    classification_record = {**p, "genre": psub.resolve_genre(p, kr_category)}
     card = {
         "id": p.get("id"),
         "slug": slug or _slugify(p.get("title")),
         "title": p.get("title"),
         "product_type": ptype,
-        "family": recipe.get("category"),
+        "layout_family": recipe.get("category"),
         "format": recipe.get("primary"),
         "topic": p.get("topic"),
         "cover_url": p.get("cover_url") or p.get("thumbnail_url"),
         "price": p.get("price"),
         "currency": "USD",
-        "pathways": pp.classify(p, ptype),
-        "subject": psub.reconcile_subject(p),
+        "pathways": pp.classify(classification_record, ptype),
+        "subject": psub.reconcile_subject(classification_record),
+        "family": pf.family_for_product(family_index, p.get("id")),
         # Honest state, not a fabricated action — no self-serve checkout exists yet for
         # non-book products. A storefront page can show this plainly rather than a
         # non-working "Buy" button.
@@ -93,22 +129,28 @@ def _public_product(p: dict, slug: str | None = None, detail: bool = False) -> d
 
 @router.get("/products")
 async def list_products(pathway: str | None = None, subject: str | None = None,
-                        family: str | None = None, format: str | None = None):
+                        layout_family: str | None = None, format: str | None = None,
+                        family_id: str | None = None):
     """Public catalog of non-book products. Optional filters compose with AND semantics.
     pathway/subject are computed at read time (see public_pathway.py / public_subject.py),
     not stored — so a filter always reflects the current deterministic rule, never a stale
-    cached label."""
+    cached label. family_id filters to a single Product Family Assembly™ collection (see
+    public_family.py) — distinct from layout_family, which is the product's own layout type."""
     docs = await db.products.find(_PUBLISHED_QUERY, {"_id": 0}).to_list(2000)
     slugs = _slug_map(docs)
-    items = [_public_product(p, slug=slugs.get(p.get("id"))) for p in docs]
-    if family:
-        items = [i for i in items if i["family"] == family]
+    kr_category_by_id = await _kr_category_lookup(docs)
+    family_index = await pf.load_index()
+    items = [_public_product(p, kr_category_by_id, family_index, slug=slugs.get(p.get("id"))) for p in docs]
+    if layout_family:
+        items = [i for i in items if i["layout_family"] == layout_family]
     if format:
         items = [i for i in items if i["format"] == format]
     if subject:
         items = [i for i in items if i["subject"] == subject]
     if pathway:
         items = [i for i in items if pathway in i["pathways"]]
+    if family_id:
+        items = [i for i in items if i["family"] and i["family"]["id"] == family_id]
     return {"products": items, "count": len(items)}
 
 
@@ -131,7 +173,9 @@ async def product_detail(key: str, request: Request):
         p, slug = match, key
     else:
         slug = _slug_map(all_docs).get(p.get("id"))
-    return _public_product(p, slug=slug, detail=True)
+    kr_category_by_id = await _kr_category_lookup([p])
+    family_index = await pf.load_index()
+    return _public_product(p, kr_category_by_id, family_index, slug=slug, detail=True)
 
 
 @router.get("/pathways")
@@ -142,13 +186,18 @@ async def list_pathways():
     book_docs = await db.book_records.find(
         {"founder_authorization.authorized": True}, {"_id": 0, "audience": 1, "genre": 1}
     ).to_list(2000)
-    product_docs = await db.products.find(_PUBLISHED_QUERY, {"_id": 0, "audience": 1, "genre": 1, "product_type": 1}).to_list(2000)
+    product_docs = await db.products.find(
+        _PUBLISHED_QUERY, {"_id": 0, "audience": 1, "genre": 1, "product_type": 1, "knowledge_record_id": 1}
+    ).to_list(2000)
+    kr_category_by_id = await _kr_category_lookup(product_docs)
     counts = {p: 0 for p in pp.PATHWAYS}
     for b in book_docs:
         for path in pp.classify(b, "Book"):
             counts[path] += 1
     for p in product_docs:
-        for path in pp.classify(p, p.get("product_type")):
+        kr_category = kr_category_by_id.get(p.get("knowledge_record_id"))
+        classification_record = {**p, "genre": psub.resolve_genre(p, kr_category)}
+        for path in pp.classify(classification_record, p.get("product_type")):
             counts[path] += 1
     return {"pathways": [{"id": p, "name": p, "count": counts[p]} for p in pp.PATHWAYS]}
 
@@ -161,10 +210,16 @@ async def list_collections():
     book_docs = await db.book_records.find(
         {"founder_authorization.authorized": True}, {"_id": 0, "genre": 1}
     ).to_list(2000)
-    product_docs = await db.products.find(_PUBLISHED_QUERY, {"_id": 0, "genre": 1}).to_list(2000)
+    product_docs = await db.products.find(
+        _PUBLISHED_QUERY, {"_id": 0, "genre": 1, "knowledge_record_id": 1}
+    ).to_list(2000)
+    kr_category_by_id = await _kr_category_lookup(product_docs)
     counts = {}
-    for rec in book_docs + product_docs:
-        s = psub.reconcile_subject(rec)
+    for b in book_docs:
+        s = psub.reconcile_subject(b)
+        counts[s] = counts.get(s, 0) + 1
+    for p in product_docs:
+        s = psub.reconcile_subject_for(p, kr_category_by_id.get(p.get("knowledge_record_id")))
         counts[s] = counts.get(s, 0) + 1
     return {"collections": [{"id": s, "name": s, "count": n} for s, n in sorted(counts.items())]}
 

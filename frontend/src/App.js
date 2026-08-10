@@ -129,6 +129,7 @@ import QRURefunds from "@/pages/public/QRURefunds";
 import QRUPathway from "@/pages/public/QRUPathway";
 import QRUCollection from "@/pages/public/QRUCollection";
 import QRUProductPage from "@/pages/public/QRUProductPage";
+import QRUFamily from "@/pages/public/QRUFamily";
 import QRUOnlineOrders from "@/pages/QRUOnlineOrders";
 import PilotCoordinator from "@/pages/PilotCoordinator";
 import ProductionOperations from "@/pages/ProductionOperations";
@@ -331,6 +332,7 @@ function App() {
                 <Route path="/product/:slug" element={<QRUProductPage />} />
                 <Route path="/for/:slug" element={<QRUPathway />} />
                 <Route path="/collections/:subject" element={<QRUCollection />} />
+                <Route path="/family/:id" element={<QRUFamily />} />
                 <Route path="/purchase/success" element={<QRUPurchaseSuccess />} />
                 <Route path="/access/:token" element={<QRUAccess />} />
                 <Route path="/privacy" element={<QRUPrivacy />} />

@@ -5,6 +5,7 @@ import { ArrowLeft, BookOpen, Loader2, ShieldCheck } from "lucide-react";
 import { publicApi, assetUrl } from "./publicApi";
 import Seo from "./Seo";
 import FounderStorefrontControls from "@/components/FounderStorefrontControls";
+import CollectionTeaser from "./CollectionTeaser";
 
 function Meta({ label, value }) {
   if (!value) return null;
@@ -135,6 +136,8 @@ export default function QRUBookPage() {
               <ShieldCheck className="w-5 h-5 text-[#C5A059] shrink-0 mt-0.5" />
               <p>Manufactured and verified to the <span style={{ color: "#1C1C1A", fontWeight: 500 }}>Treasure Standard™</span> — authorized for release by QRU Press™.</p>
             </div>
+
+            <CollectionTeaser family={book.family} excludeKind="book" excludeId={book.id} />
           </div>
         </div>
       </div>

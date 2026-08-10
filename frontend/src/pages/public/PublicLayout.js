@@ -15,21 +15,13 @@ export default function PublicLayout() {
               QRU <span className="text-[#C5A059]">Online</span>
             </span>
           </Link>
+          {/* Primary nav stays concise on purpose — the 5 customer pathways (Read, Learning
+              Resources, Teach, Families, Professional) are merchandising/discovery surfaces, not
+              a requirement to permanently occupy the header. They're reachable from the homepage
+              pathway tiles and the footer below, both real clicked-through UI, not just URLs. */}
           <nav className="flex items-center gap-6 lg:gap-8 text-sm">
             <Link to="/" data-testid="nav-home"
               className={`transition-colors hover:text-[#C5A059] ${pathname === "/" ? "text-[#1C1C1A]" : "text-[#575754]"}`}>Home</Link>
-            <span className="hidden lg:flex items-center gap-6">
-              {[
-                ["read", "Read"],
-                ["learn", "Learn"],
-                ["teach", "Teach"],
-                ["families", "Families"],
-                ["professional", "Professional"],
-              ].map(([slug, label]) => (
-                <Link key={slug} to={`/for/${slug}`} data-testid={`nav-pathway-${slug}`}
-                  className={`transition-colors hover:text-[#C5A059] ${pathname === `/for/${slug}` ? "text-[#1C1C1A]" : "text-[#575754]"}`}>{label}</Link>
-              ))}
-            </span>
             <Link to="/catalog" data-testid="nav-catalog"
               className={`transition-colors hover:text-[#C5A059] ${pathname.startsWith("/catalog") || pathname.startsWith("/book/") || pathname.startsWith("/product/") ? "text-[#1C1C1A]" : "text-[#575754]"}`}>Explore All</Link>
             <Link to="/bundles" data-testid="nav-bundles"
