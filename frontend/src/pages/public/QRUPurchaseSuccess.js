@@ -6,7 +6,9 @@ import { publicApi, assetUrl } from "./publicApi";
 export default function QRUPurchaseSuccess() {
   const [params] = useSearchParams();
   const sessionId = params.get("session_id");
-  const isBundle = params.get("kind") === "bundle";
+  const kind = params.get("kind") || "ebook";
+  const isBundle = kind === "bundle";
+  const isProduct = kind === "product";
   const [state, setState] = useState("checking"); // checking | paid | failed
   const [order, setOrder] = useState(null);
   const attempts = useRef(0);
@@ -14,7 +16,11 @@ export default function QRUPurchaseSuccess() {
   useEffect(() => {
     if (!sessionId) { setState("failed"); return; }
     let timer;
-    const statusUrl = isBundle ? `/bundle-checkout/status/${sessionId}` : `/checkout/status/${sessionId}`;
+    const statusUrl = isBundle
+      ? `/bundle-checkout/status/${sessionId}`
+      : isProduct
+        ? `/product-checkout/status/${sessionId}`
+        : `/checkout/status/${sessionId}`;
     const poll = async () => {
       attempts.current += 1;
       try {
@@ -27,7 +33,9 @@ export default function QRUPurchaseSuccess() {
     };
     poll();
     return () => clearTimeout(timer);
-  }, [sessionId, isBundle]);
+  }, [sessionId, isBundle, isProduct]);
+
+  const formatLabel = (order?.format || "digital file").toUpperCase();
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-24 text-center" data-testid="qru-purchase-success">
@@ -47,6 +55,7 @@ export default function QRUPurchaseSuccess() {
           </div>
           <CheckCircle2 className="w-14 h-14 text-emerald-600 mx-auto" />
           <h1 className="qru-serif text-4xl font-semibold mt-6" style={{ color: "#1C1C1A" }}>Thank you.</h1>
+
           {isBundle ? (
             <>
               <p className="text-lg mt-3" style={{ color: "#3A3A37" }}>
@@ -58,6 +67,18 @@ export default function QRUPurchaseSuccess() {
                 <Download className="w-4 h-4" /> Open my bundle
               </Link>
               <div className="mt-8"><Link to="/bundles" className="text-sm text-[#C5A059] hover:underline">Browse more bundles</Link></div>
+            </>
+          ) : isProduct ? (
+            <>
+              <p className="text-lg mt-3" style={{ color: "#3A3A37" }}>
+                <span style={{ color: "#1C1C1A", fontWeight: 500 }}>{order?.product_title}</span> is ready to download.
+              </p>
+              <a href={assetUrl(order?.download_url)} data-testid="download-product-btn"
+                style={{ backgroundColor: "#1C1C1A", color: "#FAFAF8" }}
+                className="inline-flex items-center gap-2 rounded-full px-8 py-3.5 text-sm font-medium mt-8 transition-opacity hover:opacity-90">
+                <Download className="w-4 h-4" /> Download {formatLabel}
+              </a>
+              <div className="mt-8"><Link to="/catalog" className="text-sm text-[#C5A059] hover:underline">Continue browsing the catalog</Link></div>
             </>
           ) : (
             <>
@@ -72,6 +93,7 @@ export default function QRUPurchaseSuccess() {
               <div className="mt-8"><Link to="/catalog" className="text-sm text-[#C5A059] hover:underline">Continue browsing the catalog</Link></div>
             </>
           )}
+
           <p className="mt-6 text-xs" style={{ color: "#8A8A85" }} data-testid="refund-guarantee-success">
             Not satisfied? Full refund within 14 days — just reply to your receipt.
           </p>

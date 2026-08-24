@@ -28,13 +28,48 @@ export default function QRUOnlineOrders() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const load = () => api.get("/public/orders").then((r) => setData(r.data)).catch(() => setData(false));
+  const load = async () => {
+    try {
+      const [bookRes, productRes] = await Promise.all([
+        api.get("/public/orders"),
+        api.get("/public/product-orders"),
+      ]);
+      const books = (bookRes.data.orders || []).map((o) => ({
+        ...o,
+        kind: "ebook",
+        title: o.book_title,
+        format: "epub",
+      }));
+      const products = (productRes.data.orders || []).map((o) => ({
+        ...o,
+        kind: "product",
+        title: o.product_title,
+      }));
+      const orders = [...books, ...products].sort((a, b) => {
+        const aTime = Date.parse(a.created_at || a.paid_at || 0) || 0;
+        const bTime = Date.parse(b.created_at || b.paid_at || 0) || 0;
+        return bTime - aTime;
+      });
+      setData({
+        orders,
+        total: orders.length,
+        paid: orders.filter((o) => o.payment_status === "paid").length,
+        provider_configured: Boolean(bookRes.data.provider_configured || productRes.data.provider_configured),
+      });
+    } catch {
+      setData(false);
+    }
+  };
+
   useEffect(() => { load(); }, []);
 
-  const resend = async (sid) => {
-    setBusy(sid);
+  const resend = async (order) => {
+    setBusy(order.session_id);
     try {
-      const { data: res } = await api.post(`/public/orders/${sid}/resend-confirmation`);
+      const endpoint = order.kind === "product"
+        ? `/public/product-orders/${order.session_id}/resend-confirmation`
+        : `/public/orders/${order.session_id}/resend-confirmation`;
+      const { data: res } = await api.post(endpoint);
       const st = res?.confirmation_email?.status;
       if (st === "sent-to-provider") toast.success("Confirmation email re-sent to the customer.");
       else if (st === "skipped") toast.warning("Email provider not configured — nothing sent.");
@@ -42,6 +77,19 @@ export default function QRUOnlineOrders() {
       await load();
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Could not resend confirmation.");
+    }
+    setBusy(null);
+  };
+
+  const reconcile = async (order) => {
+    setBusy(order.session_id);
+    try {
+      const { data: res } = await api.post(`/public/product-orders/${order.session_id}/reconcile`);
+      if (res?.order?.payment_status === "paid") toast.success("Stripe confirms payment. Product access is now active.");
+      else toast.info("Stripe does not show this product order as paid yet.");
+      await load();
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Could not verify this payment.");
     }
     setBusy(null);
   };
@@ -55,7 +103,7 @@ export default function QRUOnlineOrders() {
     if (statusFilter === "paid" && o.payment_status !== "paid") return false;
     if (statusFilter === "pending" && o.payment_status === "paid") return false;
     if (!needle) return true;
-    return [o.book_title, o.order_ref, o.customer_email, o.session_id]
+    return [o.title, o.order_ref, o.customer_email, o.session_id, o.format]
       .some((v) => (v || "").toLowerCase().includes(needle));
   });
 
@@ -64,7 +112,7 @@ export default function QRUOnlineOrders() {
       <PageHeader
         overline="QRU Online™ · Fulfillment"
         title="QRU Online Orders"
-        subtitle="Every real storefront purchase and its delivery email. Resend a customer's confirmation and a fresh secure link in one tap — no re-charge."
+        subtitle="Every real storefront purchase and its delivery status. Recover access or resend a secure delivery email without charging the customer again."
       />
 
       <FeaturedTitlesManager />
@@ -88,7 +136,7 @@ export default function QRUOnlineOrders() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             data-testid="orders-search-input"
-            placeholder="Search by customer email, book title, or order reference…"
+            placeholder="Search by customer, title, format, or order reference…"
             className="w-full rounded-lg border bg-card pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-royal/40"
           />
         </div>
@@ -126,11 +174,12 @@ export default function QRUOnlineOrders() {
             )}
             {orders.map((o) => {
               const paid = o.payment_status === "paid";
+              const label = o.kind === "product" ? (o.format || "digital product").toUpperCase() : "EPUB";
               return (
-                <tr key={o.session_id} className="border-b last:border-0 hover:bg-muted/30" data-testid={`order-row-${o.order_ref || o.session_id}`}>
+                <tr key={`${o.kind}-${o.session_id}`} className="border-b last:border-0 hover:bg-muted/30" data-testid={`order-row-${o.order_ref || o.session_id}`}>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-foreground">{o.book_title || "—"}</div>
-                    <div className="text-[11px] text-muted-foreground">{o.order_ref || o.session_id?.slice(0, 16)}</div>
+                    <div className="font-medium text-foreground">{o.title || "—"}</div>
+                    <div className="text-[11px] text-muted-foreground">{label} · {o.order_ref || o.session_id?.slice(0, 16)}</div>
                   </td>
                   <td className="px-4 py-3">${Number(o.amount || 0).toFixed(2)} {(o.currency || "usd").toUpperCase()}</td>
                   <td className="px-4 py-3">
@@ -147,13 +196,23 @@ export default function QRUOnlineOrders() {
                   <td className="px-4 py-3 text-right">
                     {paid ? (
                       <button
-                        onClick={() => resend(o.session_id)}
+                        onClick={() => resend(o)}
                         disabled={busy === o.session_id}
                         data-testid={`resend-btn-${o.order_ref || o.session_id}`}
                         className="inline-flex items-center gap-1.5 rounded-lg bg-navy text-white px-3 py-1.5 text-xs font-medium hover:opacity-90 disabled:opacity-50"
                       >
                         {busy === o.session_id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
                         Resend
+                      </button>
+                    ) : o.kind === "product" ? (
+                      <button
+                        onClick={() => reconcile(o)}
+                        disabled={busy === o.session_id}
+                        data-testid={`reconcile-btn-${o.session_id}`}
+                        className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
+                      >
+                        {busy === o.session_id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                        Check payment
                       </button>
                     ) : <span className="text-xs text-muted-foreground">—</span>}
                   </td>
