@@ -6,5 +6,11 @@
 # changing Factory startup wiring.
 from . import public_products as _public_products
 from . import public_product_commerce as _public_product_commerce
+from . import public_storefront_webhook as _public_storefront_webhook
 
 _public_products.router.routes.extend(_public_product_commerce.router.routes)
+
+# Register the hardened unified webhook on public_products, which server.py includes before the
+# legacy ebook public_commerce router. Starlette resolves the first matching route, so this safely
+# supersedes the older ebook-only /api/public/webhook without modifying the proven ebook module.
+_public_products.router.routes.extend(_public_storefront_webhook.router.routes)
