@@ -1,6 +1,7 @@
 import hashlib
 import io
 import json
+import os
 import zipfile
 
 import pytest
@@ -74,6 +75,48 @@ def make_package(*, approved=True, locked=False, metadata_locked=False,
     return out.getvalue(), product_key, version
 
 
+def make_factory_v2_package(*, approved=True, handoff_ready=True):
+    product_key = "family-money-meeting"
+    version = "1.0.0"
+    metadata_name = "metadata/product-metadata.json"
+    files = {
+        "primary/family-money-meeting-workbook.pdf": b"%PDF-1.7\nFactory v2 fixture\n%%EOF\n",
+        metadata_name: _json_bytes({
+            "product_key": product_key,
+            "version": version,
+            "title": "Family Money Meeting",
+            "category": "Personal Finance / Family & Relationships",
+            "tags": ["family money meeting"],
+            "price": {"amount_cents": 900, "currency": "USD"},
+        }),
+    }
+    manifest = {
+        "product_key": product_key,
+        "version": version,
+        "title": "Family Money Meeting",
+        "founder_approval": "approved" if approved else "pending",
+        "approval_record": {
+            "status": "approved" if approved else "pending",
+            "approved_by": "Founder" if approved else None,
+            "scope": "Draft-only Quick Publisher handoff",
+        },
+        "files": [
+            {"path": "primary/family-money-meeting-workbook.pdf", "role": "final_pdf"},
+            {"path": metadata_name, "role": "metadata"},
+        ],
+        "package": {
+            "schema": "qru.product-package.v1",
+            "sha256": {name: hashlib.sha256(data).hexdigest() for name, data in files.items()},
+            "handoff_ready": handoff_ready,
+        },
+    }
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zf:
+        for name, data in files.items(): zf.writestr(name, data)
+        zf.writestr("manifest.json", _json_bytes(manifest))
+    return out.getvalue()
+
+
 def test_pending_factory_package_is_blocked():
     blob, _, _ = make_package(approved=False, locked=True)
     with pytest.raises(PackageIntakeError) as exc:
@@ -137,3 +180,31 @@ def test_invalid_zip_has_structured_error():
         "trace_id": "trace-xyz",
         "message": "Package is not a valid ZIP archive.",
     }
+
+
+def test_factory_v2_contract_with_embedded_approval_passes_unchanged():
+    parsed = parse_factory_package(make_factory_v2_package(), trace_id="factory-v2")
+    assert parsed.product_key == "family-money-meeting"
+    assert parsed.version == "1.0.0"
+    assert parsed.metadata["price"] == {"amount_cents": 900, "currency": "USD"}
+    assert parsed.approval["status"] == "approved"
+    assert [entry["role"] for entry in parsed.declared_files] == ["final_pdf", "metadata"]
+
+
+def test_factory_v2_handoff_gate_remains_enforced():
+    with pytest.raises(PackageIntakeError) as exc:
+        parse_factory_package(make_factory_v2_package(handoff_ready=False), trace_id="factory-v2-lock")
+    assert exc.value.code == "PUBLISHER_HANDOFF_LOCKED"
+    assert exc.value.stage == "approval_gate"
+
+
+def test_family_money_meeting_golden_zip_when_supplied():
+    """Controlled backend test: never rebuild or silently substitute the approved ZIP."""
+    path = os.getenv("QRU_FAMILY_MONEY_MEETING_GOLDEN_ZIP")
+    if not path: pytest.skip("set QRU_FAMILY_MONEY_MEETING_GOLDEN_ZIP to run the controlled golden-package test")
+    blob = open(path, "rb").read()
+    assert hashlib.sha256(blob).hexdigest() == "a7b9f56b94205c6f51cced8087e28eceffbd13ac189d4d5d64d3b128bea1fd32"
+    parsed = parse_factory_package(blob, trace_id="family-money-meeting-golden")
+    assert parsed.product_key == "family-money-meeting"
+    assert parsed.version == "1.0.0"
+    assert parsed.approval["status"] == "approved"
