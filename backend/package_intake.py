@@ -48,9 +48,33 @@ def _j(name,data,trace):
     except (UnicodeDecodeError,json.JSONDecodeError): _fail("INVALID_JSON","contract_discovery",f"{name} is not valid UTF-8 JSON.",trace)
     if not isinstance(value,dict): _fail("INVALID_JSON_SHAPE","contract_discovery",f"{name} must be a JSON object.",trace)
     return value
-def _manifest(d):
+def _manifest_kind(d):
+    """Identify supported package contracts without rewriting package bytes."""
     f=d.get("files")
-    return bool(d.get("product_key") and d.get("version") and isinstance(f,list) and f and all(isinstance(x,dict) and isinstance(x.get("filename"),str) and isinstance(x.get("sha256"),str) for x in f))
+    if not (d.get("product_key") and d.get("version") and isinstance(f,list) and f):
+        return None
+    if all(isinstance(x,dict) and isinstance(x.get("filename"),str) and isinstance(x.get("sha256"),str) for x in f):
+        return "legacy"
+    package=d.get("package")
+    checksums=package.get("sha256") if isinstance(package,dict) else None
+    if (package or {}).get("schema")=="qru.product-package.v1" and isinstance(checksums,dict) and all(
+        isinstance(x,dict) and isinstance(x.get("path"),str) and isinstance(x.get("role"),str) for x in f
+    ):
+        return "factory_v2"
+    return None
+
+def _manifest(d): return _manifest_kind(d) is not None
+
+def _declared_manifest_files(manifest,kind,trace):
+    checksums=(manifest.get("package") or {}).get("sha256") or {}
+    declared=[]
+    for entry in manifest["files"]:
+        name=entry.get("filename") if kind=="legacy" else entry.get("path")
+        sha=entry.get("sha256") if kind=="legacy" else checksums.get(name)
+        if not isinstance(sha,str):
+            _fail("MANIFEST_CHECKSUM_MISSING","manifest_validation","Manifest has no SHA-256 for a declared file.",trace,details={"filename":name})
+        declared.append({"filename":name,"sha256":sha,"role":entry.get("role")})
+    return declared
 def _approved(d):
     for k in ("founder_approval","approval_status","status","founder_status"):
         v=_norm(d.get(k))
@@ -65,14 +89,23 @@ def _locked(*docs):
 def _fmt(name): return name.rsplit(".",1)[-1].lower() if "." in name else "bin"
 def _mime(name): return mimetypes.guess_type(name)[0] or "application/octet-stream"
 def _fid_part(v,n=60): return (re.sub(r"[^a-zA-Z0-9._-]+","-",v).strip("-.") or "product")[:n]
+def _price_usd(metadata):
+    if metadata.get("suggested_price_usd") is not None: return metadata.get("suggested_price_usd")
+    price=metadata.get("price")
+    if isinstance(price,dict) and _norm(price.get("currency"))=="USD" and isinstance(price.get("amount_cents"),(int,float)):
+        return price["amount_cents"]/100
+    return None
 
 def parse_factory_package(blob: bytes, *, trace_id: Optional[str]=None) -> ParsedFactoryPackage:
     trace=trace_id or new_trace_id()
+    log.info("[%s] receive started",trace)
     if not isinstance(blob,(bytes,bytearray)): _fail("INVALID_PACKAGE_BODY","receive","Package body must be ZIP bytes.",trace)
     blob=bytes(blob)
     if not blob: _fail("EMPTY_PACKAGE","receive","Package is empty.",trace)
     if len(blob)>MAX_ARCHIVE_BYTES: _fail("PACKAGE_TOO_LARGE","receive","Package exceeds the 100 MB intake limit.",trace,413)
     archive_sha=hashlib.sha256(blob).hexdigest()
+    log.info("[%s] receive ok bytes=%d sha256=%s",trace,len(blob),archive_sha)
+    log.info("[%s] archive_open started",trace)
     try: z=zipfile.ZipFile(io.BytesIO(blob))
     except zipfile.BadZipFile: _fail("INVALID_ZIP","archive_open","Package is not a valid ZIP archive.",trace)
     members={}; seen=set(); total=0
@@ -90,24 +123,37 @@ def parse_factory_package(blob: bytes, *, trace_id: Optional[str]=None) -> Parse
             if total>MAX_UNCOMPRESSED_BYTES: _fail("UNCOMPRESSED_PACKAGE_TOO_LARGE","archive_safety","Expanded package exceeds the intake limit.",trace)
             try: members[name]=z.read(i)
             except (RuntimeError,zipfile.BadZipFile) as e: _fail("ZIP_READ_FAILED","archive_read",f"Could not read {name}: {e}",trace)
+    log.info("[%s] archive_open ok members=%d expanded_bytes=%d",trace,len(members),total)
+    log.info("[%s] contract_discovery started",trace)
     docs={n:_j(n,b,trace) for n,b in members.items() if n.lower().endswith(".json")}
     mans=[(n,d) for n,d in docs.items() if _manifest(d)]
     if len(mans)!=1: _fail("MANIFEST_NOT_UNIQUE","contract_discovery","Factory package must contain exactly one manifest JSON.",trace,details={"candidates":[n for n,_ in mans]})
-    mn,m=mans[0]; key=str(m["product_key"]).strip(); ver=str(m["version"]).strip(); declared=[]; names=set()
-    for e in m["files"]:
+    mn,m=mans[0]; kind=_manifest_kind(m); key=str(m["product_key"]).strip(); ver=str(m["version"]).strip(); declared=[]; names=set()
+    log.info("[%s] contract_discovery ok manifest=%s contract=%s",trace,mn,kind)
+    log.info("[%s] manifest_validation started",trace)
+    for e in _declared_manifest_files(m,kind,trace):
         name=_safe(str(e["filename"]),trace); sha=str(e["sha256"]).strip().lower()
         if name in names: _fail("DUPLICATE_MANIFEST_FILE","manifest_validation","Manifest lists a file more than once.",trace,details={"filename":name})
         if not re.fullmatch(r"[0-9a-f]{64}",sha): _fail("INVALID_MANIFEST_SHA256","manifest_validation","Manifest contains an invalid SHA-256.",trace,details={"filename":name})
         if name not in members: _fail("MANIFEST_FILE_MISSING","manifest_validation","Manifest references a missing file.",trace,details={"filename":name})
         actual=hashlib.sha256(members[name]).hexdigest()
         if actual!=sha: _fail("CHECKSUM_MISMATCH","checksum_validation","Artifact checksum does not match manifest.",trace,details={"filename":name,"expected":sha,"actual":actual})
-        names.add(name); declared.append({"filename":name,"sha256":sha})
+        names.add(name); declared.append({"filename":name,"sha256":sha,"role":e.get("role")})
     extras=set(members)-names-{mn}
     if extras: _fail("UNDECLARED_ARCHIVE_FILE","manifest_validation","ZIP contains files not declared by the manifest.",trace,details={"files":sorted(extras)})
+    log.info("[%s] manifest_validation ok declared_files=%d",trace,len(declared))
+    role_names={e.get("role"):e["filename"] for e in declared if e.get("role")}
     an=next((n for n in names if PurePosixPath(n).name.lower()=="approval-record.json"),None)
-    if not an: _fail("APPROVAL_RECORD_MISSING","approval_gate","Factory package has no approval-record.json.",trace)
-    approval=docs.get(an) or _j(an,members[an],trace)
+    if an:
+        approval=docs.get(an) or _j(an,members[an],trace)
+    elif kind=="factory_v2" and isinstance(m.get("approval_record"),dict):
+        approval={"product_key":key,"version":ver,**m["approval_record"]}
+    else:
+        _fail("APPROVAL_RECORD_MISSING","approval_gate","Factory package has no approval record.",trace)
+    metadata_role=role_names.get("metadata")
     metas=[(n,docs[n]) for n in names if n.lower().endswith(".json") and n!=an and n in docs and str(docs[n].get("product_key","")).strip()==key and str(docs[n].get("version","")).strip()==ver and any(k in docs[n] for k in ("title","category","tags"))]
+    if metadata_role:
+        metas=[(metadata_role,docs[metadata_role])] if metadata_role in docs else []
     if len(metas)!=1: _fail("METADATA_NOT_UNIQUE","contract_discovery","Factory package must contain exactly one product metadata JSON.",trace,details={"candidates":[n for n,_ in metas]})
     metan,meta=metas[0]
     for label,d in (("metadata",meta),("approval",approval)):
@@ -115,6 +161,9 @@ def parse_factory_package(blob: bytes, *, trace_id: Optional[str]=None) -> Parse
     if not _approved(approval): _fail("FOUNDER_APPROVAL_REQUIRED","approval_gate","Package is valid but Founder approval is not granted.",trace,409)
     lock=_locked(approval,m)
     if lock: _fail("PUBLISHER_HANDOFF_LOCKED","approval_gate","Package still declares publisher handoff as locked.",trace,409,{"publisher_handoff":lock})
+    if kind=="factory_v2" and not (m.get("package") or {}).get("handoff_ready"):
+        _fail("PUBLISHER_HANDOFF_LOCKED","approval_gate","Factory v2 package is not marked handoff-ready.",trace,409)
+    log.info("[%s] approval_gate ok approved=true handoff_ready=true",trace)
     return ParsedFactoryPackage(trace,archive_sha,key,ver,mn,m,metan,meta,approval,members,declared)
 
 async def _stage(db,intake,trace,stage,status,msg=""):
@@ -132,6 +181,7 @@ async def ingest_factory_package(blob: bytes, *, actor="Founder", trace_id=None)
     import storage
     from models import now_iso
     trace=trace_id or new_trace_id(); p=parse_factory_package(blob,trace_id=trace); intake=p.idempotency_key
+    log.info("[%s] idempotency started key=%s",trace,intake)
     claim={"_id":p.version_key,"product_key":p.product_key,"version":p.version,"archive_sha256":p.archive_sha256,"intake_id":intake,"created_at":now_iso()}
     try: vc=await db.package_version_claims.find_one_and_update({"_id":p.version_key},{"$setOnInsert":claim},upsert=True,return_document=ReturnDocument.AFTER)
     except DuplicateKeyError: vc=await db.package_version_claims.find_one({"_id":p.version_key})
@@ -160,16 +210,18 @@ async def ingest_factory_package(blob: bytes, *, actor="Founder", trace_id=None)
         msha=hashlib.sha256(p.members[p.manifest_name]).hexdigest(); mfid=f"deliverable-{key}-{ver}-{msha[:12]}.manifest.json"; zfid=f"deliverable-{key}-{ver}-{p.archive_sha256[:12]}.package.zip"
         if not await storage.amirror_file(mfid,p.members[p.manifest_name],"application/json"): raise PackageIntakeError("DURABLE_STORAGE_FAILED","durable_storage","Durable storage could not verify the package manifest.",trace_id=trace,http_status=503)
         if not await storage.amirror_file(zfid,blob,"application/zip"): raise PackageIntakeError("DURABLE_STORAGE_FAILED","durable_storage","Durable storage could not verify the original package ZIP.",trace_id=trace,http_status=503)
-        await _stage(db,intake,trace,"durable_storage","ok"); await _stage(db,intake,trace,"catalog_stage","started")
-        pid=f"pkg-{p.archive_sha256[:24]}"; product={"_id":f"package:{intake}","id":pid,"product_code":f"PKG-{p.archive_sha256[:12].upper()}","product_key":p.product_key,"version":p.version,"title":str(p.metadata.get("title") or p.product_key),"subtitle":p.metadata.get("subtitle"),"product_type":p.metadata.get("product_type") or "Publisher Package","family":p.metadata.get("series") or p.metadata.get("category") or "General","category":p.metadata.get("category"),"tags":p.metadata.get("tags") or [],"price":p.metadata.get("suggested_price_usd"),"status":"Ready for Publisher","production_state":"Gold Master","source":"factory_package_intake","deliverable_ready":bool(customer),"customer_deliverable":{"files":customer,"source":"factory_package_intake"},"package_artifacts":arts,"package_manifest":{"filename":mfid,"source_filename":p.manifest_name,"sha256":msha,"storage_path":storage.asset_object_path(mfid)},"source_package":{"filename":zfid,"sha256":p.archive_sha256,"storage_path":storage.asset_object_path(zfid)},"factory_approval":dict(p.approval),"package_intake_key":intake,"package_trace_id":trace,"published":False,"created_by":actor,"created_at":now_iso(),"updated_at":now_iso()}
+        await _stage(db,intake,trace,"durable_storage","ok"); await _stage(db,intake,trace,"catalog_record","started")
+        pid=f"pkg-{p.archive_sha256[:24]}"; product={"_id":f"package:{intake}","id":pid,"product_code":f"PKG-{p.archive_sha256[:12].upper()}","product_key":p.product_key,"version":p.version,"title":str(p.metadata.get("title") or p.product_key),"subtitle":p.metadata.get("subtitle"),"product_type":p.metadata.get("product_type") or "Publisher Package","family":p.metadata.get("series") or p.metadata.get("category") or "General","category":p.metadata.get("category"),"tags":p.metadata.get("tags") or [],"price":_price_usd(p.metadata),"status":"Ready for Publisher","production_state":"Gold Master","source":"factory_package_intake","deliverable_ready":bool(customer),"customer_deliverable":{"files":customer,"source":"factory_package_intake"},"package_artifacts":arts,"package_manifest":{"filename":mfid,"source_filename":p.manifest_name,"sha256":msha,"storage_path":storage.asset_object_path(mfid)},"source_package":{"filename":zfid,"sha256":p.archive_sha256,"storage_path":storage.asset_object_path(zfid)},"factory_approval":dict(p.approval),"package_intake_key":intake,"package_trace_id":trace,"published":False,"created_by":actor,"created_at":now_iso(),"updated_at":now_iso()}
         try: await db.products.insert_one(product)
         except DuplicateKeyError:
             if not await db.products.find_one({"_id":product["_id"]}): raise
-        await _stage(db,intake,trace,"catalog_stage","ok")
+        await _stage(db,intake,trace,"catalog_record","ok"); await _stage(db,intake,trace,"commit","started")
         await db.package_intakes.update_one({"_id":intake},{"$set":{"status":"complete","stage":"complete","product_id":pid,"updated_at":now_iso(),"published":False},"$push":{"stage_events":{"stage":"complete","status":"ok","at":now_iso()}}})
+        log.info("[%s] commit ok product_id=%s",trace,pid)
         return {"ok":True,"idempotent_replay":False,"trace_id":trace,"product_id":pid,"product_key":p.product_key,"version":p.version,"archive_sha256":p.archive_sha256,"status":"Ready for Publisher","artifact_count":len(arts),"customer_file_count":len(customer),"published":False}
     except PackageIntakeError as e:
         await db.package_intakes.update_one({"_id":intake},{"$set":{"status":"failed","stage":e.stage,"error_code":e.code,"error_message":e.message[:500],"updated_at":now_iso()},"$push":{"stage_events":{"stage":e.stage,"status":"failed","code":e.code,"message":e.message[:500],"at":now_iso()}}}); raise
     except Exception as e:
+        log.exception("[%s] internal failed",trace)
         await db.package_intakes.update_one({"_id":intake},{"$set":{"status":"failed","stage":"internal","error_code":"INGEST_INTERNAL_ERROR","error_message":str(e)[:500],"updated_at":now_iso()}})
         raise PackageIntakeError("INGEST_INTERNAL_ERROR","internal","Package intake failed unexpectedly.",trace_id=trace,http_status=500) from e
