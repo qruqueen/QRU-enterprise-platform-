@@ -1,4 +1,4 @@
-"""Emergent Object Storage™ — durable file storage that persists across redeploys.
+"""Portable QRU object storage with legacy Emergent compatibility.
 
 The container filesystem is EPHEMERAL (wiped on every redeploy/restart), so all runtime-generated
 binary files (currently videos) are stored here instead. MongoDB records reference the object
@@ -17,6 +17,21 @@ _EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
 _storage_key = None
 
 
+def _s3_enabled():
+    return bool(os.environ.get("S3_BUCKET"))
+
+
+def _s3_client():
+    import boto3
+    return boto3.client(
+        "s3",
+        endpoint_url=os.environ.get("S3_ENDPOINT_URL") or None,
+        region_name=os.environ.get("S3_REGION") or None,
+        aws_access_key_id=os.environ.get("S3_ACCESS_KEY_ID") or os.environ.get("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.environ.get("S3_SECRET_ACCESS_KEY") or os.environ.get("AWS_SECRET_ACCESS_KEY"),
+    )
+
+
 def init_storage(force=False):
     global _storage_key
     if _storage_key and not force:
@@ -29,6 +44,9 @@ def init_storage(force=False):
 
 
 def put_object(path: str, data: bytes, content_type: str) -> dict:
+    if _s3_enabled():
+        _s3_client().put_object(Bucket=os.environ["S3_BUCKET"], Key=path, Body=data, ContentType=content_type)
+        return {"path": path, "provider": "s3"}
     for attempt in range(3):
         key = init_storage(force=(attempt > 0))
         resp = requests.put(f"{STORAGE_URL}/objects/{path}",
@@ -45,6 +63,8 @@ def put_object(path: str, data: bytes, content_type: str) -> dict:
 
 
 def get_object(path: str) -> bytes:
+    if _s3_enabled():
+        return _s3_client().get_object(Bucket=os.environ["S3_BUCKET"], Key=path)["Body"].read()
     for attempt in range(3):
         key = init_storage(force=(attempt > 0))
         resp = requests.get(f"{STORAGE_URL}/objects/{path}",
@@ -69,6 +89,41 @@ async def aput_object(path: str, data: bytes, content_type: str) -> dict:
 
 async def aget_object(path: str) -> bytes:
     return await asyncio.to_thread(get_object, path)
+
+
+def path_exists(path: str) -> bool:
+    if _s3_enabled():
+        try:
+            _s3_client().head_object(Bucket=os.environ["S3_BUCKET"], Key=path)
+            return True
+        except Exception:
+            return False
+    for attempt in range(2):
+        try:
+            key = init_storage(force=(attempt > 0))
+            response = requests.get(f"{STORAGE_URL}/objects/{path}",
+                                    headers={"X-Storage-Key": key, "Range": "bytes=0-0"}, timeout=30)
+            if response.status_code == 403 and attempt < 1:
+                continue
+            return response.status_code in (200, 206)
+        except Exception:
+            return False
+    return False
+
+
+def put_verified_object(path: str, data: bytes, content_type: str) -> bool:
+    for _ in range(2):
+        try:
+            put_object(path, data, content_type)
+            if path_exists(path):
+                return True
+        except Exception as exc:
+            logger.warning("verified object write failed for %s: %s", path, exc)
+    return False
+
+
+async def aput_verified_object(path: str, data: bytes, content_type: str) -> bool:
+    return await asyncio.to_thread(put_verified_object, path, data, content_type)
 
 
 # --------------------------------------------------------------------------- #
@@ -99,6 +154,8 @@ def asset_object_path(fid: str) -> str:
 
 def object_exists(fid: str) -> bool:
     """Cheap existence check for a durable asset (ranged 1-byte GET, no full download)."""
+    if _s3_enabled():
+        return path_exists(asset_object_path(fid))
     for attempt in range(2):
         try:
             key = init_storage(force=(attempt > 0))

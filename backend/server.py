@@ -105,6 +105,7 @@ from routers.bundles import router as bundles_router
 from routers.public_bundles import router as public_bundles_router
 from routers.manufacturing_standards import router as manufacturing_standards_router
 from routers.package_intake import router as package_intake_router
+from routers.publisher_lite import router as publisher_lite_router
 from consumer_seed import seed_consumer_demo
 from design_intelligence import seed_design_intelligence
 from routers.misc import (
@@ -203,6 +204,7 @@ for r in [
     public_bundles_router,
     factory_jobs_router,
     package_intake_router,
+    publisher_lite_router,
 ]:
     app.include_router(r)
 
